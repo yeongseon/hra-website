@@ -1,3 +1,13 @@
+/**
+ * 수업일지 행 액션 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 각 수업일지 행의 우측에 표시되는 "수정", "삭제" 버튼
+ * - 수정 버튼: 수정 페이지로 이동
+ * - 삭제 버튼: 확인 대화상자 표시 후 삭제 처리
+ *
+ * 📌 클라이언트 컴포넌트 이유: 버튼 클릭, 대화상자 상태 관리 필요
+ */
+
 "use client";
 
 import { useState, useTransition } from "react";
@@ -52,10 +62,11 @@ export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
               disabled={isPending}
               onClick={() => {
                 startTransition(async () => {
+                  // ⚙️ 서버 액션 호출 - 수업일지 삭제 요청
                   const result = await deleteClassLog(id);
                   if (result.success) {
                     setIsDeleteOpen(false);
-                    router.refresh();
+                    router.refresh(); // 페이지 새로고침 (목록 업데이트)
                   }
                 });
               }}

@@ -1,7 +1,20 @@
+/**
+ * 기수 소개 페이지 (src/app/(public)/cohorts/page.tsx)
+ * 
+ * HRA의 각 기수(cohort) 정보를 보여주는 페이지입니다.
+ * - 1기: 2024.03 - 2024.12 (수료)
+ * - 2기: 2025.03 - 2025.12 (진행중)
+ * - 3기: 2026.03 - 2026.12 (예정)
+ */
+
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import type { Metadata } from "next";
 
+/**
+ * SEO 최적화: 이 페이지가 검색엔진에 어떻게 표시될지 설정
+ * 페이지 제목은 "기수 소개"로 표시됨
+ */
 export const metadata: Metadata = {
   title: "기수 소개",
 };
@@ -9,16 +22,19 @@ export const metadata: Metadata = {
 export default function CohortsPage() {
   return (
     <div className="mx-auto max-w-7xl px-6">
+      {/* 기수 소개 페이지 메인 제목 */}
       <section className="py-20 md:py-32">
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
-           기수 소개
-         </h1>
-        <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
-           커뮤니티의 기반을 이루는 뛰어난 인재들. 각 기수는 인문학과 기술의 교차점에 고유한 시각을 더합니다.
-         </p>
-      </section>
+         <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
+            기수 소개
+          </h1>
+         {/* 기수 한 줄 설명 */}
+         <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
+            커뮤니티의 기반을 이루는 뛰어난 인재들. 각 기수는 인문학과 기술의 교차점에 고유한 시각을 더합니다.
+          </p>
+       </section>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pb-32">
+       {/* 3기/2기/1기를 카드로 표시 */}
+       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pb-32">
         <div className="group relative flex flex-col justify-between rounded-3xl bg-white/5 border border-white/10 p-8 transition-all hover:bg-white/10 hover:-translate-y-1">
           <div>
             <div className="flex items-start justify-between mb-8">

@@ -1,3 +1,14 @@
+/**
+ * 수업일지 관리 페이지 (목록)
+ *
+ * 역할: 관리자가 등록된 모든 수업일지를 한눈에 볼 수 있는 페이지
+ * - 수업일지 목록 조회
+ * - 수업일지 수정/삭제 액션
+ * - "새 수업일지 작성" 버튼으로 새 항목 추가 가능
+ *
+ * 데이터 흐름: DB에서 모든 수업일지 + 작성자 이름 + 기수 이름을 함께 조회
+ */
+
 import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
@@ -25,8 +36,14 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 export default async function AdminClassLogsPage() {
+  // 🔒 관리자 권한 확인 - 관리자가 아니면 접근 불가
   await requireAdmin();
 
+  // 📊 DB에서 수업일지 데이터 조회
+  // - classLogs: 수업일지 테이블
+  // - users: 작성자 정보 가져오기 (innerJoin 사용 → 필수)
+  // - cohorts: 기수 정보 (leftJoin 사용 → 선택사항, 없어도 됨)
+  // - 최신 수업일을 먼저 보여줌 (orderBy desc)
   const rows = await db
     .select({
       id: classLogs.id,

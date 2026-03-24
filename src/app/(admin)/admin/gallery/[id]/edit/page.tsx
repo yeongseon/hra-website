@@ -1,3 +1,12 @@
+/**
+ * 앨범 수정 페이지
+ *
+ * 역할: 관리자가 기존 앨범을 수정하고 이미지를 관리할 수 있는 페이지
+ * - URL의 id 파라미터로 앨범 조회
+ * - 앨범 정보 수정 폼
+ * - 이미지 추가/삭제 관리 인터페이스
+ */
+
 import Link from "next/link";
 import { ArrowLeft, ImageIcon, Trash2 } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
@@ -23,10 +32,12 @@ type EditGalleryPageProps = {
 };
 
 export default async function EditGalleryPage({ params }: EditGalleryPageProps) {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
   const { id } = await params;
 
+  // 📊 DB에서 특정 앨범 조회
   const [gallery] = await db.select().from(galleries).where(eq(galleries.id, id)).limit(1);
 
   if (!gallery) {
@@ -51,6 +62,7 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
   }
 
   const images = await db
+    // 📊 DB에서 해당 앨범의 모든 이미지 조회
     .select()
     .from(galleryImages)
     .where(eq(galleryImages.galleryId, id))
@@ -107,35 +119,36 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
                 };
 
                 return (
-                  <div
-                    key={image.id}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                  >
-                    <div className="relative h-44 w-full bg-slate-100">
-                      {image.url ? (
-                        <img
-                          src={image.url}
-                          alt={image.alt ?? "갤러리 이미지"}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate-400">
-                          <ImageIcon className="size-8" />
-                        </div>
-                      )}
-                    </div>
+                   <div
+                     key={image.id}
+                     className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                   >
+                     <div className="relative h-44 w-full bg-slate-100">
+                       {image.url ? (
+                         <img
+                           src={image.url}
+                           alt={image.alt ?? "갤러리 이미지"}
+                           className="h-full w-full object-cover"
+                         />
+                       ) : (
+                         <div className="flex h-full w-full items-center justify-center text-slate-400">
+                           <ImageIcon className="size-8" />
+                         </div>
+                       )}
+                     </div>
 
-                    <div className="space-y-3 p-4 text-sm text-slate-600">
-                      <p className="line-clamp-2 min-h-10">{image.alt || "(대체 텍스트 없음)"}</p>
-                      <p>정렬 순서: {image.order}</p>
-                      <form action={deleteAction}>
-                        <Button type="submit" variant="destructive" className="w-full">
-                          <Trash2 className="mr-1 size-4" />이미지 삭제
-                        </Button>
-                      </form>
-                    </div>
-                  </div>
-                );
+                     <div className="space-y-3 p-4 text-sm text-slate-600">
+                       <p className="line-clamp-2 min-h-10">{image.alt || "(대체 텍스트 없음)"}</p>
+                       <p>정렬 순서: {image.order}</p>
+                       <form action={deleteAction}>
+                         <Button type="submit" variant="destructive" className="w-full">
+                           {/* ⚙️ 서버 액션 호출 - 이미지 삭제 */}
+                           <Trash2 className="mr-1 size-4" />이미지 삭제
+                         </Button>
+                       </form>
+                     </div>
+                   </div>
+                 );
               })}
             </div>
           )}

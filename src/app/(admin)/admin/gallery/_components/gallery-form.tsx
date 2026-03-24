@@ -1,3 +1,13 @@
+/**
+ * 갤러리 앨범 정보 폼 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 앨범 제목, 설명, 커버 이미지 URL을 입력하는 폼
+ * - 새 앨범 생성 또는 기존 앨범 수정에 사용
+ * - 성공/실패 메시지 표시
+ *
+ * 📌 클라이언트 컴포넌트 이유: 폼 제출, 상태 관리 필요
+ */
+
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -36,6 +46,7 @@ export function GalleryForm({
 }: GalleryFormProps) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
+    // ⚙️ 서버 액션 호출 - 갤러리 정보를 서버로 전송하여 DB 저장/수정
     async (_prevState: GalleryActionState, formData: FormData) => action(formData),
     initialState
   );

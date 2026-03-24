@@ -1,3 +1,17 @@
+/**
+ * 수업일지 입력 폼 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 수업일지를 작성하거나 수정하는 폼을 렌더링
+ * - 제목, 수업 날짜, 기수, 내용 입력 필드
+ * - 서버 액션을 호출하여 DB에 저장
+ * - 성공/실패 메시지 표시
+ *
+ * 📌 "use client" 컴포넌트란?
+ * - 기본적으로 모든 React 컴포넌트는 서버에서 HTML로 미리 그려서 내려줍니다 (빠름)
+ * - 하지만 버튼 클릭, 입력창 입력 같이 사용자와 상호작용이 필요한 경우 "use client" 표시
+ * - 이 컴포넌트는 form 제출, 상태 관리 등이 필요하므로 클라이언트 컴포넌트
+ */
+
 "use client";
 
 import { useActionState, useEffect } from "react";
@@ -48,6 +62,8 @@ export function ClassLogForm({
   const router = useRouter();
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
+    // ⚙️ 서버 액션 호출 - 폼 데이터를 서버로 전송
+    // FormData 객체를 받아서 action 함수 실행 (DB 저장 처리)
     async (_previous: ClassLogActionResult, formData: FormData) => {
       return action(formData);
     },

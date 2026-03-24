@@ -1,3 +1,12 @@
+/**
+ * 새 수업일지 작성 페이지
+ *
+ * 역할: 관리자가 새로운 수업일지를 작성할 수 있는 페이지
+ * - 수업일지 폼 컴포넌트 표시
+ * - 기수 목록 조회 후 드롭다운에 표시
+ * - 작성 완료 시 DB에 저장
+ */
+
 import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
@@ -10,8 +19,10 @@ import { cohorts } from "@/lib/db/schema";
 export const dynamic = "force-dynamic";
 
 export default async function NewClassLogPage() {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
+  // 📊 DB에서 기수 목록 조회 - 폼의 드롭다운에 표시할 데이터
   const cohortRows = await db
     .select({ id: cohorts.id, name: cohorts.name })
     .from(cohorts)

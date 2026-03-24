@@ -1,3 +1,11 @@
+/**
+ * 새 앨범 추가 페이지
+ *
+ * 역할: 관리자가 새로운 갤러리 앨범을 생성할 수 있는 페이지
+ * - 갤러리 폼 컴포넌트 표시
+ * - 앨범 정보 입력 후 DB에 저장
+ */
+
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -6,6 +14,7 @@ import { createGallery } from "@/features/gallery/actions";
 import { requireAdmin } from "@/lib/admin";
 
 export default async function NewGalleryPage() {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
   return (

@@ -1,3 +1,14 @@
+/**
+ * 모집 행 액션 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 각 기수 행의 우측에 표시되는 액션 버튼/드롭다운
+ * - 모집 상태 드롭다운: 상태 변경 (UPCOMING → OPEN → CLOSED)
+ * - 수정 버튼: 수정 페이지로 이동
+ * - 삭제 버튼: 확인 대화상자 표시 후 삭제 처리
+ *
+ * 📌 클라이언트 컴포넌트 이유: 드롭다운 상태, 버튼 클릭, 대화상자 관리 필요
+ */
+
 "use client";
 
 import { useState, useTransition } from "react";
@@ -35,9 +46,10 @@ export function RecruitmentRowActions({ id, currentStatus }: RecruitmentRowActio
 
   const handleStatusChange = (status: string | null) => {
     if (!status) return;
+    // ⚙️ 서버 액션 호출 - 기수의 모집 상태 변경
     startTransition(async () => {
       await updateRecruitmentStatus(id, status as "UPCOMING" | "OPEN" | "CLOSED");
-      router.refresh();
+      router.refresh(); // 페이지 새로고침 (상태 업데이트)
     });
   };
 
@@ -77,13 +89,14 @@ export function RecruitmentRowActions({ id, currentStatus }: RecruitmentRowActio
             <Button
               variant="destructive"
               disabled={isPending}
-              onClick={() => {
-                startTransition(async () => {
-                  await deleteCohort(id);
-                  setIsDeleteOpen(false);
-                  router.refresh();
-                });
-              }}
+            onClick={() => {
+              startTransition(async () => {
+                // ⚙️ 서버 액션 호출 - 기수 삭제 (포함된 지원서도 함께 삭제됨)
+                await deleteCohort(id);
+                setIsDeleteOpen(false);
+                router.refresh(); // 페이지 새로고침 (목록 업데이트)
+              });
+            }}
             >
               삭제
             </Button>

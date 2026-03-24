@@ -1,3 +1,11 @@
+/**
+ * 갤러리 페이지 (src/app/(public)/gallery/page.tsx)
+ * 
+ * HRA의 활동 사진 앨범을 보여주는 페이지입니다.
+ * 서버 컴포넌트에서 DB에 저장된 갤러리 앨범 정보를 조회해서 표시합니다.
+ * - 각 앨범은 커버 이미지와 이미지 개수 표시
+ */
+
 import type { Metadata } from "next";
 import { ImageIcon } from "lucide-react";
 import { count, desc, eq } from "drizzle-orm";
@@ -8,26 +16,37 @@ import { galleries, galleryImages } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * SEO 최적화: 이 페이지가 검색엔진에 어떻게 표시될지 설정
+ * 페이지 제목은 "갤러리"로 표시됨
+ */
 export const metadata: Metadata = {
   title: "갤러리",
 };
 
 export default async function GalleryPage() {
+  /**
+   * 서버에서 데이터베이스 조회
+   * galleries 테이블에서 모든 앨범을 가져오고,
+   * 각 앨범의 이미지 개수(count)를 함께 계산
+   * 최신 앨범이 먼저 나오도록 정렬(orderBy desc)
+   */
   const albums = await db
-    .select({
-      id: galleries.id,
-      title: galleries.title,
-      coverImageUrl: galleries.coverImageUrl,
-      imageCount: count(galleryImages.id),
-    })
-    .from(galleries)
-    .leftJoin(galleryImages, eq(galleryImages.galleryId, galleries.id))
-    .groupBy(galleries.id)
-    .orderBy(desc(galleries.createdAt));
+     .select({
+       id: galleries.id,
+       title: galleries.title,
+       coverImageUrl: galleries.coverImageUrl,
+       imageCount: count(galleryImages.id),
+     })
+     .from(galleries)
+     .leftJoin(galleryImages, eq(galleryImages.galleryId, galleries.id))
+     .groupBy(galleries.id)
+     .orderBy(desc(galleries.createdAt));
 
-  return (
-    <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
-      <section className="mb-14 space-y-4">
+   return (
+     <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
+       {/* 갤러리 페이지 헤더 */}
+       <section className="mb-14 space-y-4">
         <Badge
           variant="outline"
           className="border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
@@ -42,14 +61,15 @@ export default async function GalleryPage() {
         </p>
       </section>
 
-      {albums.length === 0 ? (
-        <Card className="border-white/10 bg-zinc-950/80 py-10">
-          <CardContent className="text-center text-base text-zinc-300">
-            갤러리가 없습니다
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+       {albums.length === 0 ? (
+         <Card className="border-white/10 bg-zinc-950/80 py-10">
+           <CardContent className="text-center text-base text-zinc-300">
+             갤러리가 없습니다
+           </CardContent>
+         </Card>
+       ) : (
+         /* 갤러리 앨범들을 3열 그리드로 표시 */
+         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {albums.map((album) => {
             const imageCount = Number(album.imageCount ?? 0);
 

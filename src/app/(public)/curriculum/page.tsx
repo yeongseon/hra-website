@@ -1,6 +1,18 @@
+/**
+ * 커리큘럼 페이지 (src/app/(public)/curriculum/page.tsx)
+ * 
+ * HRA 2학기 커리큘럼 전체 과정을 보여주는 페이지입니다.
+ * - 봄학기: 인문학 세미나, 독서 토론
+ * - 가을학기: 기술 워크숍, 프로젝트 실습
+ */
+
 import { Book, Code, Terminal, MessageSquare } from "lucide-react";
 import type { Metadata } from "next";
 
+/**
+ * SEO 최적화: 이 페이지가 검색엔진에 어떻게 표시될지 설정
+ * 페이지 제목은 "커리큘럼"으로 표시됨
+ */
 export const metadata: Metadata = {
   title: "커리큘럼",
 };
@@ -8,23 +20,28 @@ export const metadata: Metadata = {
 export default function CurriculumPage() {
   return (
     <div className="mx-auto max-w-7xl px-6">
+      {/* 커리큘럼 페이지 메인 제목 */}
       <section className="py-20 md:py-32">
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
-          커리큘럼
-        </h1>
-        <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
-          인문학적 탐구와 기술적 실행의 간극을 연결하는 2학기 집중 커리큘럼입니다.
-        </p>
-      </section>
+         <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
+           커리큘럼
+         </h1>
+         {/* 커리큘럼 한 줄 설명 */}
+         <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
+           인문학적 탐구와 기술적 실행의 간극을 연결하는 2학기 집중 커리큘럼입니다.
+         </p>
+       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 pb-32">
-        <section>
-          <div className="mb-8 inline-block rounded-full bg-white/10 px-4 py-1.5">
-            <h2 className="text-sm font-medium tracking-wide">
-              봄학기
-            </h2>
-          </div>
-          <div className="space-y-6">
+       {/* 봄학기/가을학기를 좌우로 나열 */}
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 pb-32">
+         {/* 봄학기: 인문학 세미나, 독서 토론 */}
+         <section>
+           <div className="mb-8 inline-block rounded-full bg-white/10 px-4 py-1.5">
+             <h2 className="text-sm font-medium tracking-wide">
+               봄학기
+             </h2>
+           </div>
+           {/* 봄학기 과목 2개 카드 */}
+           <div className="space-y-6">
             <div className="group rounded-2xl bg-white/5 border border-white/10 p-8 transition-colors hover:bg-white/10 hover:border-white/20">
               <Book className="w-8 h-8 mb-6 text-gray-300" />
               <div className="flex items-center justify-between mb-4">
@@ -55,13 +72,14 @@ export default function CurriculumPage() {
           </div>
         </section>
 
-        <section>
-          <div className="mb-8 inline-block rounded-full bg-white/10 px-4 py-1.5">
-            <h2 className="text-sm font-medium tracking-wide">
-              가을학기
-            </h2>
-          </div>
-          <div className="space-y-6">
+         <section>
+           <div className="mb-8 inline-block rounded-full bg-white/10 px-4 py-1.5">
+             <h2 className="text-sm font-medium tracking-wide">
+               가을학기
+             </h2>
+           </div>
+           {/* 가을학기 과목 2개 카드 */}
+           <div className="space-y-6">
             <div className="group rounded-2xl bg-white/5 border border-white/10 p-8 transition-colors hover:bg-white/10 hover:border-white/20">
               <Code className="w-8 h-8 mb-6 text-gray-300" />
               <div className="flex items-center justify-between mb-4">

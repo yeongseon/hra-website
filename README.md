@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HRA (Human Renaissance Academy) 프로젝트 가이드
 
-## Getting Started
+대학 연합 교육 프로그램 **HRA (Human Renaissance Academy)**의 공식 웹사이트 프로젝트입니다. 이 가이드는 개발이 처음인 대학생분들도 쉽게 프로젝트를 이해하고, 본인의 컴퓨터에서 실행하며, 실제 인터넷에 배포까지 할 수 있도록 구성되었습니다.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 1. 프로젝트 소개
+HRA 웹사이트는 교육 프로그램의 정보를 공유하고, 회원들이 과제를 제출하거나 관리자가 학사 일정을 관리할 수 있는 플랫폼입니다. 
+누구나 접속해서 프로그램 소개를 볼 수 있고, 회원가입 후에는 전용 기능을 사용할 수 있습니다.
+
+---
+
+## 2. 기술 스택
+이 프로젝트는 최신 웹 개발 도구들을 사용합니다. 각 도구가 어떤 역할을 하는지 간단히 알아볼까요?
+
+*   **Next.js 16**: React를 기반으로 웹사이트의 앞면(UI)과 뒷면(서버)을 모두 만들 수 있게 해주는 도구입니다.
+*   **React 19**: 사용자 화면(UI)을 만들기 위한 가장 인기 있는 라이브러리입니다.
+*   **TypeScript**: 자바스크립트에 '타입'이라는 규칙을 추가해 코딩 실수를 줄여주는 언어입니다.
+*   **Tailwind CSS v4**: 미리 정해진 이름을 사용해 디자인을 쉽고 빠르게 입힐 수 있는 스타일링 도구입니다.
+*   **shadcn/ui v4**: 버튼, 입력창 등 이미 잘 만들어진 디자인 부품들을 가져와 쓸 수 있는 라이브러리입니다.
+*   **Drizzle ORM**: 복잡한 데이터베이스 언어 대신 자바스크립트 코드로 데이터를 쉽게 다룰 수 있게 돕는 도구입니다.
+*   **Neon Postgres**: 데이터를 저장하는 창고(데이터베이스)로, 서버 없이도 빠르게 시작할 수 있습니다.
+*   **NextAuth v5 beta**: 구글 로그인이나 아이디/비밀번호 로그인을 안전하게 구현해주는 인증 도구입니다.
+*   **Vercel Blob**: 사용자가 올린 이미지나 파일을 저장하는 온라인 저장소입니다.
+
+---
+
+## 3. 폴더 구조
+프로젝트 내의 폴더들은 각각 정해진 역할이 있습니다.
+
+```text
+src/
+├── app/                  # 페이지 주소(라우트)와 화면 구성을 담당
+│   ├── (public)/         # 로그인 없이 누구나 볼 수 있는 페이지들
+│   ├── (auth)/           # 로그인, 회원가입 관련 페이지
+│   ├── (admin)/          # 관리자만 들어올 수 있는 페이지
+│   └── (member)/         # 로그인한 일반 회원만 사용하는 페이지
+├── features/             # 데이터베이스를 조작하는 실제 비즈니스 로직 (서버 액션)
+├── lib/                  # 공통적으로 쓰이는 도구들 (인증 설정, DB 연결 등)
+└── components/           # 여러 페이지에서 돌려 쓰는 UI 부품 (버튼, 메뉴바 등)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 4. 시작하기
+본인의 컴퓨터에서 프로젝트를 실행해보는 단계입니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 준비물 (Prerequisites)
+1.  **Node.js 설치**: [Node.js 공식 홈페이지](https://nodejs.org/)에서 18 버전 이상을 설치해주세요.
+2.  **코드 에디터**: VS Code(Visual Studio Code)를 추천합니다.
 
-## Learn More
+### 설치 및 실행 단계
+1.  **코드 내려받기**: GitHub 저장소를 본인의 컴퓨터로 가져옵니다.
+2.  **터미널 열기**: 프로젝트 폴더에서 터미널(또는 CMD)을 엽니다.
+3.  **패키지 설치**: 아래 명령어를 입력해 필요한 도구들을 설치합니다.
+    ```bash
+    npm install
+    ```
+4.  **환경변수 설정**: `.env.example` 파일을 복사해 `.env` 파일을 만들고 내용을 채웁니다. (5번 섹션 참고)
+5.  **개발 서버 실행**: 아래 명령어를 입력하고 브라우저에서 `http://localhost:3000` 접속!
+    ```bash
+    npm run dev
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 5. 환경변수 설명
+`.env` 파일은 데이터베이스 주소나 비밀키 같은 중요한 정보를 담는 파일입니다. 아래 항목들을 채워야 합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+*   **DATABASE_URL**: [Neon.tech](https://neon.tech/)에 가입하고 프로젝트를 생성한 뒤, 'Connection String'을 복사해서 넣으세요.
+*   **AUTH_SECRET**: 보안을 위한 랜덤 문자열입니다. 터미널에 `npx auth secret`을 입력해 나온 값을 넣으세요.
+*   **BLOB_READ_WRITE_TOKEN**: Vercel 홈페이지의 Storage 탭에서 Blob 저장소를 만들고 받은 토큰을 넣으세요.
+*   **NEXT_PUBLIC_APP_URL**: 로컬에서는 `http://localhost:3000`, 배포 후에는 실제 사이트 주소를 넣으세요.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 6. 주요 명령어
+터미널에서 자주 사용하게 될 명령어들입니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*   `npm run dev`: 개발 모드로 사이트를 실행합니다. (수정하면 바로 반영됨)
+*   `npm run build`: 실제 서비스에 올릴 수 있도록 최적화된 결과물을 만듭니다.
+*   `npm run start`: 빌드된 결과물을 실행합니다.
+*   `npx drizzle-kit push`: 작성한 데이터베이스 구조(Schema)를 실제 Neon DB에 반영합니다.
+
+---
+
+## 7. 배포 가이드 (Vercel)
+만든 사이트를 인터넷 세상에 공개하는 가장 쉬운 방법입니다.
+
+1.  [Vercel](https://vercel.com/)에 가입하고 GitHub 계정을 연결합니다.
+2.  **Add New -> Project**를 누르고 이 저장소(GitHub repo)를 선택합니다.
+3.  **Environment Variables** 섹션에 위에 정리한 `.env` 내용들을 똑같이 입력합니다.
+4.  **Deploy** 버튼을 누르면 끝! 몇 분 뒤면 주소가 생성됩니다.
+
+---
+
+## 8. 프로젝트 구조 이해하기 (팁)
+
+*   **라우트 그룹**: 폴더 이름에 `(name)`처럼 괄호가 있으면 주소창에는 나타나지 않지만, 페이지들을 그룹화하거나 다른 레이아웃을 적용할 때 쓰입니다.
+*   **서버 컴포넌트**: 기본적으로 모든 페이지는 서버에서 미리 그려서 내려보냅니다. 속도가 빠르고 보안에 좋습니다.
+*   **클라이언트 컴포넌트**: 버튼 클릭이나 입력 창처럼 사용자 인터랙션이 필요한 경우 파일 맨 위에 `'use client'`를 적어줍니다.
+
+궁금한 점이 있다면 언제든 프로젝트 관리자에게 문의하세요!

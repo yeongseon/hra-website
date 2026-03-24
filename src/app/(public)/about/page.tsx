@@ -1,6 +1,19 @@
+/**
+ * 소개 페이지 (src/app/(public)/about/page.tsx)
+ * 
+ * HRA(Human Renaissance Academy)의 기본 정보를 보여주는 페이지입니다.
+ * - HRA 미션 및 설명
+ * - 핵심 가치 4가지 (인문학, 기술, 공동체, 실천)
+ * - 연혁 (설립, 1기, 2기)
+ */
+
 import { BookOpen, Cpu, Users, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 
+/**
+ * SEO 최적화: 이 페이지가 검색엔진에 어떻게 표시될지 설정
+ * 페이지 제목은 "소개"로 표시됨
+ */
 export const metadata: Metadata = {
   title: "소개",
 };
@@ -8,18 +21,21 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-7xl px-6">
+      {/* 소개 페이지 메인 제목과 설명 */}
       <section className="py-20 md:py-32">
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
-           HRA 소개
-         </h1>
-         <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
-           HRA는 인문학과 기술의 융합을 탐구하며, 인간 르네상스를 지향하는 대학생 교육 프로그램입니다.
-         </p>
-      </section>
+         <h1 className="text-4xl font-bold tracking-tight md:text-6xl text-white">
+            HRA 소개
+          </h1>
+          {/* 프로그램 한 줄 설명 */}
+          <p className="mt-6 text-xl text-gray-400 max-w-3xl leading-relaxed">
+            HRA는 인문학과 기술의 융합을 탐구하며, 인간 르네상스를 지향하는 대학생 교육 프로그램입니다.
+          </p>
+       </section>
 
-      <section className="py-16 border-t border-white/10">
-         <h2 className="text-2xl font-semibold mb-12">핵심 가치</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+       {/* 핵심 가치 섹션: 4개 항목 (인문학, 기술, 공동체, 실천) */}
+       <section className="py-16 border-t border-white/10">
+          <h2 className="text-2xl font-semibold mb-12">핵심 가치</h2>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
             <BookOpen className="w-8 h-8 mb-4 text-gray-300" />
              <h3 className="text-xl font-medium mb-2">
@@ -59,9 +75,10 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="py-16 border-t border-white/10">
-         <h2 className="text-2xl font-semibold mb-12">연혁</h2>
-        <div className="space-y-8 pl-4 border-l-2 border-white/10">
+       <section className="py-16 border-t border-white/10">
+          <h2 className="text-2xl font-semibold mb-12">연혁</h2>
+         {/* 타임라인: 2023 설립 → 2024 1기 → 2025 2기 */}
+         <div className="space-y-8 pl-4 border-l-2 border-white/10">
           <div className="relative">
             <div className="absolute w-3 h-3 bg-white rounded-full -left-[23px] top-1.5" />
             <div className="text-gray-400 mb-1">2023</div>

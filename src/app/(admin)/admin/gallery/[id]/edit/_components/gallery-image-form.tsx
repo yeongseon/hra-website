@@ -1,3 +1,21 @@
+/**
+ * 갤러리 이미지 추가 폼 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 앨범에 이미지를 추가하는 폼
+ * - 이미지 URL, 대체 텍스트(alt), 정렬 순서 입력
+ * - Vercel Blob 업로드 기능 (TODO로 표시됨 - 아직 미구현)
+ * - 현재는 URL 수동 입력 방식 사용
+ *
+ * 📌 클라이언트 컴포넌트 이유: 폼 제출, 상태 관리 필요
+ * 
+ * 📌 Vercel Blob 이미지 업로드 흐름 (향후 구현 예정):
+ * 1. 사용자가 이미지 파일 선택
+ * 2. 클라이언트에서 Vercel Blob API로 파일 업로드
+ * 3. Blob에서 이미지 URL 반환
+ * 4. 반환된 URL을 폼에 자동으로 채우고 서버 액션 호출
+ * 5. DB에 이미지 정보 저장
+ */
+
 "use client";
 
 import { useActionState } from "react";
@@ -19,6 +37,7 @@ type GalleryImageFormProps = {
 
 export function GalleryImageForm({ galleryId, action }: GalleryImageFormProps) {
   const [state, formAction, isPending] = useActionState(
+    // ⚙️ 서버 액션 호출 - 폼 데이터를 서버로 전송하여 이미지 추가
     async (_prevState: GalleryActionState, formData: FormData) => {
       const nextFormData = new FormData();
 
@@ -26,6 +45,7 @@ export function GalleryImageForm({ galleryId, action }: GalleryImageFormProps) {
         nextFormData.append(key, value);
       }
 
+      // 🔑 갤러리 ID를 폼 데이터에 추가 (어느 앨범에 이미지를 추가할지 식별)
       nextFormData.set("galleryId", galleryId);
       return action(nextFormData);
     },

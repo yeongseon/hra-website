@@ -1,3 +1,12 @@
+/**
+ * 기수 수정 페이지
+ *
+ * 역할: 관리자가 기존 기수의 정보를 수정할 수 있는 페이지
+ * - URL의 id 파라미터로 기수 조회
+ * - 수정 폼에 기존 데이터 미리 채우기
+ * - 수정 완료 시 DB에 업데이트
+ */
+
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { buttonVariants } from "@/components/ui/button";
@@ -14,16 +23,19 @@ type EditCohortPageProps = {
   params: Promise<{ id: string }>;
 };
 
+// 날짜를 HTML input[type="date"] 형식으로 변환 (YYYY-MM-DD)
 const formatDateForInput = (date: Date | null) => {
   if (!date) return "";
   return date.toISOString().split("T")[0];
 };
 
 export default async function EditCohortPage({ params }: EditCohortPageProps) {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
   const { id } = await params;
 
+  // 📊 DB에서 특정 기수 조회 - 수정할 데이터
   const [cohort] = await db
     .select()
     .from(cohorts)

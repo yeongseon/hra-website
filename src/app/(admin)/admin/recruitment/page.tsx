@@ -1,3 +1,15 @@
+/**
+ * 기수 관리 페이지 (목록)
+ *
+ * 역할: 관리자가 등록된 모든 기수를 테이블 형태로 볼 수 있는 페이지
+ * - 기수 목록 조회 (기수명, 모집 상태, 활성 여부, 기간, 지원자 수)
+ * - 각 기수의 모집 상태 변경 (UPCOMING → OPEN → CLOSED)
+ * - 각 기수별 수정/삭제 액션
+ * - "새 기수 추가" 버튼으로 새 항목 생성 가능
+ *
+ * 데이터 흐름: DB에서 모든 기수 + 각 기수의 지원서 개수 조회
+ */
+
 import Link from "next/link";
 import { desc, eq, count } from "drizzle-orm";
 import { Plus } from "lucide-react";
@@ -35,8 +47,13 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 export default async function AdminRecruitmentPage() {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
+  // 📊 DB에서 모든 기수 조회 + 각 기수의 지원서 개수 계산
+  // - cohorts: 기수 정보 테이블
+  // - applications: 지원서 테이블 (count 사용하여 지원자 수 계산)
+  // - leftJoin + groupBy: 지원자가 없는 기수도 표시 가능하게 함
   const rows = await db
     .select({
       id: cohorts.id,

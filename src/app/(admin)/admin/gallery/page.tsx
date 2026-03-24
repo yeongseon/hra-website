@@ -1,3 +1,14 @@
+/**
+ * 갤러리 관리 페이지 (목록)
+ *
+ * 역할: 관리자가 등록된 모든 앨범을 카드 형태로 볼 수 있는 페이지
+ * - 앨범 목록 조회 (썸네일, 제목, 설명, 이미지 개수)
+ * - 각 앨범별 수정/삭제 액션
+ * - "새 앨범 추가" 버튼으로 새 항목 생성 가능
+ *
+ * 데이터 흐름: DB에서 모든 앨범 + 각 앨범의 이미지 개수 조회
+ */
+
 import Link from "next/link";
 import { CalendarDays, ImageIcon, PencilLine, Plus } from "lucide-react";
 import { count, desc, eq } from "drizzle-orm";
@@ -38,8 +49,13 @@ const excerptDescription = (value: string | null, maxLength = 90) => {
 };
 
 export default async function AdminGalleryPage() {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
+  // 📊 DB에서 모든 앨범 조회 + 각 앨범의 이미지 개수 계산
+  // - galleries: 앨범 정보 테이블
+  // - galleryImages: 이미지 테이블 (count 사용하여 개수 계산)
+  // - leftJoin + groupBy: 이미지가 없는 앨범도 표시 가능하게 함
   const albums = await db
     .select({
       id: galleries.id,

@@ -1,3 +1,11 @@
+/**
+ * 모집(기수) 관리 서버 액션 파일
+ * 
+ * 역할: 관리자가 새로운 기수(모집)를 만들고, 수정하고, 삭제할 수 있게 해주는 파일입니다.
+ * 예: 2025학년도 1기 모집을 만들고, 모집 기간을 정하고, 마감하는 작업들이 여기서 일어납니다.
+ * 
+ * "use server" 표기: 이 파일의 모든 함수는 서버에서만 실행되므로, 비밀 정보(DB 접근)를 안전하게 다룰 수 있습니다.
+ */
 "use server";
 
 import { eq } from "drizzle-orm";
@@ -8,8 +16,23 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
+/**
+ * 모집 상태를 정의하는 스키마
+ * - UPCOMING: 아직 모집하지 않음 (예정 중)
+ * - OPEN: 현재 모집 중
+ * - CLOSED: 모집 마감
+ */
 const statusSchema = z.enum(["UPCOMING", "OPEN", "CLOSED"]);
 
+/**
+ * 기수 정보 유효성 검사 스키마
+ * 
+ * Zod는 입력된 데이터가 정확한 형식인지 확인하는 도구입니다.
+ * 예: "name"이 정말 텍스트인지? 길이가 100자 이하인지? 이런 것들을 체크합니다.
+ * 
+ * superRefine 부분: 단순 타입 체크를 넘어 "시작일이 종료일보다 늦으면 안 된다"는 
+ * 논리적 규칙까지 확인합니다. (날짜 교차 검증)
+ */
 const cohortSchema = z
   .object({
     name: z.string().trim().min(1, "기수명을 입력해주세요.").max(100, "기수명은 100자 이하여야 합니다."),
@@ -85,6 +108,11 @@ export type CohortActionState = {
   fieldErrors?: Record<string, string>;
 };
 
+/**
+ * 텍스트를 정리하는 헬퍼 함수
+ * 역할: 사용자가 입력한 값 앞뒤의 공백을 제거하거나, 잘못된 형식이면 빈 문자열로 반환
+ * 예: "  안녕하세요  " → "안녕하세요"
+ */
 function normalizeText(value: FormDataEntryValue | null) {
   if (typeof value !== "string") {
     return "";
@@ -92,6 +120,11 @@ function normalizeText(value: FormDataEntryValue | null) {
   return value.trim();
 }
 
+/**
+ * 문자열을 Date 객체로 변환하거나 null 반환
+ * 역할: "2025-03-24" 형식의 문자열을 날짜 객체로 변환하거나, 빈 값이면 null 반환
+ * 예: "2025-03-24" → Date(2025, 3, 24) / "" → null
+ */
 function toDateOrNull(value: string | undefined) {
   if (!value) {
     return null;
@@ -99,6 +132,11 @@ function toDateOrNull(value: string | undefined) {
   return new Date(`${value}T00:00:00`);
 }
 
+/**
+ * Zod 검증 에러를 필드별 에러로 변환하는 함수
+ * 역할: 검증에 실패한 여러 오류를 "필드명: 에러 메시지" 형태로 정렬
+ * 예: [{ path: ["name"], message: "필수 항목" }] → { name: "필수 항목" }
+ */
 function issuesToFieldErrors(issues: z.ZodIssue[]) {
   const fieldErrors: Record<string, string> = {};
 
@@ -112,6 +150,11 @@ function issuesToFieldErrors(issues: z.ZodIssue[]) {
   return fieldErrors;
 }
 
+/**
+ * 폼 데이터를 기수 정보로 파싱하고 검증하는 함수
+ * 역할: 사용자가 폼에 입력한 값들을 정리하고, cohortSchema로 검증
+ * 예: FormData → { name: "1기", order: 1, ... } (또는 에러 반환)
+ */
 function parseCohortFormData(formData: FormData) {
   return cohortSchema.safeParse({
     name: normalizeText(formData.get("name")),
@@ -126,6 +169,18 @@ function parseCohortFormData(formData: FormData) {
   });
 }
 
+/**
+ * 새로운 기수(모집) 생성 서버 액션
+ * 역할: 관리자가 새로운 기수를 만들 때 호출되는 함수
+ * 
+ * 단계:
+ * 1. 관리자 권한 확인 (requireAdmin)
+ * 2. 입력 데이터 검증 (parseCohortFormData)
+ * 3. 검증 통과 시 데이터베이스에 저장
+ * 4. 페이지 새로고침 및 리다이렉트
+ * 
+ * 반환값: { success, message, fieldErrors? } 형태의 상태 정보
+ */
 export async function createCohort(formData: FormData): Promise<CohortActionState> {
   await requireAdmin();
 
@@ -155,6 +210,18 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
   redirect("/admin/recruitment");
 }
 
+/**
+ * 기수 정보 수정 서버 액션
+ * 역할: 관리자가 이미 만들어진 기수의 정보를 변경할 때 호출되는 함수
+ * 
+ * 단계:
+ * 1. 기수 ID 유효성 확인
+ * 2. 입력 데이터 검증
+ * 3. 데이터베이스의 기수 정보 업데이트
+ * 4. 페이지 새로고침 및 리다이렉트
+ * 
+ * 매개변수: id (기수의 고유 ID), formData (수정할 정보)
+ */
 export async function updateCohort(id: string, formData: FormData): Promise<CohortActionState> {
   await requireAdmin();
 
@@ -195,6 +262,18 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
   redirect("/admin/recruitment");
 }
 
+/**
+ * 기수 삭제 서버 액션
+ * 역할: 관리자가 기수를 데이터베이스에서 삭제할 때 호출되는 함수
+ * 
+ * 단계:
+ * 1. 관리자 권한 확인
+ * 2. 기수 ID 유효성 확인
+ * 3. 데이터베이스에서 기수 삭제
+ * 4. 페이지 새로고침
+ * 
+ * 매개변수: id (삭제할 기수의 고유 ID)
+ */
 export async function deleteCohort(id: string) {
   await requireAdmin();
 
@@ -207,6 +286,17 @@ export async function deleteCohort(id: string) {
   revalidatePath("/admin/recruitment");
 }
 
+/**
+ * 모집 상태 변경 서버 액션
+ * 역할: 관리자가 모집 상태를 "예정" → "모집중" → "마감"으로 변경할 때 호출
+ * 
+ * 상태 종류:
+ * - UPCOMING: 아직 시작 전 (프로그램 소개만 보임)
+ * - OPEN: 모집 중 (지원서 접수 가능)
+ * - CLOSED: 모집 마감 (지원 불가)
+ * 
+ * 매개변수: id (기수의 고유 ID), status (변경할 모집 상태)
+ */
 export async function updateRecruitmentStatus(
   id: string,
   status: "UPCOMING" | "OPEN" | "CLOSED"

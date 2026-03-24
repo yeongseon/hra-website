@@ -1,3 +1,13 @@
+/**
+ * 기수 정보 입력 폼 컴포넌트 (클라이언트 컴포넌트)
+ *
+ * 역할: 기수 정보(이름, 설명, 시작/종료일, 모집 상태 등)를 입력하는 폼
+ * - 새 기수 생성 또는 기존 기수 수정에 사용
+ * - 에러 메시지 표시
+ *
+ * 📌 클라이언트 컴포넌트 이유: 폼 제출, 상태 관리 필요
+ */
+
 "use client";
 
 import Link from "next/link";
@@ -51,6 +61,7 @@ const statusOptions: Array<{ value: RecruitmentStatus; label: string }> = [
 ];
 
 export function CohortForm({ title, description, submitLabel, action, defaultValues }: CohortFormProps) {
+  // ⚙️ 서버 액션 호출 - 기수 정보를 서버로 전송하여 DB 저장/수정
   const [state, formAction, isPending] = useActionState(async (_prevState: CohortActionState, formData: FormData) => {
     const result = await action(formData);
     return result ?? initialState;

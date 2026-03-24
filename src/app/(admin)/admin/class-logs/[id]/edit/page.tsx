@@ -1,3 +1,12 @@
+/**
+ * 수업일지 수정 페이지
+ *
+ * 역할: 관리자가 기존 수업일지를 수정할 수 있는 페이지
+ * - URL의 id 파라미터로 수업일지 조회
+ * - 수정 폼에 기존 데이터 미리 채우기
+ * - 수정 완료 시 DB에 업데이트
+ */
+
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
@@ -14,15 +23,18 @@ type ClassLogEditPageProps = {
   params: Promise<{ id: string }>;
 };
 
+// 날짜를 HTML input[type="date"] 형식으로 변환 (YYYY-MM-DD)
 const toDateInputValue = (value: Date) => {
   return value.toISOString().slice(0, 10);
 };
 
 export default async function ClassLogEditPage({ params }: ClassLogEditPageProps) {
+  // 🔒 관리자 권한 확인
   await requireAdmin();
 
   const { id } = await params;
 
+  // 📊 DB에서 특정 수업일지 조회 - 수정할 데이터
   const [log] = await db
     .select({
       id: classLogs.id,
