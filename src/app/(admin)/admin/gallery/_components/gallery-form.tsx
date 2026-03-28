@@ -28,7 +28,6 @@ const initialState: GalleryActionState = {
 type GalleryFormValues = {
   title?: string | null;
   description?: string | null;
-  coverImageUrl?: string | null;
 };
 
 type GalleryFormProps = {
@@ -105,21 +104,6 @@ export function GalleryForm({
               name="description"
               defaultValue={defaultValues?.description ?? ""}
               className="min-h-32 border-slate-200"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="coverImageUrl" className="text-slate-700">
-              커버 이미지 URL
-            </Label>
-            {/* TODO: Replace with Vercel Blob upload */}
-            <Input
-              id="coverImageUrl"
-              name="coverImageUrl"
-              type="url"
-              placeholder="https://example.com/cover.jpg"
-              defaultValue={defaultValues?.coverImageUrl ?? ""}
-              className="border-slate-200"
             />
           </div>
 

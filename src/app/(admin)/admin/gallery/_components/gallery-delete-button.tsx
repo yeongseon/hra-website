@@ -26,10 +26,10 @@ import {
 import { deleteGallery } from "@/features/gallery/actions";
 
 type GalleryDeleteButtonProps = {
-  id: string;
+  slug: string;
 };
 
-export function GalleryDeleteButton({ id }: GalleryDeleteButtonProps) {
+export function GalleryDeleteButton({ slug }: GalleryDeleteButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -57,7 +57,7 @@ export function GalleryDeleteButton({ id }: GalleryDeleteButtonProps) {
             onClick={() => {
               startTransition(async () => {
                 // ⚙️ 서버 액션 호출 - 앨범 삭제 (포함된 이미지도 함께 삭제됨)
-                await deleteGallery(id);
+                await deleteGallery(slug);
                 setIsOpen(false);
                 router.refresh(); // 페이지 새로고침 (목록 업데이트)
               });

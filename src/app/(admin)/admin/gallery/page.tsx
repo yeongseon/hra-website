@@ -11,7 +11,6 @@
 
 import Link from "next/link";
 import { CalendarDays, ImageIcon, PencilLine, Plus } from "lucide-react";
-import { count, desc, eq } from "drizzle-orm";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -23,20 +22,19 @@ import {
 } from "@/components/ui/card";
 import { GalleryDeleteButton } from "@/app/(admin)/admin/gallery/_components/gallery-delete-button";
 import { requireAdmin } from "@/lib/admin";
-import { db } from "@/lib/db";
-import { galleries, galleryImages } from "@/lib/db/schema";
+import { getAllGalleries } from "@/lib/content/gallery";
 
-export const dynamic = "force-dynamic";
+const formatCreatedDate = (isoDate: string) => {
+  const parsedDate = new Date(isoDate);
 
-const formatCreatedDate = (date: Date) => {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(date);
+  }).format(parsedDate);
 };
 
-const excerptDescription = (value: string | null, maxLength = 90) => {
+const excerptDescription = (value: string | undefined, maxLength = 90) => {
   if (!value) {
     return "설명이 아직 없습니다.";
   }
@@ -52,23 +50,7 @@ export default async function AdminGalleryPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();
 
-  // 📊 DB에서 모든 앨범 조회 + 각 앨범의 이미지 개수 계산
-  // - galleries: 앨범 정보 테이블
-  // - galleryImages: 이미지 테이블 (count 사용하여 개수 계산)
-  // - leftJoin + groupBy: 이미지가 없는 앨범도 표시 가능하게 함
-  const albums = await db
-    .select({
-      id: galleries.id,
-      title: galleries.title,
-      description: galleries.description,
-      coverImageUrl: galleries.coverImageUrl,
-      createdAt: galleries.createdAt,
-      imageCount: count(galleryImages.id),
-    })
-    .from(galleries)
-    .leftJoin(galleryImages, eq(galleryImages.galleryId, galleries.id))
-    .groupBy(galleries.id)
-    .orderBy(desc(galleries.createdAt));
+  const albums = await getAllGalleries();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-6 px-4 sm:px-6 py-6 sm:py-10">
@@ -95,10 +77,10 @@ export default async function AdminGalleryPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {albums.map((album) => {
-            const imageCount = Number(album.imageCount ?? 0);
+            const imageCount = album.images.length;
 
             return (
-              <Card key={album.id} className="overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+              <Card key={album.slug} className="overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
                 {album.coverImageUrl ? (
                   <img
                     src={album.coverImageUrl}
@@ -131,7 +113,7 @@ export default async function AdminGalleryPage() {
 
                 <CardFooter className="flex items-center justify-between gap-2 border-t border-slate-100 py-4">
                   <Link
-                    href={`/admin/gallery/${album.id}/edit`}
+                    href={`/admin/gallery/${album.slug}/edit`}
                     className={buttonVariants({
                       variant: "outline",
                       className: "border-slate-200 text-slate-700",
@@ -141,7 +123,7 @@ export default async function AdminGalleryPage() {
                     수정
                   </Link>
 
-                  <GalleryDeleteButton id={album.id} />
+                  <GalleryDeleteButton slug={album.slug} />
                 </CardFooter>
               </Card>
             );

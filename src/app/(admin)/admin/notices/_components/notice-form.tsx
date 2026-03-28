@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 
 // 서버 액션의 반환 타입 정의
 type NoticeActionResult = {
@@ -133,13 +133,11 @@ export function NoticeForm({
             <Label htmlFor="content" className="text-slate-700">
               내용
             </Label>
-            <Textarea
-              id="content"
+            <MarkdownEditor
               name="content"
-              required
-              // defaultValue — 수정 시 기존 내용을 폼에 미리 표시
               defaultValue={defaultValues?.content ?? ""}
-              className="min-h-56 border-slate-300"
+              required
+              placeholder="마크다운으로 작성하세요..."
             />
           </div>
 

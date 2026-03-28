@@ -36,6 +36,8 @@ type CohortFormValues = {
   endDate?: string;
   recruitmentStartDate?: string;
   recruitmentEndDate?: string;
+  googleFormUrl?: string | null;
+  googleSheetId?: string | null;
   recruitmentStatus?: RecruitmentStatus;
   isActive?: boolean;
   order?: number;
@@ -214,6 +216,42 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                 />
                 활성 기수로 표시
               </label>
+            </div>
+
+            <div className="space-y-5 border-t border-slate-200 pt-5">
+              <div className="space-y-2">
+                <Label htmlFor="googleFormUrl">구글폼 URL</Label>
+                <Input
+                  id="googleFormUrl"
+                  name="googleFormUrl"
+                  placeholder="https://forms.google.com/..."
+                  defaultValue={defaultValues?.googleFormUrl ?? ""}
+                  className="h-10"
+                />
+                <p className="text-xs text-slate-500">
+                  모집 상태가 "OPEN"일 때 공개 모집 페이지의 "지원하기" 버튼이 이 링크로 연결됩니다.
+                </p>
+                {state.fieldErrors?.googleFormUrl ? (
+                  <p className="text-xs text-red-600">{state.fieldErrors.googleFormUrl}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="googleSheetId">구글 시트 ID</Label>
+                <Input
+                  id="googleSheetId"
+                  name="googleSheetId"
+                  placeholder="스프레드시트 URL에서 /d/ 뒤의 문자열"
+                  defaultValue={defaultValues?.googleSheetId ?? ""}
+                  className="h-10"
+                />
+                <p className="text-xs text-slate-500">
+                  구글폼 응답이 저장되는 시트를 연동할 때 사용하는 값입니다. 비워둬도 저장할 수 있습니다.
+                </p>
+                {state.fieldErrors?.googleSheetId ? (
+                  <p className="text-xs text-red-600">{state.fieldErrors.googleSheetId}</p>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">

@@ -33,12 +33,12 @@ import {
 import { deleteNotice, togglePin, toggleStatus } from "@/features/notices/actions";
 
 type NoticeRowActionsProps = {
-  id: string;
+  slug: string;
   pinned: boolean;
   status: "DRAFT" | "PUBLISHED";
 };
 
-export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) {
+export function NoticeRowActions({ slug, pinned, status }: NoticeRowActionsProps) {
   const router = useRouter();
   // useState — 삭제 확인 대화상자 열림/닫힘 상태 관리
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -62,7 +62,7 @@ export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) 
   return (
     <div className="flex items-center gap-2">
       {/* 수정 버튼 — 수정 페이지로 이동 */}
-      <Button variant="outline" size="sm" render={<Link href={`/admin/notices/${id}/edit`} />}>
+      <Button variant="outline" size="sm" render={<Link href={`/admin/notices/${slug}/edit`} />}>
         수정
       </Button>
       
@@ -71,7 +71,7 @@ export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) 
         variant="outline"
         size="sm"
         disabled={isPending}
-        onClick={() => runAction(() => togglePin(id))}
+        onClick={() => runAction(() => togglePin(slug))}
       >
         {/* 현재 고정 상태에 따라 아이콘과 텍스트 변경 */}
         {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
@@ -83,7 +83,7 @@ export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) 
         variant="outline"
         size="sm"
         disabled={isPending}
-        onClick={() => runAction(() => toggleStatus(id))}
+        onClick={() => runAction(() => toggleStatus(slug))}
       >
         {/* 현재 상태에 따라 텍스트 변경 */}
         {status === "DRAFT" ? "게시" : "임시저장"}
@@ -114,7 +114,7 @@ export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) 
               disabled={isPending}
               onClick={() => {
                 runAction(async () => {
-                  const result = await deleteNotice(id);
+                  const result = await deleteNotice(slug);
                   // 성공 시 대화상자 닫기
                   if (result.success) {
                     setIsDeleteOpen(false);

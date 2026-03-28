@@ -1,25 +1,7 @@
-/**
- * 갤러리 이미지 추가 폼 컴포넌트 (클라이언트 컴포넌트)
- *
- * 역할: 앨범에 이미지를 추가하는 폼
- * - 이미지 URL, 대체 텍스트(alt), 정렬 순서 입력
- * - Vercel Blob 업로드 기능 (TODO로 표시됨 - 아직 미구현)
- * - 현재는 URL 수동 입력 방식 사용
- *
- * 📌 클라이언트 컴포넌트 이유: 폼 제출, 상태 관리 필요
- * 
- * 📌 Vercel Blob 이미지 업로드 흐름 (향후 구현 예정):
- * 1. 사용자가 이미지 파일 선택
- * 2. 클라이언트에서 Vercel Blob API로 파일 업로드
- * 3. Blob에서 이미지 URL 반환
- * 4. 반환된 URL을 폼에 자동으로 채우고 서버 액션 호출
- * 5. DB에 이미지 정보 저장
- */
-
 "use client";
 
-import { useActionState } from "react";
-import { AlertCircle, CheckCircle2, Plus } from "lucide-react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { AlertCircle, CheckCircle2, ImagePlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,25 +13,39 @@ const initialState: GalleryActionState = {
 };
 
 type GalleryImageFormProps = {
-  galleryId: string;
   action: (formData: FormData) => Promise<GalleryActionState>;
 };
 
-export function GalleryImageForm({ galleryId, action }: GalleryImageFormProps) {
-  const [state, formAction, isPending] = useActionState(
-    // ⚙️ 서버 액션 호출 - 폼 데이터를 서버로 전송하여 이미지 추가
-    async (_prevState: GalleryActionState, formData: FormData) => {
-      const nextFormData = new FormData();
+export function GalleryImageForm({ action }: GalleryImageFormProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-      for (const [key, value] of formData.entries()) {
-        nextFormData.append(key, value);
+  const previewUrl = useMemo(() => {
+    if (!selectedFile) {
+      return null;
+    }
+
+    return URL.createObjectURL(selectedFile);
+  }, [selectedFile]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const [state, formAction, isPending] = useActionState(
+    async (_prevState: GalleryActionState, formData: FormData) => {
+      const result = await action(formData);
+
+      if (result.success) {
+        setSelectedFile(null);
       }
 
-      // 🔑 갤러리 ID를 폼 데이터에 추가 (어느 앨범에 이미지를 추가할지 식별)
-      nextFormData.set("galleryId", galleryId);
-      return action(nextFormData);
+      return result;
     },
-    initialState
+    initialState,
   );
 
   return (
@@ -73,17 +69,20 @@ export function GalleryImageForm({ galleryId, action }: GalleryImageFormProps) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="url" className="text-slate-700">
-            이미지 URL
+          <Label htmlFor="image" className="text-slate-700">
+            이미지 파일
           </Label>
-          {/* TODO: Replace with Vercel Blob upload */}
           <Input
-            id="url"
-            name="url"
-            type="url"
+            id="image"
+            name="image"
+            type="file"
             required
-            placeholder="https://example.com/image.jpg"
+            accept="image/*"
             className="border-slate-200 bg-white"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0] ?? null;
+              setSelectedFile(file);
+            }}
           />
         </div>
 
@@ -113,6 +112,16 @@ export function GalleryImageForm({ galleryId, action }: GalleryImageFormProps) {
           />
         </div>
       </div>
+
+      {previewUrl ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 text-sm text-slate-600">
+            <ImagePlus className="size-4" />
+            업로드 미리보기
+          </div>
+          <img src={previewUrl} alt="업로드 미리보기" className="h-56 w-full object-cover" />
+        </div>
+      ) : null}
 
       <Button type="submit" disabled={isPending} className="bg-slate-900 hover:bg-slate-700">
         <Plus className="mr-1 size-4" />

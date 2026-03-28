@@ -113,6 +113,8 @@ export const cohorts = pgTable("cohorts", {
     .default("UPCOMING"), // 모집 상태 (기본값: 곧 시작될 예정)
   recruitmentStartDate: timestamp("recruitment_start_date"), // 모집 시작 날짜
   recruitmentEndDate: timestamp("recruitment_end_date"), // 모집 종료 날짜
+  googleFormUrl: text("google_form_url"), // 이 기수의 구글폼 링크 (선택사항, 지원 버튼 연결에 사용)
+  googleSheetId: text("google_sheet_id"), // 이 기수와 연결된 구글 시트 ID (선택사항, 응답 데이터 조회에 사용)
   isActive: boolean("is_active").notNull().default(true), // 현재 활성 기수인지 여부 (기본값: 활성)
   order: integer("order").notNull().default(0), // 기수 표시 순서 (숫자가 작을수록 먼저 표시됨)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 기수 생성 시간

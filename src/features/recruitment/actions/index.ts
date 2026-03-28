@@ -45,6 +45,14 @@ const cohortSchema = z
     endDate: z.string().trim().optional(),
     recruitmentStartDate: z.string().trim().optional(),
     recruitmentEndDate: z.string().trim().optional(),
+    googleFormUrl: z
+      .string()
+      .trim()
+      .optional()
+      .refine((value) => !value || value.startsWith("https://"), {
+        message: "구글폼 URL은 https://로 시작해야 합니다.",
+      }),
+    googleSheetId: z.string().trim().optional(),
     recruitmentStatus: statusSchema,
     isActive: z.boolean(),
     order: z.coerce
@@ -137,7 +145,7 @@ function toDateOrNull(value: string | undefined) {
  * 역할: 검증에 실패한 여러 오류를 "필드명: 에러 메시지" 형태로 정렬
  * 예: [{ path: ["name"], message: "필수 항목" }] → { name: "필수 항목" }
  */
-function issuesToFieldErrors(issues: z.ZodIssue[]) {
+function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: string }>) {
   const fieldErrors: Record<string, string> = {};
 
   for (const issue of issues) {
@@ -163,6 +171,8 @@ function parseCohortFormData(formData: FormData) {
     endDate: normalizeText(formData.get("endDate")) || undefined,
     recruitmentStartDate: normalizeText(formData.get("recruitmentStartDate")) || undefined,
     recruitmentEndDate: normalizeText(formData.get("recruitmentEndDate")) || undefined,
+    googleFormUrl: normalizeText(formData.get("googleFormUrl")) || undefined,
+    googleSheetId: normalizeText(formData.get("googleSheetId")) || undefined,
     recruitmentStatus: normalizeText(formData.get("recruitmentStatus")),
     isActive: formData.get("isActive") === "on",
     order: normalizeText(formData.get("order")) || "0",
@@ -201,6 +211,8 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
     endDate: toDateOrNull(parsed.data.endDate),
     recruitmentStartDate: toDateOrNull(parsed.data.recruitmentStartDate),
     recruitmentEndDate: toDateOrNull(parsed.data.recruitmentEndDate),
+    googleFormUrl: parsed.data.googleFormUrl ?? null,
+    googleSheetId: parsed.data.googleSheetId ?? null,
     recruitmentStatus: parsed.data.recruitmentStatus,
     isActive: parsed.data.isActive,
     order: parsed.data.order,
@@ -252,6 +264,8 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
       endDate: toDateOrNull(parsed.data.endDate),
       recruitmentStartDate: toDateOrNull(parsed.data.recruitmentStartDate),
       recruitmentEndDate: toDateOrNull(parsed.data.recruitmentEndDate),
+      googleFormUrl: parsed.data.googleFormUrl ?? null,
+      googleSheetId: parsed.data.googleSheetId ?? null,
       recruitmentStatus: parsed.data.recruitmentStatus,
       isActive: parsed.data.isActive,
       order: parsed.data.order,

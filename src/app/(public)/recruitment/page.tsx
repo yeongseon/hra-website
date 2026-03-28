@@ -95,6 +95,7 @@ export default async function RecruitmentPage() {
       recruitmentStatus: cohorts.recruitmentStatus,
       recruitmentStartDate: cohorts.recruitmentStartDate,
       recruitmentEndDate: cohorts.recruitmentEndDate,
+      googleFormUrl: cohorts.googleFormUrl,
     })
     .from(cohorts)
     .where(eq(cohorts.isActive, true))
@@ -183,11 +184,11 @@ export default async function RecruitmentPage() {
                   </div>
 
                   {/* 
-                    "지원하기" 버튼은 모집 상태가 "OPEN"일 때만 표시됩니다.
-                    버튼 클릭 시 지원서 작성을 위한 구글폼 외부 링크로 이동합니다.
+                    "지원하기" 버튼은 모집 상태가 "OPEN"이고 구글폼 URL이 있을 때만 표시됩니다.
+                    버튼 클릭 시 각 기수에 설정된 구글폼 외부 링크로 이동합니다.
                   */}
-                  {cohort.recruitmentStatus === "OPEN" ? (
-                    <Link href="https://forms.google.com/hra-application" target="_blank" rel="noopener noreferrer">
+                  {cohort.recruitmentStatus === "OPEN" && cohort.googleFormUrl ? (
+                    <Link href={cohort.googleFormUrl} target="_blank" rel="noopener noreferrer">
                       <Button className="h-10 bg-emerald-500 text-black hover:bg-emerald-400">
                         지원하기
                         <ArrowRight className="size-4" />
