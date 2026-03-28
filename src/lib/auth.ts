@@ -19,6 +19,8 @@
  */
 
 import NextAuth from "next-auth";
+import { compare } from "bcryptjs";
+import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Kakao from "next-auth/providers/kakao";
 import { db } from "@/lib/db";
@@ -30,12 +32,12 @@ import { eq } from "drizzle-orm";
  * NextAuth 인증 시스템 설정
  * ========================================
  * 
- * 주요 설정:
- * 1. session.strategy: JWT 방식으로 세션 관리
- * 2. pages.signIn: 로그인 페이지 경로
- * 3. providers: 구글, 카카오 소셜 로그인
- * 4. callbacks: 로그인 과정 중 특정 시점에 실행되는 함수들
- */
+  * 주요 설정:
+  * 1. session.strategy: JWT 방식으로 세션 관리
+  * 2. pages.signIn: 로그인 페이지 경로
+  * 3. providers: 구글, 카카오, 이메일/비밀번호 로그인
+  * 4. callbacks: 로그인 과정 중 특정 시점에 실행되는 함수들
+  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
@@ -60,6 +62,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.AUTH_KAKAO_ID!,
       clientSecret: process.env.AUTH_KAKAO_SECRET!,
     }),
+    /**
+     * 이메일/비밀번호 로그인 프로바이더
+     *
+     * 이 방식은 OAuth(구글/카카오)와 달리, 우리 DB에 저장된 비밀번호 해시를 직접 검증합니다.
+     * 비밀번호 원문은 절대 DB에 저장하지 않고, bcrypt 해시(passwordHash)와 비교해서 로그인 여부를 판단합니다.
+     *
+     * 동작 순서:
+     * 1) 사용자가 입력한 이메일/비밀번호를 받습니다.
+     * 2) 이메일로 사용자를 조회합니다.
+     * 3) 저장된 passwordHash와 입력 비밀번호를 compare로 검증합니다.
+     * 4) 검증 성공 시 NextAuth 세션 생성을 위해 사용자 정보를 반환합니다.
+     */
+    Credentials({
+      credentials: {
+        email: { label: "이메일", type: "email" },
+        password: { label: "비밀번호", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        if (
+          typeof credentials.email !== "string" ||
+          typeof credentials.password !== "string"
+        ) {
+          return null;
+        }
+
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, credentials.email),
+        });
+
+        if (!user || !user.passwordHash) return null;
+
+        const isValid = await compare(credentials.password, user.passwordHash);
+        if (!isValid) return null;
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          role: user.role,
+        };
+      },
+    }),
   ],
   callbacks: {
     /**
@@ -69,6 +115,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * 이미 있는 사용자면 그냥 로그인됩니다.
      */
     async signIn({ user, account }) {
+      if (account?.provider === "credentials") return true;
+
       if (!account || !user.email) return false;
 
       const existingUser = await db.query.users.findFirst({
