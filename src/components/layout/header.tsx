@@ -1,9 +1,9 @@
 /**
- * 헤더 컴포넌트 - 사이트 상단의 네비게이션 바
+ * 헤더 컴포넌트 - 사이트 상단의 내비게이션 바
  *
  * 이 컴포넌트는 HRA 웹사이트의 맨 위에 표시되는 헤더를 만듭니다.
  * - 로고(HRA) 표시
- * - PC 화면에서는 가로로 네비게이션 링크 표시
+ * - PC 화면에서는 가로로 내비게이션 링크 표시
  * - 모바일 화면에서는 메뉴 아이콘으로 햄버거 메뉴 제공
  * - 현재 페이지를 표시해주는 액티브 상태 관리
  * - 로그인/로그아웃 버튼 표시
@@ -41,7 +41,7 @@ type HeaderProps = {
 };
 
 /**
- * 네비게이션 링크 배열
+ * 내비게이션 링크 배열
  * 사이트의 주요 페이지들을 여기에 정의합니다.
  * 각 객체는 { href: "이동할 주소", label: "화면에 보여줄 텍스트" } 형태입니다.
  */
@@ -62,7 +62,7 @@ const navLinks = [
  */
 export function Header({ session }: HeaderProps) {
   // 현재 페이지의 URL 경로를 가져옵니다. (예: "/recruitment")
-  // 이를 통해 어느 네비게이션 링크가 활성화되었는지 판단합니다.
+  // 이를 통해 어느 내비게이션 링크가 활성화되었는지 판단합니다.
   const pathname = usePathname();
   
   // 모바일 메뉴가 열려있는지 여부를 관리하는 상태
@@ -77,7 +77,7 @@ export function Header({ session }: HeaderProps) {
   const isLoggedIn = !!user;
   const isAdmin = user?.role === "ADMIN";
 
-  // 역할에 따라 추가되는 네비게이션 링크
+  // 역할에 따라 추가되는 내비게이션 링크
   // MEMBER/ADMIN: 수업일지 링크 추가
   // ADMIN: 관리자 링크 추가
   const roleLinks = [];
@@ -88,7 +88,7 @@ export function Header({ session }: HeaderProps) {
     roleLinks.push({ href: "/admin", label: "관리자" });
   }
 
-  // 전체 네비게이션 링크 = 기본 링크 + 역할별 링크
+  // 전체 내비게이션 링크 = 기본 링크 + 역할별 링크
   const allNavLinks = [...navLinks, ...roleLinks];
 
   /**
@@ -110,11 +110,11 @@ export function Header({ session }: HeaderProps) {
          </Link>
 
          {/* 
-           데스크톱 네비게이션: md(화면 너비 768px) 이상일 때만 표시
+           데스크톱 내비게이션: md(화면 너비 768px) 이상일 때만 표시
            모바일에서는 hidden으로 숨겨집니다.
          */}
          <div className="hidden items-center gap-6 md:flex">
-           {/* navLinks + roleLinks를 순회하며 네비게이션 버튼을 만듭니다 */}
+           {/* navLinks + roleLinks를 순회하며 내비게이션 버튼을 만듭니다 */}
            {allNavLinks.map((link) => (
              <Link
                key={link.href}

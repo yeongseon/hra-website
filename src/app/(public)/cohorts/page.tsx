@@ -11,13 +11,13 @@ type CohortStatus = "completed" | "active";
 interface Cohort {
   cohortNumber: number;
   period: string;
-  graduates: number | "진행중";
+  graduates: number | "진행 중";
   motto: string;
   status: CohortStatus;
 }
 
 const cohorts: Cohort[] = [
-  { cohortNumber: 19, period: "2025.09 - 2026.08", graduates: "진행중", motto: "새로운 도전을 향해 나아가는 19기", status: "active" },
+  { cohortNumber: 19, period: "2025.09 - 2026.08", graduates: "진행 중", motto: "새로운 도전을 향해 나아가는 19기", status: "active" },
   { cohortNumber: 18, period: "2024.09 - 2025.08", graduates: 23, motto: "함께 성장하며 미래를 그리다.", status: "completed" },
   { cohortNumber: 17, period: "2023.09 - 2024.08", graduates: 22, motto: "한계를 극복하고 성장으로 보답하다.", status: "completed" },
   { cohortNumber: 16, period: "2022.09 - 2023.08", graduates: 24, motto: "변화를 주도하는 혁신가들.", status: "completed" },
@@ -81,7 +81,7 @@ export default function CohortsPage() {
                 </h2>
                 {cohort.status === "active" ? (
                   <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-full px-3 py-1">
-                    진행중
+                    진행 중
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 rounded-full px-3 py-1">

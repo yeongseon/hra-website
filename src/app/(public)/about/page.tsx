@@ -124,7 +124,7 @@ export default function AboutPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center py-5 border-b border-white/10">
               <span className="text-gray-400 font-medium">교육 기간</span>
-              <span className="text-white text-right max-w-[60%]">52주 (매년 9월~다음해 8월까지 교실수업 40주, 합숙 캠프 7박 8일 포함)</span>
+              <span className="text-white text-right max-w-[60%]">52주 (매년 9월~다음 해 8월까지 교실수업 40주, 합숙 캠프 7박 8일 포함)</span>
             </div>
             <div className="flex justify-between items-center py-5 border-b border-white/10">
               <span className="text-gray-400 font-medium">교육 일시</span>

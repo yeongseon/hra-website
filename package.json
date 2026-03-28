@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "spell-check": "node scripts/spell-check.mjs",
+    "spell-fix": "node scripts/spell-check.mjs --fix"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -37,6 +39,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
+    "hanspell": "^0.9.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

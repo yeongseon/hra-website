@@ -104,10 +104,10 @@ export default async function MyPage() {
             <CardContent>
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-gray-400">
-                  현재 기기에서 로그아웃하시려면 상단 메뉴의 로그아웃 버튼을 이용해주세요.
+                  현재 기기에서 로그아웃하시려면 상단 메뉴의 로그아웃 버튼을 이용해 주세요.
                 </p>
                 <Badge variant="outline" className="border-white/20 text-gray-400 px-4 py-1.5 font-normal">
-                  상단 네비게이션 참조
+                  상단 내비게이션 참조
                 </Badge>
               </div>
             </CardContent>

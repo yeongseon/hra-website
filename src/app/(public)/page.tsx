@@ -30,7 +30,7 @@ export default function Home() {
            </h2>
            {/* 사이트 주제를 대표하는 큰 제목 — 모바일에서 적절한 크기로 시작 */}
            <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl md:text-7xl lg:text-8xl text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 pb-2 leading-tight">
-             배우고,<br />토론하고,<br />실행하라
+             배우고, <br />토론하고, <br />실행하라
            </h1>
            {/* 소개 텍스트 */}
            <p className="max-w-2xl text-base sm:text-lg md:text-xl text-gray-400 font-light tracking-wide px-2 leading-relaxed">

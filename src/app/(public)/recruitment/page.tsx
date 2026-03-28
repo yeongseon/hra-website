@@ -50,7 +50,7 @@ const statusMap = {
     className: "border-blue-300/50 bg-blue-500/15 text-blue-100",
   },
   OPEN: {
-    label: "접수중",
+    label: "접수 중",
     className: "border-emerald-300/50 bg-emerald-500/20 text-emerald-100",
   },
   CLOSED: {
