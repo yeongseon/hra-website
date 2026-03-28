@@ -71,10 +71,10 @@ export default async function AdminGalleryPage() {
     .orderBy(desc(galleries.createdAt));
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-6 py-10">
+    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">갤러리 관리</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">갤러리 관리</h1>
           <p className="text-sm text-slate-500">앨범을 추가하고 이미지를 관리할 수 있습니다.</p>
         </div>
         <Link

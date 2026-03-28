@@ -59,9 +59,9 @@ export default async function AdminClassLogsPage() {
     .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">수업일지 관리</h1>
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">수업일지 관리</h1>
         <Button render={<Link href="/admin/class-logs/new" />}>새 수업일지 작성</Button>
       </div>
 
@@ -70,6 +70,7 @@ export default async function AdminClassLogsPage() {
           <CardTitle className="text-base text-slate-900">전체 수업일지 {rows.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
           <Table>
             <TableHeader>
                <TableRow>
@@ -106,6 +107,7 @@ export default async function AdminClassLogsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </section>

@@ -16,7 +16,7 @@ import Link from "next/link";
 export function Footer() {
    return (
      <footer className="border-t border-white/10 bg-black py-12">
-       <div className="mx-auto max-w-7xl px-6">
+       <div className="mx-auto max-w-7xl px-4 sm:px-6">
          {/* 
            푸터 콘텐츠: 3열 그리드 레이아웃
            - 첫 번째 열: HRA 소개
@@ -52,6 +52,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/faculty"
+                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                >
+                  교수진
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/recruitment"
                   className="text-sm text-gray-500 transition-colors hover:text-white"
                 >
@@ -64,6 +72,14 @@ export function Footer() {
                   className="text-sm text-gray-500 transition-colors hover:text-white"
                 >
                   공지사항
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/resources"
+                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                >
+                  자료실
                 </Link>
               </li>
              </ul>

@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
   Menu,
   Users,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +55,7 @@ const navItems = [
   { href: "/admin/recruitment", label: "기수 관리", icon: Users },
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/applications", label: "지원서", icon: FileText },
+  { href: "/admin/users", label: "회원 관리", icon: UserCog },
   { href: "/admin/docs", label: "개발 문서", icon: BookOpen },
 ];
 

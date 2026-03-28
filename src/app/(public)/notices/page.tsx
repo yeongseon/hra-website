@@ -59,16 +59,16 @@ export default async function NoticesPage() {
    );
 
    return (
-     <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
+     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
        {/* 공지사항 페이지 헤더 */}
-       <section className="mb-14 space-y-4">
+       <section className="mb-10 sm:mb-14 space-y-4">
         <Badge
           variant="outline"
           className="border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
         >
           HRA NOTICE
         </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
           공지사항
         </h1>
         <p className="max-w-2xl text-sm text-zinc-400 md:text-base">

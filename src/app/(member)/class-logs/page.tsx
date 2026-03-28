@@ -68,10 +68,10 @@ export default async function ClassLogsPage() {
     .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10 md:py-14">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10 md:py-14">
       {/* 페이지 제목과 수업일지 개수 표시 */}
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">수업일지</h1>
+      <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">수업일지</h1>
         {/* Badge: 전체 수업일지 개수를 표시하는 배지 */}
         <Badge variant="outline" className="border-white/20 text-white/80">
           {logs.length}개

@@ -51,7 +51,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">대시보드</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900">대시보드</h1>
         <p className="mt-1 text-sm text-slate-600">HRA 운영 현황을 한눈에 확인하세요.</p>
       </div>
 

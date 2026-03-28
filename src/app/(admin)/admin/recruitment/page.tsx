@@ -71,9 +71,9 @@ export default async function AdminRecruitmentPage() {
     .orderBy(desc(cohorts.order), desc(cohorts.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">기수 관리</h1>
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">기수 관리</h1>
         <Link
           href="/admin/recruitment/new"
           className={buttonVariants({ className: "bg-slate-900 hover:bg-slate-700" })}
@@ -87,6 +87,7 @@ export default async function AdminRecruitmentPage() {
           <CardTitle className="text-base text-slate-900">전체 기수 {rows.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
           <Table>
             <TableHeader>
                <TableRow>
@@ -142,6 +143,7 @@ export default async function AdminRecruitmentPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </section>

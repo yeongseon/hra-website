@@ -36,5 +36,11 @@ export const config = {
     // /class-logs/ 경로와 그 하위 모든 페이지에서 미들웨어 실행
     // 예: /class-logs, /class-logs/2024-01-15 등
     "/class-logs/:path*",
+
+    // /resources/ 경로: 자료실은 로그인한 회원만 접근 가능
+    "/resources/:path*",
+
+    // /mypage/ 경로: 마이페이지는 로그인한 회원만 접근 가능
+    "/mypage/:path*",
   ],
 };

@@ -101,26 +101,29 @@ export default async function RecruitmentPage() {
     .orderBy(asc(cohorts.order), asc(cohorts.createdAt));
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       {/* 페이지 상단: 제목 영역 */}
-      <section className="mb-16 space-y-4">
+      <section className="mb-10 sm:mb-16 space-y-4">
         <Badge
           variant="outline"
           className="border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
         >
           HRA RECRUITMENT
         </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-semibold tracking-tight text-white">
           모집안내
         </h1>
         <p className="max-w-3xl text-sm text-zinc-300 md:text-base">
-          HRA는 성장에 진심인 사람을 기다립니다. 아래 절차를 확인하고 원하는 기수에
-          지원해보세요.
+          HRA는 성장에 진심인 사람을 기다립니다.
         </p>
+        <ul className="mt-4 space-y-2 text-sm text-zinc-400 list-disc list-inside">
+          <li>지원서 제출은 구글폼을 연동하는 방식으로 운영됩니다.</li>
+          <li>면접 일정은 현기수가 별도로 관리하며, 홈페이지에는 별도 업로드하지 않습니다.</li>
+        </ul>
       </section>
 
       {/* 모집 절차 표시: processSteps 배열의 각 항목을 카드로 렌더링 */}
-      <section className="mb-16 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-10 sm:mb-16 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {processSteps.map((item) => (
           <Card key={item.step} className="border-white/10 bg-zinc-950/80 py-0">
             <CardHeader className="space-y-2 pb-3 pt-5">
@@ -181,11 +184,10 @@ export default async function RecruitmentPage() {
 
                   {/* 
                     "지원하기" 버튼은 모집 상태가 "OPEN"일 때만 표시됩니다.
-                    버튼 클릭 시 지원서 작성 페이지로 이동하며,
-                    URL의 쿼리 파라미터(?cohort=id)로 기수 ID를 전달합니다.
+                    버튼 클릭 시 지원서 작성을 위한 구글폼 외부 링크로 이동합니다.
                   */}
                   {cohort.recruitmentStatus === "OPEN" ? (
-                    <Link href={`/recruitment/apply?cohort=${cohort.id}`}>
+                    <Link href="https://forms.google.com/hra-application" target="_blank" rel="noopener noreferrer">
                       <Button className="h-10 bg-emerald-500 text-black hover:bg-emerald-400">
                         지원하기
                         <ArrowRight className="size-4" />

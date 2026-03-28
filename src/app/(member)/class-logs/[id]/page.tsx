@@ -116,7 +116,7 @@ export default async function ClassLogDetailPage({ params }: PageProps) {
     .orderBy(asc(classLogImages.order), asc(classLogImages.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10 md:py-14">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-10 md:py-14">
       {/* "목록으로" 버튼 - 클릭하면 수업일지 목록 페이지로 이동 */}
       <div className="mb-6">
         <Link
@@ -153,7 +153,7 @@ export default async function ClassLogDetailPage({ params }: PageProps) {
           <iframe
             title="수업일지 내용"
             srcDoc={`<!doctype html><html lang="ko"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>body{margin:0;background:#000;color:#fff;font-family:var(--font-geist-sans),sans-serif;line-height:1.75}a{color:#fff}img{max-width:100%;height:auto;border-radius:12px}h1,h2,h3,h4,h5,h6{margin:0 0 12px;color:#fff}p{margin:0 0 14px;color:rgba(255,255,255,.85)}</style></head><body>${log.content}</body></html>`}
-            className="h-[520px] w-full rounded-xl border border-white/10 bg-black"
+            className="h-[300px] sm:h-[420px] md:h-[520px] w-full rounded-xl border border-white/10 bg-black"
           />
         </CardContent>
       </Card>

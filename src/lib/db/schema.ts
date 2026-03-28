@@ -59,6 +59,16 @@ export const noticeStatusEnum = pgEnum("notice_status", [
   "PUBLISHED",
 ]);
 
+// 지원서 처리 상태
+// - PENDING: 검토 대기 중 (기본값)
+// - ACCEPTED: 합격
+// - REJECTED: 불합격
+export const applicationStatusEnum = pgEnum("application_status", [
+  "PENDING",
+  "ACCEPTED",
+  "REJECTED",
+]);
+
 // ============================================================
 // Users (사용자 테이블)
 // ============================================================
@@ -69,7 +79,7 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(), // 사용자 고유 ID (자동 생성)
   name: varchar("name", { length: 100 }).notNull(), // 사용자 이름 (최대 100자)
   email: varchar("email", { length: 255 }).notNull().unique(), // 이메일 (중복 불가, 로그인할 때 사용)
-  passwordHash: text("password_hash").notNull(), // 비밀번호를 암호화한 값 (bcrypt 해시)
+  passwordHash: text("password_hash"), // 비밀번호를 암호화한 값 (소셜 로그인 사용자는 null)
   role: userRoleEnum("role").notNull().default("MEMBER"), // 사용자 역할 (기본값: 일반 멤버)
   image: text("image"), // 프로필 사진 URL (선택사항)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 계정 생성 시간
@@ -277,6 +287,7 @@ export const applications = pgTable("applications", {
   major: varchar("major", { length: 100 }), // 지원자 전공 (선택사항)
   motivation: text("motivation").notNull(), // 지원 동기/자기소개 (길이 제한 없음)
   additionalInfo: text("additional_info"), // 추가 정보/특이사항 (선택사항)
+  status: applicationStatusEnum("status").notNull().default("PENDING"), // 지원서 처리 상태 (기본값: 검토 대기)
   submittedAt: timestamp("submitted_at").notNull().defaultNow(), // 지원서 제출 시간
 });
 

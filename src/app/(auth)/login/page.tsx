@@ -1,139 +1,74 @@
 /**
  * 로그인 페이지
- * 클라이언트 컴포넌트: 사용자가 이메일과 비밀번호를 입력하고 로그인할 수 있는 페이지입니다
- * - "use client"가 있으므로 브라우저에서 직접 실행되는 컴포넌트입니다
- * - useState를 사용해 입력값과 상태를 관리합니다
- * - NextAuth의 signIn() 함수를 사용해 실제 인증을 처리합니다
+ * 구글/카카오 소셜 로그인 버튼을 제공하는 페이지입니다.
+ * 소셜 로그인은 NextAuth의 signIn() 함수로 처리됩니다.
  */
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 function LoginForm() {
-  // useRouter: 페이지를 다른 곳으로 이동시키는 훅 (예: 로그인 후 홈으로 이동)
-  const router = useRouter();
-  // useSearchParams: URL에 붙은 파라미터를 읽는 훅 (예: ?callbackUrl=/member)
   const searchParams = useSearchParams();
-  // useState 훅: 상태를 저장했다가 변경할 수 있는 기능 (값, 값을 바꾸는 함수)
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // error: 에러 메시지를 저장 (예: "이메일이 틀렸습니다")
-  const [error, setError] = useState("");
-  // isLoading: 로그인 진행 중인지를 나타냄 (true면 진행 중, false면 완료)
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  // handleSubmit: 폼이 제출될 때 실행되는 함수 (즉, 로그인 버튼을 클릭할 때)
-  const handleSubmit = async (e: React.FormEvent) => {
-    // e.preventDefault(): 폼의 기본 동작(페이지 새로고침)을 막음
-    e.preventDefault();
-    // 에러 메시지 초기화 (이전 오류 삭제)
-    setError("");
-    // 로그인 진행 중임을 표시
-    setIsLoading(true);
-
-    try {
-      // signIn(): NextAuth가 제공하는 함수로 이메일/비밀번호로 로그인 시도
-      // "credentials": 아이디/비밀번호 방식의 로그인을 의미
-      // redirect: false는 자동 이동을 하지 말고, 결과만 받겠다는 뜻
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      // 만약 로그인에 실패했다면 (result?.error가 존재한다면)
-      if (result?.error) {
-        setError("이메일 또는 비밀번호가 올바르지 않습니다");
-        // 비밀번호 필드를 비움 (보안 때문에)
-        setPassword("");
-      } 
-      // 만약 로그인이 성공했다면
-      else if (result?.ok) {
-        // callbackUrl: 로그인 후 이동할 주소 (없으면 "/" 즉, 홈페이지)
-        const callbackUrl = searchParams.get("callbackUrl") || "/";
-        // router.push(): 그 주소로 이동
-        router.push(callbackUrl);
-      }
-    } catch {
-      // 예상치 못한 오류가 발생했을 때 (예: 네트워크 끊김)
-      setError("오류가 발생했습니다. 다시 시도해주세요.");
-    } finally {
-      // try와 catch가 모두 끝난 후 무조건 실행됨
-      // 로그인 진행 중 상태를 해제 (로딩 끝남)
-      setIsLoading(false);
-    }
+  const handleSocialLogin = async (provider: "google" | "kakao") => {
+    setIsLoading(provider);
+    await signIn(provider, { callbackUrl });
   };
 
   return (
     <Card className="border-slate-700 bg-slate-900">
-      <CardHeader>
-          <CardTitle className="text-2xl text-white">로그인</CardTitle>
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl text-white">로그인</CardTitle>
+        <p className="text-sm text-slate-400 mt-2">
+          소셜 계정으로 간편하게 로그인하세요
+        </p>
       </CardHeader>
-      <CardContent>
-        {/* onSubmit: 이 폼이 제출될 때 handleSubmit 함수를 실행 */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 이메일 입력 필드 */}
-          <div>
-              <Label htmlFor="email" className="text-slate-300">
-                이메일
-              </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="이메일을 입력하세요"
-              // value: 현재 입력 상자의 값
-              value={email}
-              // onChange: 사용자가 입력할 때마다 실행 (입력된 값을 email 상태에 저장)
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+      <CardContent className="space-y-4">
+        {/* 구글 로그인 버튼 */}
+         <button
+          type="button"
+          onClick={() => handleSocialLogin("google")}
+          disabled={isLoading !== null}
+          className="w-full flex items-center justify-center gap-3 rounded-md border border-slate-600 bg-white px-4 py-3 min-h-[44px] text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+              fill="#4285F4"
             />
-          </div>
-
-          {/* 비밀번호 입력 필드 */}
-          <div>
-              <Label htmlFor="password" className="text-slate-300">
-                비밀번호
-              </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
             />
-          </div>
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          {isLoading === "google" ? "로그인 중..." : "구글로 로그인"}
+        </button>
 
-          {/* 에러가 있으면 빨간색으로 표시 */}
-          {error && <div className="text-red-400 text-sm">{error}</div>}
-
-          {/* 로그인 버튼: isLoading이 true면 버튼을 누를 수 없게 함 (disabled) */}
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            {/* isLoading이 true면 "로그인 중...", false면 "로그인" 표시 */}
-            {isLoading ? "로그인 중..." : "로그인"}
-          </Button>
-        </form>
-
-        {/* 회원가입 링크 */}
-        <div className="mt-6 text-center text-sm text-slate-400">
-          계정이 없으신가요?{" "}
-            <Link href="/register" className="text-blue-400 hover:text-blue-300">
-              회원가입
-            </Link>
-        </div>
+        {/* 카카오 로그인 버튼 */}
+        <button
+          type="button"
+          onClick={() => handleSocialLogin("kakao")}
+          disabled={isLoading !== null}
+          className="w-full flex items-center justify-center gap-3 rounded-md bg-[#FEE500] px-4 py-3 min-h-[44px] text-sm font-medium text-[#191919] shadow-sm hover:bg-[#FDD800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
+            <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.72 1.8 5.108 4.512 6.467-.198.74-.716 2.68-.82 3.095-.127.506.186.499.39.363.16-.107 2.554-1.737 3.588-2.446.748.11 1.52.168 2.33.168 5.523 0 10-3.463 10-7.647C22 6.463 17.523 3 12 3z" />
+          </svg>
+          {isLoading === "kakao" ? "로그인 중..." : "카카오로 로그인"}
+        </button>
       </CardContent>
     </Card>
   );
@@ -141,15 +76,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    // Suspense: 로딩 중일 때 fallback UI를 보여주는 React 기능
-    // LoginForm이 로딩 중이면 "로딩 중..." 메시지를 표시
     <Suspense
       fallback={
-          <Card className="border-slate-700 bg-slate-900">
-            <CardContent className="p-8 text-center text-slate-400">
-              로딩 중...
-            </CardContent>
-          </Card>
+        <Card className="border-slate-700 bg-slate-900">
+          <CardContent className="p-8 text-center text-slate-400">
+            로딩 중...
+          </CardContent>
+        </Card>
       }
     >
       <LoginForm />

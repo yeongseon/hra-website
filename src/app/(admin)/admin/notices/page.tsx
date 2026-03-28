@@ -64,10 +64,10 @@ export default async function AdminNoticesPage() {
     .orderBy(desc(notices.pinned), desc(notices.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-10">
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
       {/* 페이지 제목 + 새 공지 버튼 */}
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">공지사항 관리</h1>
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">공지사항 관리</h1>
         <Button render={<Link href="/admin/notices/new" />}>새 공지 작성</Button>
       </div>
 
@@ -77,6 +77,7 @@ export default async function AdminNoticesPage() {
           <CardTitle className="text-base text-slate-900">전체 공지 {rows.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -141,6 +142,7 @@ export default async function AdminNoticesPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </section>

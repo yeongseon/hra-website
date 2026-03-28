@@ -60,15 +60,15 @@ function ApplyForm() {
   const [state, formAction, isPending] = useActionState(submitApplication, initialState);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
-      <section className="mb-10 space-y-4">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+      <section className="mb-8 sm:mb-10 space-y-4">
         <Badge
           variant="outline"
           className="border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
         >
           비회원 지원
         </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
           지원서 작성
         </h1>
         <p className="max-w-2xl text-sm text-zinc-300 md:text-base">
@@ -216,7 +216,7 @@ export default function RecruitmentApplyPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-7xl px-6 py-20 text-center text-zinc-400">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-20 text-center text-zinc-400">
           로딩 중...
         </div>
       }

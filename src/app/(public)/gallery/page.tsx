@@ -44,20 +44,20 @@ export default async function GalleryPage() {
      .orderBy(desc(galleries.createdAt));
 
    return (
-     <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
+     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
        {/* 갤러리 페이지 헤더 */}
-       <section className="mb-14 space-y-4">
+       <section className="mb-10 sm:mb-14 space-y-4">
         <Badge
           variant="outline"
           className="border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
         >
           HRA GALLERY
         </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-white">
           갤러리
         </h1>
         <p className="max-w-2xl text-sm text-zinc-400 md:text-base">
-          HRA의 활동 기록을 앨범으로 만나보세요.
+          수업, 행사, 기수별 사진 모음을 만나보세요.
         </p>
       </section>
 

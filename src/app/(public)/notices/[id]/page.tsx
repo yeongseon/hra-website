@@ -100,7 +100,7 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
    }
 
    return (
-     <div className="mx-auto max-w-7xl px-6 py-20 md:py-32">
+     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
        {/* 뒤로 가기 버튼 */}
        <div className="mb-8">
          <Link href="/notices">
@@ -114,8 +114,8 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
        {/* 공지사항 상세 내용 카드 */}
        <Card className="border-white/10 bg-zinc-950/80 py-0">
          {/* 공지사항 제목, 작성자, 작성일 표시 */}
-         <CardHeader className="border-b border-white/10 py-8">
-           <CardTitle className="text-2xl font-semibold text-white md:text-3xl">
+          <CardHeader className="border-b border-white/10 py-6 sm:py-8">
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">
              {notice.title}
            </CardTitle>
            {/* 공지사항 메타정보: 작성일, 작성자 */}
@@ -131,11 +131,11 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
           </div>
          </CardHeader>
          {/* 공지사항 본문 내용 (HTML로 렌더링) */}
-         <CardContent className="py-10">
+          <CardContent className="py-6 sm:py-10">
           <iframe
             title="공지사항 내용"
             srcDoc={`<!doctype html><html lang="ko"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><style>body{margin:0;background:#09090b;color:#f4f4f5;font-family:var(--font-geist-sans),sans-serif;line-height:1.75}a{color:#67e8f9}img{max-width:100%;height:auto;border-radius:12px}h1,h2,h3,h4,h5,h6{margin:0 0 12px;color:#fff}p{margin:0 0 14px;color:#e4e4e7}</style></head><body>${notice.content}</body></html>`}
-            className="h-[520px] w-full rounded-xl border border-white/10 bg-zinc-950"
+            className="h-[300px] sm:h-[420px] md:h-[520px] w-full rounded-xl border border-white/10 bg-zinc-950"
           />
         </CardContent>
       </Card>
