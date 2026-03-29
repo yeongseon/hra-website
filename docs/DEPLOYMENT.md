@@ -98,36 +98,114 @@ npx auth secret
 
 이 설정값들은 없어도 사이트는 정상적으로 작동해요! 관리자는 이메일/비밀번호로 로그인할 수 있고, 소셜 로그인 버튼은 설정이 없으면 자동으로 숨겨져요.
 
-#### ⑤ 구글 & 카카오 로그인 (소셜 로그인)
+#### ⑤ 구글 로그인 (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`)
 
-구글이나 카카오 계정으로 편하게 로그인하고 싶을 때 설정해요.
+구글 계정으로 로그인할 수 있게 해주는 열쇠예요.
 
-**구글 로그인 (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`)**
-1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트 생성
-2. **API 및 서비스** → **OAuth 동의 화면** 설정
-3. **사용자 인증 정보** → **OAuth 클라이언트 ID** 생성 (웹 애플리케이션)
-4. **승인된 리디렉션 URI**에 `https://본인주소.vercel.app/api/auth/callback/google` 추가
-5. 발급된 ID와 보안 비밀번호를 Vercel에 입력
+1. 브라우저에서 [Google Cloud Console](https://console.cloud.google.com/)에 접속해요
+2. 왼쪽 위 **프로젝트 선택** → **새 프로젝트** → 이름 입력 (예: "HRA 웹사이트") → **만들기**
+3. 왼쪽 메뉴에서 **API 및 서비스** → **OAuth 동의 화면** 클릭
+4. **External** 선택 → 앱 이름, 이메일 등을 입력 → **저장**
+5. 왼쪽 메뉴에서 **사용자 인증 정보** 클릭
+6. 위쪽의 **+ 만들기** → **OAuth 클라이언트 ID** 선택
+7. 유형은 **웹 애플리케이션** 선택
+8. **승인된 리디렉션 URI**에 아래 2개를 추가해요:
 
-**카카오 로그인 (`AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`)**
-1. [Kakao Developers](https://developers.kakao.com/)에서 애플리케이션 추가
-2. **카카오 로그인** 활성화 및 **Redirect URI** 등록
-3. **동의항목**에서 닉네임, 이메일(필수) 설정
-4. **보안** → **Client Secret** 코드 생성
-5. REST API 키(ID)와 Client Secret을 Vercel에 입력
+```
+http://localhost:3000/api/auth/callback/google
+https://hra-website-theta.vercel.app/api/auth/callback/google
+```
 
-#### ⑥ GitHub CMS 설정 (`GITHUB_TOKEN`, `GITHUB_REPO`)
+> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
 
-관리자 화면에서 공지사항이나 갤러리를 직접 수정하고 싶을 때 필요해요.
+9. **만들기** 버튼을 클릭하면 **클라이언트 ID**와 **클라이언트 보안 비밀번호**가 나와요
+10. 이 두 값을 Vercel에 넣으면 돼요:
+    - 클라이언트 ID → `AUTH_GOOGLE_ID`
+    - 클라이언트 보안 비밀번호 → `AUTH_GOOGLE_SECRET`
 
-- **GITHUB_TOKEN**: GitHub에서 발급받은 Personal Access Token (PAT)
-- **GITHUB_REPO**: "아이디/저장소이름" 형식 (예: `yeongseon/hra-website`)
+> 💡 이 설정이 없어도 사이트는 정상 작동해요! 구글 로그인 버튼만 안 보일 뿐이에요.
 
-#### ⑦ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
+#### ⑥ 카카오 로그인 (`AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`)
 
-관리자 화면에서 구글 시트에 쌓인 지원서 현황을 바로 확인하고 싶을 때 설정해요.
+카카오톡 계정으로 로그인할 수 있게 해주는 열쇠예요.
 
----
+1. 브라우저에서 [Kakao Developers](https://developers.kakao.com/)에 로그인해요
+2. 상단 메뉴에서 **내 애플리케이션** → **애플리케이션 추가하기** 클릭
+3. 앱 이름 입력 (예: "HRA 웹사이트") → **저장**
+
+4. **요약 정보** 탭에서 **REST API 키**를 복사해요 → 이게 `AUTH_KAKAO_ID`
+
+5. 왼쪽 메뉴에서 **제품 설정** → **카카오 로그인** → 활성화를 **ON**으로 바꿔요
+
+6. **Redirect URI**에 아래 2개를 추가해요:
+
+```
+http://localhost:3000/api/auth/callback/kakao
+https://hra-website-theta.vercel.app/api/auth/callback/kakao
+```
+
+> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
+
+7. 왼쪽 메뉴에서 **동의항목** 설정:
+   - 닉네임: **필수 동의**
+   - 프로필 사진: **선택 동의**
+   - 이메일: **필수 동의**
+
+8. 왼쪽 메뉴에서 **보안** → **Client Secret** → **코드 생성** 클릭 → 이게 `AUTH_KAKAO_SECRET`
+
+9. Vercel에 `AUTH_KAKAO_ID`와 `AUTH_KAKAO_SECRET`을 등록!
+
+> 💡 이 설정이 없어도 사이트는 정상 작동해요! 카카오 로그인 버튼만 안 보일 뿐이에요.
+
+#### ⑦ GitHub CMS 설정 (`GITHUB_TOKEN`, `GITHUB_REPO`)
+
+관리자 화면에서 공지사항이나 갤러리를 직접 쓰고 수정하려면 이 설정이 필요해요. 이게 없으면 관리자 페이지에서 글을 올릴 수 없어요!
+
+**GITHUB_TOKEN 만드는 방법 (따라하기)**
+
+1. 브라우저에서 [github.com](https://github.com/)에 **로그인**해요
+2. 오른쪽 위에 있는 **프로필 사진**을 클릭해요
+3. 메뉴에서 **Settings** (설정)를 클릭해요
+4. 왼쪽 메뉴를 맨 아래까지 내려서 **Developer settings**를 클릭해요
+5. 왼쪽 메뉴에서 **Personal access tokens** → **Tokens (classic)** 클릭
+6. 오른쪽 위의 **Generate new token** → **Generate new token (classic)** 클릭
+7. 아래 내용을 입력해요:
+   - **Note** (메모): `hra-website-cms` (뭐에 쓰는 토큰인지 적는 거예요)
+   - **Expiration** (유효기간): `90 days` 또는 원하는 기간 선택
+   - **Select scopes** (권한): **`repo`** 항목에 체크 ✅ (맨 위에 있어요!)
+
+> ⚠️ `repo`에 체크하면 그 아래 항목들도 자동으로 체크돼요. 그게 정상이에요!
+
+8. 맨 아래 **Generate token** (초록색 버튼)을 클릭해요
+9. 화면에 `ghp_`로 시작하는 긴 문자열이 나와요 → **이걸 바로 복사**하세요!
+
+> ⚠️ **중요**: 이 토큰은 이 화면에서 **딱 한 번만** 보여요! 페이지를 벗어나면 다시 볼 수 없어요. 꼭 복사해서 안전한 곳에 저장해두세요!
+
+10. Vercel에 등록해요:
+    - **Key**: `GITHUB_TOKEN` / **Value**: 방금 복사한 `ghp_...` 값
+    - **Key**: `GITHUB_REPO` / **Value**: `yeongseon/hra-website`
+
+> 👉 `GITHUB_REPO`의 값은 GitHub 저장소 주소에서 `github.com/` 뒤에 오는 부분이에요!
+> 예를 들어 `https://github.com/yeongseon/hra-website`이면 → `yeongseon/hra-website`
+
+> 💡 토큰의 유효기간이 지나면 같은 방법으로 새로 만들어서 Vercel에서 값을 교체하면 돼요.
+
+#### ⑧ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
+
+관리자 화면에서 구글 폼으로 접수된 지원서를 바로 확인하고 싶을 때 설정해요.
+
+1. 브라우저에서 [Google Cloud Console](https://console.cloud.google.com/)에 접속해요
+2. 위쪽의 **프로젝트 선택** → 아까 만든 프로젝트 선택 (또는 새로 만들기)
+3. 왼쪽 메뉴에서 **API 및 서비스** → **라이브러리** 클릭
+4. 검색창에 **Google Sheets API** 입력 → 결과를 클릭 → **사용** 버튼 클릭
+5. 왼쪽 메뉴에서 **사용자 인증 정보** 클릭
+6. 위쪽의 **+ 만들기** → **API 키** 선택
+7. 나오는 API 키를 복사해요
+8. Vercel에 등록해요:
+   - **Key**: `GOOGLE_SHEETS_API_KEY` / **Value**: 방금 복사한 API 키
+
+> 💡 보안을 위해 API 키에 제한을 걸어두면 좋아요:
+> - 만들어진 키 옆의 **연필 아이콘** 클릭 → **API 제한** → **키 제한** → **Google Sheets API**만 선택 → **저장**
 
 ---
 

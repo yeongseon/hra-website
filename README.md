@@ -85,6 +85,8 @@ HRA 웹사이트는 각 페이지마다 이용 권한이 다릅니다.
 *   **GitHub CMS**: `GITHUB_TOKEN`, `GITHUB_REPO`. 공지사항이나 갤러리를 관리자 UI에서 직접 수정하려면 필요합니다.
 *   **지원서 조회**: `GOOGLE_SHEETS_API_KEY`. 관리자 화면에서 지원 현황을 확인하려면 필요합니다.
 
+> 👉 각 항목의 **발급 방법과 상세 설정 단계**는 [배포 가이드 (docs/DEPLOYMENT.md)](docs/DEPLOYMENT.md)를 참고하세요.
+
 ---
 
 ## 7. 주요 명령어

@@ -115,12 +115,14 @@ HRA의 매 기수 모집과 활동 정보를 관리해요.
 
 ## 10. 환경변수 요약
 
-시스템이 정상 작동하기 위해 필요한 주요 설정 값들입니다. (개발팀 확인용)
+시스템이 정상 작동하기 위해 필요한 주요 설정 값들이에요. 설정은 Vercel 대시보드에서 해요.
 
 | 기능 | 필요한 환경변수 | 없으면 발생하는 현상 |
 | :--- | :--- | :--- |
 | **기본 사이트** | `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` | 사이트 접속 불가 |
 | **이미지 업로드** | `BLOB_READ_WRITE_TOKEN` | 갤러리 이미지 업로드 실패 |
-| **소셜 로그인** | `AUTH_GOOGLE_ID/SECRET`, `AUTH_KAKAO_ID/SECRET` | 로그인 화면에서 버튼이 사라짐 |
+| **소셜 로그인** | `AUTH_GOOGLE_ID/SECRET`, `AUTH_KAKAO_ID/SECRET` | 로그인 화면에서 소셜 버튼이 사라짐 (관리자 로그인은 정상) |
 | **공지사항/갤러리** | `GITHUB_TOKEN`, `GITHUB_REPO` | 공지사항 및 갤러리 관리 불가 |
 | **지원서 조회** | `GOOGLE_SHEETS_API_KEY` | 지원서 목록 확인 불가 |
+
+> 👉 각 환경변수의 **상세 발급 방법**은 [배포 가이드 (DEPLOYMENT.md)](./DEPLOYMENT.md)의 2번 섹션에 스크린샷 수준으로 자세히 나와 있어요!
