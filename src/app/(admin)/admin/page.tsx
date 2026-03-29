@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 const stats = [
   { key: "notices", label: "전체 공지사항", value: 0 },
   { key: "galleries", label: "전체 갤러리", value: 0 },
-  { key: "classLogs", label: "전체 수업일지", value: 0 },
+  { key: "classLogs", label: "전체 자료(수업일지)", value: 0 },
   { key: "cohorts", label: "전체 기수", value: 0 },
   { key: "members", label: "전체 멤버", value: 0 },
 ] as const;

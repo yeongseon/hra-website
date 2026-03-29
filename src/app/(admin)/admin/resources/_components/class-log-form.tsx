@@ -72,7 +72,7 @@ export function ClassLogForm({
 
   useEffect(() => {
     if (submissionState.success) {
-      router.push("/admin/class-logs");
+      router.push("/admin/resources");
       router.refresh();
     }
   }, [router, submissionState.success]);
@@ -163,7 +163,7 @@ export function ClassLogForm({
             <Button type="submit" disabled={isSubmitting} className="h-10 bg-slate-900 text-white">
               {isSubmitting ? "저장 중..." : submitLabel}
             </Button>
-            <Button variant="outline" type="button" onClick={() => router.push("/admin/class-logs")}>
+            <Button variant="outline" type="button" onClick={() => router.push("/admin/resources")}>
               취소
             </Button>
           </div>

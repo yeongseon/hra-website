@@ -181,10 +181,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return auth?.user?.role === "ADMIN";
       }
 
-      if (pathname.startsWith("/class-logs")) {
-        return !!auth?.user;
-      }
-
       if (pathname.startsWith("/resources")) {
         return !!auth?.user;
       }

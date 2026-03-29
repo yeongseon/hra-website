@@ -32,10 +32,6 @@ export const config = {
     // /admin/ 경로와 그 하위 모든 페이지에서 미들웨어 실행
     // 예: /admin, /admin/users, /admin/users/123 등
     "/admin/:path*",
-    
-    // /class-logs/ 경로와 그 하위 모든 페이지에서 미들웨어 실행
-    // 예: /class-logs, /class-logs/2024-01-15 등
-    "/class-logs/:path*",
 
     // /resources/ 경로: 자료실은 로그인한 회원만 접근 가능
     "/resources/:path*",

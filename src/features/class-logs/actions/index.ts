@@ -69,8 +69,8 @@ type ClassLogActionState = {
  *      페이지를 방문한 사용자들이 새로운 내용을 볼 수 있음
  */
 const revalidateClassLogPaths = () => {
-  revalidatePath("/admin/class-logs");
-  revalidatePath("/class-logs");
+  revalidatePath("/admin/resources");
+  revalidatePath("/resources");
 };
 
 /**

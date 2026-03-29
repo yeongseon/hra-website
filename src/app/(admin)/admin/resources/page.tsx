@@ -1,5 +1,5 @@
 /**
- * 수업일지 관리 페이지 (목록)
+ * 자료실 관리 페이지 (목록)
  *
  * 역할: 관리자가 등록된 모든 수업일지를 한눈에 볼 수 있는 페이지
  * - 수업일지 목록 조회
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ClassLogRowActions } from "@/app/(admin)/admin/class-logs/_components/class-log-row-actions";
+import { ClassLogRowActions } from "@/app/(admin)/admin/resources/_components/class-log-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { classLogs, cohorts, users } from "@/lib/db/schema";
@@ -61,8 +61,8 @@ export default async function AdminClassLogsPage() {
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">수업일지 관리</h1>
-        <Button render={<Link href="/admin/class-logs/new" />}>새 수업일지 작성</Button>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">자료실 관리</h1>
+        <Button render={<Link href="/admin/resources/new" />}>새 수업일지 작성</Button>
       </div>
 
       <Card className="border-slate-200 bg-white py-0 shadow-sm">
@@ -71,42 +71,42 @@ export default async function AdminClassLogsPage() {
         </CardHeader>
         <CardContent className="py-4">
           <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <Table>
-            <TableHeader>
-               <TableRow>
-                 <TableHead>제목</TableHead>
-                 <TableHead>수업일</TableHead>
-                 <TableHead>기수</TableHead>
-                 <TableHead>작성자</TableHead>
-                 <TableHead>작성일</TableHead>
-                 <TableHead>관리</TableHead>
-               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-slate-500">
-                    등록된 수업일지가 없습니다.
-                  </TableCell>
+                  <TableHead>제목</TableHead>
+                  <TableHead>수업일</TableHead>
+                  <TableHead>기수</TableHead>
+                  <TableHead>작성자</TableHead>
+                  <TableHead>작성일</TableHead>
+                  <TableHead>관리</TableHead>
                 </TableRow>
-              ) : (
-                rows.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="max-w-[280px] truncate font-medium text-slate-900">
-                      {log.title}
-                    </TableCell>
-                    <TableCell className="text-slate-700">{formatDate(log.classDate)}</TableCell>
-                    <TableCell className="text-slate-700">{log.cohortName ?? "-"}</TableCell>
-                    <TableCell className="text-slate-700">{log.authorName}</TableCell>
-                    <TableCell className="text-slate-700">{formatDate(log.createdAt)}</TableCell>
-                    <TableCell>
-                      <ClassLogRowActions id={log.id} />
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-slate-500">
+                      등록된 수업일지가 없습니다.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  rows.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="max-w-[280px] truncate font-medium text-slate-900">
+                        {log.title}
+                      </TableCell>
+                      <TableCell className="text-slate-700">{formatDate(log.classDate)}</TableCell>
+                      <TableCell className="text-slate-700">{log.cohortName ?? "-"}</TableCell>
+                      <TableCell className="text-slate-700">{log.authorName}</TableCell>
+                      <TableCell className="text-slate-700">{formatDate(log.createdAt)}</TableCell>
+                      <TableCell>
+                        <ClassLogRowActions id={log.id} />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

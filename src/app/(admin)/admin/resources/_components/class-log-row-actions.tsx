@@ -37,7 +37,7 @@ export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" render={<Link href={`/admin/class-logs/${id}/edit`} />}>
+      <Button variant="outline" size="sm" render={<Link href={`/admin/resources/${id}/edit`} />}>
         수정
       </Button>
 

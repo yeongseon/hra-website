@@ -1,13 +1,47 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BookMarked, BookOpen, FileText, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/lib/db";
+import { classLogs, users } from "@/lib/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 export const metadata: Metadata = {
   title: "자료실",
 };
 
-export default function ResourcesPage() {
+export const dynamic = "force-dynamic";
+
+const formatDate = (value: Date) =>
+  new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
+
+const getExcerpt = (value: string, length = 120) => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= length) {
+    return normalized;
+  }
+  return `${normalized.slice(0, length)}...`;
+};
+
+export default async function ResourcesPage() {
+  const logs = await db
+    .select({
+      id: classLogs.id,
+      title: classLogs.title,
+      content: classLogs.content,
+      classDate: classLogs.classDate,
+      createdAt: classLogs.createdAt,
+      authorName: users.name,
+    })
+    .from(classLogs)
+    .innerJoin(users, eq(classLogs.authorId, users.id))
+    .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 sm:mb-14 space-y-4 text-center sm:text-left">
@@ -43,7 +77,7 @@ export default function ResourcesPage() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 hover:bg-zinc-900/90 hover:border-amber-500/30 transition-all duration-300">
+        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 transition-all duration-300 hover:border-amber-500/30 hover:bg-zinc-900/90">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="relative pb-4 pt-8 px-8">
             <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -53,12 +87,13 @@ export default function ResourcesPage() {
           </CardHeader>
           <CardContent className="relative px-8 pb-8">
             <p className="text-zinc-400 text-sm leading-relaxed">
-              매주 진행되는 HRA 수업의 주요 내용과 토론 결과, 참가자들의 인사이트를 기록한 일지입니다.
+              매주 진행되는 HRA 수업의 주요 내용과 토론 결과를 확인할 수 있습니다.
             </p>
+            <p className="mt-3 text-xs text-zinc-500">현재 {logs.length}개의 수업일지가 등록되어 있습니다.</p>
           </CardContent>
         </Card>
 
-        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 hover:bg-zinc-900/90 hover:border-amber-500/30 transition-all duration-300">
+        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 transition-all duration-300 hover:border-amber-500/30 hover:bg-zinc-900/90">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="relative pb-4 pt-8 px-8">
             <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -67,13 +102,11 @@ export default function ResourcesPage() {
             <CardTitle className="text-xl font-bold text-white">주차별 텍스트</CardTitle>
           </CardHeader>
           <CardContent className="relative px-8 pb-8">
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              수업 전 반드시 읽어야 할 고전 및 현대 문헌 자료와 참고 아티클을 제공합니다.
-            </p>
+            <p className="text-zinc-400 text-sm leading-relaxed">준비 중입니다.</p>
           </CardContent>
         </Card>
 
-        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 hover:bg-zinc-900/90 hover:border-amber-500/30 transition-all duration-300">
+        <Card className="group relative overflow-hidden border-white/10 bg-zinc-950/80 transition-all duration-300 hover:border-amber-500/30 hover:bg-zinc-900/90">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardHeader className="relative pb-4 pt-8 px-8">
             <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -82,11 +115,49 @@ export default function ResourcesPage() {
             <CardTitle className="text-xl font-bold text-white">가이드북</CardTitle>
           </CardHeader>
           <CardContent className="relative px-8 pb-8">
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              HRA 커리큘럼, 과제 제출 양식, 프로그램 수료 기준 등 아카데미 생활에 필요한 안내서입니다.
-            </p>
+            <p className="text-zinc-400 text-sm leading-relaxed">준비 중입니다.</p>
           </CardContent>
         </Card>
+      </section>
+
+      <section className="mt-10 sm:mt-14">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">수업일지</h2>
+          <Badge variant="outline" className="border-white/20 text-white/80">
+            {logs.length}개
+          </Badge>
+        </div>
+
+        {logs.length === 0 ? (
+          <Card className="border-white/10 bg-zinc-950/80 py-10">
+            <CardContent className="text-center text-base text-zinc-300">
+              등록된 수업일지가 없습니다.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {logs.map((log) => (
+              <Link key={log.id} href={`/resources/${log.id}`}>
+                <Card className="h-full border-white/10 bg-white/[0.03] text-white transition hover:border-white/30 hover:bg-white/[0.06]">
+                  <CardHeader className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
+                      <Badge variant="secondary" className="bg-white/10 text-white">
+                        {formatDate(log.classDate)}
+                      </Badge>
+                      <span>{log.authorName}</span>
+                    </div>
+                    <CardTitle className="line-clamp-2 text-lg">{log.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="line-clamp-3 text-sm leading-6 text-white/70">
+                      {getExcerpt(log.content)}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

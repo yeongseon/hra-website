@@ -78,12 +78,8 @@ export function Header({ session }: HeaderProps) {
   const isAdmin = user?.role === "ADMIN";
 
   // 역할에 따라 추가되는 내비게이션 링크
-  // MEMBER/ADMIN: 수업일지 링크 추가
   // ADMIN: 관리자 링크 추가
   const roleLinks = [];
-  if (isLoggedIn) {
-    roleLinks.push({ href: "/class-logs", label: "수업일지" });
-  }
   if (isAdmin) {
     roleLinks.push({ href: "/admin", label: "관리자" });
   }

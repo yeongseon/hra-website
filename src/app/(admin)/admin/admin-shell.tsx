@@ -2,7 +2,7 @@
  * 관리자 사이드바 쉘 (AdminShell)
  * 
  * 클라이언트 컴포넌트 - 관리자 페이지의 UI 레이아웃을 담당합니다.
- * - 좌측 사이드바: 네비게이션 메뉴 (대시보드, 공지사항, 수업일지 등)
+ * - 좌측 사이드바: 네비게이션 메뉴 (대시보드, 공지사항, 자료실 등)
  * - 상단 헤더: 페이지 제목, 관리자 이름 표시
  * - 모바일: 작은 화면에서 사이드바를 메뉴 아이콘으로 전환
  * 
@@ -20,8 +20,8 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
-  ClipboardList,
   FileText,
+  FolderOpen,
   GalleryHorizontal,
   LayoutDashboard,
   Menu,
@@ -51,7 +51,7 @@ type AdminShellProps = {
 const navItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/notices", label: "공지사항", icon: Bell },
-  { href: "/admin/class-logs", label: "수업일지", icon: ClipboardList },
+  { href: "/admin/resources", label: "자료실", icon: FolderOpen },
   { href: "/admin/recruitment", label: "기수 관리", icon: Users },
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/applications", label: "지원서", icon: FileText },
