@@ -119,8 +119,8 @@ const navLinks = [
 
 > 💡 이건 자동이에요! 따로 건드릴 필요 없어요.
 > - 로그인 안 한 사람 → "로그인" 버튼이 보여요
-> - 일반 회원 → 이름 + 수업일지 메뉴 + 로그아웃 버튼
-> - 관리자 → 이름 + 수업일지 + 관리자 메뉴 + 로그아웃 버튼
+> - 일반 회원 → 이름 + 로그아웃 버튼
+> - 관리자 → 이름 + 관리자 메뉴 + 로그아웃 버튼
 
 ---
 
@@ -159,15 +159,20 @@ const processSteps = [
 
 ## 8. 로그인 페이지 바꾸기
 
-📁 파일 위치: `src/app/(auth)/login/page.tsx`
+📁 파일 위치:
+- `src/app/(auth)/login/page.tsx` — 서버 컴포넌트 (설정 전달용, 보통 수정할 필요 없음)
+- `src/app/(auth)/login/login-form.tsx` — 클라이언트 컴포넌트 (실제 로그인 UI)
 
-구글/카카오 로그인 버튼의 문구를 바꿀 수 있어요.
+로그인 페이지는 두 파일로 나뉘어져 있어요. UI를 바꾸고 싶으면 `login-form.tsx`를 수정하세요.
 
-```tsx
-// ✏️ 버튼 문구 바꾸기
-"구글로 로그인"  →  "Google 계정으로 시작하기"
-"카카오로 로그인"  →  "카카오톡으로 시작하기"
-```
+### 로그인 문구 및 폼 수정
+
+`login-form.tsx` 파일에서 아래 내용들을 수정할 수 있어요.
+
+- **소셜 로그인 버튼 문구**: "구글로 로그인", "카카오로 로그인" 텍스트를 찾아서 수정해요.
+- **관리자 로그인 폼**: 이메일/비밀번호 입력 폼의 문구나 디자인도 이 파일에서 고쳐요.
+
+> 💡 **알아두세요**: 소셜 로그인 버튼은 환경변수가 설정된 경우에만 자동으로 표시돼요. 환경변수가 없으면 관리자 로그인(이메일/비밀번호) 폼만 보여요.
 
 ---
 
@@ -181,7 +186,7 @@ const processSteps = [
 const navItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/notices", label: "공지사항", icon: Bell },
-  { href: "/admin/class-logs", label: "수업일지", icon: ClipboardList },
+  { href: "/admin/resources", label: "자료실", icon: FolderOpen },
   { href: "/admin/recruitment", label: "기수 관리", icon: Users },
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/applications", label: "지원서", icon: FileText },

@@ -48,9 +48,13 @@
 
 ## 2. ⭐ 비밀 설정값 넣는 방법
 
-비밀 설정값은 사이트가 작동하려면 꼭 필요한 정보들이에요. 데이터베이스 주소, 로그인 비밀키 같은 거예요. 총 **6종류**를 넣어야 해요.
+비밀 설정값은 사이트가 작동하려면 꼭 필요한 정보들이에요. 데이터베이스 주소, 로그인 보안 키 같은 정보들을 Vercel에 입력해줘야 해요.
 
-### ① DATABASE_URL (데이터베이스 주소)
+### 필수 항목 (꼭 넣어야 해요! ⭐)
+
+이 값들이 없으면 사이트가 정상적으로 작동하지 않아요.
+
+#### ① DATABASE_URL (데이터베이스 주소)
 
 데이터를 저장하는 창고의 주소예요.
 
@@ -59,7 +63,7 @@
 3. 메인 화면에 **Connection String**이라고 적힌 긴 문자열이 있어요 (`postgres://...`으로 시작해요)
 4. 그걸 복사해서 Vercel의 Value 칸에 붙여넣어요
 
-### ② AUTH_SECRET (보안 키)
+#### ② AUTH_SECRET (보안 키)
 
 사이트 보안을 위한 비밀 열쇠예요. 아무도 모르는 랜덤 문자열이어야 해요.
 
@@ -71,64 +75,9 @@ npx auth secret
 
 > 👉 나온 값을 복사해서 Vercel에 넣으면 돼요.
 
-### ③ AUTH_GOOGLE_ID & AUTH_GOOGLE_SECRET (구글 로그인용)
+#### ③ BLOB_READ_WRITE_TOKEN (이미지 저장소)
 
-구글 계정으로 로그인할 수 있게 해주는 열쇠예요.
-
-1. [Google Cloud Console](https://console.cloud.google.com/)에 접속해요
-2. 왼쪽 위 **프로젝트 선택** → **새 프로젝트** → 이름 입력 → 만들기
-3. 왼쪽 메뉴에서 **API 및 서비스** → **OAuth 동의 화면** 클릭
-4. **External** 선택 → 앱 이름, 이메일 등을 입력 → 저장
-5. 왼쪽 메뉴에서 **사용자 인증 정보** 클릭
-6. 위쪽의 **+ 만들기** → **OAuth 클라이언트 ID** 선택
-7. 유형은 **웹 애플리케이션** 선택
-8. **승인된 리디렉션 URI**에 아래 2개를 추가해요:
-
-```
-http://localhost:3000/api/auth/callback/google
-https://hra-website-theta.vercel.app/api/auth/callback/google
-```
-
-> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
-
-9. **만들기** 버튼을 클릭하면 **클라이언트 ID**와 **클라이언트 보안 비밀번호**가 나와요
-10. 이 두 값을 Vercel에 넣으면 돼요:
-    - 클라이언트 ID → `AUTH_GOOGLE_ID`
-    - 클라이언트 보안 비밀번호 → `AUTH_GOOGLE_SECRET`
-
-### ④ AUTH_KAKAO_ID & AUTH_KAKAO_SECRET (카카오 로그인용)
-
-카카오톡 계정으로 로그인할 수 있게 해주는 열쇠예요.
-
-1. [Kakao Developers](https://developers.kakao.com/)에 로그인해요
-2. 상단 메뉴에서 **내 애플리케이션** → **애플리케이션 추가하기** 클릭
-3. 앱 이름 입력 (예: "HRA 웹사이트") → 저장
-
-4. **요약 정보** 탭에서 **REST API 키**를 복사해요 → 이게 `AUTH_KAKAO_ID`
-
-5. 왼쪽 메뉴에서 **제품 설정** → **카카오 로그인** → 활성화를 **ON**으로 바꿔요
-
-6. **Redirect URI**에 아래 2개를 추가해요:
-
-```
-http://localhost:3000/api/auth/callback/kakao
-https://hra-website-theta.vercel.app/api/auth/callback/kakao
-```
-
-> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
-
-7. 왼쪽 메뉴에서 **동의항목** 설정:
-   - 닉네임: **필수 동의**
-   - 프로필 사진: **선택 동의**
-   - 이메일: **필수 동의**
-
-8. 왼쪽 메뉴에서 **보안** → **Client Secret** → **코드 생성** 클릭 → 이게 `AUTH_KAKAO_SECRET`
-
-9. Vercel에 `AUTH_KAKAO_ID`와 `AUTH_KAKAO_SECRET`을 등록!
-
-### ⑤ BLOB_READ_WRITE_TOKEN (이미지 저장소)
-
-사진 업로드 기능을 쓰려면 필요해요. 이거 없어도 글쓰기 기능은 다 돼요.
+사진 업로드 기능을 쓰려면 필요해요.
 
 1. [Vercel 대시보드](https://vercel.com/)에서 상단의 **Storage** 탭을 클릭해요
 2. **Create** → **Blob** 선택 → 이름 입력 (예: `hra-images`) → **Create** 클릭
@@ -136,12 +85,49 @@ https://hra-website-theta.vercel.app/api/auth/callback/kakao
 4. 프로젝트의 Settings → Environment Variables에 등록해요
 5. **Redeploy**(다시 배포)를 해야 적용돼요!
 
-### ⑥ NEXT_PUBLIC_APP_URL (사이트 주소)
+#### ④ NEXT_PUBLIC_APP_URL (사이트 주소)
 
 | 어디서 쓰는 건가요? | 값 |
 | --- | --- |
 | 인터넷에 올린 사이트 | `https://hra-website-theta.vercel.app` (본인 주소) |
 | 내 컴퓨터에서 테스트할 때 | `http://localhost:3000` |
+
+---
+
+### 선택 항목 (더 많은 기능을 쓰고 싶을 때! 💡)
+
+이 설정값들은 없어도 사이트는 정상적으로 작동해요! 관리자는 이메일/비밀번호로 로그인할 수 있고, 소셜 로그인 버튼은 설정이 없으면 자동으로 숨겨져요.
+
+#### ⑤ 구글 & 카카오 로그인 (소셜 로그인)
+
+구글이나 카카오 계정으로 편하게 로그인하고 싶을 때 설정해요.
+
+**구글 로그인 (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`)**
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트 생성
+2. **API 및 서비스** → **OAuth 동의 화면** 설정
+3. **사용자 인증 정보** → **OAuth 클라이언트 ID** 생성 (웹 애플리케이션)
+4. **승인된 리디렉션 URI**에 `https://본인주소.vercel.app/api/auth/callback/google` 추가
+5. 발급된 ID와 보안 비밀번호를 Vercel에 입력
+
+**카카오 로그인 (`AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`)**
+1. [Kakao Developers](https://developers.kakao.com/)에서 애플리케이션 추가
+2. **카카오 로그인** 활성화 및 **Redirect URI** 등록
+3. **동의항목**에서 닉네임, 이메일(필수) 설정
+4. **보안** → **Client Secret** 코드 생성
+5. REST API 키(ID)와 Client Secret을 Vercel에 입력
+
+#### ⑥ GitHub CMS 설정 (`GITHUB_TOKEN`, `GITHUB_REPO`)
+
+관리자 화면에서 공지사항이나 갤러리를 직접 수정하고 싶을 때 필요해요.
+
+- **GITHUB_TOKEN**: GitHub에서 발급받은 Personal Access Token (PAT)
+- **GITHUB_REPO**: "아이디/저장소이름" 형식 (예: `yeongseon/hra-website`)
+
+#### ⑦ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
+
+관리자 화면에서 구글 시트에 쌓인 지원서 현황을 바로 확인하고 싶을 때 설정해요.
+
+---
 
 ---
 
@@ -193,11 +179,12 @@ Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
 
 ### 로그인이 안 돼요
 
-아래 3가지를 확인하세요:
+아래 내용들을 확인해보세요:
 
-1. Vercel에 `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`이 다 있나요?
-2. 구글/카카오 개발자 사이트에서 **Redirect URI**에 내 Vercel 주소를 넣었나요?
-3. 비밀 설정값을 수정한 후 **Redeploy**(다시 배포)를 했나요?
+1. **관리자 로그인이 안 돼요** → `AUTH_SECRET`이 설정되어 있는지 확인하세요. 관리자는 이메일과 비밀번호로 로그인합니다.
+2. **소셜 로그인 버튼이 안 보여요** → `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (또는 카카오) 환경변수가 설정되어 있는지 확인하세요. 환경변수가 없으면 해당 버튼은 자동으로 숨겨집니다.
+3. **구글/카카오 로그인이 안 돼요** → 구글/카카오 개발자 사이트에서 **Redirect URI**에 내 Vercel 주소를 넣었는지 확인하세요.
+4. 비밀 설정값을 수정한 후 **Redeploy**(다시 배포)를 했는지 확인하세요.
 
 ### 이미지 업로드가 안 돼요
 
@@ -247,17 +234,17 @@ Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
 | 순서 | 할 일 | 어떻게 확인하나요? |
 | --- | --- | --- |
 | 1 | 데이터베이스 테이블 만들기 | 터미널에서 `npx drizzle-kit push` 입력 → "Changes applied" 나오면 성공 |
-| 2 | 구글/카카오 로그인 키 발급 & Vercel에 등록 | 위 2번 섹션 참고 (설정값 4개 추가) |
+| 2 | (선택) 소셜 로그인을 사용하려면 | 위 2번 섹션 참고 (설정값 4개 추가) |
 | 3 | 사이트 접속 확인 | Vercel이 준 주소로 접속 → 홈페이지가 보이면 성공 |
-| 4 | 로그인 테스트 | 사이트에서 구글/카카오 로그인 버튼 → 로그인 성공하면 OK |
-| 5 | 첫 관리자 만들기 | 데이터베이스 가이드 4번 섹션 참고 → 관리자 메뉴가 보이면 성공 |
-| 6 | 이미지 저장소 만들기 | 위 2번의 ⑤ 참고 → 갤러리에서 사진 올리기 성공하면 OK |
+| 4 | 관리자 이메일/비밀번호로 로그인 테스트 | 사이트에서 로그인 페이지 접속 → 관리자 계정으로 로그인 성공하면 OK |
+| 5 | 첫 관리자 만들기 | 터미널에서 `ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin` 입력 |
+| 6 | 이미지 저장소 만들기 | 위 2번의 ③ 참고 → 갤러리에서 사진 올리기 성공하면 OK |
 | 7 | 첫 기수 만들기 | 관리자 페이지 → 기수 관리 → 새 기수 등록 |
 | 8 | 첫 공지사항 쓰기 | 관리자 페이지 → 공지사항 → 글 써보기 |
 | 9 | 맞춤법 검사 | 터미널에서 `npm run spell-check`로 전체 맞춤법 확인 |
 | 10 | 신규 페이지 확인 | 교수진, 자료실, 마이페이지 등 새로 추가된 페이지들이 잘 열리는지 확인 |
 | 11 | 지원하기 버튼 확인 | 모집 안내 페이지의 '지원하기' 버튼이 구글 폼으로 잘 연결되는지 확인 |
-| 12 | 권한 제한 페이지 확인 | 자료실, 마이페이지, 수업일지가 로그인 없이 접속이 차단되는지 확인 |
+| 12 | 권한 제한 페이지 확인 | 자료실, 마이페이지가 로그인 없이 접속이 차단되는지 확인 |
 
 모든 체크를 완료하면 사이트 운영 준비 끝! 🎉
 
