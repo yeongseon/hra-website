@@ -27,15 +27,37 @@ const stats = [
 ] as const;
 
 export default async function AdminDashboardPage() {
-  // 파일시스템(공지사항, 갤러리) + DB(수업일지, 기수, 멤버) 동시 조회
-  const [allNotices, allGalleries, classLogRows, cohortRows, memberRows] =
-    await Promise.all([
+  let allNotices: Awaited<ReturnType<typeof getAllNoticesUnfiltered>> = [];
+  let allGalleries: Awaited<ReturnType<typeof getAllGalleries>> = [];
+  let classLogRows: Array<{ total: number | bigint }> = [{ total: 0 }];
+  let cohortRows: Array<{ total: number | bigint }> = [{ total: 0 }];
+  let memberRows: Array<{ total: number | bigint }> = [{ total: 0 }];
+
+  try {
+    // 파일시스템(공지사항, 갤러리) + DB(수업일지, 기수, 멤버) 동시 조회
+    [allNotices, allGalleries, classLogRows, cohortRows, memberRows] = await Promise.all([
       getAllNoticesUnfiltered(),
       getAllGalleries(),
       db.select({ total: count() }).from(classLogs),
       db.select({ total: count() }).from(cohorts),
       db.select({ total: count() }).from(users),
     ]);
+  } catch (error) {
+    console.error("[admin/dashboard] DB 조회 오류:", error);
+
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900">대시보드</h1>
+          <p className="mt-1 text-sm text-slate-600">HRA 운영 현황을 한눈에 확인하세요.</p>
+        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-medium text-red-800">데이터를 불러오지 못했습니다.</p>
+          <p className="mt-1 text-xs text-red-600">데이터베이스 연결을 확인해 주세요.</p>
+        </div>
+      </div>
+    );
+  }
 
   const values = {
     notices: allNotices.length,

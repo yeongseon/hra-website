@@ -34,58 +34,71 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
 
   const { id } = await params;
 
-  // 📊 DB에서 특정 수업일지 조회 - 수정할 데이터
-  const [log] = await db
-    .select({
-      id: classLogs.id,
-      title: classLogs.title,
-      content: classLogs.content,
-      classDate: classLogs.classDate,
-      cohortId: classLogs.cohortId,
-    })
-    .from(classLogs)
-    .where(eq(classLogs.id, id))
-    .limit(1);
+  try {
+    // 📊 DB에서 특정 수업일지 조회 - 수정할 데이터
+    const [log] = await db
+      .select({
+        id: classLogs.id,
+        title: classLogs.title,
+        content: classLogs.content,
+        classDate: classLogs.classDate,
+        cohortId: classLogs.cohortId,
+      })
+      .from(classLogs)
+      .where(eq(classLogs.id, id))
+      .limit(1);
 
-  const cohortRows = await db
-    .select({ id: cohorts.id, name: cohorts.name })
-    .from(cohorts)
-    .orderBy(asc(cohorts.order), asc(cohorts.name));
+    const cohortRows = await db
+      .select({ id: cohorts.id, name: cohorts.name })
+      .from(cohorts)
+      .orderBy(asc(cohorts.order), asc(cohorts.name));
 
-  if (!log) {
+    if (!log) {
+      return (
+        <section className="mx-auto max-w-4xl px-6 py-10">
+          <Card className="border-slate-200 bg-white">
+            <CardContent className="py-10 text-center text-slate-600">
+              수업일지를 찾을 수 없습니다.
+            </CardContent>
+          </Card>
+        </section>
+      );
+    }
+
+    const action = updateClassLog.bind(null, log.id);
+
     return (
       <section className="mx-auto max-w-4xl px-6 py-10">
-        <Card className="border-slate-200 bg-white">
-          <CardContent className="py-10 text-center text-slate-600">
-            수업일지를 찾을 수 없습니다.
-          </CardContent>
-        </Card>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">수업일지 수정</h1>
+          <Button variant="outline" render={<Link href="/admin/resources" />}>
+            목록으로
+          </Button>
+        </div>
+        <ClassLogForm
+          action={action}
+          cohorts={cohortRows}
+          defaultValues={{
+            title: log.title,
+            content: log.content,
+            classDate: toDateInputValue(log.classDate),
+            cohortId: log.cohortId,
+          }}
+          submitLabel="수정 저장"
+          successMessage="수업일지가 수정되었습니다."
+        />
+      </section>
+    );
+  } catch (error) {
+    console.error("[admin/resources/edit] DB 조회 오류:", error);
+
+    return (
+      <section className="mx-auto max-w-4xl px-6 py-10">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-medium text-red-800">데이터를 불러오지 못했습니다.</p>
+          <p className="mt-1 text-xs text-red-600">데이터베이스 연결을 확인해 주세요.</p>
+        </div>
       </section>
     );
   }
-
-  const action = updateClassLog.bind(null, log.id);
-
-  return (
-    <section className="mx-auto max-w-4xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">수업일지 수정</h1>
-        <Button variant="outline" render={<Link href="/admin/resources" />}>
-          목록으로
-        </Button>
-      </div>
-      <ClassLogForm
-        action={action}
-        cohorts={cohortRows}
-        defaultValues={{
-          title: log.title,
-          content: log.content,
-          classDate: toDateInputValue(log.classDate),
-          cohortId: log.cohortId,
-        }}
-        submitLabel="수정 저장"
-        successMessage="수업일지가 수정되었습니다."
-      />
-    </section>
-  );
 }

@@ -50,6 +50,8 @@ export default async function AdminRecruitmentPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();
 
+  let hasDbError = false;
+
   // 📊 DB에서 모든 기수 조회 + 각 기수의 지원서 개수 계산
   // - cohorts: 기수 정보 테이블
   // - applications: 지원서 테이블 (count 사용하여 지원자 수 계산)
@@ -68,7 +70,12 @@ export default async function AdminRecruitmentPage() {
     .from(cohorts)
     .leftJoin(applications, eq(applications.cohortId, cohorts.id))
     .groupBy(cohorts.id)
-    .orderBy(desc(cohorts.order), desc(cohorts.createdAt));
+    .orderBy(desc(cohorts.order), desc(cohorts.createdAt))
+    .catch((error) => {
+      hasDbError = true;
+      console.error("[admin/recruitment] DB 조회 오류:", error);
+      return [];
+    });
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
@@ -87,6 +94,11 @@ export default async function AdminRecruitmentPage() {
           <CardTitle className="text-base text-slate-900">전체 기수 {rows.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          {hasDbError ? (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              데이터를 불러오지 못했습니다. 데이터베이스 연결을 확인해 주세요.
+            </div>
+          ) : null}
           <div className="overflow-x-auto -mx-4 sm:mx-0">
           <Table>
             <TableHeader>

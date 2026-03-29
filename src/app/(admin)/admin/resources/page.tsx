@@ -39,6 +39,8 @@ export default async function AdminClassLogsPage() {
   // 🔒 관리자 권한 확인 - 관리자가 아니면 접근 불가
   await requireAdmin();
 
+  let hasDbError = false;
+
   // 📊 DB에서 수업일지 데이터 조회
   // - classLogs: 수업일지 테이블
   // - users: 작성자 정보 가져오기 (innerJoin 사용 → 필수)
@@ -56,7 +58,12 @@ export default async function AdminClassLogsPage() {
     .from(classLogs)
     .innerJoin(users, eq(classLogs.authorId, users.id))
     .leftJoin(cohorts, eq(classLogs.cohortId, cohorts.id))
-    .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
+    .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt))
+    .catch((error) => {
+      hasDbError = true;
+      console.error("[admin/resources] DB 조회 오류:", error);
+      return [];
+    });
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
@@ -70,6 +77,11 @@ export default async function AdminClassLogsPage() {
           <CardTitle className="text-base text-slate-900">전체 수업일지 {rows.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          {hasDbError ? (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              데이터를 불러오지 못했습니다. 데이터베이스 연결을 확인해 주세요.
+            </div>
+          ) : null}
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <Table>
               <TableHeader>

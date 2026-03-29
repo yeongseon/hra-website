@@ -35,12 +35,27 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
 
   const { id } = await params;
 
-  // 📊 DB에서 특정 기수 조회 - 수정할 데이터
-  const [cohort] = await db
-    .select()
-    .from(cohorts)
-    .where(eq(cohorts.id, id))
-    .limit(1);
+  let cohort: typeof cohorts.$inferSelect | undefined;
+
+  try {
+    // 📊 DB에서 특정 기수 조회 - 수정할 데이터
+    [cohort] = await db
+      .select()
+      .from(cohorts)
+      .where(eq(cohorts.id, id))
+      .limit(1);
+  } catch (error) {
+    console.error("[admin/recruitment/edit] DB 조회 오류:", error);
+
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-10">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-medium text-red-800">데이터를 불러오지 못했습니다.</p>
+          <p className="mt-1 text-xs text-red-600">데이터베이스 연결을 확인해 주세요.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!cohort) {
     return (

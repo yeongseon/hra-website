@@ -22,11 +22,17 @@ export default async function NewClassLogPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();
 
+  let cohortRows: Array<{ id: typeof cohorts.$inferSelect.id; name: string }> = [];
+
   // 📊 DB에서 기수 목록 조회 - 폼의 드롭다운에 표시할 데이터
-  const cohortRows = await db
-    .select({ id: cohorts.id, name: cohorts.name })
-    .from(cohorts)
-    .orderBy(asc(cohorts.order), asc(cohorts.name));
+  try {
+    cohortRows = await db
+      .select({ id: cohorts.id, name: cohorts.name })
+      .from(cohorts)
+      .orderBy(asc(cohorts.order), asc(cohorts.name));
+  } catch (error) {
+    console.error("[admin/resources/new] DB 조회 오류:", error);
+  }
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-10">

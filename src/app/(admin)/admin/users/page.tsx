@@ -34,6 +34,8 @@ const formatDate = (value: Date) =>
 export default async function AdminUsersPage() {
   const session = await requireAdmin();
 
+  let hasDbError = false;
+
   const rows = await db
     .select({
       id: users.id,
@@ -44,7 +46,12 @@ export default async function AdminUsersPage() {
       createdAt: users.createdAt,
     })
     .from(users)
-    .orderBy(desc(users.createdAt));
+    .orderBy(desc(users.createdAt))
+    .catch((error) => {
+      hasDbError = true;
+      console.error("[admin/users] DB 조회 오류:", error);
+      return [];
+    });
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
@@ -58,6 +65,11 @@ export default async function AdminUsersPage() {
           <CardTitle className="text-base text-slate-900">전체 회원 {rows.length}명</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
+          {hasDbError ? (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              데이터를 불러오지 못했습니다. 데이터베이스 연결을 확인해 주세요.
+            </div>
+          ) : null}
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <Table>
               <TableHeader>
