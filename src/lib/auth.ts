@@ -19,6 +19,7 @@
  */
 
 import NextAuth from "next-auth";
+import type { Provider } from "next-auth/providers";
 import { compare } from "bcryptjs";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -28,85 +29,109 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 /**
+ * 활성화할 로그인 프로바이더 목록을 동적으로 구성합니다.
+ *
+ * 환경변수가 설정된 소셜 로그인만 providers 배열에 추가합니다.
+ * 환경변수가 없으면 해당 소셜 로그인은 비활성화되고,
+ * NextAuth 초기화 시 에러도 발생하지 않습니다.
+ */
+const providers: Provider[] = [];
+
+// 구글 로그인: AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET 둘 다 있어야 활성화
+if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
+  providers.push(
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    }),
+  );
+}
+
+// 카카오 로그인: AUTH_KAKAO_ID, AUTH_KAKAO_SECRET 둘 다 있어야 활성화
+if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
+  providers.push(
+    Kakao({
+      clientId: process.env.AUTH_KAKAO_ID,
+      clientSecret: process.env.AUTH_KAKAO_SECRET,
+    }),
+  );
+}
+
+/**
+ * 이메일/비밀번호 로그인 프로바이더 (항상 활성화)
+ *
+ * 이 방식은 OAuth(구글/카카오)와 달리, 우리 DB에 저장된 비밀번호 해시를 직접 검증합니다.
+ * 비밀번호 원문은 절대 DB에 저장하지 않고, bcrypt 해시(passwordHash)와 비교해서 로그인 여부를 판단합니다.
+ *
+ * 동작 순서:
+ * 1) 사용자가 입력한 이메일/비밀번호를 받습니다.
+ * 2) 이메일로 사용자를 조회합니다.
+ * 3) 저장된 passwordHash와 입력 비밀번호를 compare로 검증합니다.
+ * 4) 검증 성공 시 NextAuth 세션 생성을 위해 사용자 정보를 반환합니다.
+ */
+providers.push(
+  Credentials({
+    credentials: {
+      email: { label: "이메일", type: "email" },
+      password: { label: "비밀번호", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) return null;
+      if (
+        typeof credentials.email !== "string" ||
+        typeof credentials.password !== "string"
+      ) {
+        return null;
+      }
+
+      const user = await db.query.users.findFirst({
+        where: eq(users.email, credentials.email),
+      });
+
+      if (!user || !user.passwordHash) return null;
+
+      const isValid = await compare(credentials.password, user.passwordHash);
+      if (!isValid) return null;
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+      };
+    },
+  }),
+);
+
+/**
+ * 프론트엔드(로그인 페이지)에서 어떤 소셜 로그인 버튼을 표시할지 결정하기 위한 플래그
+ *
+ * 서버 컴포넌트에서 이 값을 읽어 클라이언트에 전달하면,
+ * 로그인 페이지에서 환경변수가 없는 소셜 로그인 버튼을 숨길 수 있습니다.
+ */
+export const enabledProviders = {
+  google: !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET),
+  kakao: !!(process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET),
+};
+
+/**
  * ========================================
  * NextAuth 인증 시스템 설정
  * ========================================
- * 
-  * 주요 설정:
-  * 1. session.strategy: JWT 방식으로 세션 관리
-  * 2. pages.signIn: 로그인 페이지 경로
-  * 3. providers: 구글, 카카오, 이메일/비밀번호 로그인
-  * 4. callbacks: 로그인 과정 중 특정 시점에 실행되는 함수들
-  */
+ *
+ * 주요 설정:
+ * 1. session.strategy: JWT 방식으로 세션 관리
+ * 2. pages.signIn: 로그인 페이지 경로
+ * 3. providers: 환경변수에 따라 동적으로 구성된 로그인 방식
+ * 4. callbacks: 로그인 과정 중 특정 시점에 실행되는 함수들
+ */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
-  providers: [
-    /**
-     * 구글 로그인 프로바이더
-     * 환경변수 AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET 필요
-     * Google Cloud Console에서 OAuth 클라이언트를 생성해서 발급받습니다.
-     */
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-    }),
-    /**
-     * 카카오 로그인 프로바이더
-     * 환경변수 AUTH_KAKAO_ID, AUTH_KAKAO_SECRET 필요
-     * Kakao Developers에서 앱을 등록해서 발급받습니다.
-     */
-    Kakao({
-      clientId: process.env.AUTH_KAKAO_ID!,
-      clientSecret: process.env.AUTH_KAKAO_SECRET!,
-    }),
-    /**
-     * 이메일/비밀번호 로그인 프로바이더
-     *
-     * 이 방식은 OAuth(구글/카카오)와 달리, 우리 DB에 저장된 비밀번호 해시를 직접 검증합니다.
-     * 비밀번호 원문은 절대 DB에 저장하지 않고, bcrypt 해시(passwordHash)와 비교해서 로그인 여부를 판단합니다.
-     *
-     * 동작 순서:
-     * 1) 사용자가 입력한 이메일/비밀번호를 받습니다.
-     * 2) 이메일로 사용자를 조회합니다.
-     * 3) 저장된 passwordHash와 입력 비밀번호를 compare로 검증합니다.
-     * 4) 검증 성공 시 NextAuth 세션 생성을 위해 사용자 정보를 반환합니다.
-     */
-    Credentials({
-      credentials: {
-        email: { label: "이메일", type: "email" },
-        password: { label: "비밀번호", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        if (
-          typeof credentials.email !== "string" ||
-          typeof credentials.password !== "string"
-        ) {
-          return null;
-        }
-
-        const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email),
-        });
-
-        if (!user || !user.passwordHash) return null;
-
-        const isValid = await compare(credentials.password, user.passwordHash);
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: user.role,
-        };
-      },
-    }),
-  ],
+  providers,
   callbacks: {
     /**
      * signIn 콜백: 소셜 로그인 성공 후 DB에 사용자 저장
