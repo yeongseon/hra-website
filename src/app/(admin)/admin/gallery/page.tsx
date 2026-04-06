@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { CalendarDays, ImageIcon, PencilLine, Plus } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import {
   Card,
   CardContent,

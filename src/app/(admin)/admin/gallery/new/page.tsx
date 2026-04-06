@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { GalleryForm } from "@/app/(admin)/admin/gallery/_components/gallery-form";
 import { createGallery } from "@/features/gallery/actions";
 import { requireAdmin } from "@/lib/admin";

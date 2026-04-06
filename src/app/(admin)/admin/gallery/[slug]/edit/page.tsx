@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, ImageIcon, Star, Trash2 } from "lucide-react";
 import { z } from "zod/v4";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GalleryForm } from "@/app/(admin)/admin/gallery/_components/gallery-form";
 import { GalleryImageForm } from "@/app/(admin)/admin/gallery/_components/gallery-image-form";

@@ -9,7 +9,7 @@
 
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent } from "@/components/ui/card";
 import { CohortForm } from "@/app/(admin)/admin/recruitment/_components/cohort-form";
 import { updateCohort } from "@/features/recruitment/actions";
