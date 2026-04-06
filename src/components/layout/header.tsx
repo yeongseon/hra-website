@@ -72,8 +72,8 @@ export function Header({ session }: HeaderProps) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D9D9D9]">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#E5E5E5]">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
          <Link href="/" className="text-xl font-bold tracking-tight text-gray-900">
            HRA
          </Link>
@@ -89,14 +89,14 @@ export function Header({ session }: HeaderProps) {
                      type="button"
                      className={cn(
                        "flex items-center gap-1 text-sm font-medium tracking-wide transition-colors",
-                       active ? "text-gray-900" : "text-gray-600 group-hover:text-gray-900"
+                        active ? "text-[#2563EB]" : "text-gray-600 group-hover:text-gray-900"
                      )}
                    >
                      {item.label}
                      <ChevronDown className="size-4 transition-transform group-hover:rotate-180" />
                    </button>
                    <div className="invisible absolute top-full left-0 mt-0 w-48 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:translate-y-1">
-                     <div className="rounded-md border border-[#D9D9D9] bg-white py-1 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]">
+                     <div className="rounded-md border border-[#E5E5E5] bg-white py-1 shadow-[4px_4px_12px_0px_rgba(0,0,0,0.08)]">
                        {item.subItems.map((sub) => {
                          const subActive = pathname === sub.href || pathname.startsWith(sub.href + "/");
                          return (
@@ -105,7 +105,7 @@ export function Header({ session }: HeaderProps) {
                              href={sub.href}
                              className={cn(
                                "block px-4 py-2 text-sm transition-colors",
-                               subActive ? "text-gray-900 font-medium bg-gray-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                subActive ? "bg-blue-50 text-[#2563EB] font-semibold" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                              )}
                            >
                              {sub.label}
@@ -124,7 +124,7 @@ export function Header({ session }: HeaderProps) {
                  href={item.href!}
                  className={cn(
                    "text-sm font-medium tracking-wide transition-colors",
-                   active ? "text-gray-900" : "text-gray-600 hover:text-gray-900"
+                    active ? "text-[#2563EB]" : "text-gray-600 hover:text-gray-900"
                  )}
                >
                  {item.label}
@@ -137,14 +137,14 @@ export function Header({ session }: HeaderProps) {
                href="/admin"
                className={cn(
                  "text-sm font-medium tracking-wide transition-colors",
-                 pathname.startsWith("/admin") ? "text-gray-900" : "text-gray-600 hover:text-gray-900"
+                  pathname.startsWith("/admin") ? "text-[#2563EB]" : "text-gray-600 hover:text-gray-900"
                )}
              >
                관리자
              </Link>
            )}
 
-           <div className="flex items-center gap-4 ml-2 border-l border-[#D9D9D9] pl-6">
+           <div className="flex items-center gap-4 ml-2 border-l border-[#E5E5E5] pl-6">
              {isLoggedIn ? (
                <div className="relative">
                  <button
@@ -163,8 +163,8 @@ export function Header({ session }: HeaderProps) {
                        onClick={() => setUserMenuOpen(false)}
                        aria-hidden="true"
                      />
-                     <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-[#D9D9D9] bg-white py-1 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]">
-                       <div className="px-3 py-2 border-b border-[#D9D9D9]">
+                     <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-[#E5E5E5] bg-white py-1 shadow-[4px_4px_12px_0px_rgba(0,0,0,0.08)]">
+                       <div className="px-3 py-2 border-b border-[#E5E5E5]">
                          <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                          <p className="text-xs text-gray-500">{user?.email}</p>
                        </div>
@@ -209,7 +209,7 @@ export function Header({ session }: HeaderProps) {
                href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
                target="_blank"
                rel="noopener noreferrer"
-               className="ml-2 inline-flex items-center justify-center rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]"
+               className="ml-2 inline-flex items-center justify-center rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
              >
                지원하기
              </Link>
@@ -221,7 +221,7 @@ export function Header({ session }: HeaderProps) {
              href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
              target="_blank"
              rel="noopener noreferrer"
-             className="inline-flex items-center justify-center rounded-md bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+             className="inline-flex items-center justify-center rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
            >
              지원하기
            </Link>
@@ -237,13 +237,13 @@ export function Header({ session }: HeaderProps) {
       </nav>
 
        {mobileOpen && (
-        <div className="border-t border-[#D9D9D9] bg-white md:hidden overflow-y-auto max-h-[calc(100vh-64px)] shadow-lg absolute w-full">
+        <div className="border-t border-[#E5E5E5] bg-white md:hidden overflow-y-auto max-h-[calc(100vh-64px)] shadow-lg absolute w-full">
           <div className="flex flex-col px-4 py-4">
             {navItems.map((item) => {
               if (item.subItems) {
                 const isOpen = openMobileDropdown === item.label;
                 return (
-                  <div key={item.label} className="border-b border-[#f0f0f0] last:border-none">
+                  <div key={item.label} className="border-b border-[#E5E5E5] last:border-none">
                     <button
                       type="button"
                       onClick={() => setOpenMobileDropdown(isOpen ? null : item.label)}
@@ -262,7 +262,7 @@ export function Header({ session }: HeaderProps) {
                             className={cn(
                               "text-sm transition-colors",
                               pathname === sub.href || pathname.startsWith(sub.href + "/")
-                                ? "text-gray-900 font-bold"
+                                ? "text-[#2563EB] font-bold"
                                 : "text-gray-600"
                             )}
                           >
@@ -280,7 +280,7 @@ export function Header({ session }: HeaderProps) {
                   key={item.label}
                   href={item.href!}
                   onClick={() => setMobileOpen(false)}
-                  className="block border-b border-[#f0f0f0] py-4 text-sm font-medium text-gray-900 last:border-none"
+                  className="block border-b border-[#E5E5E5] py-4 text-sm font-medium text-gray-900 last:border-none"
                 >
                   {item.label}
                 </Link>
@@ -291,7 +291,7 @@ export function Header({ session }: HeaderProps) {
               <Link
                 href="/admin"
                 onClick={() => setMobileOpen(false)}
-                className="block border-b border-[#f0f0f0] py-4 text-sm font-medium text-gray-900 last:border-none"
+                className="block border-b border-[#E5E5E5] py-4 text-sm font-medium text-gray-900 last:border-none"
               >
                 관리자
               </Link>
@@ -299,7 +299,7 @@ export function Header({ session }: HeaderProps) {
 
             <div className="mt-2 pt-4">
               {isLoggedIn ? (
-                <div className="space-y-4 rounded-lg bg-gray-50 p-4 border border-[#D9D9D9]">
+                <div className="space-y-4 rounded-lg bg-gray-50 p-4 border border-[#E5E5E5]">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{user?.name || "사용자"}</p>
                     <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
@@ -308,7 +308,7 @@ export function Header({ session }: HeaderProps) {
                     <Link
                       href="/mypage"
                       onClick={() => setMobileOpen(false)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#E5E5E5] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       <User className="size-4" />
                       마이페이지
@@ -316,7 +316,7 @@ export function Header({ session }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleSignOut}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#E5E5E5] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       <LogOut className="size-4" />
                       로그아웃
@@ -328,7 +328,7 @@ export function Header({ session }: HeaderProps) {
                   <Link
                     href="/login"
                     onClick={() => setMobileOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#E5E5E5] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
                     <LogIn className="size-4" />
                     로그인
@@ -336,7 +336,7 @@ export function Header({ session }: HeaderProps) {
                   <Link
                     href="/mypage"
                     onClick={() => setMobileOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#E5E5E5] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
                     <User className="size-4" />
                     마이페이지

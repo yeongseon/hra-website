@@ -16,13 +16,13 @@ import { Instagram, Mail } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-[#D9D9D9] bg-white py-12">
+    <footer className="border-t border-[#E5E5E5] bg-white py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
             <h3 className="text-lg font-bold text-gray-900">HRA</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Human Renaissance Academy
+              휴먼 르네상스 아카데미
             </p>
             <p className="mt-1 text-sm text-gray-500">
               인간 르네상스를 꿈꾸는 대학 연합 교육 프로그램
@@ -82,7 +82,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
                 >
                   <Instagram className="h-4 w-4" />
-                  <span>Instagram</span>
+                  <span>인스타그램</span>
                 </a>
               </li>
               <li className="flex items-center gap-2 text-sm text-gray-600">
@@ -93,8 +93,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-[#D9D9D9] pt-8 text-center text-xs text-gray-500">
-          © 2026 Human Renaissance Academy. All rights reserved.
+        <div className="mt-8 border-t border-[#E5E5E5] pt-8 text-center text-xs text-gray-500">
+          © 2026 HRA. 모든 권리 보유.
         </div>
       </div>
     </footer>
