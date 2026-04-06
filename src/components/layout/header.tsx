@@ -1,18 +1,3 @@
-/**
- * 헤더 컴포넌트 - 사이트 상단의 내비게이션 바
- *
- * 이 컴포넌트는 HRA 웹사이트의 맨 위에 표시되는 헤더를 만듭니다.
- * - 로고(HRA) 표시
- * - PC 화면에서는 가로로 내비게이션 링크 표시
- * - 모바일 화면에서는 메뉴 아이콘으로 햄버거 메뉴 제공
- * - 현재 페이지를 표시해주는 액티브 상태 관리
- * - 로그인/로그아웃 버튼 표시
- * - 역할(ADMIN/MEMBER)에 따라 추가 링크 표시
- *
- * "use client" = 이 컴포넌트는 클라이언트 컴포넌트입니다.
- * 클라이언트 컴포넌트는 사용자의 브라우저에서 실행되고,
- * 클릭이나 상태 변화 같은 상호작용을 처리할 수 있습니다.
- */
 "use client";
 
 import Link from "next/link";
@@ -22,11 +7,6 @@ import { Menu, X, LogIn, LogOut, ChevronDown, User } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
-/**
- * Session 타입 정의
- * 서버에서 전달받는 세션 정보의 타입입니다.
- * null이면 로그인하지 않은 상태입니다.
- */
 type SessionUser = {
   name?: string | null;
   email?: string | null;
@@ -40,125 +20,295 @@ type HeaderProps = {
   } | null;
 };
 
-/**
- * 내비게이션 링크 배열
- * 사이트의 주요 페이지들을 여기에 정의합니다.
- * 각 객체는 { href: "이동할 주소", label: "화면에 보여줄 텍스트" } 형태입니다.
- */
-const navLinks = [
-  { href: "/about", label: "소개" },
-  { href: "/faculty", label: "교수진" },
-  { href: "/curriculum", label: "커리큘럼" },
-  { href: "/cohorts", label: "기수 소개" },
-  { href: "/recruitment", label: "모집안내" },
-  { href: "/notices", label: "공지사항" },
-  { href: "/gallery", label: "갤러리" },
-  { href: "/resources", label: "자료실" },
+type NavItem = {
+  label: string;
+  href?: string;
+  subItems?: { label: string; href: string }[];
+};
+
+const navItems: NavItem[] = [
+  {
+    label: "소개",
+    subItems: [
+      { label: "HRA", href: "/about" },
+      { label: "커리큘럼", href: "/curriculum" },
+      { label: "교수진", href: "/faculty" },
+      { label: "기수", href: "/cohorts" },
+    ],
+  },
+  { label: "모집안내", href: "/recruitment" },
+  { label: "공지사항", href: "/notices" },
+  {
+    label: "아카이빙",
+    subItems: [
+      { label: "수료생 이야기", href: "/alumni" },
+      { label: "자료실", href: "/resources" },
+      { label: "갤러리", href: "/gallery" },
+    ],
+  },
+  { label: "FAQ", href: "/faq" },
 ];
 
-/**
- * Header 컴포넌트 - 헤더를 렌더링하는 함수
- * session prop으로 현재 로그인 상태를 받아옵니다.
- */
 export function Header({ session }: HeaderProps) {
-  // 현재 페이지의 URL 경로를 가져옵니다. (예: "/recruitment")
-  // 이를 통해 어느 내비게이션 링크가 활성화되었는지 판단합니다.
   const pathname = usePathname();
-  
-  // 모바일 메뉴가 열려있는지 여부를 관리하는 상태
-  // mobileOpen = true면 메뉴가 열려있고, false면 닫혀있습니다.
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // 사용자 드롭다운 메뉴 열림/닫힘 상태
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
 
-  // 현재 로그인한 사용자 정보
   const user = session?.user;
   const isLoggedIn = !!user;
   const isAdmin = user?.role === "ADMIN";
 
-  // 역할에 따라 추가되는 내비게이션 링크
-  // ADMIN: 관리자 링크 추가
-  const roleLinks = [];
-  if (isAdmin) {
-    roleLinks.push({ href: "/admin", label: "관리자" });
-  }
-
-  // 전체 내비게이션 링크 = 기본 링크 + 역할별 링크
-  const allNavLinks = [...navLinks, ...roleLinks];
-
-  /**
-   * 로그아웃 처리 함수
-   * next-auth의 signOut을 호출하여 세션을 종료합니다.
-   */
   const handleSignOut = async () => {
     setUserMenuOpen(false);
     setMobileOpen(false);
     await signOut({ callbackUrl: "/" });
   };
 
+  const isItemActive = (href?: string, subItems?: { href: string }[]) => {
+    if (href && (pathname === href || pathname.startsWith(href + "/"))) return true;
+    if (subItems?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + "/"))) return true;
+    return false;
+  };
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D9D9D9]">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-         {/* 로고: 클릭하면 홈페이지("/")로 이동 */}
-         <Link href="/" className="text-xl font-bold tracking-tight text-white">
+         <Link href="/" className="text-xl font-bold tracking-tight text-gray-900">
            HRA
          </Link>
 
-         {/* 
-           데스크톱 내비게이션: md(화면 너비 768px) 이상일 때만 표시
-           모바일에서는 hidden으로 숨겨집니다.
-         */}
          <div className="hidden items-center gap-6 md:flex">
-           {/* navLinks + roleLinks를 순회하며 내비게이션 버튼을 만듭니다 */}
-           {allNavLinks.map((link) => (
+           {navItems.map((item) => {
+             const active = isItemActive(item.href, item.subItems);
+             
+             if (item.subItems) {
+               return (
+                 <div key={item.label} className="group relative py-6">
+                   <button
+                     type="button"
+                     className={cn(
+                       "flex items-center gap-1 text-sm font-medium tracking-wide transition-colors",
+                       active ? "text-gray-900" : "text-gray-600 group-hover:text-gray-900"
+                     )}
+                   >
+                     {item.label}
+                     <ChevronDown className="size-4 transition-transform group-hover:rotate-180" />
+                   </button>
+                   <div className="invisible absolute top-full left-0 mt-0 w-48 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:translate-y-1">
+                     <div className="rounded-md border border-[#D9D9D9] bg-white py-1 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]">
+                       {item.subItems.map((sub) => {
+                         const subActive = pathname === sub.href || pathname.startsWith(sub.href + "/");
+                         return (
+                           <Link
+                             key={sub.href}
+                             href={sub.href}
+                             className={cn(
+                               "block px-4 py-2 text-sm transition-colors",
+                               subActive ? "text-gray-900 font-medium bg-gray-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                             )}
+                           >
+                             {sub.label}
+                           </Link>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 </div>
+               );
+             }
+
+             return (
+               <Link
+                 key={item.label}
+                 href={item.href!}
+                 className={cn(
+                   "text-sm font-medium tracking-wide transition-colors",
+                   active ? "text-gray-900" : "text-gray-600 hover:text-gray-900"
+                 )}
+               >
+                 {item.label}
+               </Link>
+             );
+           })}
+
+           {isAdmin && (
              <Link
-               key={link.href}
-               href={link.href}
+               href="/admin"
                className={cn(
                  "text-sm font-medium tracking-wide transition-colors",
-                 // 현재 페이지가 이 링크와 일치하면 흰색, 아니면 회색
-                 // startsWith를 사용하면 /recruitment/apply도 /recruitment 링크를 활성화합니다
-                 pathname === link.href || pathname.startsWith(link.href + "/")
-                   ? "text-white"
-                   : "text-gray-400 hover:text-white"
+                 pathname.startsWith("/admin") ? "text-gray-900" : "text-gray-600 hover:text-gray-900"
                )}
              >
-              {link.label}
-            </Link>
-          ))}
+               관리자
+             </Link>
+           )}
 
-          {/* 로그인/사용자 메뉴 영역 */}
-          {isLoggedIn ? (
-            // 로그인 상태: 사용자 이름 + 드롭다운 메뉴
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+           <div className="flex items-center gap-4 ml-2 border-l border-[#D9D9D9] pl-6">
+             {isLoggedIn ? (
+               <div className="relative">
+                 <button
+                   type="button"
+                   onClick={() => setUserMenuOpen(!userMenuOpen)}
+                   className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 hover:bg-gray-50"
+                 >
+                   <span>{user?.name || "사용자"}</span>
+                   <ChevronDown className={cn("size-4 transition-transform", userMenuOpen && "rotate-180")} />
+                 </button>
+
+                 {userMenuOpen && (
+                   <>
+                     <div
+                       className="fixed inset-0 z-40"
+                       onClick={() => setUserMenuOpen(false)}
+                       aria-hidden="true"
+                     />
+                     <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-[#D9D9D9] bg-white py-1 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]">
+                       <div className="px-3 py-2 border-b border-[#D9D9D9]">
+                         <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                         <p className="text-xs text-gray-500">{user?.email}</p>
+                       </div>
+                       <Link
+                         href="/mypage"
+                         onClick={() => setUserMenuOpen(false)}
+                         className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                       >
+                         <User className="size-4" />
+                         마이페이지
+                       </Link>
+                       <button
+                         type="button"
+                         onClick={handleSignOut}
+                         className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                       >
+                         <LogOut className="size-4" />
+                         로그아웃
+                       </button>
+                     </div>
+                   </>
+                 )}
+               </div>
+             ) : (
+               <div className="flex items-center gap-4">
+                 <Link
+                   href="/login"
+                   className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+                 >
+                   로그인
+                 </Link>
+                 <Link
+                   href="/mypage"
+                   className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+                 >
+                   마이페이지
+                 </Link>
+               </div>
+             )}
+             
+             <Link
+               href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
+               target="_blank"
+               rel="noopener noreferrer"
+               className="ml-2 inline-flex items-center justify-center rounded-md bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 shadow-[2px_2px_0px_0px_rgba(217,217,217,1)]"
+             >
+               지원하기
+             </Link>
+           </div>
+         </div>
+
+         <div className="flex items-center gap-3 md:hidden">
+           <Link
+             href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="inline-flex items-center justify-center rounded-md bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+           >
+             지원하기
+           </Link>
+           <button
+             type="button"
+             className="text-gray-900 p-2 -mr-2 flex items-center justify-center"
+             onClick={() => setMobileOpen(!mobileOpen)}
+             aria-label="Toggle menu"
+           >
+             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+           </button>
+         </div>
+      </nav>
+
+       {mobileOpen && (
+        <div className="border-t border-[#D9D9D9] bg-white md:hidden overflow-y-auto max-h-[calc(100vh-64px)] shadow-lg absolute w-full">
+          <div className="flex flex-col px-4 py-4">
+            {navItems.map((item) => {
+              if (item.subItems) {
+                const isOpen = openMobileDropdown === item.label;
+                return (
+                  <div key={item.label} className="border-b border-[#f0f0f0] last:border-none">
+                    <button
+                      type="button"
+                      onClick={() => setOpenMobileDropdown(isOpen ? null : item.label)}
+                      className="flex w-full items-center justify-between py-4 text-left text-sm font-medium text-gray-900"
+                    >
+                      {item.label}
+                      <ChevronDown className={cn("size-4 transition-transform", isOpen && "rotate-180")} />
+                    </button>
+                    {isOpen && (
+                      <div className="flex flex-col pb-4 pl-4 space-y-4">
+                        {item.subItems.map((sub) => (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              "text-sm transition-colors",
+                              pathname === sub.href || pathname.startsWith(sub.href + "/")
+                                ? "text-gray-900 font-bold"
+                                : "text-gray-600"
+                            )}
+                          >
+                            {sub.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href!}
+                  onClick={() => setMobileOpen(false)}
+                  className="block border-b border-[#f0f0f0] py-4 text-sm font-medium text-gray-900 last:border-none"
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="block border-b border-[#f0f0f0] py-4 text-sm font-medium text-gray-900 last:border-none"
               >
-                <span>{user?.name || "사용자"}</span>
-                <ChevronDown className={cn("size-4 transition-transform", userMenuOpen && "rotate-180")} />
-              </button>
+                관리자
+              </Link>
+            )}
 
-              {/* 사용자 드롭다운 메뉴 */}
-              {userMenuOpen && (
-                <>
-                  {/* 드롭다운 외부 클릭 시 닫기 */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setUserMenuOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-white/10 bg-black/95 py-1 shadow-lg">
-                    <div className="px-3 py-2 border-b border-white/10">
-                      <p className="text-sm text-white">{user?.name}</p>
-                      <p className="text-xs text-gray-400">{user?.email}</p>
-                    </div>
+            <div className="mt-2 pt-4">
+              {isLoggedIn ? (
+                <div className="space-y-4 rounded-lg bg-gray-50 p-4 border border-[#D9D9D9]">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{user?.name || "사용자"}</p>
+                    <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
+                  </div>
+                  <div className="flex gap-2">
                     <Link
                       href="/mypage"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       <User className="size-4" />
                       마이페이지
@@ -166,99 +316,32 @@ export function Header({ session }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleSignOut}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/10 hover:text-white"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       <LogOut className="size-4" />
                       로그아웃
                     </button>
                   </div>
-                </>
-              )}
-            </div>
-          ) : (
-            // 미로그인 상태: 로그인 버튼
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-            >
-              <LogIn className="size-4" />
-              로그인
-            </Link>
-          )}
-        </div>
-
-         <button
-           type="button"
-           className="text-white md:hidden p-2 -mr-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
-           onClick={() => setMobileOpen(!mobileOpen)}
-           aria-label="Toggle menu"
-         >
-           {/* 
-             모바일에서만 표시되는 메뉴 아이콘
-             mobileOpen이 true면 X 아이콘, false면 Menu 아이콘 표시
-           */}
-           {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-         </button>
-      </nav>
-
-       {/* 
-         모바일 메뉴: mobileOpen이 true일 때만 표시됩니다.
-         사용자가 모바일에서 Menu 아이콘을 클릭하면 이 메뉴가 아래로 펼쳐집니다.
-       */}
-       {mobileOpen && (
-        <div className="border-t border-white/10 bg-black/95 md:hidden">
-          <div className="flex flex-col gap-1 px-6 py-4">
-            {allNavLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "rounded-md px-3 py-3 text-sm font-medium transition-colors",
-                  pathname === link.href || pathname.startsWith(link.href + "/")
-                    ? "bg-white/10 text-white"
-                    : "text-gray-400 hover:bg-white/5 hover:text-white"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-
-            {/* 모바일 메뉴 하단: 로그인/로그아웃 */}
-            <div className="mt-2 border-t border-white/10 pt-3">
-              {isLoggedIn ? (
-                <div className="space-y-2">
-                  {/* 사용자 정보 표시 */}
-                  <div className="px-3 py-2">
-                    <p className="text-sm text-white">{user?.name || "사용자"}</p>
-                    <p className="text-xs text-gray-400">{user?.email}</p>
-                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    <LogIn className="size-4" />
+                    로그인
+                  </Link>
                   <Link
                     href="/mypage"
                     onClick={() => setMobileOpen(false)}
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
                     <User className="size-4" />
                     마이페이지
                   </Link>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-                  >
-                    <LogOut className="size-4" />
-                    로그아웃
-                  </button>
                 </div>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-3 text-sm font-medium text-white transition-colors hover:bg-white/20"
-                >
-                  <LogIn className="size-4" />
-                  로그인
-                </Link>
               )}
             </div>
           </div>

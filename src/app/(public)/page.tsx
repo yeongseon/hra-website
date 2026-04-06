@@ -1,155 +1,477 @@
-/**
- * 홈 페이지 (src/app/(public)/page.tsx)
- * 
- * 이 파일은 HRA 웹사이트의 첫 페이지를 보여줍니다.
- * - HRA 소개 및 미션 전달
- * - 핵심 가치 3가지 (도전, 성장, 경험) 표시
- * - 통계 정보 (기수, 수료생, 열정)
- * - 지원하기 버튼으로 사용자 유도
- */
+"use client";
 
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Lightbulb, Heart, Target, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Target, Briefcase, Heart } from "lucide-react";
+
+const fullHeadingText = "정답보다 중요한 것,\nHRA는 본질을 묻는 법을 배웁니다.";
+
+const alumniData = [
+  {
+    id: "alumni-17",
+    image: "/images/alumni-1.jpg",
+    cohort: "17기 수료생",
+    quote: "한계까지 도전하고, 성장으로 보답하다"
+  },
+  {
+    id: "alumni-18",
+    image: "/images/alumni-2.jpg",
+    cohort: "18기 수료생",
+    quote: "본질을 묻는 힘, 현업에서의 차이를 만들다"
+  },
+  {
+    id: "alumni-19",
+    image: "/images/alumni-3.jpg",
+    cohort: "19기 수료생",
+    quote: "평생을 함께할 최고의 동료들을 얻었습니다"
+  }
+];
+
+const AnimatedNumber = ({ end, duration = 2000, suffix = "", visible = false }: { end: number, duration?: number, suffix?: string, visible?: boolean }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let startTimestamp: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeOut = progress * (2 - progress);
+      setCount(Math.floor(easeOut * end));
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+
+    window.requestAnimationFrame(step);
+  }, [visible, end, duration]);
+
+  return <span>{count}{suffix}</span>;
+};
+
+const AnimatedDecimal = ({ end, duration = 2000, suffix = "", visible = false }: { end: number, duration?: number, suffix?: string, visible?: boolean }) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    let startTimestamp: number | null = null;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeOut = progress * (2 - progress);
+      setCount(Number((easeOut * end).toFixed(1)));
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+
+    window.requestAnimationFrame(step);
+  }, [visible, end, duration]);
+
+  return <span>{count.toFixed(1)}{suffix}</span>;
+};
 
 export default function Home() {
-  return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white selection:bg-cyan-500/30">
-      {/* 히어로 섹션: 제목과 대표 배너 */}
-       <section className="relative flex flex-col items-center justify-center min-h-screen px-4 overflow-hidden text-center">
-        {/* 배경 그래디언트 효과 */}
-        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none opacity-20">
-           <div className="absolute w-[80vw] h-[80vw] max-w-3xl max-h-[800px] rounded-full bg-cyan-600/30 blur-[120px] mix-blend-screen" />
-           <div className="absolute w-[60vw] h-[60vw] max-w-2xl max-h-[600px] rounded-full bg-blue-600/20 blur-[100px] mix-blend-screen translate-x-1/4 translate-y-1/4" />
-         </div>
+  const [typedHeading, setTypedHeading] = useState("");
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
 
-        {/* 메인 제목과 설명 텍스트 */}
-        <div className="relative z-10 flex flex-col items-center max-w-5xl gap-6 sm:gap-8 animate-in fade-in zoom-in-95 duration-1000">
-           <h2 className="text-xs sm:text-sm font-medium tracking-widest text-cyan-400 uppercase">
-             Human Renaissance Academy
-           </h2>
-           {/* 사이트 주제를 대표하는 큰 제목 — 모바일에서 적절한 크기로 시작 */}
-           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl md:text-7xl lg:text-8xl text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 pb-2 leading-tight">
-             배우고, <br />토론하고, <br />실행하라
-           </h1>
-           {/* 소개 텍스트 */}
-           <p className="max-w-2xl text-base sm:text-lg md:text-xl text-gray-400 font-light tracking-wide px-2 leading-relaxed">
-             Human Renaissance Academy(HRA)는 고전 읽기와 토의·토론, 케이스 스터디를 바탕으로 배우고 토론하고 실행하는 과정을 통해, 청년들이 더 넓게 생각하고 더 깊이 성찰하며 공동체를 이끌어갈 힘을 기르도록 돕는 아카데미입니다.
-           </p>
-           {/* 지원 버튼 — 모바일에서 적절한 크기 */}
-           <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-4">
+  useEffect(() => {
+    let currentIndex = 0;
+    const intervalId = setInterval(() => {
+      if (currentIndex <= fullHeadingText.length) {
+        setTypedHeading(fullHeadingText.slice(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(intervalId);
+        setIsTypingComplete(true);
+      }
+    }, 70);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const renderHeading = () => {
+    const parts = typedHeading.split("\n");
+    return (
+      <>
+        {parts[0]}
+        {parts.length > 1 && (
+          <>
+            <br />
+            {parts[1].split("본질").map((chunk, i, arr) => (
+              <React.Fragment key={`chunk-${i}`}>
+                {chunk}
+                {i < arr.length - 1 && (
+                  <span className="text-blue-600 underline decoration-blue-600/30 underline-offset-4">본질</span>
+                )}
+              </React.Fragment>
+            ))}
+          </>
+        )}
+      </>
+    );
+  };
+
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setStatsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % alumniData.length);
+  }, []);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + alumniData.length) % alumniData.length);
+  }, []);
+
+  return (
+    <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
+      
+      <section className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 overflow-hidden text-center bg-gray-900">
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
+        />
+        <div className="absolute inset-0 z-0 bg-black/50" />
+
+        <div className="relative z-10 flex flex-col items-center max-w-5xl gap-6">
+          <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
+            Human Renaissance Academy
+          </h2>
+          
+          <h1 
+            className={`font-extrabold tracking-tight text-white transition-all duration-1000 whitespace-pre-line leading-tight
+              ${isTypingComplete ? 'text-[50pt]' : 'text-[60pt]'}
+              max-md:text-4xl max-sm:text-3xl
+            `}
+          >
+            {renderHeading()}
+          </h1>
+          
+          <p className="max-w-2xl text-[18px] text-white/90 font-light tracking-wide px-2 leading-relaxed mt-4">
+            고전 읽기와 토의·토론, 케이스 스터디를 통해<br className="hidden sm:block" />
+            사고력을 비약적으로 성장하게 하는 1년 과정의 아카데미입니다.
+          </p>
+          
+          <div className="mt-10 flex flex-col items-center gap-6">
             <Link href="/recruitment">
-              <Button size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold h-12 px-6 text-base sm:h-14 sm:px-8 sm:text-lg rounded-full transition-all hover:scale-105 shadow-[0_0_30px_-5px_rgba(6,182,212,0.4)]">
-                지원하기
-                <ChevronRight className="w-5 h-5 ml-2" />
+              <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-black font-semibold h-14 px-10 text-lg rounded-full transition-all duration-300">
+                모집 안내 보기
               </Button>
             </Link>
-          </div>
-        </div>
-
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce opacity-50">
-          {/* 아래로 스크롤하라는 표시 (애니메이션 화살표) */}
-          <div className="w-1 h-12 rounded-full bg-gradient-to-b from-cyan-400 to-transparent" />
-         </div>
-       </section>
-
-       {/* 핵심 가치 섹션: 3C (Competence, Character, Commitment) */}
-       <section className="relative z-10 px-4 py-16 sm:py-24 md:py-32 bg-zinc-950/50 border-y border-white/5">
-         <div className="max-w-7xl mx-auto">
-           <div className="text-center mb-12 sm:mb-20">
-             <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mb-6">
-               HRA 핵심 가치
-             </h2>
-             {/* 제목 아래 장식 라인 */}
-             <div className="w-20 h-1 bg-cyan-500 mx-auto rounded-full" />
-           </div>
-
-           {/* 3개의 가치 카드 (3C) */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-12">
-            <div className="group relative p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-white/[0.07] transition-all duration-500">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-cyan-500/20 flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform duration-500">
-                  <Lightbulb className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400" />
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Competence</h3>
-                <h4 className="text-lg font-medium text-cyan-300 mb-4">업무능력</h4>
-                <p className="text-gray-400 leading-relaxed">
-                  배움을 실천으로 이어가는 힘
-                </p>
-              </div>
-            </div>
-
-            <div className="group relative p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-white/[0.07] transition-all duration-500">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-blue-400" />
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Character</h3>
-                <h4 className="text-lg font-medium text-blue-300 mb-4">성품</h4>
-                <p className="text-gray-400 leading-relaxed">
-                  생각의 깊이와 마음의 넓이를 기르는 자세
-                </p>
-              </div>
-            </div>
-
-            <div className="group relative p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-white/[0.07] transition-all duration-500">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl" />
-              <div className="relative z-10">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-cyan-500/20 flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform duration-500">
-                  <Target className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400" />
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Commitment</h3>
-                <h4 className="text-lg font-medium text-cyan-300 mb-4">사명감</h4>
-                <p className="text-gray-400 leading-relaxed">
-                  나를 넘어 사회를 향하는 마음
-                </p>
-              </div>
-            </div>
-          </div>
-         </div>
-       </section>
-
-       <section className="px-4 py-16 sm:py-24 md:py-32">
-         {/* 통계 섹션: 운영 연도, 수료생, 고전 권수, 취업률 */}
-         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-12">
-          <div className="text-center px-2 sm:px-4">
-            <div className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 mb-2">19</div>
-            <div className="text-xs sm:text-sm font-medium tracking-widest text-gray-400 uppercase">운영 연도</div>
-          </div>
-          <div className="text-center px-2 sm:px-4">
-            <div className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 mb-2">399</div>
-            <div className="text-xs sm:text-sm font-medium tracking-widest text-gray-400 uppercase">수료생</div>
-          </div>
-          <div className="text-center px-2 sm:px-4">
-            <div className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 mb-2">50+</div>
-            <div className="text-xs sm:text-sm font-medium tracking-widest text-gray-400 uppercase">고전 권수</div>
-          </div>
-          <div className="text-center px-2 sm:px-4">
-            <div className="text-3xl sm:text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 mb-2">95%</div>
-            <div className="text-xs sm:text-sm font-medium tracking-widest text-cyan-500 uppercase">취업률</div>
+            <Link 
+              href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-white/80 hover:text-white underline underline-offset-4 text-sm font-medium transition-colors"
+            >
+              지원하기
+            </Link>
           </div>
         </div>
       </section>
 
-       <section className="relative px-4 py-20 sm:py-32 md:py-40 overflow-hidden">
-         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-cyan-950/20" />
-         {/* CTA(행동 유도) 섹션 */}
-         <div className="relative z-10 max-w-4xl mx-auto text-center px-2">
-          <h2 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-6 sm:mb-8 tracking-tight">
-            당신의 새로운 <span className="text-cyan-400">시작</span>
+      <section className="py-24 px-4 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col mb-16">
+          <h2 className="text-[40px] font-bold text-[#1a1a1a] mb-[5px] tracking-tight">
+            HRA가 지향하는 교육
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-gray-400 mb-8 sm:mb-12 font-light">
+          <div className="w-12 h-1 bg-blue-600 mb-[25px]" />
+          <p className="text-[18px] text-[#666666] font-medium">
+            깊이 사고하고 넓게 실천하는 교육
+          </p>
+          <p className="text-[18px] text-[#666666] leading-relaxed max-w-3xl mt-4">
+            단순한 지식 전달을 넘어, 근본적인 질문을 던지고 스스로 해답을 찾아가는 과정을 경험합니다. 다양한 분야의 인재들이 모여 서로의 시각을 나누고 성장하는 배움의 장을 제공합니다.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[500px]">
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] cursor-pointer">
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
+              style={{ backgroundImage: "url('/images/classical.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
+            
+            <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
+              <h3 className="text-white font-bold tracking-tight transition-all duration-500 transform group-hover:-translate-y-4 group-hover:text-[50pt] text-[60pt] leading-none mb-4">
+                고전<br/>읽기
+              </h3>
+              <div className="h-0 opacity-0 overflow-hidden transition-all duration-500 group-hover:h-auto group-hover:opacity-100 group-hover:mt-4">
+                <p className="text-white/90 text-[18px] font-medium leading-relaxed border-t border-white/30 pt-4">
+                  시대를 초월한 지혜를 담은 고전을 통해, 인간과 사회의 본질을 깊이 있게 탐구합니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] cursor-pointer">
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
+              style={{ backgroundImage: "url('/images/casestudy.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
+            
+            <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
+              <h3 className="text-white font-bold tracking-tight transition-all duration-500 transform group-hover:-translate-y-4 group-hover:text-[50pt] text-[60pt] leading-none mb-4">
+                케이스<br/>스터디
+              </h3>
+              <div className="h-0 opacity-0 overflow-hidden transition-all duration-500 group-hover:h-auto group-hover:opacity-100 group-hover:mt-4">
+                <p className="text-white/90 text-[18px] font-medium leading-relaxed border-t border-white/30 pt-4">
+                  실제 비즈니스 현장의 생생한 사례를 분석하며 문제 해결 능력과 전략적 사고를 기릅니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] cursor-pointer">
+            <div 
+              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
+              style={{ backgroundImage: "url('/images/lecture.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
+            
+            <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
+              <h3 className="text-white font-bold tracking-tight transition-all duration-500 transform group-hover:-translate-y-4 group-hover:text-[50pt] text-[60pt] leading-none mb-4">
+                특강
+              </h3>
+              <div className="h-0 opacity-0 overflow-hidden transition-all duration-500 group-hover:h-auto group-hover:opacity-100 group-hover:mt-4">
+                <p className="text-white/90 text-[18px] font-medium leading-relaxed border-t border-white/30 pt-4">
+                  각 분야 최고의 전문가들을 모시고 현장의 인사이트와 깊이 있는 지식을 배웁니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 px-4 bg-white border-t border-[#D9D9D9]/30">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="flex flex-col items-center text-center mb-16">
+            <h2 className="text-[40px] font-bold text-[#1a1a1a] mb-[5px] tracking-tight">
+              HRA 핵심 가치
+            </h2>
+            <div className="w-12 h-1 bg-blue-600 mb-[25px]" />
+            <p className="text-[18px] text-[#666666] font-medium">
+              3C 인재를 향한 세 가지 핵심 가치
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="group relative bg-[#FFFFFF] border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] rounded-2xl overflow-hidden p-10 transition-all duration-500 h-[380px] flex flex-col">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Target className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
+                </div>
+                
+                <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
+                  사명감
+                </h3>
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6">
+                  Commitment
+                </h4>
+                
+                <p className="text-[18px] text-[#666666] group-hover:text-white transition-colors duration-500 leading-relaxed mt-auto">
+                  나를 넘어 사회를 향하는 마음. 주어진 일에 책임감을 가지고 끝까지 완수해내는 태도를 기릅니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="group relative bg-[#FFFFFF] border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] rounded-2xl overflow-hidden p-10 transition-all duration-500 h-[380px] flex flex-col">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Briefcase className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
+                </div>
+                
+                <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
+                  업무능력
+                </h3>
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6">
+                  Competence
+                </h4>
+                
+                <p className="text-[18px] text-[#666666] group-hover:text-white transition-colors duration-500 leading-relaxed mt-auto">
+                  배움을 실천으로 이어가는 힘. 비판적 사고와 탁월한 문제 해결 능력으로 현장에서 가치를 창출합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="group relative bg-[#FFFFFF] border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] rounded-2xl overflow-hidden p-10 transition-all duration-500 h-[380px] flex flex-col">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Heart className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
+                </div>
+                
+                <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
+                  성품
+                </h3>
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6">
+                  Character
+                </h4>
+                
+                <p className="text-[18px] text-[#666666] group-hover:text-white transition-colors duration-500 leading-relaxed mt-auto">
+                  생각의 깊이와 마음의 넓이를 기르는 자세. 타인을 존중하고 공동체와 함께 성장하는 바른 인성을 갖춥니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 px-4 max-w-7xl mx-auto w-full border-t border-[#D9D9D9]/30" ref={statsRef}>
+        <div className="flex flex-col items-center text-center mb-16">
+          <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
+            HRA 성과
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 divide-x divide-[#D9D9D9]/30">
+          <div className="flex flex-col items-center justify-center">
+            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+              <AnimatedNumber end={19} suffix="년" visible={statsVisible} />
+            </div>
+            <div className="text-[18px] text-[#666666]">운영 기간</div>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+              <AnimatedDecimal end={75.5} suffix="%" visible={statsVisible} />
+            </div>
+            <div className="text-[18px] text-[#666666]">취업률</div>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+              <AnimatedNumber end={406} suffix="명" visible={statsVisible} />
+            </div>
+            <div className="text-[18px] text-[#666666]">누적 수료생</div>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+              <AnimatedNumber end={90} suffix="%" visible={statsVisible} />
+            </div>
+            <div className="text-[18px] text-[#666666]">수료생 만족도</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 px-4 max-w-7xl mx-auto w-full border-t border-[#D9D9D9]/30">
+        <div className="flex flex-col mb-16">
+          <h2 className="text-[40px] font-bold text-[#1a1a1a] mb-5 tracking-tight">
+            수료생 이야기
+          </h2>
+        </div>
+
+        <div className="relative border border-[#D9D9D9] shadow-[8px_8px_0px_0px_rgba(217,217,217,0.5)] rounded-2xl overflow-hidden bg-white">
+          <div className="flex transition-transform duration-700 ease-in-out h-[500px]" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+            {alumniData.map((alumni) => (
+              <div key={alumni.id} className="min-w-full relative h-full flex flex-col md:flex-row">
+                <div 
+                  className="w-full md:w-1/2 h-64 md:h-full bg-cover bg-center border-r border-[#D9D9D9]"
+                  style={{ backgroundImage: `url('${alumni.image}')` }}
+                >
+                  <div className="w-full h-full bg-black/20" />
+                </div>
+                
+                <div className="w-full md:w-1/2 p-10 md:p-16 flex flex-col justify-center bg-white relative">
+                  <div className="inline-block px-4 py-1.5 bg-gray-100 text-gray-800 font-semibold text-[18px] rounded-full mb-6 w-max">
+                    {alumni.cohort}
+                  </div>
+                  
+                  <h3 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] leading-snug mb-8">
+                    &quot;{alumni.quote}&quot;
+                  </h3>
+                  
+                  <Link href="#" className="text-[#2563EB] font-semibold flex items-center hover:underline transition-colors mt-auto md:mt-0 w-max text-[18px]">
+                    자세히 읽어보기 <ChevronRight className="w-5 h-5 ml-1" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button 
+            type="button"
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white border border-[#D9D9D9] shadow-sm rounded-full flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors z-10 hidden md:flex"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          
+          <button 
+            type="button"
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white border border-[#D9D9D9] shadow-sm rounded-full flex items-center justify-center text-gray-800 hover:bg-gray-50 transition-colors z-10 hidden md:flex"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3">
+            {alumniData.map((alumni, index) => (
+              <button
+                type="button"
+                key={`nav-${alumni.id}`}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  currentSlide === index ? "bg-[#1a1a1a] w-8" : "bg-[#D9D9D9] hover:bg-gray-400"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-32 px-4 bg-[#F9FAFB] text-center border-t border-[#D9D9D9]/30">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-[40px] font-bold text-[#1a1a1a] mb-[5px] tracking-tight">
+            당신의 다음 성장을 HRA에서 시작해보세요
+          </h2>
+          <p className="text-[18px] text-[#666666] mb-12">
             최고의 동료들과 함께 압도적인 성장을 경험할 준비가 되셨나요?
           </p>
+          
           <Link href="/recruitment">
-            <Button size="lg" className="bg-white hover:bg-gray-100 text-black font-bold h-12 px-8 text-base sm:h-14 sm:px-10 sm:text-lg md:h-16 md:px-12 md:text-xl rounded-full transition-all hover:scale-105 shadow-xl shadow-cyan-500/20">
-              지원하기
+            <Button size="lg" className="bg-[#2563EB] hover:bg-blue-700 text-white font-semibold h-14 px-10 text-[18px] rounded-md transition-all duration-300">
+              모집 안내 보기
             </Button>
           </Link>
         </div>
       </section>
+
     </div>
   );
 }

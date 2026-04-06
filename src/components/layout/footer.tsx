@@ -12,107 +12,89 @@
  */
 
 import Link from "next/link";
+import { Instagram, Mail } from "lucide-react";
 
 export function Footer() {
-   return (
-     <footer className="border-t border-white/10 bg-black py-12">
-       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-         {/* 
-           푸터 콘텐츠: 3열 그리드 레이아웃
-           - 첫 번째 열: HRA 소개
-           - 두 번째 열: 주요 페이지 바로가기 링크
-           - 세 번째 열: 연락처 정보
-           - 모바일에서는 1열, 데스크톱에서는 3열로 표시
-         */}
-         <div className="grid gap-8 md:grid-cols-3">
-           {/* 첫 번째 열: 조직 소개 정보 */}
-           <div>
-            <h3 className="text-lg font-bold text-white">HRA</h3>
-            <p className="mt-2 text-sm text-gray-400">
+  return (
+    <footer className="border-t border-[#D9D9D9] bg-white py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="grid gap-8 md:grid-cols-3">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">HRA</h3>
+            <p className="mt-2 text-sm text-gray-600">
               Human Renaissance Academy
             </p>
             <p className="mt-1 text-sm text-gray-500">
               인간 르네상스를 꿈꾸는 대학 연합 교육 프로그램
-             </p>
-           </div>
+            </p>
+          </div>
 
-           {/* 두 번째 열: 사이트 주요 페이지 링크 */}
-           <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">
               바로가기
             </h4>
             <ul className="mt-4 space-y-2">
               <li>
                 <Link
                   href="/about"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
                 >
-                  소개
+                  HRA 소개
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/faculty"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                  href="/curriculum"
+                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
                 >
-                  교수진
+                  HRA 교육
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/recruitment"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                  href="/cohorts"
+                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
                 >
-                  모집안내
+                  기수 소개
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/notices"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                  href="/gallery"
+                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
                 >
-                  공지사항
+                  갤러리
                 </Link>
-              </li>
-              <li>
-                <Link
-                  href="/resources"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
-                >
-                  자료실
-                </Link>
-              </li>
-             </ul>
-           </div>
-
-           {/* 세 번째 열: 연락처 정보 */}
-           <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-              연락처
-            </h4>
-            <ul className="mt-4 space-y-2">
-              <li className="text-sm text-gray-500">hra@example.com</li>
-              <li>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-gray-500 transition-colors hover:text-white"
-                >
-                  Instagram
-                </a>
               </li>
             </ul>
           </div>
-         </div>
 
-         {/* 
-           하단 구분선 및 저작권 표시
-           현재 연도를 동적으로 계산하여 항상 최신 연도 표시
-         */}
-         <div className="mt-8 border-t border-white/10 pt-8 text-center text-xs text-gray-600">
-          © {new Date().getFullYear()} Human Renaissance Academy. All rights
-          reserved.
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">
+              연락처
+            </h4>
+            <ul className="mt-4 space-y-3">
+              <li>
+                <a
+                  href="https://instagram.com/hra_official"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
+                >
+                  <Instagram className="h-4 w-4" />
+                  <span>Instagram</span>
+                </a>
+              </li>
+              <li className="flex items-center gap-2 text-sm text-gray-600">
+                <Mail className="h-4 w-4" />
+                <span>info@hra.ac.kr</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-[#D9D9D9] pt-8 text-center text-xs text-gray-500">
+          © 2026 Human Renaissance Academy. All rights reserved.
         </div>
       </div>
     </footer>

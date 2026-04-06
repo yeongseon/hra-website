@@ -22,7 +22,7 @@ export default async function PublicLayout({
   const session = await auth();
 
   return (
-    <div className="flex min-h-screen flex-col bg-black text-white">
+    <div className="flex min-h-screen flex-col bg-white text-gray-900">
       {/* 상단 헤더(메뉴) — 로그인 상태를 전달하여 로그인/로그아웃 버튼 표시 */}
       <Header session={session} />
       {/* 각 페이지의 실제 내용이 여기에 표시됨 */}
