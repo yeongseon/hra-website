@@ -4,6 +4,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 interface MarkdownEditorProps {
+  id?: string;
   name: string;
   defaultValue?: string;
   required?: boolean;
@@ -11,6 +12,7 @@ interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor({
+  id,
   name,
   defaultValue = "",
   required = false,
@@ -34,6 +36,7 @@ export function MarkdownEditor({
             </a>
           </div>
           <textarea
+            id={id}
             name={name}
             value={content}
             onChange={(e) => setContent(e.target.value)}

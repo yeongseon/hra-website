@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, User } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +108,7 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
             <h2 className="text-base font-semibold text-[#1a1a1a]">내용</h2>
             <div className="markdown-preview break-words text-[#1a1a1a]">
               <ReactMarkdown
+                remarkPlugins={[remarkBreaks]}
                 components={{
                   h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
                   h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,

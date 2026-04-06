@@ -20,8 +20,26 @@ const formatDate = (value: Date) =>
     day: "2-digit",
   }).format(value);
 
+const stripMarkdown = (value: string) =>
+  value
+    .replace(/^#{1,6}\s+/gm, "")        // headings
+    .replace(/\*\*(.+?)\*\*/g, "$1")     // bold
+    .replace(/__(.+?)__/g, "$1")          // bold alt
+    .replace(/\*(.+?)\*/g, "$1")          // italic
+    .replace(/_(.+?)_/g, "$1")            // italic alt
+    .replace(/~~(.+?)~~/g, "$1")          // strikethrough
+    .replace(/`{1,3}([^`]+)`{1,3}/g, "$1") // inline code
+    .replace(/!\[.*?\]\(.*?\)/g, "")      // images
+    .replace(/\[(.+?)\]\(.*?\)/g, "$1")   // links
+    .replace(/^\s*[-*+]\s+/gm, "")        // unordered list
+    .replace(/^\s*\d+\.\s+/gm, "")        // ordered list
+    .replace(/^\s*>\s?/gm, "")            // blockquote
+    .replace(/^---+$/gm, "")              // hr
+    .replace(/\n{2,}/g, " ")              // double newlines
+    .replace(/\n/g, " ");                 // single newlines
+
 const getExcerpt = (value: string, length = 120) => {
-  const normalized = value.replace(/\s+/g, " ").trim();
+  const normalized = stripMarkdown(value).replace(/\s+/g, " ").trim();
   if (normalized.length <= length) {
     return normalized;
   }

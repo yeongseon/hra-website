@@ -151,6 +151,7 @@ export function ClassLogForm({
               내용
             </Label>
             <MarkdownEditor
+              id="content"
               name="content"
               defaultValue={defaultValues?.content ?? ""}
               required
