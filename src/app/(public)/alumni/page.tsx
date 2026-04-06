@@ -11,7 +11,7 @@ const alumniStories = [
     quote: "한계까지 도전하고, 성장으로 보답하다",
     story:
       "HRA에서의 1년은 단순한 교육이 아닌, 삶의 전환점이었습니다. 고전 읽기와 토론을 통해 깊이 사고하는 법을 배웠고, 케이스 스터디를 통해 실제 문제를 해결하는 역량을 키웠습니다.",
-    image: "/images/alumni-1.jpg",
+    gradient: "from-amber-700 via-amber-800 to-stone-900",
   },
   {
     id: 2,
@@ -19,7 +19,7 @@ const alumniStories = [
     quote: "본질을 묻는 힘, 현업에서의 차이를 만들다",
     story:
       "HRA에서 배운 본질적 사고력은 직장에서도 큰 차이를 만들어 주었습니다. 문제의 표면이 아닌 근본을 파악하는 습관이 자연스럽게 업무에 녹아들었습니다.",
-    image: "/images/alumni-2.jpg",
+    gradient: "from-blue-700 via-blue-800 to-slate-900",
   },
   {
     id: 3,
@@ -27,7 +27,7 @@ const alumniStories = [
     quote: "평생을 함께할 최고의 동료들을 얻었습니다",
     story:
       "HRA에서 가장 값진 것은 함께 성장한 동료들입니다. 매주 토요일 함께 고민하고 토론하며 쌓은 유대는 수료 후에도 계속되고 있습니다.",
-    image: "/images/alumni-3.jpg",
+    gradient: "from-emerald-700 via-emerald-800 to-slate-900",
   },
 ];
 
@@ -48,14 +48,8 @@ export default function AlumniPage() {
             key={story.id}
             className="overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]"
           >
-            <div className="aspect-video rounded-t-2xl bg-gray-100 px-6 py-8">
-              <div className="flex h-full flex-col justify-between rounded-xl border border-dashed border-[#D9D9D9] bg-white/70 p-5">
-                <span className="text-sm font-medium text-blue-600">{story.name}</span>
-                <div>
-                  <p className="text-base font-semibold text-[#1a1a1a]">이미지 준비 중</p>
-                  <p className="mt-2 text-sm text-[#666666]">{story.image}</p>
-                </div>
-              </div>
+            <div className={`aspect-video rounded-t-2xl bg-gradient-to-br ${story.gradient} flex items-center justify-center`}>
+              <span className="text-white/40 text-sm font-medium">수료생 사진</span>
             </div>
 
             <div className="flex flex-col p-6">

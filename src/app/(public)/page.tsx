@@ -10,19 +10,19 @@ const fullHeadingText = "정답보다 중요한 것,\nHRA는 본질을 묻는 �
 const alumniData = [
   {
     id: "alumni-17",
-    image: "/images/alumni-1.jpg",
+    gradient: "from-amber-700 via-amber-800 to-stone-900",
     cohort: "17기 수료생",
     quote: "한계까지 도전하고, 성장으로 보답하다"
   },
   {
     id: "alumni-18",
-    image: "/images/alumni-2.jpg",
+    gradient: "from-blue-700 via-blue-800 to-slate-900",
     cohort: "18기 수료생",
     quote: "본질을 묻는 힘, 현업에서의 차이를 만들다"
   },
   {
     id: "alumni-19",
-    image: "/images/alumni-3.jpg",
+    gradient: "from-emerald-700 via-emerald-800 to-slate-900",
     cohort: "19기 수료생",
     quote: "평생을 함께할 최고의 동료들을 얻었습니다"
   }
@@ -153,10 +153,9 @@ export default function Home() {
       
       <section className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 overflow-hidden text-center bg-gray-900">
         <div 
-          className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
+          className="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900"
         />
-        <div className="absolute inset-0 z-0 bg-black/50" />
+        <div className="absolute inset-0 z-0 bg-black/30" />
 
         <div className="relative z-10 flex flex-col items-center max-w-5xl gap-6">
           <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
@@ -220,8 +219,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
-              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
-              style={{ backgroundImage: "url('/images/classical.jpg')" }}
+              className="absolute inset-0 bg-gradient-to-br from-amber-800 via-amber-900 to-stone-900 transition-all duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
@@ -239,8 +237,7 @@ export default function Home() {
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
-              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
-              style={{ backgroundImage: "url('/images/casestudy.jpg')" }}
+              className="absolute inset-0 bg-gradient-to-br from-blue-800 via-blue-900 to-slate-900 transition-all duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
@@ -258,8 +255,7 @@ export default function Home() {
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
-              className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
-              style={{ backgroundImage: "url('/images/lecture.jpg')" }}
+              className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-900 transition-all duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
@@ -439,10 +435,9 @@ export default function Home() {
             {alumniData.map((alumni) => (
               <div key={alumni.id} className="min-w-full relative h-full flex flex-col md:flex-row">
                 <div 
-                  className="w-full md:w-[60%] h-64 md:h-full bg-cover bg-center border-r border-[#D9D9D9]"
-                  style={{ backgroundImage: `url('${alumni.image}')` }}
+                  className={`w-full md:w-[60%] h-64 md:h-full bg-gradient-to-br ${alumni.gradient} border-r border-[#D9D9D9]`}
                 >
-                  <div className="w-full h-full bg-black/20" />
+                  <div className="w-full h-full bg-black/10" />
                 </div>
                 
                 <div className="w-full md:w-[40%] p-6 md:p-16 flex flex-col justify-center bg-white relative">
