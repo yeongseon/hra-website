@@ -16,7 +16,7 @@ import { Instagram, Mail } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-[#E5E5E5] bg-white py-12">
+    <footer className="border-t border-[#D9D9D9] bg-white py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
@@ -93,7 +93,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-[#E5E5E5] pt-8 text-center text-xs text-gray-500">
+        <div className="mt-8 border-t border-[#D9D9D9] pt-8 text-center text-sm text-gray-500">
           © 2026 HRA. 모든 권리 보유.
         </div>
       </div>
