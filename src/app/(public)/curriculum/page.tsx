@@ -52,42 +52,42 @@ const curriculumItems = [
 
 export default function CurriculumPage() {
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-white/20">
+    <div className="min-h-screen bg-white text-[#1a1a1a] selection:bg-blue-100">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 py-24 sm:py-32">
         <section className="max-w-3xl mb-24 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-gray-300 mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#D9D9D9] text-sm font-medium text-[#666666] mb-8 shadow-[var(--shadow-soft)]">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             52주 교육 과정
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white mb-8">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-[#1a1a1a] mb-8">
             커리큘럼
           </h1>
-          <p className="text-lg sm:text-xl text-gray-400 leading-relaxed font-light">
+          <p className="text-lg sm:text-xl text-[#666666] leading-relaxed font-light">
             HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고 문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
           </p>
         </section>
 
         <section className="mb-32 relative">
-          <div className="absolute top-0 left-6 sm:left-0 sm:top-1/2 sm:-translate-y-1/2 w-px h-full sm:w-full sm:h-px bg-white/10 -z-10" />
+          <div className="absolute top-0 left-6 sm:left-0 sm:top-1/2 sm:-translate-y-1/2 w-px h-full sm:w-full sm:h-px bg-[#D9D9D9] -z-10" />
           
           <div className="flex flex-col sm:flex-row justify-between gap-12 sm:gap-4 relative z-10 pl-16 sm:pl-0">
             {timelineSteps.map((step, index) => (
               <div key={step.label} className="flex flex-col sm:items-center relative group">
-                <div className="absolute -left-16 sm:left-auto sm:relative w-12 h-12 rounded-full bg-black border-2 border-white/20 flex items-center justify-center mb-6 group-hover:border-white transition-colors duration-500 shadow-[0_0_30px_rgba(255,255,255,0)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                  <span className="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">
+                 <div className="absolute -left-16 sm:left-auto sm:relative w-12 h-12 rounded-full bg-white border-2 border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:border-blue-400 transition-colors duration-500 shadow-[var(--shadow-soft)]">
+                   <span className="text-sm font-bold text-[#666666] group-hover:text-[#2563EB] transition-colors">
                     {index + 1}
                   </span>
                 </div>
                 
                 {index < timelineSteps.length - 1 && (
                   <div className="hidden sm:block absolute top-6 left-[calc(50%+3rem)] w-[calc(100%-6rem)] h-px">
-                    <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4 -translate-x-full" />
+                     <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 text-[#D9D9D9] w-4 h-4 -translate-x-full" />
                   </div>
                 )}
 
                 <div className="sm:text-center">
-                  <h3 className="text-xl font-bold text-white mb-2">{step.label}</h3>
-                  <p className="text-sm font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-full inline-block">
+                   <h3 className="text-xl font-bold text-[#1a1a1a] mb-2">{step.label}</h3>
+                   <p className="text-sm font-mono text-[#666666] bg-gray-50 px-3 py-1 rounded-full inline-block border border-[#D9D9D9]">
                     {step.period}
                   </p>
                 </div>
@@ -100,19 +100,19 @@ export default function CurriculumPage() {
           {curriculumItems.map((item, index) => (
             <div 
               key={item.title} 
-              className="group relative flex flex-col p-8 sm:p-10 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500 overflow-hidden"
+              className="group relative flex flex-col p-8 sm:p-10 rounded-2xl bg-white border border-[#D9D9D9] shadow-[var(--shadow-soft)] hover:bg-gray-50 hover:border-blue-400 transition-all duration-500 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/[0.02] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/[0.04] transition-colors duration-700" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 group-hover:opacity-100 transition-opacity duration-700" />
               
-              <div className="mb-8 p-4 rounded-2xl bg-white/5 w-fit border border-white/10 group-hover:scale-110 transition-transform duration-500">
-                <item.icon className="w-8 h-8 text-white" />
+              <div className="mb-8 p-4 rounded-2xl bg-gray-50 w-fit border border-[#D9D9D9] group-hover:scale-110 transition-transform duration-500">
+                <item.icon className="w-8 h-8 text-blue-600" />
               </div>
               
-              <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">
+              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4 tracking-tight">
                 {item.title}
               </h3>
               
-              <p className="text-gray-400 leading-relaxed font-light mt-auto">
+              <p className="text-[#666666] leading-relaxed font-light mt-auto">
                 {item.description}
               </p>
             </div>

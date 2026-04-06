@@ -44,21 +44,21 @@ export default function CohortsPage() {
       <section className="py-12 sm:py-20 md:py-32">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold tracking-tight text-[#1a1a1a]">
               기수 소개
             </h1>
-            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-gray-400 max-w-3xl leading-relaxed">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg md:text-xl text-[#666666] max-w-3xl leading-relaxed">
               현재 HRA는 19기를 맞이했으며, 1기부터 18기까지 총 399명의 수료생을 배출했습니다. 아래에서 각 기수의 프로필을 확인하실 수 있습니다.
             </p>
           </div>
-          <div className="flex gap-4 sm:text-right text-gray-400">
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+          <div className="flex gap-4 sm:text-right text-[#666666]">
+            <div className="bg-white rounded-2xl p-4 border border-[#D9D9D9] shadow-[var(--shadow-soft)]">
               <div className="text-sm">총 기수</div>
-              <div className="text-2xl font-bold text-white">19기</div>
+              <div className="text-2xl font-bold text-[#1a1a1a]">19기</div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+            <div className="bg-white rounded-2xl p-4 border border-[#D9D9D9] shadow-[var(--shadow-soft)]">
               <div className="text-sm">총 수료생</div>
-              <div className="text-2xl font-bold text-white">399명</div>
+              <div className="text-2xl font-bold text-[#1a1a1a]">399명</div>
             </div>
           </div>
         </div>
@@ -68,35 +68,35 @@ export default function CohortsPage() {
         {cohorts.map((cohort) => (
           <div
             key={cohort.cohortNumber}
-            className="group relative flex flex-col justify-between rounded-3xl bg-white/5 border border-white/10 overflow-hidden transition-all hover:bg-white/10 hover:-translate-y-1"
+            className="group relative flex flex-col justify-between rounded-2xl bg-white border border-[#D9D9D9] shadow-[var(--shadow-soft)] overflow-hidden transition-all hover:bg-gray-50 hover:border-blue-400 hover:-translate-y-1"
           >
-            <div className="h-40 sm:h-48 bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
-              <Users className="w-12 h-12 text-white/20" />
+            <div className="h-40 sm:h-48 bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+              <Users className="w-12 h-12 text-[#666666]" />
             </div>
 
             <div className="p-5 sm:p-6 flex-1 flex flex-col">
               <div className="flex items-start justify-between mb-4">
-                <h2 className="text-2xl font-bold tracking-tight text-white">
+                <h2 className="text-2xl font-bold tracking-tight text-[#1a1a1a]">
                   {cohort.cohortNumber}기
                 </h2>
                 {cohort.status === "active" ? (
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-full px-3 py-1">
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 rounded-full px-3 py-1">
                     진행 중
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 rounded-full px-3 py-1">
+                  <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-300 rounded-full px-3 py-1">
                     수료
                   </Badge>
                 )}
               </div>
               
               <div className="space-y-3 mb-6 flex-1">
-                <div className="flex items-center text-sm text-gray-400">
-                  <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                <div className="flex items-center text-sm text-[#666666]">
+                  <Calendar className="w-4 h-4 mr-2 text-[#666666]" />
                   <span>{cohort.period}</span>
                 </div>
-                <div className="flex items-center text-sm text-gray-400">
-                  <Users className="w-4 h-4 mr-2 text-gray-500" />
+                <div className="flex items-center text-sm text-[#666666]">
+                  <Users className="w-4 h-4 mr-2 text-[#666666]" />
                   <span>
                     {typeof cohort.graduates === "number"
                       ? `${cohort.graduates}명 수료`
@@ -105,8 +105,8 @@ export default function CohortsPage() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-white/10 mt-auto">
-                <p className="text-gray-300 text-sm font-medium line-clamp-2">
+              <div className="pt-4 border-t border-[#D9D9D9] mt-auto">
+                <p className="text-[#666666] text-sm font-medium line-clamp-2">
                   &quot;{cohort.motto}&quot;
                 </p>
               </div>

@@ -16,84 +16,108 @@ import { Instagram, Mail } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-[#D9D9D9] bg-white py-12">
+    <footer className="border-t border-[#D9D9D9] bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 py-16 md:grid-cols-[1fr_2fr]">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">HRA</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              휴먼 르네상스 아카데미
+            <h3 className="text-xl font-bold text-[#1a1a1a]">HRA</h3>
+            <p className="mt-2 text-sm text-[#666666]">
+              Human Renaissance Academy
             </p>
-            <p className="mt-1 text-sm text-gray-500">
-              인간 르네상스를 꿈꾸는 대학 연합 교육 프로그램
+            <p className="mt-1 text-sm text-[#666666]">
+              고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 프로그램
             </p>
           </div>
 
-          <div>
-            <h4 className="text-sm font-semibold text-gray-900">
-              바로가기
-            </h4>
-            <ul className="mt-4 space-y-2">
-              <li>
-                <Link
-                  href="/about"
-                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                >
-                  HRA 소개
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/curriculum"
-                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                >
-                  HRA 교육
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/cohorts"
-                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                >
-                  기수 소개
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/gallery"
-                  className="text-sm text-gray-600 transition-colors hover:text-gray-900"
-                >
-                  갤러리
-                </Link>
-              </li>
-            </ul>
-          </div>
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <div>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">소개</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/about" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    HRA
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/curriculum" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    커리큘럼
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/faculty" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    교수진
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/cohorts" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    기수
+                  </Link>
+                </li>
+              </ul>
+            </div>
 
-          <div>
-            <h4 className="text-sm font-semibold text-gray-900">
-              연락처
-            </h4>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <a
-                  href="https://instagram.com/hra_official"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-gray-900"
-                >
-                  <Instagram className="h-4 w-4" />
-                  <span>인스타그램</span>
-                </a>
-              </li>
-              <li className="flex items-center gap-2 text-sm text-gray-600">
-                <Mail className="h-4 w-4" />
-                <span>info@hra.ac.kr</span>
-              </li>
-            </ul>
+            <div>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">아카이브</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/alumni" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    수료생 이야기
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/resources" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    자료실
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/gallery" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    갤러리
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">모집 안내</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/recruitment" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    모집 안내
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/faq" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    FAQ
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">소식</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/notices" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    공지사항
+                  </Link>
+                </li>
+                <li>
+                  <a
+                    href="https://instagram.com/hra_official_"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]"
+                  >
+                    <Instagram className="h-4 w-4" />
+                    <span>@hra_official_</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-[#D9D9D9] pt-8 text-center text-sm text-gray-500">
+        <div className="border-t border-[#D9D9D9] py-6 text-center text-sm text-[#999999]">
           © 2026 HRA. 모든 권리 보유.
         </div>
       </div>

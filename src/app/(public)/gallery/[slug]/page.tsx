@@ -27,32 +27,32 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
       <section className="mb-10 space-y-4">
         <Link
           href="/gallery"
-          className="inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+          className="inline-flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]"
         >
           <ArrowLeft className="size-4" />
           갤러리 목록으로
         </Link>
         <Badge
           variant="outline"
-          className="border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
+          className="border-emerald-300 bg-emerald-50 text-emerald-700"
         >
           HRA GALLERY
         </Badge>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-white">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[#1a1a1a]">
           {gallery.title}
         </h1>
         {gallery.description ? (
-          <p className="max-w-3xl whitespace-pre-line text-sm text-zinc-400 md:text-base">
+          <p className="max-w-3xl whitespace-pre-line text-sm text-[#666666] md:text-base">
             {gallery.description}
           </p>
         ) : (
-          <p className="max-w-3xl text-sm text-zinc-500 md:text-base">설명이 없습니다.</p>
+          <p className="max-w-3xl text-sm text-[#666666] md:text-base">설명이 없습니다.</p>
         )}
       </section>
 
       {gallery.images.length === 0 ? (
-        <Card className="border-white/10 bg-zinc-950/80 py-10">
-          <CardContent className="text-center text-base text-zinc-300">등록된 이미지가 없습니다.</CardContent>
+        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+          <CardContent className="text-center text-base text-[#666666]">등록된 이미지가 없습니다.</CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -62,9 +62,9 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
               href={image.url}
               target="_blank"
               rel="noreferrer"
-              className="group block overflow-hidden rounded-xl border border-white/10 bg-zinc-950/80"
+              className="group block overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]"
             >
-              <div className="relative h-72 w-full bg-zinc-900">
+              <div className="relative h-72 w-full bg-gray-100">
                 {image.url ? (
                   <img
                     src={image.url}
@@ -72,18 +72,18 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-zinc-500">
+                  <div className="flex h-full w-full items-center justify-center text-[#666666]">
                     <ImageIcon className="size-10" />
                   </div>
                 )}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 text-zinc-200 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-end bg-gradient-to-t from-white/95 via-white/80 to-transparent p-3 text-[#1a1a1a] opacity-0 transition-opacity group-hover:opacity-100">
                   <span className="inline-flex items-center gap-1 text-xs sm:text-sm">
                     원본 보기
                     <ExternalLink className="size-3.5" />
                   </span>
                 </div>
               </div>
-              <div className="border-t border-white/10 px-4 py-3 text-sm text-zinc-300">
+              <div className="border-t border-[#D9D9D9] px-4 py-3 text-sm text-[#666666]">
                 {image.alt && image.alt.length > 0 ? image.alt : `이미지 ${index + 1}`}
               </div>
             </a>

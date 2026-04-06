@@ -1,0 +1,31 @@
+[    1011ms] [LOG] Running frontend commit 736e42afce44f9fae25012411ff072d3daa792a8 @ https://www.figma.com/design/PflwGJF6vGjjHWNVxPFecW/%EB%B3%B5%EC%A0%9C%EB%B3%B8-%EC%88%98%EC%A0%95?node-id=2039-2&p=f:574
+[    3229ms] [WARNING] Statsig is not ready to log exposures, will retry in 1 seconds @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    3311ms] [LOG] Loaded 103 scripts (8511889b), 0 from cache (0b) @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    3433ms] [LOG] [import] git: 487f6ea70fe73a577b9612a53f4c2f00271badc2, stamp: 29AF7E4F0AE2F13A @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    3700ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://www.figma.com/api/statsig/v1_ruleset:0
+[    3700ms] [ERROR] Failed to fetch v1 ruleset: T: XHR for "/api/statsig/v1_ruleset" failed with status 401
+    at N (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1403:14443)
+    at async Object.R [as get] (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1403:14826)
+    at async https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1098:212726
+    at async _.validate (https://www.figma.com/webpack-artifacts/assets/figma_app_beta-63ae4131c3ae0da8.min.js.br:199:196582)
+    at async b (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1364:180149)
+    at async A (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1364:179353)
+    at async Object.write (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1364:178972) @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    3997ms] [INFO] [Fullscreen] Booting... (emscripten version 4.0.21) @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    4671ms] [INFO] [GPU] graphicsAPI:"WebGL 2", vendor:"Google Inc. (Apple)", renderer:"ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)" version:"OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))" @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    4674ms] [LOG] [Fullscreen] Ready in 988.8ms @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    4762ms] [INFO] [FullscreenApp] calling setEditorTheme and setting preference light @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    4789ms] [INFO] [MultiplayerSession] connecting to wss://www.figma.com/api/multiplayer/PflwGJF6vGjjHWNVxPFecW?role=editor&tracking_session_id=pHTswjwNUxrYNRHD&version=151&recentReload=0&file-load-streaming-compression&scenegraph-queries-initial-nodes=2039:2&client_release=736e42afce44f9fae25012411ff072d3daa792a8 @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    4799ms] [INFO] [MultiplayerSession] Joining file version 106 (initial load) @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    7197ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://static.figma.com/fullscreen/b914150ec6c1fb2067b4174c3ff9b920abb41f10/fullscreen-wasm/compiled_wasm.js.br:1
+[    7239ms] [INFO] afterJoinEnd PageSyncing: Loaded incrementally {loaded_pages: 2039:2} @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    7244ms] [INFO] [FullscreenApp] calling setEditorTheme and setting preference light @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    7650ms] [LOG] [Fullscreen] loadtime=7.20s maxmem=12399236 @ https://www.figma.com/webpack-artifacts/assets/vendor-core-de07401bc94a0078.min.js.br:53
+[    8015ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://www.figma.com/api/folders/579130564:0
+[    8087ms] T: XHR for "/api/folders/579130564" failed with status 401
+    at N (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1403:14443)
+    at async Object.R [as get] (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1403:14826)
+    at async https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:1098:165812
+    at async _.validate (https://www.figma.com/webpack-artifacts/assets/figma_app_beta-63ae4131c3ae0da8.min.js.br:199:196582)
+    at async h.fetchObject (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:349:136202)
+    at async f (https://www.figma.com/webpack-artifacts/assets/7687-6d9918efed9f2350.min.js.br:349:116508)

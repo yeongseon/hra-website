@@ -46,19 +46,19 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <div className="mb-8">
         <Link href="/notices">
-          <Button variant="ghost" className="text-zinc-200 hover:bg-zinc-900 hover:text-white">
+          <Button variant="ghost" className="text-[#666666] hover:bg-gray-50 hover:text-[#1a1a1a]">
             <ArrowLeft className="size-4" />
             공지사항으로 돌아가기
           </Button>
         </Link>
       </div>
 
-      <Card className="border-white/10 bg-zinc-950/80 py-0">
-        <CardHeader className="border-b border-white/10 py-6 sm:py-8">
-          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">
+      <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
+        <CardHeader className="border-b border-[#D9D9D9] py-6 sm:py-8">
+          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">
             {notice.title}
           </CardTitle>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 md:text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-[#666666] md:text-sm">
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-3.5" />
               {formatDate(notice.createdAt)}
@@ -66,12 +66,12 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
           </div>
         </CardHeader>
         <CardContent className="py-6 sm:py-10">
-          <div className="markdown-preview break-words text-slate-200">
+          <div className="markdown-preview break-words text-[#1a1a1a]">
             <ReactMarkdown
               components={{
-                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-white" {...props} />,
-                h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mb-3 text-white" {...props} />,
-                h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mb-2 text-white" {...props} />,
+                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
+                h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
+                h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
                 p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
                 ul: ({ node, ...props }) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
                 ol: ({ node, ...props }) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
@@ -80,7 +80,7 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
                   const match = /language-(\w+)/.exec(className || "");
                   if (!match) {
                     return (
-                      <code className="bg-slate-800 px-1.5 py-0.5 rounded text-sm text-emerald-400" {...props}>
+                      <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-blue-600" {...props}>
                         {children}
                       </code>
                     );
@@ -93,17 +93,17 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
                   );
                 },
                 pre: ({ node, ...props }) => (
-                  <pre className="block bg-slate-800 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
+                  <pre className="block bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
                 ),
-                a: ({ node, ...props }) => <a className="text-cyan-400 underline" {...props} />,
+                a: ({ node, ...props }) => <a className="text-[#2563EB] underline" {...props} />,
                 blockquote: ({ node, ...props }) => (
                   <blockquote
-                    className="border-l-4 border-slate-600 pl-4 italic text-slate-400 mb-4"
+                    className="border-l-4 border-[#D9D9D9] pl-4 italic text-[#666666] mb-4"
                     {...props}
                   />
                 ),
-                hr: ({ node, ...props }) => <hr className="border-slate-700 my-6" {...props} />,
-                strong: ({ node, ...props }) => <strong className="font-bold text-white" {...props} />,
+                hr: ({ node, ...props }) => <hr className="border-[#D9D9D9] my-6" {...props} />,
+                strong: ({ node, ...props }) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
                 em: ({ node, ...props }) => <em className="italic" {...props} />,
               }}
             >

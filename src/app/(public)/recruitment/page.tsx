@@ -47,15 +47,15 @@ const processSteps = [
 const statusMap = {
   UPCOMING: {
     label: "예정",
-    className: "border-blue-300/50 bg-blue-500/15 text-blue-100",
+    className: "border-blue-300 bg-blue-50 text-blue-700",
   },
   OPEN: {
     label: "접수 중",
-    className: "border-emerald-300/50 bg-emerald-500/20 text-emerald-100",
+    className: "border-emerald-300 bg-emerald-50 text-emerald-700",
   },
   CLOSED: {
     label: "마감",
-    className: "border-zinc-300/30 bg-zinc-500/20 text-zinc-200",
+    className: "border-gray-300 bg-gray-50 text-gray-600",
   },
 } as const;
 
@@ -105,19 +105,19 @@ export default async function RecruitmentPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       {/* 페이지 상단: 제목 영역 */}
       <section className="mb-10 sm:mb-16 space-y-4">
-        <Badge
-          variant="outline"
-          className="border-cyan-500/50 bg-cyan-500/10 text-cyan-200"
-        >
-          HRA RECRUITMENT
-        </Badge>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-semibold tracking-tight text-white">
+          <Badge
+            variant="outline"
+            className="border-blue-300 bg-blue-50 text-blue-700"
+          >
+            HRA RECRUITMENT
+          </Badge>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-semibold tracking-tight text-[#1a1a1a]">
           모집안내
         </h1>
-        <p className="max-w-3xl text-sm text-zinc-300 md:text-base">
+        <p className="max-w-3xl text-sm text-[#666666] md:text-base">
           HRA는 성장에 진심인 사람을 기다립니다.
         </p>
-        <ul className="mt-4 space-y-2 text-sm text-zinc-400 list-disc list-inside">
+        <ul className="mt-4 space-y-2 text-sm text-[#666666] list-disc list-inside">
           <li>지원서 제출은 구글폼을 연동하는 방식으로 운영됩니다.</li>
           <li>면접 일정은 현기수가 별도로 관리하며, 홈페이지에는 별도 업로드하지 않습니다.</li>
         </ul>
@@ -126,14 +126,14 @@ export default async function RecruitmentPage() {
       {/* 모집 절차 표시: processSteps 배열의 각 항목을 카드로 렌더링 */}
       <section className="mb-10 sm:mb-16 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {processSteps.map((item) => (
-          <Card key={item.step} className="border-white/10 bg-zinc-950/80 py-0">
+          <Card key={item.step} className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
             <CardHeader className="space-y-2 pb-3 pt-5">
-              <Badge variant="outline" className="w-fit border-white/20 bg-white/5 text-zinc-200">
+              <Badge variant="outline" className="w-fit border-gray-300 bg-gray-50 text-gray-600">
                 {item.step}
               </Badge>
-              <CardTitle className="text-lg text-white">{item.title}</CardTitle>
+              <CardTitle className="text-lg text-[#1a1a1a]">{item.title}</CardTitle>
             </CardHeader>
-            <CardContent className="pb-5 text-sm text-zinc-400">
+            <CardContent className="pb-5 text-sm text-[#666666]">
               {item.subtitle}
             </CardContent>
           </Card>
@@ -147,8 +147,8 @@ export default async function RecruitmentPage() {
           있을 때: 각 기수 정보를 카드로 표시
         */}
         {activeCohorts.length === 0 ? (
-          <Card className="border-white/10 bg-zinc-950/80 py-10">
-            <CardContent className="text-center text-zinc-300">
+          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+            <CardContent className="text-center text-[#666666]">
               현재 등록된 모집 기수가 없습니다.
             </CardContent>
           </Card>
@@ -161,11 +161,11 @@ export default async function RecruitmentPage() {
             const endDate = formatDate(cohort.recruitmentEndDate);
 
             return (
-              <Card key={cohort.id} className="border-white/10 bg-zinc-950/80 py-0">
+              <Card key={cohort.id} className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
                 <CardContent className="flex flex-col gap-6 py-6 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-semibold text-white md:text-2xl">
+                      <h2 className="text-xl font-semibold text-[#1a1a1a] md:text-2xl">
                         {cohort.name}
                       </h2>
                       <Badge variant="outline" className={status.className}>
@@ -173,9 +173,9 @@ export default async function RecruitmentPage() {
                       </Badge>
                     </div>
                     {cohort.description ? (
-                      <p className="text-sm text-zinc-300 md:text-base">{cohort.description}</p>
+                      <p className="text-sm text-[#666666] md:text-base">{cohort.description}</p>
                     ) : null}
-                    <div className="inline-flex items-center gap-2 text-xs text-zinc-400 md:text-sm">
+                    <div className="inline-flex items-center gap-2 text-xs text-[#666666] md:text-sm">
                       <CalendarDays className="size-3.5" />
                       {startDate && endDate
                         ? `${startDate} - ${endDate}`
@@ -189,7 +189,7 @@ export default async function RecruitmentPage() {
                   */}
                   {cohort.recruitmentStatus === "OPEN" && cohort.googleFormUrl ? (
                     <Link href={cohort.googleFormUrl} target="_blank" rel="noopener noreferrer">
-                      <Button className="h-10 bg-emerald-500 text-black hover:bg-emerald-400">
+                      <Button className="h-10 border border-blue-600 bg-white text-blue-600 hover:bg-blue-50">
                         지원하기
                         <ArrowRight className="size-4" />
                       </Button>

@@ -173,9 +173,8 @@ export default function Home() {
             {renderHeading()}
           </h1>
           
-          <p className="max-w-2xl text-[18px] text-white/90 font-light tracking-wide px-2 leading-relaxed mt-4">
-            고전 읽기와 토의·토론, 케이스 스터디를 통해<br className="hidden sm:block" />
-            사고력을 비약적으로 성장하게 하는 1년 과정의 아카데미입니다.
+          <p className="max-w-2xl text-[18px] text-white/90 font-light tracking-wide px-2 leading-relaxed mt-4 sm:whitespace-nowrap">
+            고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
           </p>
           
           <div className="mt-10 flex flex-col items-center gap-6">
@@ -185,7 +184,7 @@ export default function Home() {
               </Button>
             </Link>
             <Link 
-              href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform" 
+              href="https://docs.google.com/forms/d/e/1FAIpQLSdWsLi_3umEuLWQXgOuSq5LTETmcolXy1I3auTohWY1ZTxiww/viewform" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-white/80 hover:text-white underline underline-offset-4 text-sm font-medium transition-colors"
@@ -205,13 +204,21 @@ export default function Home() {
           <p className="text-lg text-[#666666] mt-0 font-medium">
             깊이 사고하고 넓게 실천하는 교육
           </p>
-          <p className="text-lg leading-8 text-[#666666] max-w-3xl mt-4">
-            단순한 지식 전달을 넘어, 근본적인 질문을 던지고 스스로 해답을 찾아가는 과정을 경험합니다. 다양한 분야의 인재들이 모여 서로의 시각을 나누고 성장하는 배움의 장을 제공합니다.
+          <p className="text-lg leading-8 text-[#666666] max-w-3xl mt-4 text-left">
+            HRA는 청년들이 더 깊이 사고하고, 더 넓게 실천하며, 공동체 안에서 성장하도록 돕는 교육 프로그램입니다.<br />
+            고전 읽기와 토론, 케이스 스터디를 통해 생각을 훈련하고, 배움을 삶과 사회로 연결합니다.<br />
+            단순한 지식 습득을 넘어, 업무능력·성품·사명감을 함께 기르는 것을 목표로 합니다.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:h-[500px] auto-rows-[minmax(280px,auto)] md:auto-rows-auto">
-          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)]">
+        <div className="flex flex-col items-center gap-1.5 my-10">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
               className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
               style={{ backgroundImage: "url('/images/classical.jpg')" }}
@@ -230,7 +237,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)]">
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
               className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
               style={{ backgroundImage: "url('/images/casestudy.jpg')" }}
@@ -249,7 +256,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)]">
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
             <div 
               className="absolute inset-0 bg-cover bg-center transition-all duration-700 group-hover:scale-105"
               style={{ backgroundImage: "url('/images/lecture.jpg')" }}
@@ -357,33 +364,46 @@ export default function Home() {
           <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-[#D9D9D9] bg-[#D9D9D9]">
-          <div className="flex flex-col items-center justify-center bg-white px-4 py-8 md:py-10">
-            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
-              <AnimatedNumber end={19} suffix="년" visible={statsVisible} />
+        <div className="flex flex-wrap justify-center">
+          <div className="flex items-center w-1/2 md:w-auto">
+            <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
+              <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+                <AnimatedNumber end={19} suffix="년" visible={statsVisible} />
+              </div>
+              <div className="text-lg text-[#666666]">운영 기간</div>
             </div>
-            <div className="text-lg text-[#666666]">운영 기간</div>
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
           </div>
           
-          <div className="flex flex-col items-center justify-center bg-white px-4 py-8 md:py-10">
-            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
-              <AnimatedDecimal end={75.5} suffix="%" visible={statsVisible} />
+          <div className="flex items-center w-1/2 md:w-auto">
+            <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
+              <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+                <AnimatedDecimal end={75.5} suffix="%" visible={statsVisible} />
+              </div>
+              <div className="text-lg text-[#666666]">취업률</div>
             </div>
-            <div className="text-lg text-[#666666]">취업률</div>
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
           </div>
           
-          <div className="flex flex-col items-center justify-center bg-white px-4 py-8 md:py-10">
-            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
-              <AnimatedNumber end={406} suffix="명" visible={statsVisible} />
+          <div className="flex items-center w-1/2 md:w-auto">
+            <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
+              <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+                <AnimatedNumber end={406} suffix="명" visible={statsVisible} />
+              </div>
+              <div className="text-lg text-[#666666]">누적 수료생</div>
+              <div className="text-sm text-[#999999] mt-1">조기 수료 포함</div>
             </div>
-            <div className="text-lg text-[#666666]">누적 수료생</div>
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
           </div>
           
-          <div className="flex flex-col items-center justify-center bg-white px-4 py-8 md:py-10">
-            <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
-              <AnimatedNumber end={90} suffix="%" visible={statsVisible} />
+          <div className="flex items-center w-1/2 md:w-auto">
+            <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
+              <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
+                <AnimatedNumber end={90} suffix="%" visible={statsVisible} />
+              </div>
+              <div className="text-lg text-[#666666]">수료생 만족도</div>
+              <div className="text-sm text-[#999999] mt-1">최근 3개년 간 수료생 만족도</div>
             </div>
-            <div className="text-lg text-[#666666]">수료생 만족도</div>
           </div>
         </div>
       </section>
@@ -419,13 +439,13 @@ export default function Home() {
             {alumniData.map((alumni) => (
               <div key={alumni.id} className="min-w-full relative h-full flex flex-col md:flex-row">
                 <div 
-                  className="w-full md:w-1/2 h-64 md:h-full bg-cover bg-center border-r border-[#D9D9D9]"
+                  className="w-full md:w-[60%] h-64 md:h-full bg-cover bg-center border-r border-[#D9D9D9]"
                   style={{ backgroundImage: `url('${alumni.image}')` }}
                 >
                   <div className="w-full h-full bg-black/20" />
                 </div>
                 
-                <div className="w-full md:w-1/2 p-6 md:p-16 flex flex-col justify-center bg-white relative">
+                <div className="w-full md:w-[40%] p-6 md:p-16 flex flex-col justify-center bg-white relative">
                   <div className="inline-block px-4 py-1.5 bg-gray-100 text-gray-800 font-semibold text-lg rounded-full mb-6 w-max">
                     {alumni.cohort}
                   </div>
@@ -434,7 +454,7 @@ export default function Home() {
                     &quot;{alumni.quote}&quot;
                   </h3>
                   
-                  <Link href="#" className="text-[var(--brand)] font-semibold flex items-center hover:underline transition-colors mt-auto md:mt-0 w-max text-lg">
+                  <Link href="/alumni" className="text-[var(--brand)] font-semibold flex items-center hover:underline transition-colors mt-auto md:mt-0 w-max text-lg">
                     자세히 읽어보기 <ChevronRight className="w-5 h-5 ml-1" />
                   </Link>
                 </div>

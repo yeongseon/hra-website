@@ -33,7 +33,7 @@ export default async function MemberLayout({
     // 화면 전체를 차지하는 검은색 배경의 플렉스 컨테이너
     // min-h-screen: 최소 높이 100vh (화면 전체 높이)
     // flex-col: 자식 요소들이 세로로 정렬됨
-    <div className="flex min-h-screen flex-col bg-black text-white">
+    <div className="flex min-h-screen flex-col bg-white text-gray-900">
       {/* 페이지 맨 위에 네비게이션 바 표시 */}
       <Header />
       {/* main: 페이지의 주요 내용 영역

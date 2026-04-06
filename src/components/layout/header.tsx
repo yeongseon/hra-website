@@ -206,7 +206,7 @@ export function Header({ session }: HeaderProps) {
              )}
              
              <Link
-               href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
+               href="https://docs.google.com/forms/d/e/1FAIpQLSdWsLi_3umEuLWQXgOuSq5LTETmcolXy1I3auTohWY1ZTxiww/viewform"
                target="_blank"
                rel="noopener noreferrer"
                className="ml-2 inline-flex items-center justify-center rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
@@ -218,7 +218,7 @@ export function Header({ session }: HeaderProps) {
 
          <div className="flex items-center gap-3 md:hidden">
            <Link
-             href="https://docs.google.com/forms/d/e/1FAlpQLSdWsLi_3umEuLWQXg0OuSq5LTETmcolXy1l3auTohWY1ZTxiww/viewform"
+             href="https://docs.google.com/forms/d/e/1FAIpQLSdWsLi_3umEuLWQXgOuSq5LTETmcolXy1I3auTohWY1ZTxiww/viewform"
              target="_blank"
              rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-lg bg-[#2563EB] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"

@@ -37,13 +37,13 @@ const toContentDoc = (content: string) => `
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      :root { color-scheme: dark; }
+      :root { color-scheme: light; }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         padding: 20px;
-        color: #e5e7eb;
-        background: #09090b;
+        color: #1a1a1a;
+        background: #ffffff;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
         line-height: 1.8;
         white-space: pre-wrap;
@@ -112,18 +112,18 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <div className="mb-8">
         <Link href="/resources">
-          <Button variant="ghost" className="text-zinc-200 hover:bg-zinc-900 hover:text-white">
+          <Button variant="ghost" className="text-[#666666] hover:bg-gray-50 hover:text-[#1a1a1a]">
             <ArrowLeft className="size-4" />
             목록으로
           </Button>
         </Link>
       </div>
 
-      <Card className="border-white/10 bg-zinc-950/80 py-0">
-        <CardHeader className="border-b border-white/10 py-6 sm:py-8">
-          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">{log.title}</CardTitle>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 sm:gap-4 md:text-sm">
-            <Badge variant="secondary" className="bg-white/10 text-white">
+      <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
+        <CardHeader className="border-b border-[#D9D9D9] py-6 sm:py-8">
+          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">{log.title}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666] sm:gap-4 md:text-sm">
+            <Badge variant="secondary" className="border border-[#D9D9D9] bg-gray-50 text-[#666666]">
               <CalendarDays className="size-3.5" />
               {formatDate(log.classDate)}
             </Badge>
@@ -136,22 +136,22 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
 
         <CardContent className="space-y-8 py-6 sm:py-10">
           <section className="space-y-3">
-            <h2 className="text-base font-semibold text-white">내용</h2>
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-black">
+            <h2 className="text-base font-semibold text-[#1a1a1a]">내용</h2>
+            <div className="overflow-hidden rounded-xl border border-[#D9D9D9] bg-white">
               <iframe
                 title="수업일지 내용"
                 srcDoc={toContentDoc(log.content)}
-                className="h-[420px] w-full bg-black"
+                className="h-[420px] w-full bg-white"
               />
             </div>
           </section>
 
           {images.length > 0 ? (
             <section className="space-y-3">
-              <h2 className="text-base font-semibold text-white">수업 사진</h2>
+              <h2 className="text-base font-semibold text-[#1a1a1a]">수업 사진</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {images.map((image) => (
-                  <div key={image.id} className="overflow-hidden rounded-xl border border-white/10 bg-black/50">
+                  <div key={image.id} className="overflow-hidden rounded-xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]">
                     <img
                       src={image.url}
                       alt={image.alt?.trim() || `${log.title} 이미지`}

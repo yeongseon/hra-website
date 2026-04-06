@@ -60,10 +60,10 @@ export default function FacultyPage() {
     <main className="min-h-screen py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16 space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1a1a1a]">
             교수진 소개
           </h1>
-          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-[#666666] max-w-2xl mx-auto">
             HRA의 교육을 이끄는 교수진을 소개합니다.
           </p>
         </div>
@@ -72,21 +72,21 @@ export default function FacultyPage() {
           {facultyMembers.map((faculty) => (
             <div
               key={faculty.id}
-              className="group relative flex flex-col items-center text-center rounded-2xl p-8 bg-white/5 border border-white/10 transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]"
+              className="group relative flex flex-col items-center text-center rounded-2xl p-8 bg-white border border-[#D9D9D9] shadow-[var(--shadow-soft)] transition-all duration-300 hover:bg-gray-50 hover:border-blue-400"
             >
-              <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300 group-hover:bg-white/10">
-                <User className="w-10 h-10 text-white/40 group-hover:text-white/70 transition-colors duration-300" />
+              <div className="w-24 h-24 rounded-full bg-gray-50 border border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-300 group-hover:bg-blue-50">
+                <User className="w-10 h-10 text-[#666666] group-hover:text-blue-600 transition-colors duration-300" />
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-2">{faculty.name}</h3>
+              <h3 className="text-xl font-bold text-[#1a1a1a] mb-2">{faculty.name}</h3>
               
               <div className="flex items-center justify-center gap-2 mb-4 text-sm font-medium">
-                <span className="text-white/80">{faculty.title}</span>
-                <span className="w-1 h-1 rounded-full bg-white/30"></span>
-                <span className="text-white/60">{faculty.department}</span>
+                <span className="text-[#1a1a1a]">{faculty.title}</span>
+                <span className="w-1 h-1 rounded-full bg-[#D9D9D9]"></span>
+                <span className="text-[#666666]">{faculty.department}</span>
               </div>
               
-              <p className="text-white/50 text-sm leading-relaxed">
+              <p className="text-[#666666] text-sm leading-relaxed">
                 {faculty.description}
               </p>
             </div>
@@ -94,7 +94,7 @@ export default function FacultyPage() {
         </div>
 
         <div className="mt-16 text-center">
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-[#666666]">
             ※ 위즈덤시티 운영진/임원 포함 여부는 추가 검토 중입니다.
           </p>
         </div>
