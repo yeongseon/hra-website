@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, User } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
+import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,39 +22,6 @@ const formatDate = (value: Date) =>
     month: "2-digit",
     day: "2-digit",
   }).format(value);
-
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-const toContentDoc = (content: string) => `
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      :root { color-scheme: light; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 20px;
-        color: #1a1a1a;
-        background: #ffffff;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-        line-height: 1.8;
-        white-space: pre-wrap;
-        word-break: keep-all;
-      }
-    </style>
-  </head>
-  <body>${escapeHtml(content)}</body>
-</html>
-`;
 
 const getClassLogDetail = async (id: string) => {
   const [log] = await db
@@ -137,12 +105,48 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
         <CardContent className="space-y-8 py-6 sm:py-10">
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-[#1a1a1a]">내용</h2>
-            <div className="overflow-hidden rounded-xl border border-[#D9D9D9] bg-white">
-              <iframe
-                title="수업일지 내용"
-                srcDoc={toContentDoc(log.content)}
-                className="h-[420px] w-full bg-white"
-              />
+            <div className="markdown-preview break-words text-[#1a1a1a]">
+              <ReactMarkdown
+                components={{
+                  h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
+                  h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
+                  h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
+                  p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
+                  li: ({ node, ...props }) => <li className="text-sm" {...props} />,
+                  code: ({ node, className, children, ...props }) => {
+                    const match = /language-(\w+)/.exec(className || "");
+                    if (!match) {
+                      return (
+                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-blue-600" {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  pre: ({ node, ...props }) => (
+                    <pre className="block bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
+                  ),
+                  a: ({ node, ...props }) => <a className="text-[#2563EB] underline" {...props} />,
+                  blockquote: ({ node, ...props }) => (
+                    <blockquote
+                      className="border-l-4 border-[#D9D9D9] pl-4 italic text-[#666666] mb-4"
+                      {...props}
+                    />
+                  ),
+                  hr: ({ node, ...props }) => <hr className="border-[#D9D9D9] my-6" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
+                  em: ({ node, ...props }) => <em className="italic" {...props} />,
+                }}
+              >
+                {log.content}
+              </ReactMarkdown>
             </div>
           </section>
 

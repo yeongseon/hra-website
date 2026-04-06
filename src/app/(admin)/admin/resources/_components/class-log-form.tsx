@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 
 type ClassLogActionResult = {
   success: boolean;
@@ -150,12 +150,11 @@ export function ClassLogForm({
             <Label htmlFor="content" className="text-slate-700">
               내용
             </Label>
-            <Textarea
-              id="content"
+            <MarkdownEditor
               name="content"
-              required
               defaultValue={defaultValues?.content ?? ""}
-              className="min-h-56 border-slate-300"
+              required
+              placeholder="마크다운으로 수업 내용을 작성해주세요..."
             />
           </div>
 
