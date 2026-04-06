@@ -1,42 +1,36 @@
-/**
- * ============================================
- * 미들웨어(Middleware) 설정 파일
- * ============================================
- * 
- * 🤔 미들웨어란 뭔가요?
- * 미들웨어는 사용자가 특정 페이지에 접근하려고 할 때, 
- * 그 페이지를 보여주기 전에 가장 먼저 실행되는 코드입니다.
- * 경호원이 건물 입구에서 방문객의 신분을 확인하는 것처럼,
- * 미들웨어가 "이 사람이 이 페이지에 들어갈 권리가 있나?"를 확인합니다.
- * 
- * 📝 이 미들웨어가 하는 역할
- * 1. 사용자가 로그인했는지 확인
- * 2. 로그인한 사용자의 역할(ADMIN 또는 MEMBER)을 확인
- * 3. 역할에 따라 페이지 접근을 허용하거나 차단
- * 4. 권한이 없으면 로그인 페이지로 자동으로 보냄
- * 
- * 🔗 "auth as middleware"가 뭘 의미하나요?
- * "@/lib/auth"에서 정의된 'auth' 함수를 가져와서
- * 이것을 'middleware'라는 이름으로 Next.js에 등록하는 것입니다.
- * 이렇게 하면 Next.js가 자동으로 이 함수를 미들웨어로 실행시킵니다.
- */
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
 
-export { auth as middleware } from "@/lib/auth";
+export default async function middleware(request: NextRequest) {
+  try {
+    const session = await auth();
 
-/**
- * 미들웨어가 작동할 경로(URL) 설정
- * 아래 경로에 사용자가 접근하려고 하면 미들웨어가 실행됩니다.
- */
+    const { pathname } = request.nextUrl;
+
+    if (pathname.startsWith("/admin")) {
+      if (!session?.user || session.user.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+    }
+
+    if (pathname.startsWith("/resources") || pathname.startsWith("/mypage")) {
+      if (!session?.user) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error("[middleware] 인증 확인 실패:", error);
+    return NextResponse.redirect(new URL("/system-error", request.url));
+  }
+}
+
 export const config = {
   matcher: [
-    // /admin/ 경로와 그 하위 모든 페이지에서 미들웨어 실행
-    // 예: /admin, /admin/users, /admin/users/123 등
     "/admin/:path*",
-
-    // /resources/ 경로: 자료실은 로그인한 회원만 접근 가능
     "/resources/:path*",
-
-    // /mypage/ 경로: 마이페이지는 로그인한 회원만 접근 가능
     "/mypage/:path*",
   ],
 };
