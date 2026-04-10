@@ -151,15 +151,15 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
       
-      <section className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 overflow-hidden text-center bg-gray-900">
+      <section className="relative flex flex-col items-start justify-center min-h-[90vh] px-4 overflow-hidden text-left bg-gray-900">
         <div 
           className="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900"
         />
         <div className="absolute inset-0 z-0 bg-black/30" />
 
-        <div className="relative z-10 flex flex-col items-center max-w-5xl gap-6">
+        <div className="relative z-10 flex flex-col items-start text-left max-w-5xl gap-6 w-full mx-auto">
           <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
-            Human Renaissance Academy
+            HUMAN RENAISSANCE ACADEMY
           </h2>
           
           <h1 
@@ -172,23 +172,15 @@ export default function Home() {
             {renderHeading()}
           </h1>
           
-          <p className="max-w-2xl text-[18px] text-white/90 font-light tracking-wide px-2 leading-relaxed mt-4 sm:whitespace-nowrap">
+          <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide px-4 leading-relaxed mt-4 sm:whitespace-nowrap">
             고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
           </p>
           
-          <div className="mt-10 flex flex-col items-center gap-6">
+          <div className="mt-10 flex flex-col items-start gap-6">
             <Link href="/recruitment">
               <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-[#1a1a1a] font-semibold h-14 px-10 text-lg rounded-lg border-2 transition-all duration-300">
                 모집 안내 보기
               </Button>
-            </Link>
-            <Link 
-              href="https://docs.google.com/forms/d/e/1FAIpQLSdWsLi_3umEuLWQXgOuSq5LTETmcolXy1I3auTohWY1ZTxiww/viewform" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-white/80 hover:text-white underline underline-offset-4 text-sm font-medium transition-colors"
-            >
-              지원하기
             </Link>
           </div>
         </div>
@@ -199,7 +191,7 @@ export default function Home() {
           <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
             HRA가 지향하는 교육
           </h2>
-          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
+          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
           <p className="text-lg text-[#666666] mt-0 font-medium">
             깊이 사고하고 넓게 실천하는 교육
           </p>
@@ -273,13 +265,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 px-4 max-w-7xl mx-auto w-full border-t border-[#D9D9D9]">
+      <section className="py-24 px-4 w-full bg-[#f5f5f5]">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col items-center text-center mb-16">
             <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
               HRA 핵심 가치
             </h2>
-            <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
+            <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
             <p className="text-lg text-[#666666] mt-0 font-medium">
               3C 인재를 향한 세 가지 핵심 가치
             </p>
@@ -297,12 +289,12 @@ export default function Home() {
                 <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
                   사명감
                 </h3>
-                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6">
-                  Commitment
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6 flex items-baseline">
+                  <span className="text-[24px] font-black">C</span>ommitment
                 </h4>
                 
                 <p className="text-lg leading-8 text-[#666666] group-hover:text-white transition-colors duration-500 mt-auto">
-                  나를 넘어 사회를 향하는 마음. 주어진 일에 책임감을 가지고 끝까지 완수해내는 태도를 기릅니다.
+                  나를 넘어 사회를 향하는 마음.<br /> 주어진 일에 책임감을 가지고 끝까지 완수해내는 태도를 기릅니다.
                 </p>
               </div>
             </div>
@@ -318,33 +310,33 @@ export default function Home() {
                 <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
                   업무능력
                 </h3>
-                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6">
-                  Competence
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6 flex items-baseline">
+                  <span className="text-[24px] font-black">C</span>ompetence
                 </h4>
                 
                 <p className="text-lg leading-8 text-[#666666] group-hover:text-white transition-colors duration-500 mt-auto">
-                  배움을 실천으로 이어가는 힘. 비판적 사고와 탁월한 문제 해결 능력으로 현장에서 가치를 창출합니다.
+                  배움을 실천으로 이어가는 힘.<br /> 비판적 사고와 탁월한 문제 해결 능력으로 현장에서 가치를 창출합니다.
                 </p>
               </div>
             </div>
 
             <div className="group relative bg-[#FFFFFF] border border-[#D9D9D9] shadow-[var(--shadow-soft)] rounded-2xl overflow-hidden p-10 transition-all duration-500 h-[380px] flex flex-col">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 transition-transform duration-700 ease-in-out z-0" />
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
               
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-8 transition-colors duration-500">
-                  <Heart className="w-8 h-8 text-white transition-colors duration-500" />
+                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Heart className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
                 
-                <h3 className="text-[24px] font-bold text-white transition-colors duration-500 mb-1">
+                <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
                   성품
                 </h3>
-                <h4 className="text-[18px] font-medium text-blue-200 transition-colors duration-500 mb-6">
-                  Character
+                <h4 className="text-[18px] font-medium text-blue-600 group-hover:text-blue-200 transition-colors duration-500 mb-6 flex items-baseline">
+                  <span className="text-[24px] font-black">C</span>haracter
                 </h4>
                 
-                <p className="text-lg leading-8 text-white transition-colors duration-500 mt-auto">
-                  생각의 깊이와 마음의 넓이를 기르는 자세. 타인을 존중하고 공동체와 함께 성장하는 바른 인성을 갖춥니다.
+                <p className="text-lg leading-8 text-[#666666] group-hover:text-white transition-colors duration-500 mt-auto">
+                  생각의 깊이와 마음의 넓이를 기르는 자세.<br /> 타인을 존중하고 공동체와 함께 성장하는 바른 인성을 갖춥니다.
                 </p>
               </div>
             </div>
@@ -357,31 +349,31 @@ export default function Home() {
           <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
             HRA 성과
           </h2>
-          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
+          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
         </div>
 
-        <div className="flex flex-wrap justify-center">
-          <div className="flex items-center w-1/2 md:w-auto">
+        <div className="flex flex-wrap justify-center items-start">
+          <div className="flex items-start w-1/2 md:w-auto">
             <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
               <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
                 <AnimatedNumber end={19} suffix="년" visible={statsVisible} />
               </div>
               <div className="text-lg text-[#666666]">운영 기간</div>
             </div>
-            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9] mt-10" />
           </div>
           
-          <div className="flex items-center w-1/2 md:w-auto">
+          <div className="flex items-start w-1/2 md:w-auto">
             <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
               <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
                 <AnimatedDecimal end={75.5} suffix="%" visible={statsVisible} />
               </div>
               <div className="text-lg text-[#666666]">취업률</div>
             </div>
-            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9] mt-10" />
           </div>
           
-          <div className="flex items-center w-1/2 md:w-auto">
+          <div className="flex items-start w-1/2 md:w-auto">
             <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
               <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
                 <AnimatedNumber end={406} suffix="명" visible={statsVisible} />
@@ -389,10 +381,10 @@ export default function Home() {
               <div className="text-lg text-[#666666]">누적 수료생</div>
               <div className="text-sm text-[#999999] mt-1">조기 수료 포함</div>
             </div>
-            <div className="hidden md:block w-px h-16 bg-[#D9D9D9]" />
+            <div className="hidden md:block w-px h-16 bg-[#D9D9D9] mt-10" />
           </div>
           
-          <div className="flex items-center w-1/2 md:w-auto">
+          <div className="flex items-start w-1/2 md:w-auto">
             <div className="flex flex-col items-center px-4 md:px-12 py-8 w-full text-center">
               <div className="text-[40px] md:text-[50px] font-bold text-[#1a1a1a] mb-2 tracking-tighter">
                 <AnimatedNumber end={90} suffix="%" visible={statsVisible} />
@@ -409,7 +401,7 @@ export default function Home() {
           <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
             당신의 다음 성장을 HRA에서 시작해보세요
           </h2>
-          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
+          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
           <p className="text-lg text-[#666666] mt-0 mb-12">
             최고의 동료들과 함께 압도적인 성장을 경험할 준비가 되셨나요?
           </p>
@@ -427,7 +419,7 @@ export default function Home() {
           <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
             수료생 이야기
           </h2>
-          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-[25px] mb-[5px]" />
+          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
         </div>
 
         <div className="relative border border-[#D9D9D9] shadow-[var(--shadow-soft)] rounded-2xl overflow-hidden bg-white">

@@ -1,10 +1,31 @@
 import type { Metadata } from "next";
+import { asc } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "수료생 이야기",
 };
 
-const alumniStories = [
+type AlumniStoryViewModel = {
+  id: number | string;
+  name: string;
+  quote: string;
+  story: string;
+  title?: string | null;
+  imageUrl?: string | null;
+  gradient: string;
+};
+
+const gradients = [
+  "from-amber-700 via-amber-800 to-stone-900",
+  "from-blue-700 via-blue-800 to-slate-900",
+  "from-emerald-700 via-emerald-800 to-slate-900",
+] as const;
+
+const fallbackStories: AlumniStoryViewModel[] = [
   {
     id: 1,
     name: "17기 수료생",
@@ -31,34 +52,67 @@ const alumniStories = [
   },
 ];
 
-export default function AlumniPage() {
+export default async function AlumniPage() {
+  const dbStories = await db
+    .select()
+    .from(alumniStoriesTable)
+    .orderBy(asc(alumniStoriesTable.order), asc(alumniStoriesTable.createdAt));
+
+  const stories: AlumniStoryViewModel[] = dbStories.length > 0
+    ? dbStories.map((story, index) => ({
+        id: story.id,
+        name: story.name,
+        quote: story.quote,
+        story: story.content,
+        title: story.title,
+        imageUrl: story.imageUrl,
+        gradient: gradients[index % gradients.length],
+      }))
+    : fallbackStories;
+
   return (
     <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
       <section className="py-16 sm:py-20 text-center">
         <h1 className="text-[40px] font-bold leading-tight text-[#1a1a1a]">수료생 이야기</h1>
-        <div className="mx-auto mt-[25px] mb-[5px] h-1 w-12 bg-[var(--brand)]" />
+        <div className="mx-auto mt-3 mb-3 h-1 w-12 bg-[var(--brand)]" />
         <p className="mt-5 mx-auto max-w-3xl text-lg leading-relaxed text-[#666666]">
           HRA를 거쳐 간 수료생들이 각자의 자리에서 어떻게 성장했는지, 그 변화의 순간을 짧은 이야기로 전합니다.
         </p>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {alumniStories.map((story) => (
+      <section className="flex flex-col gap-16 md:gap-24">
+        {stories.map((story, index) => (
           <article
             key={story.id}
-            className="overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]"
+            className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-12`}
           >
-            <div className={`aspect-video rounded-t-2xl bg-gradient-to-br ${story.gradient} flex items-center justify-center`}>
-              <span className="text-white/40 text-sm font-medium">수료생 사진</span>
+            <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
+              {story.imageUrl ? (
+                <img
+                  src={story.imageUrl}
+                  alt={`${story.name} 수료생 사진`}
+                  className="aspect-square w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
+                />
+              ) : (
+                <div
+                  className={`flex aspect-square w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
+                >
+                  <span className="text-sm font-medium text-white/40">수료생 사진</span>
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col p-6">
-              <p className="text-sm font-semibold text-blue-600">{story.name}</p>
-              <h2 className="mt-3 text-2xl font-bold leading-snug text-[#1a1a1a]">{story.quote}</h2>
-              <p className="mt-4 flex-1 text-lg leading-relaxed text-[#666666]">{story.story}</p>
-              <span className="mt-6 inline-flex items-center text-base font-semibold text-[#2563EB]">
-                수료생 후기
-              </span>
+            <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
+              <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl">
+                "{story.quote}"
+              </h2>
+              <p className="mt-6 text-lg leading-relaxed text-[#666666]">
+                {story.story}
+              </p>
+              <div className="mt-8">
+                <p className="font-bold text-blue-600">{story.name}</p>
+                {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+              </div>
             </div>
           </article>
         ))}

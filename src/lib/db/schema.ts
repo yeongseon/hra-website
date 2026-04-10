@@ -303,31 +303,172 @@ export const applicationsRelations = relations(applications, ({ one }) => ({
 }));
 
 // ============================================================
+// Faculty (교수진 테이블)
+// ============================================================
+
+// 교수진 카테고리
+// - CLASSICS: 고전읽기
+// - BUSINESS: 기업실무
+// - LECTURE: 특강
+export const facultyCategoryEnum = pgEnum("faculty_category", [
+  "CLASSICS",
+  "BUSINESS",
+  "LECTURE",
+]);
+
+// 교수진 정보를 저장하는 테이블
+export const faculty = pgTable("faculty", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(),
+  category: facultyCategoryEnum("category").notNull(),
+  currentPosition: text("current_position"), // 현직 (現)
+  formerPosition: text("former_position"), // 전직 (前)
+  imageUrl: text("image_url"), // 프로필 이미지 URL (선택사항)
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
+// Alumni Stories (수료생 이야기 테이블)
+// ============================================================
+
+// 수료생 이야기를 저장하는 테이블
+export const alumniStories = pgTable("alumni_stories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull(), // 수료생 이름
+  title: varchar("title", { length: 100 }), // 소속/직함
+  quote: varchar("quote", { length: 500 }).notNull(), // 인용 문구 (제목)
+  content: text("content").notNull(), // 본문 내용
+  imageUrl: text("image_url"), // 수료생 사진 URL
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
+// FAQ Contact (FAQ 담당자 연락처 테이블)
+// ============================================================
+
+// FAQ 페이지에 표시할 담당자 연락처 정보
+export const faqContact = pgTable("faq_contact", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  cohortName: varchar("cohort_name", { length: 50 }).notNull(), // 기수명 (예: "20기")
+  contactName: varchar("contact_name", { length: 100 }).notNull(), // 담당자명
+  contactPhone: varchar("contact_phone", { length: 20 }).notNull(), // 전화번호
+  contactRole: varchar("contact_role", { length: 100 }).notNull().default("모집위원장"), // 역할
+  isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
+// Recruitment Settings (모집 설정 테이블)
+// ============================================================
+
+// 모집 안내 페이지의 설정 정보 (포스터, D-day 등)
+export const recruitmentSettings = pgTable("recruitment_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  posterImageUrl: text("poster_image_url"), // 모집 포스터 이미지 URL
+  deadlineDate: timestamp("deadline_date"), // D-day 기준 마감일
+  nextRecruitmentYear: integer("next_recruitment_year"), // 다음 모집 예정 연도
+  nextRecruitmentMonth: integer("next_recruitment_month"), // 다음 모집 예정 월
+  qualificationText: text("qualification_text"), // 지원 자격 안내 문구
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
+// Notice Attachments (공지사항 첨부파일 테이블)
+// ============================================================
+
+// 공지사항에 첨부되는 파일/이미지를 저장합니다.
+export const noticeAttachments = pgTable("notice_attachments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  noticeId: uuid("notice_id")
+    .notNull()
+    .references(() => notices.id, { onDelete: "cascade" }),
+  url: text("url").notNull(), // 파일 URL
+  fileName: varchar("file_name", { length: 500 }).notNull(), // 원본 파일명
+  fileSize: integer("file_size"), // 파일 크기 (bytes)
+  fileType: varchar("file_type", { length: 100 }), // MIME type
+  isImage: boolean("is_image").notNull().default(false), // 이미지 여부
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Notice Attachments 관계 정의
+export const noticeAttachmentsRelations = relations(noticeAttachments, ({ one }) => ({
+  notice: one(notices, {
+    fields: [noticeAttachments.noticeId],
+    references: [notices.id],
+  }),
+}));
+
+// ============================================================
+// Weekly Texts (주차별 텍스트 테이블)
+// ============================================================
+
+// 자료실의 주차별 텍스트를 저장합니다.
+export const weeklyTexts = pgTable("weekly_texts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 300 }).notNull(),
+  fileUrl: text("file_url").notNull(), // 파일 URL
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Weekly Texts 관계 정의
+export const weeklyTextsRelations = relations(weeklyTexts, ({ one }) => ({
+  cohort: one(cohorts, {
+    fields: [weeklyTexts.cohortId],
+    references: [cohorts.id],
+  }),
+}));
+
+// ============================================================
+// Guidebooks (가이드북 테이블)
+// ============================================================
+
+// 자료실의 가이드북을 저장합니다.
+export const guidebooks = pgTable("guidebooks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 300 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================================
 // Type exports (타입 내보내기)
 // ============================================================
 
 // Drizzle ORM은 데이터베이스 테이블을 정의한 후 자동으로 TypeScript 타입을 생성할 수 있습니다.
 // 아래 타입들은 데이터베이스 데이터를 코드에서 사용할 때 타입 검사를 제공합니다.
 
-// User 타입: 데이터베이스에서 조회한 사용자 정보 (읽기 전용)
-// NewUser 타입: 데이터베이스에 새로 저장할 사용자 정보 (작성)
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
-// Cohort 타입: 기수 정보를 조회하거나 저장할 때 사용
 export type Cohort = typeof cohorts.$inferSelect;
-
-// Notice 타입: 공지사항 정보를 조회하거나 저장할 때 사용
 export type Notice = typeof notices.$inferSelect;
-
-// ClassLog 타입: 수업일지 정보를 조회하거나 저장할 때 사용
 export type ClassLog = typeof classLogs.$inferSelect;
-
-// Gallery 타입: 갤러리 정보를 조회하거나 저장할 때 사용
 export type Gallery = typeof galleries.$inferSelect;
-
-// GalleryImage 타입: 갤러리 이미지 정보를 조회하거나 저장할 때 사용
 export type GalleryImage = typeof galleryImages.$inferSelect;
-
-// Application 타입: 지원서 정보를 조회하거나 저장할 때 사용
 export type Application = typeof applications.$inferSelect;
+export type Faculty = typeof faculty.$inferSelect;
+export type AlumniStory = typeof alumniStories.$inferSelect;
+export type FaqContactInfo = typeof faqContact.$inferSelect;
+export type RecruitmentSetting = typeof recruitmentSettings.$inferSelect;
+export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
+export type WeeklyText = typeof weeklyTexts.$inferSelect;
+export type Guidebook = typeof guidebooks.$inferSelect;

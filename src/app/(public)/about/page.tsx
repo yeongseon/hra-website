@@ -1,4 +1,4 @@
-import { BookOpen, Lightbulb, Users, Target, Award, Briefcase, Compass } from "lucide-react";
+import { Award, BookOpen, Briefcase, Compass, Globe, Star } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export default function AboutPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-24">
       <section className="py-20 md:py-32 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1a1a1a] mb-6">
-          정답보다 중요한 것, <br className="md:hidden" />
+          정답보다 중요한 것,<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">HRA는 본질을 묻는 법을 배웁니다</span>
         </h1>
       </section>
@@ -26,32 +26,30 @@ export default function AboutPage() {
 
       <section className="mb-24">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-10 text-center">주요 목적 및 비전</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-6">
           {[
             {
               id: "vision-1",
-              icon: Target,
+              name: "목적",
               text: "본 교육과정의 주요 목적은 업무능력과 성품, 사명감을 고루 갖춘 3C 인재를 양성하는 데 있습니다."
             },
             {
               id: "vision-2",
-              icon: Users,
+              name: "운영 방식",
               text: "비영리(NPO) 기반으로 운영되어 수익이 아닌 청년의 성장을 중심에 두고 발표와 토론을 바탕으로 한 학습자 주도형 교육을 지향합니다."
             },
             {
               id: "vision-3",
-              icon: BookOpen,
+              name: "교육 중점",
               text: "또한 고전 읽기, 에세이 작성, 케이스 스터디, 스피치 훈련 등을 통해 사고력과 표현력, 실천 역량을 기르는 데 중점을 둡니다."
             }
           ].map((item, i) => (
-            <div key={item.id} className="bg-white border border-[#D9D9D9] p-8 rounded-2xl shadow-[var(--shadow-soft)] hover:border-blue-400 transition-colors">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-6">
-                <item.icon className="w-6 h-6 text-blue-400" />
+            <div key={item.id} className="bg-white rounded-2xl border border-[#D9D9D9] shadow-[var(--shadow-soft)] p-8">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-blue-600 font-bold text-lg">0{i + 1}.</span>
+                <span className="text-lg text-[#1a1a1a]">{item.name}</span>
               </div>
-              <div className="flex gap-4">
-                <span className="text-4xl font-black text-blue-100 select-none">0{i + 1}</span>
-                <p className="text-[#666666] leading-relaxed pt-2">{item.text}</p>
-              </div>
+              <p className="text-[#666666] leading-relaxed">{item.text}</p>
             </div>
           ))}
         </div>
@@ -65,6 +63,7 @@ export default function AboutPage() {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-colors hover:border-blue-400">
+            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
               <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Competence</div>
@@ -76,6 +75,7 @@ export default function AboutPage() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-colors hover:border-blue-400">
+            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-indigo-500">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
               <div className="text-indigo-500 font-mono text-sm tracking-widest uppercase mb-2">Character</div>
@@ -87,6 +87,7 @@ export default function AboutPage() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-colors hover:border-blue-400">
+            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-purple-500">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
               <div className="text-purple-500 font-mono text-sm tracking-widest uppercase mb-2">Commitment</div>
@@ -103,14 +104,14 @@ export default function AboutPage() {
         <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-10 text-center">교육 효과</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
           {[
-            { id: "effect-1", icon: Compass, text: "글로벌 마인드를 가진 창조적 인재 육성" },
-            { id: "effect-2", icon: Users, text: "성품(Character), 업무능력(Competence), 사명감(Commitment)을 갖춘 청년 배출" },
-            { id: "effect-3", icon: Lightbulb, text: "인문학적 소양을 통한 생성형 AI 활용 능력 향상" },
+            { id: "effect-1", icon: Globe, text: "글로벌 마인드를 가진 창조적 인재 육성" },
+            { id: "effect-2", icon: Star, text: "성품(Character), 업무능력(Competence), 사명감(Commitment)을 갖춘 청년 배출" },
+            { id: "effect-3", icon: BookOpen, text: "인문학적 소양을 통한 생성형 AI 활용 능력 향상" },
             { id: "effect-4", icon: Briefcase, text: "기업 2~3년 차 정도의 실무 역량 강화" }
           ].map((item) => (
             <div key={item.id} className="flex items-center gap-5 p-6 rounded-2xl bg-white border border-[#D9D9D9] shadow-[var(--shadow-soft)] hover:bg-gray-50 transition-colors">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
-                <item.icon className="w-5 h-5 text-[#666666]" />
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <item.icon className="w-6 h-6 text-white" />
               </div>
               <p className="text-[#666666] font-medium">{item.text}</p>
             </div>

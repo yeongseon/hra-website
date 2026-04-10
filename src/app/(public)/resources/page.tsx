@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookMarked, BookOpen, FileText, Info } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { classLogs, users } from "@/lib/db/schema";
@@ -60,6 +61,8 @@ export default async function ResourcesPage() {
     .innerJoin(users, eq(classLogs.authorId, users.id))
     .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
 
+  const recentLogs = logs.slice(0, 3);
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 sm:mb-14 space-y-4 text-center sm:text-left">
@@ -94,51 +97,7 @@ export default async function ResourcesPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="group relative overflow-hidden border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl transition-all duration-300 hover:border-blue-400 hover:bg-gray-50">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="relative pb-4 pt-8 px-8">
-            <div className="w-12 h-12 rounded-xl bg-gray-50 border border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <FileText className="w-6 h-6 text-amber-600" />
-            </div>
-            <CardTitle className="text-xl font-bold text-[#1a1a1a]">수업일지</CardTitle>
-          </CardHeader>
-          <CardContent className="relative px-8 pb-8">
-            <p className="text-[#666666] text-sm leading-relaxed">
-              매주 진행되는 HRA 수업의 주요 내용과 토론 결과를 확인할 수 있습니다.
-            </p>
-            <p className="mt-3 text-xs text-[#666666]">현재 {logs.length}개의 수업일지가 등록되어 있습니다.</p>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl transition-all duration-300 hover:border-blue-400 hover:bg-gray-50">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="relative pb-4 pt-8 px-8">
-            <div className="w-12 h-12 rounded-xl bg-gray-50 border border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <BookOpen className="w-6 h-6 text-amber-600" />
-            </div>
-            <CardTitle className="text-xl font-bold text-[#1a1a1a]">주차별 텍스트</CardTitle>
-          </CardHeader>
-          <CardContent className="relative px-8 pb-8">
-            <p className="text-[#666666] text-sm leading-relaxed">준비 중입니다.</p>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl transition-all duration-300 hover:border-blue-400 hover:bg-gray-50">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardHeader className="relative pb-4 pt-8 px-8">
-            <div className="w-12 h-12 rounded-xl bg-gray-50 border border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-              <BookMarked className="w-6 h-6 text-amber-600" />
-            </div>
-            <CardTitle className="text-xl font-bold text-[#1a1a1a]">가이드북</CardTitle>
-          </CardHeader>
-          <CardContent className="relative px-8 pb-8">
-            <p className="text-[#666666] text-sm leading-relaxed">준비 중입니다.</p>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="mt-10 sm:mt-14">
+      <section className="mt-12 sm:mt-16">
         <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">수업일지</h2>
           <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
@@ -146,15 +105,15 @@ export default async function ResourcesPage() {
           </Badge>
         </div>
 
-        {logs.length === 0 ? (
-          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+        {recentLogs.length === 0 ? (
+          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10 mb-6">
             <CardContent className="text-center text-base text-[#666666]">
               등록된 수업일지가 없습니다.
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {logs.map((log) => (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-3 mb-6">
+            {recentLogs.map((log) => (
               <Link key={log.id} href={`/resources/${log.id}`}>
                 <Card className="h-full border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
                   <CardHeader className="space-y-3">
@@ -176,6 +135,53 @@ export default async function ResourcesPage() {
             ))}
           </div>
         )}
+
+        <div className="flex justify-center sm:justify-start">
+          <Link href="/resources/class-logs">
+            <Button variant="outline" className="border-[#D9D9D9] text-[#666666] hover:text-blue-600">
+              자세히 보기 <ArrowRight className="size-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-12 sm:mt-16">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">주차별 텍스트</h2>
+          <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
+            0개
+          </Badge>
+        </div>
+
+        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10 mb-6">
+          <CardContent className="text-center text-base text-[#666666]">
+            등록된 주차별 텍스트가 없습니다.
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-center sm:justify-start">
+          <Link href="/resources/weekly-texts">
+            <Button variant="outline" className="border-[#D9D9D9] text-[#666666] hover:text-blue-600">
+              자세히 보기 <ArrowRight className="size-4 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-12 sm:mt-16">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">가이드북</h2>
+          <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
+            0개
+          </Badge>
+        </div>
+
+        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+          <CardContent className="text-center text-base text-[#666666] flex flex-col items-center justify-center gap-2">
+            <span>등록된 가이드북이 없습니다.</span>
+            <span className="text-sm">가이드북은 즉시 다운로드됩니다.</span>
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

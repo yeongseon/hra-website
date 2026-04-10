@@ -1,0 +1,108 @@
+import Link from "next/link";
+import { asc } from "drizzle-orm";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { deleteFaculty } from "@/features/faculty/actions";
+import { requireAdmin } from "@/lib/admin";
+import { db } from "@/lib/db";
+import { faculty } from "@/lib/db/schema";
+
+export const metadata = { title: "교수진 관리" };
+
+export const dynamic = "force-dynamic";
+
+const categoryLabels = {
+  CLASSICS: "고전읽기",
+  BUSINESS: "기업실무",
+  LECTURE: "특강",
+} as const;
+
+export default async function AdminFacultyPage() {
+  await requireAdmin();
+
+  const facultyMembers = await db
+    .select()
+    .from(faculty)
+    .orderBy(asc(faculty.order), asc(faculty.createdAt));
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a]">교수진 관리</h1>
+        <Link href="/admin/faculty/new" className={buttonVariants({ className: "bg-[#1a1a1a] text-white hover:bg-[#333333]" })}>
+          새 교수진 추가
+        </Link>
+      </div>
+
+      <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
+        <CardHeader className="border-b border-[#D9D9D9] py-4">
+          <CardTitle className="text-base text-[#1a1a1a]">전체 교수진 {facultyMembers.length}명</CardTitle>
+        </CardHeader>
+        <CardContent className="py-4">
+          <div className="-mx-4 overflow-x-auto sm:mx-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>이름</TableHead>
+                  <TableHead>카테고리</TableHead>
+                  <TableHead>현직</TableHead>
+                  <TableHead>순서</TableHead>
+                  <TableHead>액션</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {facultyMembers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
+                      등록된 교수진이 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  facultyMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium text-[#1a1a1a]">{member.name}</TableCell>
+                      <TableCell className="text-[#666666]">{categoryLabels[member.category]}</TableCell>
+                      <TableCell className="max-w-xs text-[#666666]">{member.currentPosition || "-"}</TableCell>
+                      <TableCell className="text-[#666666]">{member.order}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/faculty/${member.id}`}
+                            className={buttonVariants({ variant: "outline", className: "border-[#D9D9D9] text-[#1a1a1a]" })}
+                          >
+                            편집
+                          </Link>
+                          <form
+                            action={async (formData) => {
+                              "use server";
+
+                              const id = formData.get("id");
+                              await deleteFaculty(typeof id === "string" ? id : "");
+                            }}
+                          >
+                            <input type="hidden" name="id" value={member.id} />
+                            <Button type="submit" variant="outline" className="border-[#D9D9D9] text-[#1a1a1a]">
+                              삭제
+                            </Button>
+                          </form>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}

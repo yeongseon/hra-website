@@ -55,30 +55,30 @@ export default async function GalleryPage() {
              const imageCount = album.images.length;
 
              return (
-               <Link key={album.slug} href={`/gallery/${album.slug}`} className="group block">
-                  <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0 transition-colors hover:border-blue-400 hover:bg-gray-50">
-                   {album.coverImageUrl && imageCount > 0 ? (
-                     <img
-                       src={album.coverImageUrl}
-                       alt={album.title}
-                       className="h-52 w-full rounded-t-xl object-cover"
-                     />
-                   ) : (
-                      <div className="relative h-52 overflow-hidden rounded-t-xl bg-gradient-to-br from-emerald-50 via-blue-50 to-gray-100">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_82%_72%,rgba(34,211,238,0.14),transparent_30%)]" />
-                        <div className="absolute inset-0 flex items-center justify-center text-[#666666]">
-                          <ImageIcon className="size-10" />
-                        </div>
-                      </div>
-                    )}
-                    <CardHeader>
-                      <CardTitle className="line-clamp-1 text-lg text-[#1a1a1a] group-hover:text-blue-600">
+                <Link key={album.slug} href={`/gallery/${album.slug}`} className="group block h-full">
+                   <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] py-0 transition-all duration-200 hover:border-blue-400 hover:shadow-md">
+                    {album.coverImageUrl && imageCount > 0 ? (
+                      <img
+                        src={album.coverImageUrl}
+                        alt={album.title}
+                        className="h-52 w-full object-cover"
+                      />
+                    ) : (
+                       <div className="relative h-52 overflow-hidden bg-gradient-to-br from-emerald-50 via-blue-50 to-gray-100">
+                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_82%_72%,rgba(34,211,238,0.14),transparent_30%)]" />
+                         <div className="absolute inset-0 flex items-center justify-center text-[#666666]">
+                           <ImageIcon className="size-10" />
+                         </div>
+                       </div>
+                     )}
+                    <CardHeader className="px-6 pt-5 pb-1 text-center">
+                      <CardTitle className="line-clamp-1 text-center text-lg font-semibold text-[#1a1a1a] group-hover:text-blue-600">
                         {album.title}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pb-5 text-sm text-[#666666]">이미지 {imageCount}장</CardContent>
+                    <CardContent className="px-6 pb-5 text-center text-sm text-[#666666]">이미지 {imageCount}장</CardContent>
                   </Card>
-               </Link>
+                </Link>
              );
            })}
          </div>

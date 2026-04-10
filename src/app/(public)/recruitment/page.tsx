@@ -14,13 +14,13 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowRight, CalendarDays, ImageIcon } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { cohorts } from "@/lib/db/schema";
+import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +101,37 @@ export default async function RecruitmentPage() {
     .where(eq(cohorts.isActive, true))
     .orderBy(asc(cohorts.order), asc(cohorts.createdAt));
 
+  const [settings] = await db.select().from(recruitmentSettings).limit(1);
+
+  const dDayText = (() => {
+    if (!settings?.deadlineDate) {
+      return null;
+    }
+
+    const now = new Date();
+    const deadline = new Date(settings.deadlineDate);
+    const diffMs = deadline.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      return `D-${diffDays}`;
+    }
+
+    if (diffDays === 0) {
+      return "D-DAY";
+    }
+
+    return `D+${Math.abs(diffDays)}`;
+  })();
+
+  const qualifications = settings?.qualificationText
+    ? settings.qualificationText.split("\n").map((value) => value.trim()).filter(Boolean)
+    : [
+        "4년제 대학교 재학생 또는 졸업생",
+        "학기 중 매주 토요일 수업 참여 가능한 자",
+        "고전 읽기와 토론에 관심이 있는 자",
+      ];
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       {/* 페이지 상단: 제목 영역 */}
@@ -111,32 +142,48 @@ export default async function RecruitmentPage() {
           >
             HRA RECRUITMENT
           </Badge>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-semibold tracking-tight text-[#1a1a1a]">
-          모집안내
-        </h1>
-        <p className="max-w-3xl text-sm text-[#666666] md:text-base">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-semibold tracking-tight text-[#1a1a1a]">
+            모집안내
+          </h1>
+          {dDayText && <Badge className="border-red-300 bg-red-50 text-red-700">{dDayText}</Badge>}
+        </div>
+        <p className="max-w-3xl text-sm text-[#666666] md:text-base mt-4">
           HRA는 성장에 진심인 사람을 기다립니다.
         </p>
-        <ul className="mt-4 space-y-2 text-sm text-[#666666] list-disc list-inside">
-          <li>지원서 제출은 구글폼을 연동하는 방식으로 운영됩니다.</li>
-          <li>면접 일정은 현기수가 별도로 관리하며, 홈페이지에는 별도 업로드하지 않습니다.</li>
-        </ul>
+        
+        <div className="mt-8 border border-[#D9D9D9] rounded-2xl p-6 bg-white">
+          <h2 className="text-lg font-semibold text-[#1a1a1a] mb-4">지원 자격</h2>
+          <ul className="space-y-2 text-sm text-[#666666] list-disc list-inside">
+            {qualifications.map((qualification) => (
+              <li key={qualification}>{qualification}</li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* 모집 절차 표시: processSteps 배열의 각 항목을 카드로 렌더링 */}
-      <section className="mb-10 sm:mb-16 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {processSteps.map((item) => (
-          <Card key={item.step} className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
-            <CardHeader className="space-y-2 pb-3 pt-5">
-              <Badge variant="outline" className="w-fit border-gray-300 bg-gray-50 text-gray-600">
-                {item.step}
-              </Badge>
-              <CardTitle className="text-lg text-[#1a1a1a]">{item.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-5 text-sm text-[#666666]">
-              {item.subtitle}
-            </CardContent>
-          </Card>
+      <section className="mb-10 sm:mb-16 flex flex-col xl:flex-row items-stretch gap-4">
+        {processSteps.map((item, index) => (
+          <div key={item.step} className="flex flex-col xl:flex-row items-center gap-4 w-full xl:w-auto flex-1">
+            <Card className="w-full h-full border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
+              <CardHeader className="space-y-2 pb-3 pt-5">
+                <Badge variant="outline" className="w-fit border-gray-300 bg-gray-50 text-gray-600">
+                  {item.step}
+                </Badge>
+                <CardTitle className="text-lg text-[#1a1a1a]">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-5 text-sm text-[#666666]">
+                {item.subtitle}
+              </CardContent>
+            </Card>
+            {index < processSteps.length - 1 && (
+              <div className="shrink-0 text-blue-600 text-2xl font-bold flex justify-center items-center py-2 xl:py-0 xl:px-2">
+                <span className="hidden xl:block">→</span>
+                <span className="block xl:hidden">↓</span>
+              </div>
+            )}
+          </div>
         ))}
       </section>
 
@@ -183,22 +230,36 @@ export default async function RecruitmentPage() {
                     </div>
                   </div>
 
-                  {/* 
-                    "지원하기" 버튼은 모집 상태가 "OPEN"이고 구글폼 URL이 있을 때만 표시됩니다.
-                    버튼 클릭 시 각 기수에 설정된 구글폼 외부 링크로 이동합니다.
-                  */}
-                  {cohort.recruitmentStatus === "OPEN" && cohort.googleFormUrl ? (
-                    <Link href={cohort.googleFormUrl} target="_blank" rel="noopener noreferrer">
-                      <Button className="h-10 border border-blue-600 bg-white text-blue-600 hover:bg-blue-50">
-                        지원하기
-                        <ArrowRight className="size-4" />
+                  <div className="shrink-0 mt-4 md:mt-0">
+                    {cohort.recruitmentStatus === "OPEN" && cohort.googleFormUrl && (
+                      <Link href={cohort.googleFormUrl} target="_blank" rel="noopener noreferrer">
+                        <Button className="h-10 w-full md:w-auto bg-blue-600 text-white hover:bg-blue-700">
+                          지원하기
+                          <ArrowRight className="size-4 ml-1.5" />
+                        </Button>
+                      </Link>
+                    )}
+                    {cohort.recruitmentStatus === "CLOSED" && (
+                      <Button disabled className="h-10 w-full md:w-auto bg-gray-100 text-[#666666] cursor-not-allowed">
+                        마감
                       </Button>
-                    </Link>
-                  ) : null}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
           })
+        )}
+      </section>
+
+      <section className="mt-16 sm:mt-24">
+        {settings?.posterImageUrl ? (
+          <img src={settings.posterImageUrl} alt="모집 포스터" className="w-full rounded-2xl" />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#D9D9D9] bg-gray-50 p-12 text-center">
+            <ImageIcon className="size-12 text-[#666666]" />
+            <p className="font-medium text-[#666666]">모집 포스터가 등록되면 여기에 표시됩니다.</p>
+          </div>
         )}
       </section>
     </div>

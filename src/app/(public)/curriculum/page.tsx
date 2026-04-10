@@ -1,15 +1,29 @@
-import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent, ArrowRight } from "lucide-react";
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "커리큘럼",
-};
+import { useState } from "react";
+import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent, ArrowRight } from "lucide-react";
 
 const timelineSteps = [
-  { label: "전반기", period: "9~12월" },
-  { label: "겨울캠프", period: "1~2월" },
-  { label: "하반기", period: "3~6월" },
-  { label: "수료식/입학식", period: "9월" },
+  { 
+    label: "전반기", 
+    period: "9~12월",
+    description: "고전 읽기·토론, 케이스 스터디, 경영서 리뷰 시작. 매주 토요일 09:00–18:00 진행."
+  },
+  { 
+    label: "겨울캠프", 
+    period: "1~2월",
+    description: "7박 8일 합숙 집중 훈련. 강도 높은 토론·특강·팀 프로젝트로 사고력 극대화."
+  },
+  { 
+    label: "하반기", 
+    period: "3~6월",
+    description: "전반기 역량 심화. 하계 인턴·봉사활동·실전 케이스 스터디 병행."
+  },
+  { 
+    label: "수료식/입학식", 
+    period: "9월",
+    description: "52주 과정 마무리. 수료증·추천서 수여 및 차기 기수 입학식 동시 개최."
+  },
 ];
 
 const curriculumItems = [
@@ -51,6 +65,8 @@ const curriculumItems = [
 ];
 
 export default function CurriculumPage() {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a] selection:bg-blue-100">
       <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 py-24 sm:py-32">
@@ -63,24 +79,34 @@ export default function CurriculumPage() {
             커리큘럼
           </h1>
           <p className="text-lg sm:text-xl text-[#666666] leading-relaxed font-light">
-            HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고 문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
+            HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고<br />
+            문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
           </p>
         </section>
 
         <section className="mb-32 relative">
-          <div className="absolute top-0 left-6 sm:left-0 sm:top-1/2 sm:-translate-y-1/2 w-px h-full sm:w-full sm:h-px bg-[#D9D9D9] -z-10" />
+          <div className="absolute top-0 left-6 sm:left-0 sm:top-[23px] sm:-translate-y-1/2 w-px h-full sm:w-full sm:h-[2px] bg-[#D9D9D9] -z-10" />
           
           <div className="flex flex-col sm:flex-row justify-between gap-12 sm:gap-4 relative z-10 pl-16 sm:pl-0">
             {timelineSteps.map((step, index) => (
-              <div key={step.label} className="flex flex-col sm:items-center relative group">
-                 <div className="absolute -left-16 sm:left-auto sm:relative w-12 h-12 rounded-full bg-white border-2 border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:border-blue-400 transition-colors duration-500 shadow-[var(--shadow-soft)]">
+              <button 
+                key={step.label} 
+                type="button"
+                className="flex flex-col sm:items-center relative group focus:outline-none text-left appearance-none"
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onFocus={() => setHoveredIndex(index)}
+                onBlur={() => setHoveredIndex(null)}
+                aria-label={`${step.label} 정보`}
+              >
+                 <div className="absolute -left-16 sm:left-auto sm:relative w-12 h-12 rounded-full bg-white border-2 border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:border-blue-400 transition-colors duration-500 shadow-[var(--shadow-soft)] cursor-pointer">
                    <span className="text-sm font-bold text-[#666666] group-hover:text-[#2563EB] transition-colors">
                     {index + 1}
                   </span>
                 </div>
                 
                 {index < timelineSteps.length - 1 && (
-                  <div className="hidden sm:block absolute top-6 left-[calc(50%+3rem)] w-[calc(100%-6rem)] h-px">
+                  <div className="hidden sm:block absolute top-[23px] left-[calc(50%+3rem)] w-[calc(100%-6rem)] h-px">
                      <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 text-[#D9D9D9] w-4 h-4 -translate-x-full" />
                   </div>
                 )}
@@ -91,7 +117,23 @@ export default function CurriculumPage() {
                     {step.period}
                   </p>
                 </div>
-              </div>
+
+                {/* Hover Tooltip */}
+                {hoveredIndex === index && (
+                  <div className="hidden sm:block absolute top-full mt-3 left-1/2 -translate-x-1/2 w-64 p-4 bg-white border border-[#D9D9D9] rounded-xl shadow-[var(--shadow-soft)] text-sm text-[#666666] z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-t border-l border-[#D9D9D9] rotate-45" />
+                    <div className="relative z-10 leading-relaxed">
+                      {step.description}
+                    </div>
+                  </div>
+                )}
+                {/* Mobile Tooltip (appears inline) */}
+                {hoveredIndex === index && (
+                  <div className="sm:hidden mt-3 p-4 bg-white border border-[#D9D9D9] rounded-xl shadow-[var(--shadow-soft)] text-sm text-[#666666] animate-in fade-in slide-in-from-top-2 duration-200">
+                    {step.description}
+                  </div>
+                )}
+              </button>
             ))}
           </div>
         </section>
@@ -104,15 +146,15 @@ export default function CurriculumPage() {
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 group-hover:opacity-100 transition-opacity duration-700" />
               
-              <div className="mb-8 p-4 rounded-2xl bg-gray-50 w-fit border border-[#D9D9D9] group-hover:scale-110 transition-transform duration-500">
+              <div className="mb-8 p-4 rounded-2xl bg-gray-50 w-fit border border-[#D9D9D9] group-hover:scale-110 transition-transform duration-500 relative z-10">
                 <item.icon className="w-8 h-8 text-blue-600" />
               </div>
               
-              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4 tracking-tight">
+              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4 tracking-tight relative z-10">
                 {item.title}
               </h3>
               
-              <p className="text-[#666666] leading-relaxed font-light mt-auto">
+              <p className="text-[#666666] leading-relaxed font-light mt-auto relative z-10">
                 {item.description}
               </p>
             </div>

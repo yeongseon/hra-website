@@ -23,8 +23,12 @@ import {
   FileText,
   FolderOpen,
   GalleryHorizontal,
+  GraduationCap,
   LayoutDashboard,
   Menu,
+  MessageSquare,
+  Phone,
+  Settings,
   Users,
   UserCog,
 } from "lucide-react";
@@ -57,6 +61,10 @@ const navItems = [
   { href: "/admin/applications", label: "지원서", icon: FileText },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
   { href: "/admin/docs", label: "개발 문서", icon: BookOpen },
+  { href: "/admin/faculty", label: "교수진", icon: GraduationCap },
+  { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
+  { href: "/admin/faq-contact", label: "FAQ 연락처", icon: Phone },
+  { href: "/admin/recruitment-settings", label: "모집 설정", icon: Settings },
 ];
 
 /**
