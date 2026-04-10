@@ -11,7 +11,7 @@ export default function AboutPage() {
       <section className="py-20 md:py-32 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1a1a1a] mb-6">
           정답보다 중요한 것,<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">HRA는 본질을 묻는 법을 배웁니다</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">HRA는 본질을 묻는 법을 배웁니다.</span>
         </h1>
       </section>
 

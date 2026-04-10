@@ -147,16 +147,19 @@ export default async function FacultyPage() {
       <div className="space-y-12 sm:space-y-16">
         {(["CLASSICS", "BUSINESS", "LECTURE"] as const).map((category) => (
           <section key={category}>
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
-                {categoryLabels[category]}
-              </h2>
-              <Badge
-                variant="outline"
-                className="border-[#D9D9D9] bg-white text-[#666666]"
-              >
-                {displayFacultyByCategory[category].length}명
-              </Badge>
+            <div className="mb-6">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
+                  {categoryLabels[category]}
+                </h2>
+                <Badge
+                  variant="outline"
+                  className="border-[#D9D9D9] bg-white text-[#666666]"
+                >
+                  {displayFacultyByCategory[category].length}명
+                </Badge>
+              </div>
+              <div className="mt-3 h-0.5 w-full bg-blue-600" />
             </div>
             <FacultyList members={displayFacultyByCategory[category]} />
           </section>

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Info } from "lucide-react";
+import { ArrowRight, Download, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { classLogs, users } from "@/lib/db/schema";
+import { classLogs, guidebooks, users, weeklyTexts } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 
 export const metadata: Metadata = {
@@ -61,7 +61,20 @@ export default async function ResourcesPage() {
     .innerJoin(users, eq(classLogs.authorId, users.id))
     .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
 
+  const allWeeklyTexts = await db
+    .select()
+    .from(weeklyTexts)
+    .orderBy(desc(weeklyTexts.createdAt));
+
+  const latestGuidebook = await db
+    .select()
+    .from(guidebooks)
+    .orderBy(desc(guidebooks.createdAt))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+
   const recentLogs = logs.slice(0, 3);
+  const recentWeeklyTexts = allWeeklyTexts.slice(0, 3);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
@@ -90,7 +103,7 @@ export default async function ResourcesPage() {
             <div>
               <h3 className="text-lg font-medium text-amber-800 mb-1">열람 권한 안내</h3>
               <p className="text-[#666666] text-sm md:text-base leading-relaxed">
-                자료실은 수료생, 교수진, 운영진 등 내부 회원만 열람할 수 있습니다. 로그인 후 이용해 주세요.
+                자료실의 일부 콘텐츠는 수료생, 교수진, 운영진 등 내부 회원만 열람할 수 있습니다.
               </p>
             </div>
           </div>
@@ -149,15 +162,39 @@ export default async function ResourcesPage() {
         <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">주차별 텍스트</h2>
           <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
-            0개
+            {allWeeklyTexts.length}개
           </Badge>
         </div>
 
-        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10 mb-6">
-          <CardContent className="text-center text-base text-[#666666]">
-            등록된 주차별 텍스트가 없습니다.
-          </CardContent>
-        </Card>
+        {recentWeeklyTexts.length === 0 ? (
+          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10 mb-6">
+            <CardContent className="text-center text-base text-[#666666]">
+              등록된 주차별 텍스트가 없습니다.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-3 mb-6">
+            {recentWeeklyTexts.map((text) => (
+              <a
+                key={text.id}
+                href={text.fileUrl}
+                download={text.fileName}
+                className="block"
+              >
+                <Card className="h-full border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+                  <CardHeader className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666]">
+                      <Badge variant="secondary" className="border border-[#D9D9D9] bg-gray-50 text-[#666666]">
+                        {formatDate(text.createdAt)}
+                      </Badge>
+                    </div>
+                    <CardTitle className="line-clamp-2 text-lg">{text.title}</CardTitle>
+                  </CardHeader>
+                </Card>
+              </a>
+            ))}
+          </div>
+        )}
 
         <div className="flex justify-center sm:justify-start">
           <Link href="/resources/weekly-texts">
@@ -172,16 +209,36 @@ export default async function ResourcesPage() {
         <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">가이드북</h2>
           <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
-            0개
+            {latestGuidebook ? "1개" : "0개"}
           </Badge>
         </div>
 
-        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
-          <CardContent className="text-center text-base text-[#666666] flex flex-col items-center justify-center gap-2">
-            <span>등록된 가이드북이 없습니다.</span>
-            <span className="text-sm">가이드북은 즉시 다운로드됩니다.</span>
-          </CardContent>
-        </Card>
+        {latestGuidebook ? (
+          <a href={latestGuidebook.fileUrl} download={latestGuidebook.fileName} className="block">
+            <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+              <CardHeader className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <CardTitle className="text-xl text-[#1a1a1a]">{latestGuidebook.title}</CardTitle>
+                    <CardDescription className="text-sm text-[#666666]">
+                      클릭하면 즉시 다운로드됩니다
+                    </CardDescription>
+                  </div>
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#D9D9D9] bg-gray-50 text-blue-600">
+                    <Download className="size-5" />
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          </a>
+        ) : (
+          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+            <CardContent className="text-center text-base text-[#666666] flex flex-col items-center justify-center gap-2">
+              <span>등록된 가이드북이 없습니다.</span>
+              <span className="text-sm">가이드북은 즉시 다운로드됩니다.</span>
+            </CardContent>
+          </Card>
+        )}
       </section>
     </div>
   );

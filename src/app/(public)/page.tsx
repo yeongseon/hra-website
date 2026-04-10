@@ -172,17 +172,11 @@ export default function Home() {
             {renderHeading()}
           </h1>
           
-          <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide px-4 leading-relaxed mt-4 sm:whitespace-nowrap">
+          <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide px-6 sm:px-10 md:px-16 leading-relaxed mt-4 sm:whitespace-nowrap">
             고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
           </p>
           
-          <div className="mt-10 flex flex-col items-start gap-6">
-            <Link href="/recruitment">
-              <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-[#1a1a1a] font-semibold h-14 px-10 text-lg rounded-lg border-2 transition-all duration-300">
-                모집 안내 보기
-              </Button>
-            </Link>
-          </div>
+          <div className="mt-10" />
         </div>
       </section>
 
