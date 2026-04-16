@@ -89,6 +89,7 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
       defaultValues={{
         name: cohort.name,
         description: cohort.description,
+        imageUrl: cohort.imageUrl,
         startDate: formatDateForInput(cohort.startDate),
         endDate: formatDateForInput(cohort.endDate),
         recruitmentStartDate: formatDateForInput(cohort.recruitmentStartDate),

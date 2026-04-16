@@ -1,31 +1,42 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { and, eq } from "drizzle-orm";
 import { ArrowLeft, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAllNotices, getNoticeBySlug } from "@/lib/content/notices";
+import { db } from "@/lib/db";
+import { notices } from "@/lib/db/schema";
 
 type NoticePageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: string) =>
+export const dynamic = "force-dynamic";
+
+const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date(value));
+  }).format(value);
 
-export async function generateStaticParams() {
-  const notices = await getAllNotices();
-  return notices.map((notice) => ({ slug: notice.slug }));
+async function getPublishedNoticeById(id: string) {
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return null;
+  }
+
+  return db.query.notices.findFirst({
+    where: and(eq(notices.id, parsedId.data), eq(notices.status, "PUBLISHED")),
+  });
 }
 
 export async function generateMetadata({ params }: NoticePageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const notice = await getNoticeBySlug(slug);
+  const { id } = await params;
+  const notice = await getPublishedNoticeById(id);
 
   if (!notice) {
     return { title: "공지사항" };
@@ -35,8 +46,8 @@ export async function generateMetadata({ params }: NoticePageProps): Promise<Met
 }
 
 export default async function NoticeDetailPage({ params }: NoticePageProps) {
-  const { slug } = await params;
-  const notice = await getNoticeBySlug(slug);
+  const { id } = await params;
+  const notice = await getPublishedNoticeById(id);
 
   if (!notice) {
     notFound();

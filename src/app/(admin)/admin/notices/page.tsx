@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { desc } from "drizzle-orm";
 import { Pin } from "lucide-react";
 import { NoticeRowActions } from "@/app/(admin)/admin/notices/_components/notice-row-actions";
 import { Badge } from "@/components/ui/badge";
@@ -13,18 +14,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/admin";
-import { getAllNoticesUnfiltered } from "@/lib/content/notices";
+import { db } from "@/lib/db";
+import { notices } from "@/lib/db/schema";
 
-const formatDate = (value: string) =>
+const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date(value));
+  }).format(value);
 
 export default async function AdminNoticesPage() {
   await requireAdmin();
-  const notices = await getAllNoticesUnfiltered();
+
+  const noticeList = await db
+    .select({
+      id: notices.id,
+      title: notices.title,
+      status: notices.status,
+      pinned: notices.pinned,
+      createdAt: notices.createdAt,
+    })
+    .from(notices)
+    .orderBy(desc(notices.createdAt));
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
@@ -35,7 +47,7 @@ export default async function AdminNoticesPage() {
 
       <Card className="border-slate-200 bg-white py-0 shadow-sm">
         <CardHeader className="border-b border-slate-200 py-4">
-          <CardTitle className="text-base text-slate-900">전체 공지 {notices.length}건</CardTitle>
+          <CardTitle className="text-base text-slate-900">전체 공지 {noticeList.length}건</CardTitle>
         </CardHeader>
         <CardContent className="py-4">
           <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -50,15 +62,15 @@ export default async function AdminNoticesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {notices.length === 0 ? (
+                {noticeList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-slate-500">
                       등록된 공지사항이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  notices.map((notice) => (
-                    <TableRow key={notice.slug}>
+                  noticeList.map((notice) => (
+                    <TableRow key={notice.id}>
                       <TableCell className="max-w-[280px] truncate font-medium text-slate-900">
                         {notice.title}
                       </TableCell>
@@ -85,7 +97,7 @@ export default async function AdminNoticesPage() {
                       </TableCell>
                       <TableCell className="text-slate-700">{formatDate(notice.createdAt)}</TableCell>
                       <TableCell>
-                        <NoticeRowActions slug={notice.slug} pinned={notice.pinned} status={notice.status} />
+                        <NoticeRowActions id={notice.id} pinned={notice.pinned} status={notice.status} />
                       </TableCell>
                     </TableRow>
                   ))

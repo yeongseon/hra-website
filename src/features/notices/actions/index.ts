@@ -1,399 +1,250 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { createOrUpdateFile, deleteFile, getFile } from "@/lib/github";
+import { db } from "@/lib/db";
+import { notices } from "@/lib/db/schema";
 
 const noticeFormSchema = z.object({
-  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300),
+  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요."),
   status: z.enum(["DRAFT", "PUBLISHED"]),
   pinned: z.boolean(),
 });
 
-const noticeSlugSchema = z.string().trim().min(1, "유효하지 않은 공지사항 슬러그입니다.");
-
-type NoticeActionState = {
+export type NoticeActionState = {
   success: boolean;
-  error?: string;
+  message: string;
+  fieldErrors?: Record<string, string>;
 };
 
-type ParsedNoticeFile = {
-  title: string;
-  status: "DRAFT" | "PUBLISHED";
-  pinned: boolean;
-  createdAt: string;
-  updatedAt: string;
-  content: string;
-};
+function normalizeText(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") {
+    return "";
+  }
 
-const parsePinned = (value: FormDataEntryValue | null) => {
+  return value.trim();
+}
+
+function parsePinned(value: FormDataEntryValue | null) {
   if (typeof value !== "string") {
     return false;
   }
 
   return value === "on" || value === "true";
-};
+}
 
-const normalizeText = (value: FormDataEntryValue | null) => {
-  if (typeof value !== "string") {
-    return "";
-  }
+function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: string }>) {
+  const fieldErrors: Record<string, string> = {};
 
-  return value;
-};
-
-const stripQuotes = (value: string): string => {
-  const hasDoubleQuotes = value.startsWith('"') && value.endsWith('"');
-  const hasSingleQuotes = value.startsWith("'") && value.endsWith("'");
-
-  if (hasDoubleQuotes || hasSingleQuotes) {
-    return value.slice(1, -1).trim();
-  }
-
-  return value;
-};
-
-const parseFrontmatter = (frontmatterText: string): Record<string, string> => {
-  const map: Record<string, string> = {};
-
-  for (const line of frontmatterText.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      continue;
+  for (const issue of issues) {
+    const [field] = issue.path;
+    if (typeof field === "string" && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
     }
-
-    const delimiterIndex = trimmed.indexOf(":");
-    if (delimiterIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, delimiterIndex).trim();
-    const rawValue = trimmed.slice(delimiterIndex + 1).trim();
-    if (!key) {
-      continue;
-    }
-
-    map[key] = stripQuotes(rawValue);
   }
 
-  return map;
-};
+  return fieldErrors;
+}
 
-const parseNoticeMarkdown = (markdown: string): ParsedNoticeFile | null => {
-  const normalized = markdown.replace(/\r\n/g, "\n");
-  const lines = normalized.split("\n");
+function parseNoticeFormData(formData: FormData) {
+  return noticeFormSchema.safeParse({
+    title: normalizeText(formData.get("title")),
+    content: normalizeText(formData.get("content")),
+    status: normalizeText(formData.get("status")),
+    pinned: parsePinned(formData.get("pinned")),
+  });
+}
 
-  if (lines[0] !== "---") {
-    return null;
-  }
+function parseNoticeId(id: string) {
+  return z.uuid().safeParse(id);
+}
 
-  const closingDelimiterIndex = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
-  if (closingDelimiterIndex === -1) {
-    return null;
-  }
-
-  const frontmatter = parseFrontmatter(lines.slice(1, closingDelimiterIndex).join("\n"));
-  const status = frontmatter.status === "DRAFT" || frontmatter.status === "PUBLISHED" ? frontmatter.status : null;
-  const title = frontmatter.title?.trim();
-  const createdAt = frontmatter.createdAt?.trim();
-  const updatedAt = frontmatter.updatedAt?.trim();
-
-  if (!title || !status || !createdAt || !updatedAt) {
-    return null;
-  }
-
-  return {
-    title,
-    status,
-    pinned: frontmatter.pinned?.toLowerCase() === "true",
-    createdAt,
-    updatedAt,
-    content: lines.slice(closingDelimiterIndex + 1).join("\n").trimStart(),
-  };
-};
-
-const escapeFrontmatter = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
-
-const buildNoticeMarkdown = (input: {
-  title: string;
-  status: "DRAFT" | "PUBLISHED";
-  pinned: boolean;
-  createdAt: string;
-  updatedAt: string;
-  content: string;
-}) => {
-  return [
-    "---",
-    `title: ${escapeFrontmatter(input.title)}`,
-    `status: ${input.status}`,
-    `pinned: ${input.pinned}`,
-    `createdAt: ${input.createdAt}`,
-    `updatedAt: ${input.updatedAt}`,
-    "---",
-    "",
-    input.content.trim(),
-    "",
-  ].join("\n");
-};
-
-const generateSlug = (title: string) => {
-  const base = title
-    .replace(/[^가-힣a-zA-Z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50);
-
-  return `${Date.now()}-${base || "notice"}`;
-};
-
-const revalidateNoticePaths = (slug?: string) => {
+function revalidateNoticePaths() {
   revalidatePath("/admin/notices");
   revalidatePath("/notices");
-
-  if (slug) {
-    revalidatePath(`/notices/${slug}`);
-  }
-};
+}
 
 export async function createNotice(formData: FormData): Promise<NoticeActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  const parsed = noticeFormSchema.safeParse({
-    title: normalizeText(formData.get("title")),
-    content: normalizeText(formData.get("content")),
-    status: normalizeText(formData.get("status")),
-    pinned: parsePinned(formData.get("pinned")),
-  });
-
+  const parsed = parseNoticeFormData(formData);
   if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.",
+      message: firstIssue?.message ?? "입력값을 확인해주세요.",
+      fieldErrors: issuesToFieldErrors(parsed.error.issues),
     };
   }
 
-  const slug = generateSlug(parsed.data.title);
-  const now = new Date().toISOString();
-  const filePath = `content/notices/${slug}.md`;
-  const markdown = buildNoticeMarkdown({
+  await db.insert(notices).values({
     title: parsed.data.title,
     content: parsed.data.content,
     status: parsed.data.status,
     pinned: parsed.data.pinned,
-    createdAt: now,
-    updatedAt: now,
+    authorId: session.user.id,
   });
 
-  const result = await createOrUpdateFile(filePath, markdown, `공지사항 생성: ${parsed.data.title}`);
-  if (!result.success) {
-    return {
-      success: false,
-      error: result.error ?? "공지사항 생성에 실패했습니다.",
-    };
-  }
-
-  revalidateNoticePaths(slug);
+  revalidateNoticePaths();
   redirect("/admin/notices");
 }
 
-export async function updateNotice(slug: string, formData: FormData): Promise<NoticeActionState> {
+export async function updateNotice(id: string, formData: FormData): Promise<NoticeActionState> {
   await requireAdmin();
 
-  const parsedSlug = noticeSlugSchema.safeParse(slug);
-  if (!parsedSlug.success) {
+  const parsedId = parseNoticeId(id);
+  if (!parsedId.success) {
     return {
       success: false,
-      error: parsedSlug.error.issues[0]?.message ?? "유효하지 않은 공지사항 슬러그입니다.",
+      message: "잘못된 공지사항 ID입니다.",
     };
   }
 
-  const parsed = noticeFormSchema.safeParse({
-    title: normalizeText(formData.get("title")),
-    content: normalizeText(formData.get("content")),
-    status: normalizeText(formData.get("status")),
-    pinned: parsePinned(formData.get("pinned")),
-  });
-
+  const parsed = parseNoticeFormData(formData);
   if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
     return {
       success: false,
-      error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.",
+      message: firstIssue?.message ?? "입력값을 확인해주세요.",
+      fieldErrors: issuesToFieldErrors(parsed.error.issues),
     };
   }
 
-  const filePath = `content/notices/${parsedSlug.data}.md`;
-  const existingFile = await getFile(filePath);
-  if (!existingFile) {
+  const updatedRows = await db
+    .update(notices)
+    .set({
+      title: parsed.data.title,
+      content: parsed.data.content,
+      status: parsed.data.status,
+      pinned: parsed.data.pinned,
+    })
+    .where(eq(notices.id, parsedId.data))
+    .returning({ id: notices.id });
+
+  if (updatedRows.length === 0) {
     return {
       success: false,
-      error: "공지사항을 찾을 수 없습니다.",
+      message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  const existing = parseNoticeMarkdown(existingFile.content);
-  const createdAt = existing?.createdAt ?? new Date().toISOString();
-  const markdown = buildNoticeMarkdown({
-    title: parsed.data.title,
-    content: parsed.data.content,
-    status: parsed.data.status,
-    pinned: parsed.data.pinned,
-    createdAt,
-    updatedAt: new Date().toISOString(),
-  });
-
-  const result = await createOrUpdateFile(
-    filePath,
-    markdown,
-    `공지사항 수정: ${parsed.data.title}`,
-    existingFile.sha,
-  );
-
-  if (!result.success) {
-    return {
-      success: false,
-      error: result.error ?? "공지사항 수정에 실패했습니다.",
-    };
-  }
-
-  revalidateNoticePaths(parsedSlug.data);
+  revalidateNoticePaths();
   redirect("/admin/notices");
 }
 
-export async function deleteNotice(slug: string): Promise<NoticeActionState> {
+export async function deleteNotice(id: string): Promise<NoticeActionState> {
   await requireAdmin();
 
-  const parsedSlug = noticeSlugSchema.safeParse(slug);
-  if (!parsedSlug.success) {
+  const parsedId = parseNoticeId(id);
+  if (!parsedId.success) {
     return {
       success: false,
-      error: parsedSlug.error.issues[0]?.message ?? "유효하지 않은 공지사항 슬러그입니다.",
+      message: "잘못된 공지사항 ID입니다.",
     };
   }
 
-  const filePath = `content/notices/${parsedSlug.data}.md`;
-  const existingFile = await getFile(filePath);
-  if (!existingFile) {
+  const deletedRows = await db
+    .delete(notices)
+    .where(eq(notices.id, parsedId.data))
+    .returning({ id: notices.id });
+
+  if (deletedRows.length === 0) {
     return {
       success: false,
-      error: "공지사항을 찾을 수 없습니다.",
+      message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  const result = await deleteFile(filePath, existingFile.sha, `공지사항 삭제: ${parsedSlug.data}`);
-  if (!result.success) {
-    return {
-      success: false,
-      error: result.error ?? "공지사항 삭제에 실패했습니다.",
-    };
-  }
-
-  revalidateNoticePaths(parsedSlug.data);
-  return { success: true };
+  revalidateNoticePaths();
+  return {
+    success: true,
+    message: "공지사항이 삭제되었습니다.",
+  };
 }
 
-export async function togglePin(slug: string): Promise<NoticeActionState> {
+export async function togglePin(id: string): Promise<NoticeActionState> {
   await requireAdmin();
 
-  const parsedSlug = noticeSlugSchema.safeParse(slug);
-  if (!parsedSlug.success) {
+  const parsedId = parseNoticeId(id);
+  if (!parsedId.success) {
     return {
       success: false,
-      error: parsedSlug.error.issues[0]?.message ?? "유효하지 않은 공지사항 슬러그입니다.",
+      message: "잘못된 공지사항 ID입니다.",
     };
   }
 
-  const filePath = `content/notices/${parsedSlug.data}.md`;
-  const existingFile = await getFile(filePath);
-  if (!existingFile) {
-    return {
-      success: false,
-      error: "공지사항을 찾을 수 없습니다.",
-    };
-  }
-
-  const parsedNotice = parseNoticeMarkdown(existingFile.content);
-  if (!parsedNotice) {
-    return {
-      success: false,
-      error: "공지사항 파일 형식이 올바르지 않습니다.",
-    };
-  }
-
-  const markdown = buildNoticeMarkdown({
-    ...parsedNotice,
-    pinned: !parsedNotice.pinned,
-    updatedAt: new Date().toISOString(),
+  const currentNotice = await db.query.notices.findFirst({
+    where: eq(notices.id, parsedId.data),
+    columns: {
+      id: true,
+      pinned: true,
+    },
   });
 
-  const result = await createOrUpdateFile(
-    filePath,
-    markdown,
-    `공지사항 고정 상태 변경: ${parsedNotice.title}`,
-    existingFile.sha,
-  );
-
-  if (!result.success) {
+  if (!currentNotice) {
     return {
       success: false,
-      error: result.error ?? "고정 상태 변경에 실패했습니다.",
+      message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  revalidateNoticePaths(parsedSlug.data);
-  return { success: true };
+  await db
+    .update(notices)
+    .set({
+      pinned: !currentNotice.pinned,
+    })
+    .where(eq(notices.id, currentNotice.id));
+
+  revalidateNoticePaths();
+  return {
+    success: true,
+    message: currentNotice.pinned ? "공지사항 고정을 해제했습니다." : "공지사항을 고정했습니다.",
+  };
 }
 
-export async function toggleStatus(slug: string): Promise<NoticeActionState> {
+export async function toggleStatus(id: string): Promise<NoticeActionState> {
   await requireAdmin();
 
-  const parsedSlug = noticeSlugSchema.safeParse(slug);
-  if (!parsedSlug.success) {
+  const parsedId = parseNoticeId(id);
+  if (!parsedId.success) {
     return {
       success: false,
-      error: parsedSlug.error.issues[0]?.message ?? "유효하지 않은 공지사항 슬러그입니다.",
+      message: "잘못된 공지사항 ID입니다.",
     };
   }
 
-  const filePath = `content/notices/${parsedSlug.data}.md`;
-  const existingFile = await getFile(filePath);
-  if (!existingFile) {
-    return {
-      success: false,
-      error: "공지사항을 찾을 수 없습니다.",
-    };
-  }
-
-  const parsedNotice = parseNoticeMarkdown(existingFile.content);
-  if (!parsedNotice) {
-    return {
-      success: false,
-      error: "공지사항 파일 형식이 올바르지 않습니다.",
-    };
-  }
-
-  const markdown = buildNoticeMarkdown({
-    ...parsedNotice,
-    status: parsedNotice.status === "DRAFT" ? "PUBLISHED" : "DRAFT",
-    updatedAt: new Date().toISOString(),
+  const currentNotice = await db.query.notices.findFirst({
+    where: eq(notices.id, parsedId.data),
+    columns: {
+      id: true,
+      status: true,
+    },
   });
 
-  const result = await createOrUpdateFile(
-    filePath,
-    markdown,
-    `공지사항 상태 변경: ${parsedNotice.title}`,
-    existingFile.sha,
-  );
-
-  if (!result.success) {
+  if (!currentNotice) {
     return {
       success: false,
-      error: result.error ?? "상태 변경에 실패했습니다.",
+      message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  revalidateNoticePaths(parsedSlug.data);
-  return { success: true };
+  await db
+    .update(notices)
+    .set({
+      status: currentNotice.status === "DRAFT" ? "PUBLISHED" : "DRAFT",
+    })
+    .where(eq(notices.id, currentNotice.id));
+
+  revalidateNoticePaths();
+  return {
+    success: true,
+    message:
+      currentNotice.status === "DRAFT"
+        ? "공지사항을 게시했습니다."
+        : "공지사항을 임시저장 상태로 변경했습니다.",
+  };
 }

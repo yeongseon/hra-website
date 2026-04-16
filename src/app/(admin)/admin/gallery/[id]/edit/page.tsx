@@ -1,4 +1,14 @@
+/**
+ * 갤러리 편집 페이지
+ *
+ * 역할:
+ * - 갤러리 기본 정보를 수정합니다.
+ * - 갤러리에 속한 이미지 업로드/삭제를 관리합니다.
+ * - 삭제 시 현재 커버 이미지 상태를 함께 보여줍니다.
+ */
+
 import Link from "next/link";
+import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, ImageIcon, Star, Trash2 } from "lucide-react";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
@@ -12,39 +22,22 @@ import {
   updateGallery,
 } from "@/features/gallery/actions";
 import { requireAdmin } from "@/lib/admin";
-import { getFile } from "@/lib/github";
+import { db } from "@/lib/db";
+import { galleries, galleryImages } from "@/lib/db/schema";
 
 type EditGalleryPageProps = {
   params: Promise<{
-    slug: string;
+    id: string;
   }>;
 };
-
-const galleryMetadataSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  coverImageUrl: z.string().nullable().optional(),
-  images: z
-    .array(
-      z.object({
-        url: z.string(),
-        alt: z.string().optional(),
-        order: z.number().int(),
-      }),
-    )
-    .default([]),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
 
 export default async function EditGalleryPage({ params }: EditGalleryPageProps) {
   await requireAdmin();
 
-  const { slug } = await params;
-  const filePath = `content/gallery/${slug}.json`;
-  const file = await getFile(filePath);
+  const { id } = await params;
+  const parsedId = z.uuid().safeParse(id);
 
-  if (!file) {
+  if (!parsedId.success) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-10">
         <Card className="border-slate-200 bg-white py-10 shadow-sm">
@@ -65,22 +58,21 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
     );
   }
 
-  let parsedJson: unknown;
+  const gallery = await db.query.galleries.findFirst({
+    where: eq(galleries.id, parsedId.data),
+    with: {
+      images: {
+        orderBy: [asc(galleryImages.order), asc(galleryImages.createdAt)],
+      },
+    },
+  });
 
-  try {
-    parsedJson = JSON.parse(file.content);
-  } catch {
-    parsedJson = null;
-  }
-
-  const parsedGallery = galleryMetadataSchema.safeParse(parsedJson);
-
-  if (!parsedGallery.success) {
+  if (!gallery) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-10">
         <Card className="border-slate-200 bg-white py-10 shadow-sm">
           <CardContent className="space-y-4 text-center">
-            <p className="text-lg font-medium text-slate-900">앨범 데이터를 읽을 수 없습니다.</p>
+            <p className="text-lg font-medium text-slate-900">앨범을 찾을 수 없습니다.</p>
             <Link
               href="/admin/gallery"
               className={buttonVariants({
@@ -96,14 +88,8 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
     );
   }
 
-  const gallery = {
-    ...parsedGallery.data,
-    coverImageUrl: parsedGallery.data.coverImageUrl ?? null,
-    images: [...parsedGallery.data.images].sort((a, b) => a.order - b.order),
-  };
-
-  const updateAction = updateGallery.bind(null, slug);
-  const addImageAction = addGalleryImage.bind(null, slug);
+  const updateAction = updateGallery.bind(null, gallery.id);
+  const addImageAction = addGalleryImage.bind(null, gallery.id);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-6 py-10">
@@ -146,15 +132,15 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {gallery.images.map((image, index) => {
+              {gallery.images.map((image) => {
                 const deleteAction = async () => {
                   "use server";
-                  await deleteGalleryImage(slug, image.url);
+                  await deleteGalleryImage(gallery.id, image.id);
                 };
 
                 return (
                   <div
-                    key={`${image.url}-${index}`}
+                    key={image.id}
                     className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
                   >
                     <div className="relative h-44 w-full bg-slate-100">

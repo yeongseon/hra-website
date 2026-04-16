@@ -11,8 +11,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import { AlertCircle } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { AlertCircle, ImagePlus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ type RecruitmentStatus = "UPCOMING" | "OPEN" | "CLOSED";
 type CohortFormValues = {
   name?: string;
   description?: string | null;
+  imageUrl?: string | null;
   startDate?: string;
   endDate?: string;
   recruitmentStartDate?: string;
@@ -71,6 +72,93 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
 
   const statusValue = defaultValues?.recruitmentStatus ?? "UPCOMING";
   const isActive = defaultValues?.isActive ?? true;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(defaultValues?.imageUrl ?? null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const hasImage = Boolean(previewUrl);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [objectUrl]);
+
+  const processFile = (file: File | undefined) => {
+    if (!file) {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        setObjectUrl(null);
+      }
+      setPreviewUrl(removeImage ? null : (defaultValues?.imageUrl ?? null));
+      setSelectedFileName(null);
+      return;
+    }
+
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    const nextObjectUrl = URL.createObjectURL(file);
+    setObjectUrl(nextObjectUrl);
+    setRemoveImage(false);
+    setPreviewUrl(nextObjectUrl);
+    setSelectedFileName(file.name);
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      if (fileInputRef.current) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInputRef.current.files = dataTransfer.files;
+      }
+      processFile(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (!window.confirm("이미지를 삭제하시겠습니까?")) {
+      return;
+    }
+    
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      setObjectUrl(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setRemoveImage(true);
+    setPreviewUrl(null);
+    setSelectedFileName(null);
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12 md:py-16">
@@ -80,7 +168,7 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
           {description ? <p className="text-sm text-slate-600">{description}</p> : null}
         </CardHeader>
         <CardContent className="py-6">
-          <form action={formAction} className="space-y-6">
+          <form action={formAction} encType="multipart/form-data" className="space-y-6">
             {state.message ? (
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <AlertCircle className="mt-0.5 size-4" />
@@ -114,6 +202,90 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                 {state.fieldErrors?.description ? (
                   <p className="text-xs text-red-600">{state.fieldErrors.description}</p>
                 ) : null}
+              </div>
+
+              <div className="space-y-3 md:col-span-2">
+                <div className="space-y-2">
+                  <Label htmlFor="image">기수 이미지</Label>
+                  <input type="hidden" name="removeImage" value={removeImage ? "true" : "false"} />
+                  <div
+                    className={`relative overflow-hidden rounded-xl border transition-colors ${
+                      isDragging ? "border-slate-500 bg-slate-100" : "border-slate-200 bg-slate-50"
+                    } ${hasImage ? "" : "border-dashed border-slate-300"}`}
+                  >
+                    {isPending ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+                        <Loader2 className="mb-2 size-8 animate-spin text-slate-900" />
+                        <span className="text-sm font-medium text-slate-900">이미지 업로드 중...</span>
+                      </div>
+                    ) : null}
+                    
+                    {hasImage ? (
+                      <button
+                        type="button"
+                        className="group relative block w-full cursor-pointer overflow-hidden p-0 text-left" 
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <img src={previewUrl ?? ""} alt="기수 이미지 미리보기" className="aspect-video w-full object-cover" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm">
+                            <ImagePlus className="size-4" />
+                            이미지 변경
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex w-full aspect-video cursor-pointer items-center justify-center text-sm text-slate-500 hover:bg-slate-100 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <ImagePlus className="size-6" />
+                          <span>클릭하거나 이미지를 드래그하여 등록하세요</span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Input
+                      ref={fileInputRef}
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handleImageChange}
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <ImagePlus className="mr-2 size-4" />
+                        이미지 선택
+                      </Button>
+                      {hasImage ? (
+                        <Button type="button" variant="outline" onClick={handleRemoveImage} className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                          <Trash2 className="mr-2 size-4" />
+                          이미지 삭제
+                        </Button>
+                      ) : null}
+                      {selectedFileName ? (
+                        <span className="text-sm text-slate-500 truncate max-w-[200px]" title={selectedFileName}>
+                          {selectedFileName}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">JPG, PNG, WebP 형식, 최대 4MB</p>
+                  {state.fieldErrors?.image ? (
+                    <p className="text-xs text-red-600">{state.fieldErrors.image}</p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="space-y-2">

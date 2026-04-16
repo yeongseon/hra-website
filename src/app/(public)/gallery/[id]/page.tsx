@@ -1,29 +1,50 @@
+/**
+ * 갤러리 상세 페이지
+ *
+ * 역할:
+ * - 선택한 갤러리 앨범의 제목, 설명, 이미지 목록을 보여줍니다.
+ * - DB에 저장된 이미지 순서를 그대로 유지해 공개 페이지에 노출합니다.
+ */
+
 import Link from "next/link";
+import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
+import { notFound } from "next/navigation";
+import { z } from "zod/v4";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAllGalleries, getGalleryBySlug } from "@/lib/content/gallery";
-import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
+import { galleries, galleryImages } from "@/lib/db/schema";
 
-export async function generateStaticParams() {
-  const galleries = await getAllGalleries();
-  return galleries.map((g) => ({ slug: g.slug }));
-}
+export const dynamic = "force-dynamic";
 
 type GalleryDetailPageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
-  const { slug } = await params;
-  const gallery = await getGalleryBySlug(slug);
+  const { id } = await params;
+  const parsedId = z.uuid().safeParse(id);
+
+  if (!parsedId.success) {
+    notFound();
+  }
+
+  const gallery = await db.query.galleries.findFirst({
+    where: eq(galleries.id, parsedId.data),
+    with: {
+      images: {
+        orderBy: [asc(galleryImages.order), asc(galleryImages.createdAt)],
+      },
+    },
+  });
 
   if (!gallery) {
     notFound();
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20">
       <section className="mb-10 space-y-4">
         <Link
           href="/gallery"
@@ -38,7 +59,7 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
         >
           HRA GALLERY
         </Badge>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-[#1a1a1a]">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl">
           {gallery.title}
         </h1>
         {gallery.description ? (
@@ -51,14 +72,16 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
       </section>
 
       {gallery.images.length === 0 ? (
-        <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
-          <CardContent className="text-center text-base text-[#666666]">등록된 이미지가 없습니다.</CardContent>
+        <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
+          <CardContent className="text-center text-base text-[#666666]">
+            등록된 이미지가 없습니다.
+          </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {gallery.images.map((image, index) => (
             <a
-              key={`${image.url}-${index}`}
+              key={image.id}
               href={image.url}
               target="_blank"
               rel="noreferrer"

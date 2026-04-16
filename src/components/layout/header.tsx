@@ -37,16 +37,22 @@ const navItems: NavItem[] = [
     ],
   },
   { label: "모집안내", href: "/recruitment" },
-  { label: "공지사항", href: "/notices" },
   {
-    label: "아카이빙",
+    label: "소식",
     subItems: [
-      { label: "수료생 이야기", href: "/alumni" },
-      { label: "자료실", href: "/resources" },
+      { label: "공지사항", href: "/notices" },
+      { label: "언론보도", href: "/press" },
       { label: "갤러리", href: "/gallery" },
     ],
   },
-  { label: "FAQ", href: "/faq" },
+  {
+    label: "커뮤니티",
+    subItems: [
+      { label: "수료생 이야기", href: "/alumni" },
+      { label: "FAQ", href: "/faq" },
+    ],
+  },
+  { label: "자료실", href: "/resources" },
 ];
 
 export function Header({ session }: HeaderProps) {

@@ -1,20 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { desc, eq } from "drizzle-orm";
 import { Pin, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAllNotices } from "@/lib/content/notices";
+import { db } from "@/lib/db";
+import { notices } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
   title: "공지사항",
 };
 
-const formatDate = (value: string) =>
+export const dynamic = "force-dynamic";
+
+const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date(value));
+  }).format(value);
 
 export default async function NoticesPage({
   searchParams,
@@ -22,14 +26,23 @@ export default async function NoticesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const params = await searchParams;
-  const query = params.q ?? "";
+  const query = (params.q ?? "").trim();
 
-  let notices = await getAllNotices();
-  
+  let noticeList = await db
+    .select({
+      id: notices.id,
+      title: notices.title,
+      pinned: notices.pinned,
+      createdAt: notices.createdAt,
+      viewCount: notices.viewCount,
+    })
+    .from(notices)
+    .where(eq(notices.status, "PUBLISHED"))
+    .orderBy(desc(notices.pinned), desc(notices.createdAt));
+
   if (query) {
-    notices = notices.filter((n) =>
-      n.title.toLowerCase().includes(query.toLowerCase())
-    );
+    const normalizedQuery = query.toLowerCase();
+    noticeList = noticeList.filter((notice) => notice.title.toLowerCase().includes(normalizedQuery));
   }
 
   return (
@@ -67,7 +80,7 @@ export default async function NoticesPage({
         </form>
       </section>
 
-      {notices.length === 0 ? (
+      {noticeList.length === 0 ? (
         <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
           <CardContent className="text-center text-base text-[#666666]">
             {query ? "검색 결과가 없습니다" : "공지사항이 없습니다"}
@@ -82,34 +95,35 @@ export default async function NoticesPage({
             <div className="w-28 text-center shrink-0">작성일</div>
             <div className="w-16 text-center shrink-0 hidden md:block">조회수</div>
           </div>
-          
+
           <div className="flex flex-col">
-            {notices.map((notice, index) => {
-              const num = notices.length - index;
+            {noticeList.map((notice, index) => {
+              const num = noticeList.length - index;
+
               return (
                 <Link
-                  key={notice.slug}
-                  href={`/notices/${notice.slug}`}
+                  key={notice.id}
+                  href={`/notices/${notice.id}`}
                   className="group flex flex-col sm:flex-row sm:items-center border-b border-[#D9D9D9] last:border-b-0 py-3.5 px-4 transition-colors hover:bg-gray-50 text-sm"
                 >
                   <div className="hidden sm:block w-16 text-center text-[#666666] shrink-0">
                     {num}
                   </div>
-                  
+
                   <div className="flex-1 text-left sm:px-4 flex flex-col sm:flex-row sm:items-center gap-2 overflow-hidden mb-2 sm:mb-0">
                     <div className="flex items-center gap-2 max-w-full">
-                      {notice.pinned && (
+                      {notice.pinned ? (
                         <Badge className="border border-blue-300 bg-blue-50 text-blue-700 shrink-0 px-1.5 py-0 text-[10px] h-5 hover:bg-blue-50">
                           <Pin className="size-3 mr-1" />
                           고정
                         </Badge>
-                      )}
+                      ) : null}
                       <span className="truncate text-[#1a1a1a] font-medium group-hover:text-blue-600 transition-colors">
                         {notice.title}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center text-xs sm:text-sm text-[#666666] sm:text-[#666666]">
                     <div className="w-24 text-center shrink-0 hidden md:block">
                       관리자
@@ -118,7 +132,7 @@ export default async function NoticesPage({
                       {formatDate(notice.createdAt)}
                     </div>
                     <div className="w-16 text-center shrink-0 hidden md:block">
-                      -
+                      {notice.viewCount}
                     </div>
                   </div>
                 </Link>

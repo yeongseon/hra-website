@@ -117,6 +117,7 @@ export const cohorts = pgTable("cohorts", {
   googleSheetId: text("google_sheet_id"), // 이 기수와 연결된 구글 시트 ID (선택사항, 응답 데이터 조회에 사용)
   isActive: boolean("is_active").notNull().default(true), // 현재 활성 기수인지 여부 (기본값: 활성)
   order: integer("order").notNull().default(0), // 기수 표시 순서 (숫자가 작을수록 먼저 표시됨)
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(), // 기수 생성 시간
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -450,6 +451,22 @@ export const guidebooks = pgTable("guidebooks", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const pressArticles = pgTable("press_articles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 300 }).notNull(),
+  source: varchar("source", { length: 200 }).notNull(),
+  url: text("url").notNull(),
+  publishedAt: timestamp("published_at").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 // ============================================================
 // Type exports (타입 내보내기)
 // ============================================================
@@ -472,3 +489,4 @@ export type RecruitmentSetting = typeof recruitmentSettings.$inferSelect;
 export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
 export type WeeklyText = typeof weeklyTexts.$inferSelect;
 export type Guidebook = typeof guidebooks.$inferSelect;
+export type PressArticle = typeof pressArticles.$inferSelect;

@@ -8,6 +8,7 @@
  */
 "use server";
 
+import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -179,6 +180,37 @@ function parseCohortFormData(formData: FormData) {
   });
 }
 
+function normalizeFileName(fileName: string) {
+  const trimmed = fileName.trim();
+  const sanitized = trimmed
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+
+  return sanitized || "cohort-image";
+}
+
+async function uploadCohortImage(fileEntry: FormDataEntryValue | null) {
+  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
+    return { imageUrl: null, error: null } as const;
+  }
+
+  if (!fileEntry.type.startsWith("image/")) {
+    return { imageUrl: null, error: "이미지 파일만 업로드할 수 있습니다." } as const;
+  }
+
+  const maxFileSize = 4 * 1024 * 1024;
+  if (fileEntry.size > maxFileSize) {
+    return { imageUrl: null, error: "이미지 파일은 4MB 이하여야 합니다." } as const;
+  }
+
+  const safeFileName = `cohorts/${Date.now()}-${normalizeFileName(fileEntry.name)}`;
+  const blob = await put(safeFileName, fileEntry, {
+    access: "public",
+  });
+
+  return { imageUrl: blob.url, error: null } as const;
+}
+
 /**
  * 새로운 기수(모집) 생성 서버 액션
  * 역할: 관리자가 새로운 기수를 만들 때 호출되는 함수
@@ -204,6 +236,15 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
     };
   }
 
+  const uploadedImage = await uploadCohortImage(formData.get("image"));
+  if (uploadedImage.error) {
+    return {
+      success: false,
+      message: uploadedImage.error,
+      fieldErrors: { image: uploadedImage.error },
+    };
+  }
+
   await db.insert(cohorts).values({
     name: parsed.data.name,
     description: parsed.data.description ?? null,
@@ -216,9 +257,12 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
     recruitmentStatus: parsed.data.recruitmentStatus,
     isActive: parsed.data.isActive,
     order: parsed.data.order,
+    imageUrl: uploadedImage.imageUrl,
   });
 
   revalidatePath("/admin/recruitment");
+  revalidatePath("/cohorts");
+  revalidatePath("/recruitment");
   redirect("/admin/recruitment");
 }
 
@@ -255,6 +299,45 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
     };
   }
 
+  const [existingCohort] = await db
+    .select({ imageUrl: cohorts.imageUrl })
+    .from(cohorts)
+    .where(eq(cohorts.id, parsedId.data))
+    .limit(1);
+
+  if (!existingCohort) {
+    return {
+      success: false,
+      message: "기수를 찾을 수 없습니다.",
+    };
+  }
+
+  const shouldRemoveImage = formData.get("removeImage") === "true";
+  const uploadedImage = await uploadCohortImage(formData.get("image"));
+  if (uploadedImage.error) {
+    return {
+      success: false,
+      message: uploadedImage.error,
+      fieldErrors: { image: uploadedImage.error },
+    };
+  }
+
+  let nextImageUrl = existingCohort.imageUrl;
+
+  let imageToDelete: string | null = null;
+
+  if (uploadedImage.imageUrl) {
+    nextImageUrl = uploadedImage.imageUrl;
+    if (existingCohort.imageUrl) {
+      imageToDelete = existingCohort.imageUrl;
+    }
+  } else if (shouldRemoveImage) {
+    nextImageUrl = null;
+    if (existingCohort.imageUrl) {
+      imageToDelete = existingCohort.imageUrl;
+    }
+  }
+
   await db
     .update(cohorts)
     .set({
@@ -269,10 +352,17 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
       recruitmentStatus: parsed.data.recruitmentStatus,
       isActive: parsed.data.isActive,
       order: parsed.data.order,
+      imageUrl: nextImageUrl,
     })
     .where(eq(cohorts.id, parsedId.data));
 
+  if (imageToDelete) {
+    await del(imageToDelete);
+  }
+
   revalidatePath("/admin/recruitment");
+  revalidatePath("/cohorts");
+  revalidatePath("/recruitment");
   redirect("/admin/recruitment");
 }
 
@@ -298,6 +388,8 @@ export async function deleteCohort(id: string) {
 
   await db.delete(cohorts).where(eq(cohorts.id, parsedId.data));
   revalidatePath("/admin/recruitment");
+  revalidatePath("/cohorts");
+  revalidatePath("/recruitment");
 }
 
 /**
@@ -329,4 +421,6 @@ export async function updateRecruitmentStatus(
     .where(eq(cohorts.id, parsedId.data));
 
   revalidatePath("/admin/recruitment");
+  revalidatePath("/cohorts");
+  revalidatePath("/recruitment");
 }

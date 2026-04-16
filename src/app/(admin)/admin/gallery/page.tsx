@@ -1,15 +1,14 @@
 /**
- * 갤러리 관리 페이지 (목록)
+ * 갤러리 관리 목록 페이지
  *
- * 역할: 관리자가 등록된 모든 앨범을 카드 형태로 볼 수 있는 페이지
- * - 앨범 목록 조회 (썸네일, 제목, 설명, 이미지 개수)
- * - 각 앨범별 수정/삭제 액션
- * - "새 앨범 추가" 버튼으로 새 항목 생성 가능
- *
- * 데이터 흐름: DB에서 모든 앨범 + 각 앨범의 이미지 개수 조회
+ * 역할:
+ * - 관리자가 등록된 모든 갤러리 앨범을 한눈에 확인합니다.
+ * - 앨범별 썸네일, 설명, 이미지 수, 생성일을 표시합니다.
+ * - 수정/삭제 액션을 UUID 기반 편집 경로와 서버 액션에 연결합니다.
  */
 
 import Link from "next/link";
+import { desc } from "drizzle-orm";
 import { CalendarDays, ImageIcon, PencilLine, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
@@ -22,19 +21,18 @@ import {
 } from "@/components/ui/card";
 import { GalleryDeleteButton } from "@/app/(admin)/admin/gallery/_components/gallery-delete-button";
 import { requireAdmin } from "@/lib/admin";
-import { getAllGalleries } from "@/lib/content/gallery";
+import { db } from "@/lib/db";
+import { galleries } from "@/lib/db/schema";
 
-const formatCreatedDate = (isoDate: string) => {
-  const parsedDate = new Date(isoDate);
-
+const formatCreatedDate = (date: Date) => {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(parsedDate);
+  }).format(date);
 };
 
-const excerptDescription = (value: string | undefined, maxLength = 90) => {
+const excerptDescription = (value: string | null, maxLength = 90) => {
   if (!value) {
     return "설명이 아직 없습니다.";
   }
@@ -47,16 +45,26 @@ const excerptDescription = (value: string | undefined, maxLength = 90) => {
 };
 
 export default async function AdminGalleryPage() {
-  // 🔒 관리자 권한 확인
   await requireAdmin();
 
-  const albums = await getAllGalleries();
+  const albums = await db.query.galleries.findMany({
+    orderBy: [desc(galleries.createdAt)],
+    with: {
+      images: {
+        columns: {
+          id: true,
+        },
+      },
+    },
+  });
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-6 px-4 sm:px-6 py-6 sm:py-10">
+    <div className="mx-auto w-full max-w-7xl space-y-4 px-4 py-6 sm:space-y-6 sm:px-6 sm:py-10">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">갤러리 관리</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            갤러리 관리
+          </h1>
           <p className="text-sm text-slate-500">앨범을 추가하고 이미지를 관리할 수 있습니다.</p>
         </div>
         <Link
@@ -80,7 +88,7 @@ export default async function AdminGalleryPage() {
             const imageCount = album.images.length;
 
             return (
-              <Card key={album.slug} className="overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
+              <Card key={album.id} className="overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
                 {album.coverImageUrl ? (
                   <img
                     src={album.coverImageUrl}
@@ -113,7 +121,7 @@ export default async function AdminGalleryPage() {
 
                 <CardFooter className="flex items-center justify-between gap-2 border-t border-slate-100 py-4">
                   <Link
-                    href={`/admin/gallery/${album.slug}/edit`}
+                    href={`/admin/gallery/${album.id}/edit`}
                     className={buttonVariants({
                       variant: "outline",
                       className: "border-slate-200 text-slate-700",
@@ -123,7 +131,7 @@ export default async function AdminGalleryPage() {
                     수정
                   </Link>
 
-                  <GalleryDeleteButton slug={album.slug} />
+                  <GalleryDeleteButton id={album.id} />
                 </CardFooter>
               </Card>
             );
