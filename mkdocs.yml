@@ -1,0 +1,80 @@
+site_name: HRA 개발 가이드
+site_description: 대학교 1학년도 따라할 수 있는 HRA 웹사이트 개발 참여 가이드
+site_url: https://yeongseon.github.io/hra-website/
+
+theme:
+  name: material
+  language: ko
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/yeongseon/hra-website
+repo_name: yeongseon/hra-website
+
+nav:
+  - 🏠 홈: index.md
+  - 🚀 시작하기:
+      - 사전 준비 (설치): getting-started/prerequisites.md
+      - 프로젝트 받아오기: getting-started/clone-and-setup.md
+      - 사이트 실행하기: getting-started/first-run.md
+  - 🤝 기여하기:
+      - 협업 워크플로우: contributing/workflow.md
+      - 코드 컨벤션: contributing/conventions.md
+      - AI 도구로 기여하기: contributing/ai-tools.md
+      - 난이도별 작업 가이드: contributing/tasks-by-level.md
+  - 🔧 사이트 수정:
+      - 페이지 수정 & 꾸미기: CUSTOMIZATION.md
+      - 폴더 구조 이해하기: GUIDE.md
+  - 👑 관리자:
+      - 관리자 운영 가이드: ADMIN-GUIDE.md
+      - 데이터베이스 가이드: DATABASE.md
+  - 🚢 배포:
+      - 배포 & 문제 해결: DEPLOYMENT.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yeongseon/hra-website
+    - icon: fontawesome/brands/instagram
+      link: https://instagram.com/hra_official_

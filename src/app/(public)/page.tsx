@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Target, Briefcase, Heart } from "lucide-react";
 
@@ -12,19 +13,22 @@ const alumniData = [
     id: "alumni-17",
     gradient: "from-amber-700 via-amber-800 to-stone-900",
     cohort: "17기 수료생",
-    quote: "한계까지 도전하고, 성장으로 보답하다"
+    quote: "한계까지 도전하고, 성장으로 보답하다",
+    image: "/images/cohort-17.jpeg"
   },
   {
     id: "alumni-18",
     gradient: "from-blue-700 via-blue-800 to-slate-900",
     cohort: "18기 수료생",
-    quote: "본질을 묻는 힘, 현업에서의 차이를 만들다"
+    quote: "본질을 묻는 힘, 현업에서의 차이를 만들다",
+    image: null
   },
   {
     id: "alumni-19",
     gradient: "from-emerald-700 via-emerald-800 to-slate-900",
     cohort: "19기 수료생",
-    quote: "평생을 함께할 최고의 동료들을 얻었습니다"
+    quote: "평생을 함께할 최고의 동료들을 얻었습니다",
+    image: null
   }
 ];
 
@@ -152,10 +156,8 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
       
       <section className="relative flex flex-col items-start justify-center min-h-[90vh] px-4 overflow-hidden text-left bg-gray-900">
-        <div 
-          className="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900"
-        />
-        <div className="absolute inset-0 z-0 bg-black/30" />
+        <Image src="/images/hero-bg.jpeg" alt="HRA 수업 현장" fill className="object-cover z-0" priority />
+        <div className="absolute inset-0 z-0 bg-black/50" />
 
         <div className="relative z-10 flex flex-col items-start text-left max-w-5xl gap-6 w-full mx-auto">
           <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
@@ -204,9 +206,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <div 
-              className="absolute inset-0 bg-gradient-to-br from-amber-800 via-amber-900 to-stone-900 transition-all duration-700 group-hover:scale-105"
-            />
+            <Image src="/images/faculty-classics.jpeg" alt="고전 읽기 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
@@ -222,9 +222,7 @@ export default function Home() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <div 
-              className="absolute inset-0 bg-gradient-to-br from-blue-800 via-blue-900 to-slate-900 transition-all duration-700 group-hover:scale-105"
-            />
+            <Image src="/images/faculty-casestudy.jpeg" alt="케이스 스터디 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
@@ -240,9 +238,7 @@ export default function Home() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <div 
-              className="absolute inset-0 bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-900 transition-all duration-700 group-hover:scale-105"
-            />
+            <Image src="/images/faculty-lecture.jpeg" alt="특강 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
             
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
@@ -421,9 +417,13 @@ export default function Home() {
             {alumniData.map((alumni) => (
               <div key={alumni.id} className="min-w-full relative h-full flex flex-col md:flex-row">
                 <div 
-                  className={`w-full md:w-[60%] h-64 md:h-full bg-gradient-to-br ${alumni.gradient} border-r border-[#D9D9D9]`}
+                  className={`w-full md:w-[60%] h-64 md:h-full relative bg-gradient-to-br ${alumni.gradient} border-r border-[#D9D9D9]`}
                 >
-                  <div className="w-full h-full bg-black/10" />
+                  {alumni.image ? (
+                    <Image src={alumni.image} alt={alumni.cohort} fill className="object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-black/10" />
+                  )}
                 </div>
                 
                 <div className="w-full md:w-[40%] p-6 md:p-16 flex flex-col justify-center bg-white relative">

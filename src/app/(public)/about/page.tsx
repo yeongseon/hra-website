@@ -1,4 +1,5 @@
-import { Award, BookOpen, Briefcase, Compass, Globe, Star } from "lucide-react";
+import { Award, BookOpen, Briefcase, Compass, ExternalLink, Globe, Star } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -166,6 +167,35 @@ export default function AboutPage() {
           </div>
         </section>
       </div>
+
+      <section className="mt-24 text-center">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-[#D9D9D9] rounded-2xl p-10 md:p-14">
+          <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-4">개발 참여 안내</h2>
+          <p className="text-[#666666] text-lg mb-8 max-w-2xl mx-auto">
+            HRA 웹사이트는 오픈소스 프로젝트로 운영됩니다. 개발이 처음이어도 참여할 수 있도록 자세한 가이드를 준비했어요.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="https://github.com/yeongseon/hra-website"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1a1a1a] text-white font-medium hover:bg-[#333] transition-colors"
+            >
+              GitHub 저장소
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+            <Link
+              href="https://yeongseon.github.io/hra-website/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+            >
+              개발 가이드 문서
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
