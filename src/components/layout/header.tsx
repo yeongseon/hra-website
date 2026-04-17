@@ -26,17 +26,23 @@ type NavItem = {
   subItems?: { label: string; href: string }[];
 };
 
+/** 공개 네비게이션 메뉴 (비로그인 포함 모든 사용자에게 노출) */
 const navItems: NavItem[] = [
   {
-    label: "소개",
+    label: "학원소개",
     subItems: [
       { label: "HRA", href: "/about" },
       { label: "커리큘럼", href: "/curriculum" },
       { label: "교수진", href: "/faculty" },
-      { label: "기수", href: "/cohorts" },
     ],
   },
-  { label: "모집안내", href: "/recruitment" },
+  {
+    label: "입학안내",
+    subItems: [
+      { label: "모집안내", href: "/recruitment" },
+      { label: "FAQ", href: "/faq" },
+    ],
+  },
   {
     label: "소식",
     subItems: [
@@ -48,11 +54,10 @@ const navItems: NavItem[] = [
   {
     label: "커뮤니티",
     subItems: [
+      { label: "기수", href: "/cohorts" },
       { label: "수료생 이야기", href: "/alumni" },
-      { label: "FAQ", href: "/faq" },
     ],
   },
-  { label: "자료실", href: "/resources" },
 ];
 
 export function Header({ session }: HeaderProps) {
@@ -64,6 +69,11 @@ export function Header({ session }: HeaderProps) {
   const user = session?.user;
   const isLoggedIn = !!user;
   const isAdmin = user?.role === "ADMIN";
+
+  /** 로그인 사용자에게만 자료실 메뉴 추가 */
+  const visibleNavItems: NavItem[] = isLoggedIn
+    ? [...navItems, { label: "자료실", href: "/resources" }]
+    : navItems;
 
   const handleSignOut = async () => {
     setUserMenuOpen(false);
@@ -85,8 +95,8 @@ export function Header({ session }: HeaderProps) {
          </Link>
 
          <div className="hidden items-center gap-6 md:flex">
-           {navItems.map((item) => {
-             const active = isItemActive(item.href, item.subItems);
+{visibleNavItems.map((item) => {
+              const active = isItemActive(item.href, item.subItems);
              
              if (item.subItems) {
                return (
@@ -194,22 +204,14 @@ export function Header({ session }: HeaderProps) {
                    </>
                  )}
                </div>
-             ) : (
-               <div className="flex items-center gap-4">
-                 <Link
-                   href="/login"
-                   className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
-                 >
-                   로그인
-                 </Link>
-                 <Link
-                   href="/mypage"
-                   className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
-                 >
-                   마이페이지
-                 </Link>
-               </div>
-             )}
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+                >
+                  로그인
+                </Link>
+              )}
              
              <Link
                href="https://docs.google.com/forms/d/e/1FAIpQLSdWsLi_3umEuLWQXgOuSq5LTETmcolXy1I3auTohWY1ZTxiww/viewform"
@@ -245,8 +247,8 @@ export function Header({ session }: HeaderProps) {
        {mobileOpen && (
          <div className="border-t border-[#D9D9D9] bg-white md:hidden overflow-y-auto max-h-[calc(100vh-64px)] shadow-[var(--shadow-soft)] absolute w-full">
           <div className="flex flex-col px-4 py-4">
-            {navItems.map((item) => {
-              if (item.subItems) {
+             {visibleNavItems.map((item) => {
+               if (item.subItems) {
                 const isOpen = openMobileDropdown === item.label;
                 return (
                    <div key={item.label} className="border-b border-[#D9D9D9] last:border-none">
@@ -330,24 +332,14 @@ export function Header({ session }: HeaderProps) {
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                  >
-                    <LogIn className="size-4" />
-                    로그인
-                  </Link>
-                  <Link
-                    href="/mypage"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                  >
-                    <User className="size-4" />
-                    마이페이지
-                  </Link>
-                </div>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <LogIn className="size-4" />
+                  로그인
+                </Link>
               )}
             </div>
           </div>
