@@ -29,7 +29,7 @@ type NavItem = {
 /** 공개 네비게이션 메뉴 (비로그인 포함 모든 사용자에게 노출) */
 const navItems: NavItem[] = [
   {
-    label: "학원소개",
+    label: "HRA소개",
     subItems: [
       { label: "HRA", href: "/about" },
       { label: "커리큘럼", href: "/curriculum" },

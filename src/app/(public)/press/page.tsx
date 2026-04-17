@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { asc, desc } from "drizzle-orm";
 import { ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -25,14 +26,15 @@ export default async function PressPage() {
     .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt));
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
-      <section className="py-16 text-center sm:py-20">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+      <section className="mb-10 space-y-4 sm:mb-14">
         <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
           HRA PRESS
         </Badge>
-        <h1 className="mt-4 text-[40px] font-bold leading-tight text-[#1a1a1a]">언론보도</h1>
-        <div className="mx-auto mb-3 mt-3 h-1 w-12 bg-[var(--brand)]" />
-        <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-[#666666]">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+          언론보도
+        </h1>
+        <p className="max-w-2xl text-sm text-[#666666] md:text-base">
           HRA가 소개된 언론보도를 모아보았습니다. 다양한 매체에서 전한 HRA의 이야기와 주요 소식을 확인해보세요.
         </p>
       </section>
@@ -52,9 +54,11 @@ export default async function PressPage() {
               className="group overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all hover:-translate-y-1 hover:border-blue-400 hover:bg-gray-50"
             >
               {article.imageUrl ? (
-                <img
+                <Image
                   src={article.imageUrl}
                   alt={`${article.title} 썸네일`}
+                  width={640}
+                  height={360}
                   className="aspect-[16/9] w-full border-b border-[#D9D9D9] object-cover"
                 />
               ) : (

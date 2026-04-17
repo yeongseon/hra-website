@@ -8,6 +8,7 @@
  */
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { ImageIcon } from "lucide-react";
@@ -66,9 +67,11 @@ export default async function GalleryPage() {
               <Link key={album.id} href={`/gallery/${album.id}`} className="group block h-full">
                 <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)] transition-all duration-200 hover:border-blue-400 hover:shadow-md">
                   {album.coverImageUrl && imageCount > 0 ? (
-                    <img
+                    <Image
                       src={album.coverImageUrl}
                       alt={album.title}
+                      width={400}
+                      height={208}
                       className="h-52 w-full object-cover"
                     />
                   ) : (

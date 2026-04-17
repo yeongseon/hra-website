@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { asc } from "drizzle-orm";
+import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
 
@@ -71,11 +73,15 @@ export default async function AlumniPage() {
     : fallbackStories;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
-      <section className="py-16 sm:py-20 text-center">
-        <h1 className="text-[40px] font-bold leading-tight text-[#1a1a1a]">수료생 이야기</h1>
-        <div className="mx-auto mt-3 mb-3 h-1 w-12 bg-[var(--brand)]" />
-        <p className="mt-5 mx-auto max-w-3xl text-lg leading-relaxed text-[#666666]">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+      <section className="mb-10 space-y-4 sm:mb-14">
+        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
+          HRA ALUMNI
+        </Badge>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+          수료생 이야기
+        </h1>
+        <p className="max-w-2xl text-sm text-[#666666] md:text-base">
           HRA를 거쳐 간 수료생들이 각자의 자리에서 어떻게 성장했는지, 그 변화의 순간을 짧은 이야기로 전합니다.
         </p>
       </section>
@@ -88,9 +94,11 @@ export default async function AlumniPage() {
           >
             <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
               {story.imageUrl ? (
-                <img
+                <Image
                   src={story.imageUrl}
                   alt={`${story.name} 수료생 사진`}
+                  width={600}
+                  height={600}
                   className="aspect-square w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
                 />
               ) : (

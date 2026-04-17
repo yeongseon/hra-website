@@ -73,18 +73,17 @@ export default async function CohortsPage() {
   const totalCohorts = cohortData.length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <section className="py-12 sm:py-20 md:py-32">
-        <div className="flex items-center justify-center gap-4 flex-nowrap overflow-x-auto">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold tracking-tight text-[#1a1a1a]">
-            기수 소개
-          </h1>
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="rounded-full px-4 py-1.5 text-sm sm:text-base bg-white border-[#D9D9D9] shadow-sm whitespace-nowrap">
-              총 기수 {totalCohorts}기
-            </Badge>
-          </div>
-        </div>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+      <section className="mb-10 space-y-4 sm:mb-14">
+        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
+          HRA COHORTS
+        </Badge>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+          기수 소개
+        </h1>
+        <p className="max-w-2xl text-sm text-[#666666] md:text-base">
+          HRA의 역대 기수를 소개합니다. 현재까지 총 {totalCohorts}기가 함께했습니다.
+        </p>
       </section>
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-16 sm:pb-24 md:pb-32">

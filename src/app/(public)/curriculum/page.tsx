@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const timelineSteps = [
   { 
@@ -69,18 +70,16 @@ export default function CurriculumPage() {
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a] selection:bg-blue-100">
-      <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 py-24 sm:py-32">
-        <section className="max-w-3xl mb-24 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#D9D9D9] text-sm font-medium text-[#666666] mb-8 shadow-[var(--shadow-soft)]">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            52주 교육 과정
-          </div>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-[#1a1a1a] mb-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+        <section className="mb-10 space-y-4 sm:mb-14">
+          <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
+            HRA CURRICULUM
+          </Badge>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
             커리큘럼
           </h1>
-          <p className="text-lg sm:text-xl text-[#666666] leading-relaxed font-light">
-            HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고<br />
-            문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
+          <p className="max-w-2xl text-sm text-[#666666] md:text-base">
+            HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고 문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
           </p>
         </section>
 

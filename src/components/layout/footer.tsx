@@ -2,9 +2,8 @@
  * 푸터 컴포넌트 - 사이트 하단 영역
  *
  * 이 컴포넌트는 HRA 웹사이트의 맨 아래에 표시되는 푸터를 만듭니다.
- * - HRA 소개 및 설명 (좌측)
- * - 사이트 주요 페이지 링크 (중앙)
- * - 연락처 정보 (우측)
+ * - HRA 소개 및 간단한 설명 (좌측)
+ * - 헤더 구조와 맞춘 주요 메뉴 링크 (중앙)
  * - 저작권 표시
  *
  * 참고: 이 컴포넌트는 "use client"가 없으므로 서버 컴포넌트입니다.
@@ -12,7 +11,7 @@
  */
 
 import Link from "next/link";
-import { Instagram, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 
 export function Footer() {
   return (
@@ -31,7 +30,7 @@ export function Footer() {
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
             <div>
-              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">소개</h4>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">HRA소개</h4>
               <ul className="space-y-3">
                 <li>
                   <Link href="/about" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
@@ -48,41 +47,15 @@ export function Footer() {
                     교수진
                   </Link>
                 </li>
-                <li>
-                  <Link href="/cohorts" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
-                    기수
-                  </Link>
-                </li>
               </ul>
             </div>
 
             <div>
-              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">아카이브</h4>
-              <ul className="space-y-3">
-                <li>
-                  <Link href="/alumni" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
-                    수료생 이야기
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/resources" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
-                    자료실
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/gallery" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
-                    갤러리
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">모집 안내</h4>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">입학안내</h4>
               <ul className="space-y-3">
                 <li>
                   <Link href="/recruitment" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
-                    모집 안내
+                    모집안내
                   </Link>
                 </li>
                 <li>
@@ -102,15 +75,46 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/press" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    언론보도
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/gallery" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    갤러리
+                  </Link>
+                </li>
+                <li>
                   <a
                     href="https://instagram.com/hra_official_"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]"
                   >
-                    <Instagram className="h-4 w-4" />
                     <span>@hra_official_</span>
                   </a>
+                </li>
+                <li>
+                  <Link href="/faq" className="flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    <Mail className="h-4 w-4" />
+                    <span>문의</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">커뮤니티</h4>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/cohorts" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    기수
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/alumni" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                    수료생 이야기
+                  </Link>
                 </li>
               </ul>
             </div>

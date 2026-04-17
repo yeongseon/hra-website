@@ -1,5 +1,6 @@
 import { Award, BookOpen, Briefcase, Compass, Globe, Star } from "lucide-react";
 import type { Metadata } from "next";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "소개",
@@ -7,12 +8,17 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 pb-24">
-      <section className="py-20 md:py-32 text-center">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#1a1a1a] mb-6">
-          정답보다 중요한 것,<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">HRA는 본질을 묻는 법을 배웁니다.</span>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+      <section className="mb-10 space-y-4 sm:mb-14">
+        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
+          HRA ABOUT
+        </Badge>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+          HRA 소개
         </h1>
+        <p className="max-w-2xl text-sm text-[#666666] md:text-base">
+          정답보다 중요한 것, HRA는 본질을 묻는 법을 배웁니다.
+        </p>
       </section>
 
       <section className="mb-24 relative">
@@ -75,10 +81,10 @@ export default function AboutPage() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-colors hover:border-blue-400">
-            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-indigo-500">C</span>
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <div className="text-indigo-500 font-mono text-sm tracking-widest uppercase mb-2">Character</div>
+              <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Character</div>
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">성품</h3>
               <p className="text-[#666666] leading-relaxed">
                 성품은 지식이나 성과만으로 드러나지 않습니다. HRA는 사람을 이해하는 마음, 함께 배우고 협력하는 자세, 그리고 바른 가치관 위에 서는 태도를 중요하게 여깁니다.
@@ -87,10 +93,10 @@ export default function AboutPage() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-colors hover:border-blue-400">
-            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-purple-500">C</span>
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <span className="absolute top-4 right-4 text-[180px] font-black leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <div className="text-purple-500 font-mono text-sm tracking-widest uppercase mb-2">Commitment</div>
+              <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Commitment</div>
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">사명감</h3>
               <p className="text-[#666666] leading-relaxed">
                 사명감은 맡은 일을 끝까지 해내는 책임감에서 시작해, 나아가 공동체와 사회를 향한 의식으로 확장됩니다. HRA는 배움을 삶 속에서 실천하는 사람을 길러 내고자 합니다.
@@ -152,14 +158,14 @@ export default function AboutPage() {
               <div className="text-xl text-[#1a1a1a] font-medium">수료증 및 추천서 수여</div>
             </div>
             <div className="flex items-center gap-5">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                <Compass className="w-6 h-6 text-indigo-500" />
+              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Compass className="w-6 h-6 text-blue-600" />
               </div>
               <div className="text-xl text-[#1a1a1a] font-medium">진로 지도</div>
             </div>
             <div className="flex items-center gap-5">
-              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
-                <Briefcase className="w-6 h-6 text-purple-500" />
+              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Briefcase className="w-6 h-6 text-blue-600" />
               </div>
               <div className="text-xl text-[#1a1a1a] font-medium">취업 알선</div>
             </div>

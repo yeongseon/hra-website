@@ -7,6 +7,7 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -87,14 +88,16 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
               rel="noreferrer"
               className="group block overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]"
             >
-              <div className="relative h-72 w-full bg-gray-100">
-                {image.url ? (
-                  <img
-                    src={image.url}
-                    alt={image.alt ?? `${gallery.title} 이미지 ${index + 1}`}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                  />
-                ) : (
+                <div className="relative h-72 w-full bg-gray-100">
+                  {image.url ? (
+                    <Image
+                      src={image.url}
+                      alt={image.alt ?? `${gallery.title} 이미지 ${index + 1}`}
+                      width={1200}
+                      height={800}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                  ) : (
                   <div className="flex h-full w-full items-center justify-center text-[#666666]">
                     <ImageIcon className="size-10" />
                   </div>

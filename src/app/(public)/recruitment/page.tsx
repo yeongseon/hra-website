@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { CalendarDays, ImageIcon } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
@@ -256,13 +257,25 @@ export default async function RecruitmentPage() {
           </div>
         ) : !isRecruitmentOpen && settings?.posterImageUrl ? (
           <div className="space-y-8">
-            <img src={settings.posterImageUrl} alt="모집 포스터" className="w-full rounded-2xl" />
+            <Image
+              src={settings.posterImageUrl}
+              alt="모집 포스터"
+              width={1200}
+              height={800}
+              className="w-full rounded-2xl"
+            />
             <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-8 text-center shadow-[var(--shadow-soft)]">
               <p className="text-lg font-semibold text-[#1a1a1a]">{nextRecruitmentText}</p>
             </div>
           </div>
         ) : settings?.posterImageUrl ? (
-          <img src={settings.posterImageUrl} alt="모집 포스터" className="w-full rounded-2xl" />
+          <Image
+            src={settings.posterImageUrl}
+            alt="모집 포스터"
+            width={1200}
+            height={800}
+            className="w-full rounded-2xl"
+          />
         ) : (
           <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#D9D9D9] bg-gray-50 p-12 text-center">
             <ImageIcon className="size-12 text-[#666666]" />
