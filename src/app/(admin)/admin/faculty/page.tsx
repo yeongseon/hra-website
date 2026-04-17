@@ -26,6 +26,8 @@ const categoryLabels = {
   LECTURE: "특강",
 } as const;
 
+const categoryOrder = ["CLASSICS", "BUSINESS", "LECTURE"] as const;
+
 export default async function AdminFacultyPage() {
   await requireAdmin();
 
@@ -33,6 +35,11 @@ export default async function AdminFacultyPage() {
     .select()
     .from(faculty)
     .orderBy(asc(faculty.order), asc(faculty.createdAt));
+
+  const categorizedFacultyMembers = categoryOrder.map((category) => ({
+    category,
+    members: facultyMembers.filter((member) => member.category === category),
+  }));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -45,63 +52,77 @@ export default async function AdminFacultyPage() {
 
       <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
         <CardHeader className="border-b border-[#D9D9D9] py-4">
-          <CardTitle className="text-base text-[#1a1a1a]">전체 교수진 {facultyMembers.length}명</CardTitle>
+        <CardTitle className="text-base text-[#1a1a1a]">전체 교수진 {facultyMembers.length}명</CardTitle>
         </CardHeader>
-        <CardContent className="py-4">
-          <div className="-mx-4 overflow-x-auto sm:mx-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead>카테고리</TableHead>
-                  <TableHead>현직</TableHead>
-                  <TableHead>순서</TableHead>
-                  <TableHead>액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {facultyMembers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
-                      등록된 교수진이 없습니다.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  facultyMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium text-[#1a1a1a]">{member.name}</TableCell>
-                      <TableCell className="text-[#666666]">{categoryLabels[member.category]}</TableCell>
-                      <TableCell className="max-w-xs text-[#666666]">{member.currentPosition || "-"}</TableCell>
-                      <TableCell className="text-[#666666]">{member.order}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/faculty/${member.id}`}
-                            className={buttonVariants({ variant: "outline", className: "border-[#D9D9D9] text-[#1a1a1a]" })}
-                          >
-                            편집
-                          </Link>
-                          <form
-                            action={async (formData) => {
-                              "use server";
+        <CardContent className="space-y-6 py-4">
+          {facultyMembers.length === 0 ? (
+            <div className="py-8 text-center text-[#666666]">등록된 교수진이 없습니다.</div>
+          ) : (
+            categorizedFacultyMembers.map(({ category, members }) => (
+              <section key={category} className="space-y-3">
+                <div className="flex items-center justify-between gap-4 border-b border-[#D9D9D9] pb-2">
+                  <h2 className="text-base font-semibold text-[#1a1a1a]">
+                    {categoryLabels[category]} <span className="text-[#666666]">{members.length}명</span>
+                  </h2>
+                </div>
 
-                              const id = formData.get("id");
-                              await deleteFaculty(typeof id === "string" ? id : "");
-                            }}
-                          >
-                            <input type="hidden" name="id" value={member.id} />
-                            <Button type="submit" variant="outline" className="border-[#D9D9D9] text-[#1a1a1a]">
-                              삭제
-                            </Button>
-                          </form>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                <div className="-mx-4 overflow-x-auto sm:mx-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>이름</TableHead>
+                        <TableHead>카테고리</TableHead>
+                        <TableHead>현직</TableHead>
+                        <TableHead>순서</TableHead>
+                        <TableHead>액션</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {members.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
+                            등록된 교수진이 없습니다.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        members.map((member) => (
+                          <TableRow key={member.id}>
+                            <TableCell className="font-medium text-[#1a1a1a]">{member.name}</TableCell>
+                            <TableCell className="text-[#666666]">{categoryLabels[member.category]}</TableCell>
+                            <TableCell className="max-w-xs text-[#666666]">{member.currentPosition || "-"}</TableCell>
+                            <TableCell className="text-[#666666]">{member.order}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/admin/faculty/${member.id}`}
+                                  className={buttonVariants({ variant: "outline", className: "border-[#D9D9D9] text-[#1a1a1a]" })}
+                                >
+                                  편집
+                                </Link>
+                                <form
+                                  action={async (formData) => {
+                                    "use server";
+
+                                    const id = formData.get("id");
+                                    await deleteFaculty(typeof id === "string" ? id : "");
+                                  }}
+                                >
+                                  <input type="hidden" name="id" value={member.id} />
+                                  <Button type="submit" variant="outline" className="border-[#D9D9D9] text-[#1a1a1a]">
+                                    삭제
+                                  </Button>
+                                </form>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
+            ))
+          )}
         </CardContent>
       </Card>
     </section>
