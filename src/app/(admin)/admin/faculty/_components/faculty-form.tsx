@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +53,22 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
     },
     initialState
   );
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(defaultValues?.imageUrl ?? null);
+
+  useEffect(() => {
+    if (!selectedImage) {
+      setPreviewUrl(defaultValues?.imageUrl ?? null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImage);
+    setPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [defaultValues?.imageUrl, selectedImage]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -62,7 +78,7 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
           {description ? <p className="text-sm text-[#666666]">{description}</p> : null}
         </CardHeader>
         <CardContent className="py-6">
-          <form action={formAction} className="space-y-6">
+          <form action={formAction} encType="multipart/form-data" className="space-y-6">
             {state.message ? (
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <AlertCircle className="mt-0.5 size-4" />
@@ -137,19 +153,38 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="imageUrl" className="text-[#1a1a1a]">
-                  이미지 URL
+                <Label htmlFor="image" className="text-[#1a1a1a]">
+                  프로필 사진
                 </Label>
-                <Input
-                  id="imageUrl"
-                  name="imageUrl"
-                  placeholder="https://example.com/image.jpg"
-                  defaultValue={defaultValues?.imageUrl ?? ""}
-                  className="h-10 border-[#D9D9D9]"
-                />
-                {state.fieldErrors?.imageUrl ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.imageUrl}</p>
-                ) : null}
+                <div className="flex flex-col items-start gap-4 rounded-xl border border-[#D9D9D9] px-5 py-5">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="교수진 프로필 사진 미리보기"
+                      className="h-[120px] w-[120px] rounded-full border border-[#D9D9D9] object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full border border-dashed border-[#D9D9D9] text-sm text-[#666666]">
+                      미리보기 없음
+                    </div>
+                  )}
+
+                  <div className="w-full space-y-2">
+                    <Input
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="h-10 border-[#D9D9D9] file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[#1a1a1a]"
+                      onChange={(event) => {
+                        setSelectedImage(event.target.files?.[0] ?? null);
+                      }}
+                    />
+                    <p className="text-sm text-[#666666]">{previewUrl ? "변경" : "사진 선택"}</p>
+                    <p className="text-xs text-[#666666]">JPG, PNG, WEBP 형식만 가능하며 최대 5MB까지 업로드할 수 있습니다.</p>
+                    {state.fieldErrors?.image ? <p className="text-xs text-red-600">{state.fieldErrors.image}</p> : null}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
