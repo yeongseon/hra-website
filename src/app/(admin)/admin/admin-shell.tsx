@@ -121,7 +121,7 @@ export function AdminShell({ userName, children }: AdminShellProps) {
         {/* 좌측 사이드바 — 태블릿/데스크톱에서만 표시 (md: breakpoint) */}
         <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col">
           <div className="px-6 py-5">
-            <p className="text-sm font-semibold tracking-wide text-slate-900">HRA Admin</p>
+            <p className="text-sm font-semibold tracking-wide text-slate-900">HRA 관리자</p>
           </div>
           <Separator className="bg-slate-200" />
           <div className="flex-1 p-4">
@@ -147,7 +147,7 @@ export function AdminShell({ userName, children }: AdminShellProps) {
                   {/* SheetContent — 슬라이드 오픈되는 메뉴 패널 */}
                   <SheetContent side="left" className="w-72 bg-white p-0" showCloseButton>
                     <SheetHeader className="px-5 py-4">
-                      <SheetTitle>HRA Admin</SheetTitle>
+                      <SheetTitle>HRA 관리자</SheetTitle>
                     </SheetHeader>
                     <Separator className="bg-slate-200" />
                     <div className="p-4">
@@ -159,7 +159,7 @@ export function AdminShell({ userName, children }: AdminShellProps) {
               </div>
 
               {/* 데스크톱에서 표시되는 제목 */}
-              <div className="hidden text-sm font-semibold tracking-wide md:block">HRA Admin</div>
+              <div className="hidden text-sm font-semibold tracking-wide md:block">HRA 관리자</div>
 
               {/* 관리자 이름 표시 */}
               <div className="text-sm text-slate-600">

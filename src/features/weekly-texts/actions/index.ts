@@ -1,3 +1,18 @@
+/**
+ * 주차별 텍스트 서버 액션
+ *
+ * 역할: 관리자 페이지(/admin/resources/weekly-texts)에서 주차별 텍스트 자료의
+ *       업로드(생성)와 삭제를 처리한다. 파일은 Vercel Blob에, 메타는 Postgres에 저장한다.
+ *
+ * 사용 위치:
+ *   - src/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-form.tsx (생성 폼)
+ *   - src/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-row-actions.tsx (삭제)
+ *
+ * 보안:
+ *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
+ *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
+ */
 "use server";
 
 import { del, put } from "@vercel/blob";
@@ -29,6 +44,15 @@ const allowedFileTypes = new Set([
 ]);
 
 const maxFileSize = 30 * 1024 * 1024;
+
+const normalizeFileName = (fileName: string) => {
+  const trimmed = fileName.trim();
+  const sanitized = trimmed
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+
+  return sanitized || "weekly-text";
+};
 
 const parseCohortId = (value: FormDataEntryValue | null) => {
   if (typeof value !== "string" || value === "__none__") {
@@ -88,7 +112,7 @@ export async function createWeeklyText(formData: FormData): Promise<WeeklyTextAc
   }
 
   try {
-    const safeFileName = validatedFile.file.name.replace(/\s+/g, "-");
+    const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`weekly-texts/${safeFileName}`, validatedFile.file, {
       access: "public",
     });

@@ -43,7 +43,10 @@ export default async function CohortsPage() {
       .orderBy(desc(cohortsTable.order));
 
     cohortData = dbCohorts;
-  } catch {
+  } catch (error) {
+    // DB 조회 실패 시: 빈 화면이 "데이터 없음"과 구분되도록 서버 로그에 명확히 기록한다.
+    // 이렇게 해야 운영 중 실제 장애와 단순한 미시드(미입력) 상태를 구분할 수 있다.
+    console.error("[cohorts/page] DB 조회 실패 - 빈 목록으로 폴백합니다:", error);
     cohortData = [];
   }
 
@@ -53,7 +56,7 @@ export default async function CohortsPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-14">
         <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          HRA COHORTS
+          기수 안내
         </Badge>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
           기수 소개

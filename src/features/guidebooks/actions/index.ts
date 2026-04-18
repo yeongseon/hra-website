@@ -1,3 +1,18 @@
+/**
+ * 가이드북 서버 액션
+ *
+ * 역할: 관리자 페이지(/admin/resources/guidebooks)에서 가이드북 파일(PDF/HWP/DOC 등)의
+ *       업로드(생성)와 삭제를 처리한다. 파일은 Vercel Blob에, 메타는 Postgres에 저장한다.
+ *
+ * 사용 위치:
+ *   - src/app/(admin)/admin/resources/guidebooks/_components/guidebook-form.tsx (생성 폼)
+ *   - src/app/(admin)/admin/resources/guidebooks/_components/guidebook-row-actions.tsx (삭제)
+ *
+ * 보안:
+ *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
+ *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
+ */
 "use server";
 
 import { del, put } from "@vercel/blob";
@@ -28,6 +43,15 @@ const allowedFileTypes = new Set([
 ]);
 
 const maxFileSize = 30 * 1024 * 1024;
+
+const normalizeFileName = (fileName: string) => {
+  const trimmed = fileName.trim();
+  const sanitized = trimmed
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+
+  return sanitized || "guidebook";
+};
 
 const getValidatedFile = (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
@@ -77,7 +101,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
   }
 
   try {
-    const safeFileName = validatedFile.file.name.replace(/\s+/g, "-");
+    const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
       access: "public",
     });

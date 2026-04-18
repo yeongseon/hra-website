@@ -11,19 +11,21 @@ const tabs = [
     isActive: (pathname: string) =>
       pathname === "/admin/resources" ||
       pathname === "/admin/resources/new" ||
-      pathname.startsWith("/admin/resources/") &&
-        !pathname.startsWith("/admin/resources/weekly-texts") &&
-        !pathname.startsWith("/admin/resources/guidebooks"),
+      /^\/admin\/resources\/[^/]+\/edit$/.test(pathname),
   },
   {
     href: "/admin/resources/weekly-texts",
     label: "주차별 텍스트",
-    isActive: (pathname: string) => pathname.startsWith("/admin/resources/weekly-texts"),
+    isActive: (pathname: string) =>
+      pathname === "/admin/resources/weekly-texts" ||
+      pathname.startsWith("/admin/resources/weekly-texts/"),
   },
   {
     href: "/admin/resources/guidebooks",
     label: "가이드북",
-    isActive: (pathname: string) => pathname.startsWith("/admin/resources/guidebooks"),
+    isActive: (pathname: string) =>
+      pathname === "/admin/resources/guidebooks" ||
+      pathname.startsWith("/admin/resources/guidebooks/"),
   },
 ];
 

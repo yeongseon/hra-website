@@ -14,7 +14,12 @@ const alumniStoryFormSchema = z.object({
   quote: z.string().trim().min(1, "인용구를 입력해주세요.").max(500, "인용구는 500자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요.").max(5000, "내용은 5000자 이하여야 합니다."),
   imageUrl: z.string().trim().optional(),
-  isFeatured: z.coerce.boolean().default(false),
+  // 메인노출 여부: 체크박스가 켜져 있을 때만 "true" 문자열이 전송된다.
+  // z.coerce.boolean()을 쓰면 "false", "0" 같은 문자열도 true가 되어버리므로
+  // 명시적으로 "true" 일치만 허용하는 transform을 사용한다.
+  isFeatured: z
+    .union([z.literal("true"), z.literal("on"), z.null(), z.undefined()])
+    .transform((value) => value === "true" || value === "on"),
   order: z.coerce
     .number({ message: "순서는 숫자여야 합니다." })
     .int("순서는 정수여야 합니다."),
