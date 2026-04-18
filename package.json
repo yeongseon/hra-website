@@ -9,10 +9,10 @@
     "lint": "eslint",
     "spell-check": "node scripts/spell-check.mjs",
     "spell-fix": "node scripts/spell-check.mjs --fix",
-    "seed-admin": "node scripts/seed-admin.mjs",
-    "seed-cohorts": "node scripts/seed-cohorts.mjs",
+    "seed-admin": "node --env-file=.env scripts/seed-admin.mjs",
+    "seed-cohorts": "node --env-file=.env scripts/seed-cohorts.mjs",
     "db:push": "drizzle-kit push",
-    "db:migrate-alumni-featured": "node scripts/migrate-add-alumni-featured.mjs"
+    "db:migrate-alumni-featured": "node --env-file=.env scripts/migrate-add-alumni-featured.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
