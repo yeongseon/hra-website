@@ -48,6 +48,18 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
     initialState,
   );
 
+  const submitLabel = useMemo(() => {
+    if (isPending) {
+      return "업로드 중...";
+    }
+
+    if (selectedFile) {
+      return "저장하기";
+    }
+
+    return "이미지 업로드";
+  }, [isPending, selectedFile]);
+
   return (
     <form action={formAction} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
       {state.message ? (
@@ -84,6 +96,9 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
               setSelectedFile(file);
             }}
           />
+          <p className="text-sm text-slate-500">
+            파일 선택 후 아래 <span className="font-medium text-[#2563EB]">[이미지 업로드]</span> 버튼을 눌러야 저장됩니다.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -123,9 +138,13 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
         </div>
       ) : null}
 
-      <Button type="submit" disabled={isPending} className="bg-slate-900 hover:bg-slate-700">
+      <Button
+        type="submit"
+        disabled={isPending || !selectedFile}
+        className="w-full bg-[#2563EB] hover:bg-blue-700"
+      >
         <Plus className="mr-1 size-4" />
-        {isPending ? "추가 중..." : "이미지 추가"}
+        {submitLabel}
       </Button>
     </form>
   );

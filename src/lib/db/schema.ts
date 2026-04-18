@@ -345,6 +345,7 @@ export const alumniStories = pgTable("alumni_stories", {
   quote: varchar("quote", { length: 500 }).notNull(), // 인용 문구 (제목)
   content: text("content").notNull(), // 본문 내용
   imageUrl: text("image_url"), // 수료생 사진 URL
+  isFeatured: boolean("is_featured").notNull().default(false), // 메인 페이지 배너 노출 여부
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")

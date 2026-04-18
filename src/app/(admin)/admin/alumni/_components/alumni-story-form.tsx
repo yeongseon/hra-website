@@ -16,6 +16,7 @@ type AlumniStoryFormValues = {
   quote?: string | null;
   content?: string | null;
   imageUrl?: string | null;
+  isFeatured?: boolean;
   order?: number;
 };
 
@@ -150,6 +151,19 @@ export function AlumniStoryForm({
                   className="border-[#D9D9D9] text-[#1a1a1a]"
                 />
                 {state.fieldErrors?.order ? <p className="text-xs text-red-600">{state.fieldErrors.order}</p> : null}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="inline-flex items-center gap-2 text-sm font-medium text-[#1a1a1a]">
+                  <input
+                    type="checkbox"
+                    name="isFeatured"
+                    value="true"
+                    defaultChecked={defaultValues?.isFeatured ?? false}
+                    className="size-4 rounded border-[#D9D9D9]"
+                  />
+                  메인 페이지 배너에 노출
+                </label>
               </div>
             </div>
 

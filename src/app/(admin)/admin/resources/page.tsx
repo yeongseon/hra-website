@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClassLogRowActions } from "@/app/(admin)/admin/resources/_components/class-log-row-actions";
+import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resources-tab-nav";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { classLogs, cohorts, users } from "@/lib/db/schema";
@@ -71,6 +72,8 @@ export default async function AdminClassLogsPage() {
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">자료실 관리</h1>
         <Button render={<Link href="/admin/resources/new" />}>새 수업일지 작성</Button>
       </div>
+
+      <ResourcesTabNav />
 
       <Card className="border-slate-200 bg-white py-0 shadow-sm">
         <CardHeader className="border-b border-slate-200 py-4">

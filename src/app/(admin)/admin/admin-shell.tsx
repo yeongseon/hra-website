@@ -81,10 +81,14 @@ function AdminNav({ mobile = false }: { mobile?: boolean }) {
       {navItems.map((item) => {
         // 현재 페이지가 이 메뉴 항목인지 확인
         // "/admin"은 정확히 일치할 때만, 다른 항목은 접두사로 시작할 때 활성
+        // 활성 메뉴 매칭
+        // - "/admin"은 정확 일치만 (다른 모든 /admin/*에 매칭되는 것 방지)
+        // - 그 외 메뉴는 정확 일치 또는 하위 경로(item.href + "/")까지 활성으로 판단
+        //   예: /admin/recruitment 메뉴는 /admin/recruitment, /admin/recruitment/123 에서만 활성
+        //       /admin/recruitment-settings 같은 다른 메뉴와 충돌하지 않음
         const isActive =
-          item.href === "/admin"
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
+          pathname === item.href ||
+          (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
         const Icon = item.icon;
 
         return (

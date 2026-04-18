@@ -9,6 +9,10 @@ import { Header } from "@/components/layout/header";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+// 회원 전용 페이지는 사용자 세션에 따라 메뉴(자료실/관리자)가 달라지므로
+// 정적 캐시가 아닌 매 요청마다 렌더링하도록 강제합니다.
+export const dynamic = "force-dynamic";
+
 /**
  * async 함수: 이 컴포넌트는 비동기 서버 컴포넌트입니다 (서버에서만 실행됨)
  * 서버에서 사용자 정보를 먼저 확인한 후, 안전하게 페이지를 렌더링할 수 있습니다
@@ -34,8 +38,9 @@ export default async function MemberLayout({
     // min-h-screen: 최소 높이 100vh (화면 전체 높이)
     // flex-col: 자식 요소들이 세로로 정렬됨
     <div className="flex min-h-screen flex-col bg-white text-gray-900">
-      {/* 페이지 맨 위에 네비게이션 바 표시 */}
-      <Header />
+      {/* 페이지 맨 위에 네비게이션 바 표시 — 로그인 세션을 전달해야
+          관리자/자료실 메뉴가 표시됩니다 (전달하지 않으면 비로그인 메뉴만 노출) */}
+      <Header session={session} />
       {/* main: 페이지의 주요 내용 영역
           flex-1: 중간 공간을 최대한 활용해 Header와 Footer 사이를 채움
           pt-16: 상단 패딩 추가 (헤더 아래 공간)

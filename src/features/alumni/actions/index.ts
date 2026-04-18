@@ -14,6 +14,7 @@ const alumniStoryFormSchema = z.object({
   quote: z.string().trim().min(1, "인용구를 입력해주세요.").max(500, "인용구는 500자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요.").max(5000, "내용은 5000자 이하여야 합니다."),
   imageUrl: z.string().trim().optional(),
+  isFeatured: z.coerce.boolean().default(false),
   order: z.coerce
     .number({ message: "순서는 숫자여야 합니다." })
     .int("순서는 정수여야 합니다."),
@@ -53,11 +54,13 @@ function parseAlumniStoryFormData(formData: FormData) {
     quote: normalizeText(formData.get("quote")),
     content: normalizeText(formData.get("content")),
     imageUrl: normalizeText(formData.get("imageUrl")) || undefined,
+    isFeatured: formData.get("isFeatured"),
     order: normalizeText(formData.get("order")) || "0",
   });
 }
 
 function revalidateAlumniPaths() {
+  revalidatePath("/");
   revalidatePath("/admin/alumni");
   revalidatePath("/alumni");
 }
@@ -81,6 +84,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     quote: parsed.data.quote,
     content: parsed.data.content,
     imageUrl: parsed.data.imageUrl ?? null,
+    isFeatured: parsed.data.isFeatured,
     order: parsed.data.order,
   });
 
@@ -117,6 +121,7 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
       quote: parsed.data.quote,
       content: parsed.data.content,
       imageUrl: parsed.data.imageUrl ?? null,
+      isFeatured: parsed.data.isFeatured,
       order: parsed.data.order,
     })
     .where(eq(alumniStories.id, parsedId.data));

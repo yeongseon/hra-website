@@ -55,6 +55,7 @@ export default async function AdminAlumniPage() {
                 <TableRow>
                   <TableHead>이름</TableHead>
                   <TableHead>제목</TableHead>
+                  <TableHead>메인노출</TableHead>
                   <TableHead>인용구</TableHead>
                   <TableHead>순서</TableHead>
                   <TableHead>액션</TableHead>
@@ -63,7 +64,7 @@ export default async function AdminAlumniPage() {
               <TableBody>
                 {stories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
+                    <TableCell colSpan={6} className="py-8 text-center text-[#666666]">
                       등록된 수료생 이야기가 없습니다.
                     </TableCell>
                   </TableRow>
@@ -72,6 +73,7 @@ export default async function AdminAlumniPage() {
                     <TableRow key={story.id}>
                       <TableCell className="font-medium text-[#1a1a1a]">{story.name}</TableCell>
                       <TableCell className="text-[#1a1a1a]">{story.title ?? "-"}</TableCell>
+                      <TableCell className="text-[#666666]">{story.isFeatured ? "노출" : "숨김"}</TableCell>
                       <TableCell className="max-w-xs text-[#666666]">{truncateText(story.quote, 60)}</TableCell>
                       <TableCell className="text-[#666666]">{story.order}</TableCell>
                       <TableCell>
