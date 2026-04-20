@@ -10,8 +10,6 @@
  */
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
-
 export const alt = "HRA - Human Renaissance Academy";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -51,23 +49,25 @@ export default async function OpengraphImage() {
             fontWeight: 800,
             lineHeight: 1.1,
             marginBottom: 32,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          Human Renaissance
-          <br />
-          Academy
+          <span>Human Renaissance</span>
+          <span>Academy</span>
         </div>
         <div
           style={{
-            fontSize: 36,
-            fontWeight: 400,
-            opacity: 0.92,
+            fontSize: 44,
+            fontWeight: 500,
+            opacity: 0.95,
             lineHeight: 1.4,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          인간 르네상스를 꿈꾸는
-          <br />
-          대학 연합 교육 프로그램
+          <span>인간 르네상스를 꿈꾸는</span>
+          <span>대학 연합 교육 프로그램</span>
         </div>
       </div>
     ),
