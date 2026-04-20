@@ -8,6 +8,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -23,15 +24,13 @@ type GalleryDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
-  const { id } = await params;
+async function getGalleryById(id: string) {
   const parsedId = z.uuid().safeParse(id);
-
   if (!parsedId.success) {
-    notFound();
+    return null;
   }
 
-  const gallery = await db.query.galleries.findFirst({
+  return db.query.galleries.findFirst({
     where: eq(galleries.id, parsedId.data),
     with: {
       images: {
@@ -39,6 +38,40 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
       },
     },
   });
+}
+
+export async function generateMetadata({ params }: GalleryDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const gallery = await getGalleryById(id);
+
+  if (!gallery) {
+    return { title: "갤러리" };
+  }
+
+  const description = gallery.description?.slice(0, 160) ?? "HRA 갤러리";
+  const firstImage = gallery.images[0]?.url;
+
+  return {
+    title: gallery.title,
+    description,
+    openGraph: {
+      title: gallery.title,
+      description,
+      type: "article",
+      url: `/gallery/${gallery.id}`,
+      images: firstImage ? [{ url: firstImage, alt: gallery.title }] : undefined,
+    },
+    twitter: {
+      title: gallery.title,
+      description,
+      images: firstImage ? [firstImage] : undefined,
+    },
+  };
+}
+
+export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
+  const { id } = await params;
+  const gallery = await getGalleryById(id);
 
   if (!gallery) {
     notFound();

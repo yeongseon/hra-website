@@ -34,6 +34,25 @@ async function getPublishedNoticeById(id: string) {
   });
 }
 
+// 공지 본문(Markdown) -> SNS 미리보기에 쓸 짧은 요약 텍스트.
+// 마크다운 기호와 줄바꿈을 정리해 첫 160자 이내로 자릅니다.
+function buildExcerpt(markdown: string, maxLength = 160): string {
+  const plain = markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/[#>*_~\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (plain.length <= maxLength) {
+    return plain;
+  }
+
+  return `${plain.slice(0, maxLength).trimEnd()}…`;
+}
+
 export async function generateMetadata({ params }: NoticePageProps): Promise<Metadata> {
   const { id } = await params;
   const notice = await getPublishedNoticeById(id);
@@ -42,7 +61,23 @@ export async function generateMetadata({ params }: NoticePageProps): Promise<Met
     return { title: "공지사항" };
   }
 
-  return { title: notice.title };
+  const description = buildExcerpt(notice.content);
+
+  return {
+    title: notice.title,
+    description,
+    openGraph: {
+      title: notice.title,
+      description,
+      type: "article",
+      url: `/notices/${notice.id}`,
+      publishedTime: notice.createdAt.toISOString(),
+    },
+    twitter: {
+      title: notice.title,
+      description,
+    },
+  };
 }
 
 export default async function NoticeDetailPage({ params }: NoticePageProps) {

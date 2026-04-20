@@ -8,7 +8,10 @@ import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
 
 export const metadata: Metadata = {
-  title: "HRA - Human Renaissance Academy"
+  title: "HRA - Human Renaissance Academy",
+  openGraph: {
+    url: "/",
+  },
 };
 
 export default function Home() {
