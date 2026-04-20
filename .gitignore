@@ -45,3 +45,9 @@ next-env.d.ts
 
 # playwright-mcp
 .playwright-mcp/
+
+# 로컬 작업용 스크린샷 / 카카오톡 사진 (리포에 포함하지 않음)
+/screenshots/
+/KakaoTalk_Photo_*.jpeg
+/KakaoTalk_Photo_*.jpg
+/KakaoTalk_Photo_*.png
