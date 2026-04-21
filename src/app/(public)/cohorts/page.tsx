@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "기수 소개",
+  description: "1기부터 현재까지 HRA의 모든 기수와 함께한 청년들의 발자취를 한눈에 확인하세요.",
 };
 
 function formatPeriod(startDate: Date | null, endDate: Date | null) {

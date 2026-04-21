@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "갤러리",
+  description: "HRA의 강의, 워크숍, 행사 현장의 생생한 모습을 사진으로 만나보세요.",
 };
 
 export default async function GalleryPage() {

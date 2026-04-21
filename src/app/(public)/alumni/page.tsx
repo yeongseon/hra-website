@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "수료생 이야기",
+  description: "HRA를 수료한 동문들의 성장 이야기와 사회 진출 이후의 발걸음을 만나보세요.",
 };
 
 type AlumniStoryViewModel = {

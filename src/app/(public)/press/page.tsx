@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "언론보도",
+  description: "HRA의 활동과 비전이 다양한 언론 매체를 통해 어떻게 소개되었는지 확인해보세요.",
 };
 
 const formatDate = (value: Date) =>

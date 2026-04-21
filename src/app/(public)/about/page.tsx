@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "소개",
+  description: "HRA(Human Renaissance Academy)의 비전, 목표, 그리고 인간 르네상스를 꿈꾸는 대학 연합 교육 프로그램을 소개합니다.",
 };
 
 export default function AboutPage() {

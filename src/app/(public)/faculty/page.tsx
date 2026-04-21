@@ -6,8 +6,8 @@ import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
-  title: "교수진 소개 | HRA",
-  description: "HRA의 교육을 이끄는 교수진을 소개합니다.",
+  title: "교수진 소개",
+  description: "HRA의 교육을 이끄는 다양한 분야의 교수진과 그들의 전문성을 소개합니다.",
 };
 
 export const dynamic = "force-dynamic";

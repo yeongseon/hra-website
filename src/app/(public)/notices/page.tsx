@@ -9,6 +9,7 @@ import { notices } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
   title: "공지사항",
+  description: "HRA의 학사 일정, 행사, 모집 등 주요 소식을 확인할 수 있는 공지사항입니다.",
 };
 
 export const dynamic = "force-dynamic";
