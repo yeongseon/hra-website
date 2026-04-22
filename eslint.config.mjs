@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 프로젝트 산출물 / 외부 생성 자산:
+    "site/**",
+    ".playwright-mcp/**",
+    "screenshots/**",
   ]),
 ]);
 

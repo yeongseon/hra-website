@@ -28,25 +28,27 @@ const formatDate = (value: Date) =>
 export default async function AdminWeeklyTextsPage() {
   await requireAdmin();
 
-  let hasDbError = false;
+  const { rows, hasDbError } = await (async () => {
+    try {
+      const rows = await db
+        .select({
+          id: weeklyTexts.id,
+          title: weeklyTexts.title,
+          fileUrl: weeklyTexts.fileUrl,
+          fileName: weeklyTexts.fileName,
+          createdAt: weeklyTexts.createdAt,
+          cohortName: cohorts.name,
+        })
+        .from(weeklyTexts)
+        .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
+        .orderBy(desc(weeklyTexts.createdAt));
 
-  const rows = await db
-    .select({
-      id: weeklyTexts.id,
-      title: weeklyTexts.title,
-      fileUrl: weeklyTexts.fileUrl,
-      fileName: weeklyTexts.fileName,
-      createdAt: weeklyTexts.createdAt,
-      cohortName: cohorts.name,
-    })
-    .from(weeklyTexts)
-    .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
-    .orderBy(desc(weeklyTexts.createdAt))
-    .catch((error) => {
-      hasDbError = true;
+      return { rows, hasDbError: false };
+    } catch (error) {
       console.error("[admin/resources/weekly-texts] DB 조회 오류:", error);
-      return [];
-    });
+      return { rows: [], hasDbError: true };
+    }
+  })();
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">

@@ -34,24 +34,27 @@ const formatDate = (value: Date) =>
 export default async function AdminUsersPage() {
   const session = await requireAdmin();
 
-  let hasDbError = false;
+  // DB 조회 결과와 오류 여부를 함께 반환해 렌더 이후 재할당을 피합니다.
+  const { rows, hasDbError } = await (async () => {
+    try {
+      const rows = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          image: users.image,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt));
 
-  const rows = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      image: users.image,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .orderBy(desc(users.createdAt))
-    .catch((error) => {
-      hasDbError = true;
+      return { rows, hasDbError: false };
+    } catch (error) {
       console.error("[admin/users] DB 조회 오류:", error);
-      return [];
-    });
+      return { rows: [], hasDbError: true };
+    }
+  })();
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">

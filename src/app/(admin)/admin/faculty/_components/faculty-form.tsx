@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,21 +55,23 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
     initialState
   );
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(defaultValues?.imageUrl ?? null);
+  const previewUrl = useMemo(() => {
+    if (!selectedImage) {
+      return defaultValues?.imageUrl ?? null;
+    }
+
+    return URL.createObjectURL(selectedImage);
+  }, [defaultValues?.imageUrl, selectedImage]);
 
   useEffect(() => {
-    if (!selectedImage) {
-      setPreviewUrl(defaultValues?.imageUrl ?? null);
+    if (!selectedImage || !previewUrl) {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(selectedImage);
-    setPreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      URL.revokeObjectURL(previewUrl);
     };
-  }, [defaultValues?.imageUrl, selectedImage]);
+  }, [previewUrl, selectedImage]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -158,9 +161,12 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
                 </Label>
                 <div className="flex flex-col items-start gap-4 rounded-xl border border-[#D9D9D9] px-5 py-5">
                   {previewUrl ? (
-                    <img
+                    <Image
                       src={previewUrl}
                       alt="교수진 프로필 사진 미리보기"
+                      width={120}
+                      height={120}
+                      unoptimized
                       className="h-[120px] w-[120px] rounded-full border border-[#D9D9D9] object-cover"
                     />
                   ) : (

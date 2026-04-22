@@ -14,7 +14,6 @@ import Link from "next/link";
 import { desc, eq, count } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -51,32 +50,34 @@ export default async function AdminRecruitmentPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();
 
-  let hasDbError = false;
-
   // 📊 DB에서 모든 기수 조회 + 각 기수의 지원서 개수 계산
   // - cohorts: 기수 정보 테이블
   // - applications: 지원서 테이블 (count 사용하여 지원자 수 계산)
   // - leftJoin + groupBy: 지원자가 없는 기수도 표시 가능하게 함
-  const rows = await db
-    .select({
-      id: cohorts.id,
-      name: cohorts.name,
-      recruitmentStatus: cohorts.recruitmentStatus,
-      isActive: cohorts.isActive,
-      startDate: cohorts.startDate,
-      endDate: cohorts.endDate,
-      order: cohorts.order,
-      applicationCount: count(applications.id),
-    })
-    .from(cohorts)
-    .leftJoin(applications, eq(applications.cohortId, cohorts.id))
-    .groupBy(cohorts.id)
-    .orderBy(desc(cohorts.order), desc(cohorts.createdAt))
-    .catch((error) => {
-      hasDbError = true;
+  const { rows, hasDbError } = await (async () => {
+    try {
+      const rows = await db
+        .select({
+          id: cohorts.id,
+          name: cohorts.name,
+          recruitmentStatus: cohorts.recruitmentStatus,
+          isActive: cohorts.isActive,
+          startDate: cohorts.startDate,
+          endDate: cohorts.endDate,
+          order: cohorts.order,
+          applicationCount: count(applications.id),
+        })
+        .from(cohorts)
+        .leftJoin(applications, eq(applications.cohortId, cohorts.id))
+        .groupBy(cohorts.id)
+        .orderBy(desc(cohorts.order), desc(cohorts.createdAt));
+
+      return { rows, hasDbError: false };
+    } catch (error) {
       console.error("[admin/recruitment] DB 조회 오류:", error);
-      return [];
-    });
+      return { rows: [], hasDbError: true };
+    }
+  })();
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">

@@ -40,31 +40,33 @@ export default async function AdminClassLogsPage() {
   // 🔒 관리자 권한 확인 - 관리자가 아니면 접근 불가
   await requireAdmin();
 
-  let hasDbError = false;
-
   // 📊 DB에서 수업일지 데이터 조회
   // - classLogs: 수업일지 테이블
   // - users: 작성자 정보 가져오기 (innerJoin 사용 → 필수)
   // - cohorts: 기수 정보 (leftJoin 사용 → 선택사항, 없어도 됨)
   // - 최신 수업일을 먼저 보여줌 (orderBy desc)
-  const rows = await db
-    .select({
-      id: classLogs.id,
-      title: classLogs.title,
-      classDate: classLogs.classDate,
-      createdAt: classLogs.createdAt,
-      authorName: users.name,
-      cohortName: cohorts.name,
-    })
-    .from(classLogs)
-    .innerJoin(users, eq(classLogs.authorId, users.id))
-    .leftJoin(cohorts, eq(classLogs.cohortId, cohorts.id))
-    .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt))
-    .catch((error) => {
-      hasDbError = true;
+  const { rows, hasDbError } = await (async () => {
+    try {
+      const rows = await db
+        .select({
+          id: classLogs.id,
+          title: classLogs.title,
+          classDate: classLogs.classDate,
+          createdAt: classLogs.createdAt,
+          authorName: users.name,
+          cohortName: cohorts.name,
+        })
+        .from(classLogs)
+        .innerJoin(users, eq(classLogs.authorId, users.id))
+        .leftJoin(cohorts, eq(classLogs.cohortId, cohorts.id))
+        .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
+
+      return { rows, hasDbError: false };
+    } catch (error) {
       console.error("[admin/resources] DB 조회 오류:", error);
-      return [];
-    });
+      return { rows: [], hasDbError: true };
+    }
+  })();
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">

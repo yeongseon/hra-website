@@ -15,7 +15,7 @@ import { ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { galleries, galleryImages } from "@/lib/db/schema";
+import { galleries } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 

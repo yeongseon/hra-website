@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 type Props = {
@@ -25,12 +26,12 @@ export default function RootError({ error, reset }: Props) {
           >
             다시 시도
           </button>
-          <a
+          <Link
             href="/"
             className="rounded-md border border-white/20 px-4 py-2 font-medium text-white hover:bg-white/10"
           >
             홈으로 돌아가기
-          </a>
+          </Link>
         </div>
       </div>
     </div>

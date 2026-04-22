@@ -10,6 +10,7 @@
 
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AlertCircle, ImagePlus, Trash2, Loader2 } from "lucide-react";
@@ -229,7 +230,14 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                       >
-                        <img src={previewUrl ?? ""} alt="기수 이미지 미리보기" className="aspect-video w-full object-cover" />
+                        <Image
+                          src={previewUrl ?? ""}
+                          alt="기수 이미지 미리보기"
+                          width={1200}
+                          height={675}
+                          unoptimized
+                          className="aspect-video w-full object-cover"
+                        />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                           <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm">
                             <ImagePlus className="size-4" />
@@ -401,7 +409,7 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                   className="h-10"
                 />
                 <p className="text-xs text-slate-500">
-                  모집 상태가 "OPEN"일 때 공개 모집 페이지의 "지원하기" 버튼이 이 링크로 연결됩니다.
+                  모집 상태가 &quot;OPEN&quot;일 때 공개 모집 페이지의 &quot;지원하기&quot; 버튼이 이 링크로 연결됩니다.
                 </p>
                 {state.fieldErrors?.googleFormUrl ? (
                   <p className="text-xs text-red-600">{state.fieldErrors.googleFormUrl}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ImagePlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,14 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
             <ImagePlus className="size-4" />
             업로드 미리보기
           </div>
-          <img src={previewUrl} alt="업로드 미리보기" className="h-56 w-full object-cover" />
+          <Image
+            src={previewUrl}
+            alt="업로드 미리보기"
+            width={1200}
+            height={672}
+            unoptimized
+            className="h-56 w-full object-cover"
+          />
         </div>
       ) : null}
 

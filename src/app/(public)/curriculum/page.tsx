@@ -138,7 +138,7 @@ export default function CurriculumPage() {
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-          {curriculumItems.map((item, index) => (
+          {curriculumItems.map((item) => (
             <div 
               key={item.title} 
               className="group relative flex flex-col p-8 sm:p-10 rounded-2xl bg-white border border-[#D9D9D9] shadow-[var(--shadow-soft)] hover:bg-gray-50 hover:border-blue-400 transition-all duration-500 overflow-hidden"

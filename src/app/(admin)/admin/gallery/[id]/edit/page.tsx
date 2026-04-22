@@ -7,6 +7,7 @@
  * - 삭제 시 현재 커버 이미지 상태를 함께 보여줍니다.
  */
 
+import Image from "next/image";
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, ImageIcon, Star, Trash2 } from "lucide-react";
@@ -145,9 +146,11 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
                   >
                     <div className="relative h-44 w-full bg-slate-100">
                       {image.url ? (
-                        <img
+                        <Image
                           src={image.url}
                           alt={image.alt ?? "갤러리 이미지"}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
                           className="h-full w-full object-cover"
                         />
                       ) : (

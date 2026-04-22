@@ -7,6 +7,7 @@
  * - 수정/삭제 액션을 UUID 기반 편집 경로와 서버 액션에 연결합니다.
  */
 
+import Image from "next/image";
 import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { CalendarDays, ImageIcon, PencilLine, Plus } from "lucide-react";
@@ -90,9 +91,11 @@ export default async function AdminGalleryPage() {
             return (
               <Card key={album.id} className="overflow-hidden border-slate-200 bg-white py-0 shadow-sm">
                 {album.coverImageUrl ? (
-                  <img
+                  <Image
                     src={album.coverImageUrl}
                     alt={album.title}
+                    width={960}
+                    height={416}
                     className="h-52 w-full bg-slate-100 object-cover"
                   />
                 ) : (

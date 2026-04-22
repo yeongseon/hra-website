@@ -111,13 +111,9 @@ export default async function FacultyPage() {
         formerPosition: faculty.formerPosition,
         imageUrl: faculty.imageUrl,
         order: faculty.order,
-        createdAt: faculty.createdAt,
       })
       .from(faculty)
-      .orderBy(asc(faculty.order), asc(faculty.createdAt))
-      .then((rows) =>
-        rows.map(({ createdAt: _createdAt, ...member }) => member)
-      );
+      .orderBy(asc(faculty.order), asc(faculty.createdAt));
   } catch {
     allFaculty = [];
   }

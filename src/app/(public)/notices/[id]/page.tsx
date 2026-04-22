@@ -115,14 +115,14 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
           <div className="markdown-preview break-words text-[#1a1a1a]">
             <ReactMarkdown
               components={{
-                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
-                h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
-                h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
-                p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
-                ul: ({ node, ...props }) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
-                ol: ({ node, ...props }) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
-                li: ({ node, ...props }) => <li className="text-sm" {...props} />,
-                code: ({ node, className, children, ...props }) => {
+                h1: (props) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
+                h2: (props) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
+                h3: (props) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
+                p: (props) => <p className="mb-4 leading-relaxed" {...props} />,
+                ul: (props) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
+                ol: (props) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
+                li: (props) => <li className="text-sm" {...props} />,
+                code: ({ className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || "");
                   if (!match) {
                     return (
@@ -138,19 +138,19 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
                     </code>
                   );
                 },
-                pre: ({ node, ...props }) => (
+                pre: (props) => (
                   <pre className="block bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
                 ),
-                a: ({ node, ...props }) => <a className="text-[#2563EB] underline" {...props} />,
-                blockquote: ({ node, ...props }) => (
+                a: (props) => <a className="text-[#2563EB] underline" {...props} />,
+                blockquote: (props) => (
                   <blockquote
                     className="border-l-4 border-[#D9D9D9] pl-4 italic text-[#666666] mb-4"
                     {...props}
                   />
                 ),
-                hr: ({ node, ...props }) => <hr className="border-[#D9D9D9] my-6" {...props} />,
-                strong: ({ node, ...props }) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
-                em: ({ node, ...props }) => <em className="italic" {...props} />,
+                hr: (props) => <hr className="border-[#D9D9D9] my-6" {...props} />,
+                strong: (props) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
+                em: (props) => <em className="italic" {...props} />,
               }}
             >
               {notice.content}

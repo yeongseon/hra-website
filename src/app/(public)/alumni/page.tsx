@@ -113,7 +113,7 @@ export default async function AlumniPage() {
 
             <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
               <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl">
-                "{story.quote}"
+                &quot;{story.quote}&quot;
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-[#666666]">
                 {story.story}
