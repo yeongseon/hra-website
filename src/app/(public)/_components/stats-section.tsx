@@ -86,7 +86,7 @@ export function StatsSection() {
           observer.disconnect();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.3, rootMargin: "0px 0px -100px 0px" }
     );
 
     if (statsRef.current) {
@@ -97,7 +97,7 @@ export function StatsSection() {
   }, []);
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto w-full border-t border-[#D9D9D9]" ref={statsRef}>
+    <section className="py-32 px-4 max-w-7xl mx-auto w-full" ref={statsRef}>
       <div className="flex flex-col items-center text-center mb-16">
         <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
           HRA 성과

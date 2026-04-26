@@ -55,16 +55,29 @@ export default async function CohortsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
-      <section className="mb-10 space-y-4 sm:mb-14">
-        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          기수 안내
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
-          기수 소개
-        </h1>
-        <p className="max-w-2xl text-sm text-[#666666] md:text-base">
-          HRA의 역대 기수를 소개합니다. 현재까지 총 {totalCohorts}기가 함께했습니다.
-        </p>
+      <section className="mb-10 sm:mb-14 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+              기수 소개
+            </h1>
+          </div>
+          <p className="max-w-2xl text-sm text-[#666666] md:text-base">
+            HRA의 역대 기수를 소개합니다. 현재까지 총 {totalCohorts}기가 함께했습니다.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col justify-center w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
+            <span className="text-xs sm:text-sm font-medium text-[#666666] mb-1">총 기수</span>
+            <span className="text-xl sm:text-2xl font-bold text-[#2563EB]">{totalCohorts}기</span>
+          </div>
+          <div className="flex flex-col justify-center w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
+            <span className="text-xs sm:text-sm font-medium text-[#666666] mb-1">총 수료생</span>
+            <span className="text-xl sm:text-2xl font-bold text-[#2563EB]">406명</span>
+          </div>
+        </div>
       </section>
 
       {cohortData.length > 0 ? (
@@ -96,7 +109,7 @@ export default async function CohortsPage() {
                     {cohort.name}
                   </h2>
                   {cohort.isActive ? (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 rounded-full px-3 py-1">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 rounded-full px-3 py-1">
                       진행 중
                     </Badge>
                   ) : (

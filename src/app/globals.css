@@ -130,5 +130,6 @@
   }
   html {
     @apply font-sans;
+    font-size: 18.4px;
   }
 }
