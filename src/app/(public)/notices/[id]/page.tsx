@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, eq, lt, gt, asc, desc } from "drizzle-orm";
+import { and, eq, lt, gt, asc, desc, sql } from "drizzle-orm";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -88,6 +88,11 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     notFound();
   }
 
+  db.update(notices)
+    .set({ viewCount: sql`${notices.viewCount} + 1` })
+    .where(eq(notices.id, notice.id))
+    .then(() => {});
+
   const [prevNotice] = await db
     .select({ id: notices.id, title: notices.title })
     .from(notices)
@@ -125,14 +130,19 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
 
       <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
         <CardHeader className="border-b border-[#D9D9D9] py-6 sm:py-8">
-          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">
-            {notice.title}
-          </CardTitle>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-1 h-8 bg-[#2563EB] rounded-full shrink-0" />
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">
+              {notice.title}
+            </CardTitle>
+          </div>
           <div className="flex flex-wrap items-center gap-4 text-xs text-[#666666] md:text-sm">
+            <span>작성자 : 관리자</span>
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-3.5" />
-              {formatDate(notice.createdAt)}
+              작성일 : {formatDate(notice.createdAt)}
             </span>
+            <span>조회수 : {notice.viewCount}</span>
           </div>
         </CardHeader>
         <CardContent className="py-6 sm:py-10">
