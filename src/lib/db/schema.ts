@@ -469,6 +469,42 @@ export const pressArticles = pgTable("press_articles", {
 });
 
 // ============================================================
+// Report Templates (보고서 양식 / 작성 가이드 테이블)
+// ============================================================
+
+// 보고서 양식과 작성 가이드의 본문(Markdown)을 DB에 저장합니다.
+// 회원 자료실(/member/templates, /member/guides)과 관리자 페이지에서 공유합니다.
+// - category: "template" | "guide"
+//   * template: 보고서 작성용 양식(경영서/고전명작/기업실무 등)
+//   * guide: 작성 가이드(보고서 작성 가이드, Markdown 가이드, 제출 안내 등)
+// - reportCategory: 양식의 분야 코드 (template일 때만 의미 있음)
+//   * "management-book" | "classic-book" | "business-practice"
+// - slug: URL 식별자 (예: "management-book-template", "report-writing-guide")
+// - body: Markdown 본문 (frontmatter 제외, 순수 본문만 저장)
+export const reportTemplateCategoryEnum = pgEnum("report_template_category", [
+  "template",
+  "guide",
+]);
+
+export const reportTemplates = pgTable("report_templates", {
+  id: uuid("id").primaryKey().defaultRandom(), // 양식/가이드 고유 ID
+  slug: varchar("slug", { length: 200 }).notNull().unique(), // URL 식별자 (유일)
+  title: varchar("title", { length: 300 }).notNull(), // 표시 제목
+  category: reportTemplateCategoryEnum("category").notNull(), // template | guide
+  reportCategory: varchar("report_category", { length: 50 }), // 분야 코드 (template일 때만)
+  description: text("description"), // 짧은 설명 (목록 페이지 노출용)
+  version: varchar("version", { length: 20 }).notNull().default("1.0.0"), // 양식 버전
+  body: text("body").notNull(), // Markdown 본문 (frontmatter 제외)
+  published: boolean("published").notNull().default(true), // 공개 여부 (false면 회원에게 비노출)
+  order: integer("order").notNull().default(0), // 목록 정렬 순서
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
 // Type exports (타입 내보내기)
 // ============================================================
 
@@ -491,3 +527,5 @@ export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
 export type WeeklyText = typeof weeklyTexts.$inferSelect;
 export type Guidebook = typeof guidebooks.$inferSelect;
 export type PressArticle = typeof pressArticles.$inferSelect;
+export type ReportTemplate = typeof reportTemplates.$inferSelect;
+export type NewReportTemplate = typeof reportTemplates.$inferInsert;

@@ -51,3 +51,6 @@ next-env.d.ts
 /KakaoTalk_Photo_*.jpeg
 /KakaoTalk_Photo_*.jpg
 /KakaoTalk_Photo_*.png
+
+# 테스트 산출물 (Playwright last-run 등)
+test-results/
