@@ -93,7 +93,7 @@ export default function AboutPage() {
               <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6 transition-colors duration-300 group-hover:border-[#2563EB]">
                 <Globe className="w-10 h-10 text-[#2563EB]" />
               </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">비영리(NPO) 기반</h3>
+              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">비영리 기반</h3>
               <p className="text-[#666666] text-sm leading-relaxed max-w-[200px]">수익이 아닌 청년의 성장을 중심에 두고 운영됩니다.</p>
             </div>
             

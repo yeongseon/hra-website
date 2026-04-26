@@ -48,7 +48,7 @@ export default async function AlumniPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-14">
         <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          HRA ALUMNI
+          수료생 이야기
         </Badge>
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
           수료생 이야기

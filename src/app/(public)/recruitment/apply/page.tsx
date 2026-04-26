@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ApplyForm from "./_components/apply-form";
@@ -17,6 +17,7 @@ export default async function RecruitmentApplyPage(props: PageProps<"/recruitmen
       .where(
         and(eq(cohorts.recruitmentStatus, "OPEN"), eq(cohorts.isActive, true))
       )
+      .orderBy(asc(cohorts.order), asc(cohorts.createdAt))
       .limit(1);
 
     if (!openCohort) {

@@ -143,6 +143,12 @@ export async function submitApplication(
   const normalizedEmail = parsed.data.email.trim().toLowerCase();
 
   return db.transaction(async (tx) => {
+    // advisory lock으로 동일 이메일 동시 제출 직렬화
+    const emailHash = normalizedEmail.split("").reduce((acc, ch) => {
+      return ((acc << 5) - acc + ch.charCodeAt(0)) | 0;
+    }, 0);
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${emailHash})`);
+
     if (ip) {
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
       const [ipCount] = await tx
