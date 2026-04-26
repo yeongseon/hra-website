@@ -62,7 +62,6 @@ export default async function EditTemplatePage({ params }: Props) {
           order: target.order,
         }}
         submitLabel="변경 저장"
-        successMessage="양식이 수정되었습니다."
       />
     </section>
   );
