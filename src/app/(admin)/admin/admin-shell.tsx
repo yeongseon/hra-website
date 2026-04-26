@@ -20,6 +20,7 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   FileText,
+  FileCheck2,
   FolderOpen,
   GalleryHorizontal,
   GraduationCap,
@@ -62,6 +63,7 @@ const navItems = [
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
   { href: "/admin/faq-contact", label: "FAQ 연락처", icon: Phone },
+  { href: "/admin/templates", label: "보고서 양식", icon: FileCheck2 },
   { href: "/admin/resources", label: "자료실", icon: FolderOpen },
   { href: "/admin/applications", label: "지원서", icon: FileText },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
