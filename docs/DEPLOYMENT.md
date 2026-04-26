@@ -122,12 +122,17 @@ https://hra-website-theta.vercel.app/api/auth/callback/google
 10. 이 두 값을 Vercel에 넣으면 돼요:
     - 클라이언트 ID → `AUTH_GOOGLE_ID`
     - 클라이언트 보안 비밀번호 → `AUTH_GOOGLE_SECRET`
+11. Vercel에서 **Redeploy 실행** (Deployments 탭 → 최신 배포 옆 ⋯ → Redeploy)
+
+> ⚠️ 환경변수는 빌드 시점에 주입되므로, 변수 추가 후 반드시 재배포해야 구글 로그인 버튼이 화면에 나타납니다.
 
 > 💡 이 설정이 없어도 사이트는 정상 작동해요! 구글 로그인 버튼만 안 보일 뿐이에요.
 
 #### ⑥ 카카오 로그인 (`AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`)
 
 카카오톡 계정으로 로그인할 수 있게 해주는 열쇠예요.
+
+> 💡 **도메인 구입 전에도 바로 등록 가능해요.** Vercel 기본 주소(`xxx.vercel.app`)도 카카오에서 정상 도메인으로 인정해줘요. 나중에 커스텀 도메인을 사면 그때 Redirect URI 한 줄만 추가하면 됩니다.
 
 1. 브라우저에서 [Kakao Developers](https://developers.kakao.com/)에 로그인해요
 2. 상단 메뉴에서 **내 애플리케이션** → **애플리케이션 추가하기** 클릭
@@ -145,15 +150,26 @@ https://hra-website-theta.vercel.app/api/auth/callback/kakao
 ```
 
 > 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
+> 👉 나중에 커스텀 도메인(예: `hra.kr`)을 연결하면 `https://hra.kr/api/auth/callback/kakao`도 추가하세요.
 
 7. 왼쪽 메뉴에서 **동의항목** 설정:
    - 닉네임: **필수 동의**
    - 프로필 사진: **선택 동의**
-   - 이메일: **필수 동의**
+   - 이메일: **선택 동의** 또는 생략
 
-8. 왼쪽 메뉴에서 **보안** → **Client Secret** → **코드 생성** 클릭 → 이게 `AUTH_KAKAO_SECRET`
+> ⚠️ **이메일을 "필수 동의"로 설정하려면 카카오 비즈앱 심사가 필요해요.** 일반 개발자 앱은 이메일 필수 동의가 거부됩니다. 처음에는 닉네임만 받아도 로그인은 정상 동작하니, 나중에 비즈앱 신청 후 이메일을 추가해도 됩니다.
 
-9. Vercel에 `AUTH_KAKAO_ID`와 `AUTH_KAKAO_SECRET`을 등록!
+8. 왼쪽 메뉴에서 **보안** → **Client Secret** → **코드 생성** 클릭 → **활성화 상태를 "사용함"으로 변경** → 이게 `AUTH_KAKAO_SECRET`
+
+> ⚠️ Client Secret은 생성만 하고 "사용함" 토글을 안 켜면 적용되지 않아요.
+
+9. Vercel 대시보드 → 프로젝트 → **Settings** → **Environment Variables**에 두 키를 등록해요:
+   - `AUTH_KAKAO_ID` (Production + Preview 둘 다 체크)
+   - `AUTH_KAKAO_SECRET` (Production + Preview 둘 다 체크)
+
+10. **Vercel에서 Redeploy 실행** (Deployments 탭 → 최신 배포 옆 ⋯ → Redeploy)
+
+> ⚠️ **환경변수는 빌드 시점에 주입되므로, 변수 추가 후 반드시 재배포해야 카카오 로그인 버튼이 화면에 나타납니다.** 등록만 하고 재배포를 안 하면 버튼이 계속 숨겨진 상태로 보여요.
 
 > 💡 이 설정이 없어도 사이트는 정상 작동해요! 카카오 로그인 버튼만 안 보일 뿐이에요.
 
