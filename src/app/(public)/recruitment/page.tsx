@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { CalendarDays, ImageIcon } from "lucide-react";
+import { CalendarDays, ImageIcon, Check } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
+import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
+import { EnvelopeIcon } from "./_components/envelope-icon";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,11 @@ const processSteps = [
     step: "STEP 5",
     title: "입학식",
     description: "매년 9월, 수료식과 동시에 신입 기수 입학식이 개최됩니다.",
+  },
+  {
+    step: "STEP 6",
+    title: "교육 시작",
+    description: "9월부터 약 1년간의 교육 프로그램이 시작됩니다.",
   },
 ] as const;
 
@@ -129,35 +136,20 @@ export default async function RecruitmentPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-16">
-        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          HRA RECRUITMENT
-        </Badge>
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-6xl">
               모집안내
             </h1>
-            {openCohort?.googleFormUrl ? (
-              <a
-                href={openCohort.googleFormUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex shrink-0 items-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                지원하기
-              </a>
-            ) : (
-              <span className="inline-flex shrink-0 items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-400">
-                지원하기
-              </span>
-            )}
           </div>
-          {dDayText ? (
-            <Badge className="shrink-0 border-red-300 bg-red-50 text-red-700">{dDayText}</Badge>
-          ) : (
-            <div className="shrink-0" />
-          )}
+          
+          <div className="flex items-start gap-4 shrink-0">
+            {dDayText ? (
+              <Badge className="shrink-0 border-red-300 bg-red-50 text-red-700 mt-1">{dDayText}</Badge>
+            ) : null}
+            <EnvelopeIcon url={openCohort?.googleFormUrl ?? null} />
+          </div>
         </div>
 
         <p className="mt-4 max-w-3xl text-sm text-[#666666] md:text-base">
@@ -166,37 +158,40 @@ export default async function RecruitmentPage() {
 
         <div className="mt-8 rounded-2xl border border-[#D9D9D9] bg-white p-6">
           <h2 className="mb-4 text-lg font-semibold text-[#1a1a1a]">지원 자격</h2>
-          <ul className="list-inside list-disc space-y-2 text-sm text-[#666666]">
+          <ul className="space-y-3">
             {qualifications.map((qualification) => (
-              <li key={qualification}>{qualification}</li>
+              <li key={qualification} className="group flex items-center gap-3 text-sm text-[#666666]">
+                <span className="w-5 h-5 rounded-full border border-[#D9D9D9] flex items-center justify-center group-hover:bg-[#2563EB] group-hover:border-[#2563EB] transition-colors">
+                  <Check className="w-3 h-3 text-transparent group-hover:text-white transition-colors" />
+                </span>
+                {qualification}
+              </li>
             ))}
           </ul>
         </div>
       </section>
 
-      <section className="mb-10 flex flex-col items-stretch gap-4 sm:mb-16 xl:flex-row">
-        {processSteps.map((item, index) => (
-          <div key={item.step} className="flex w-full flex-col items-center gap-4 xl:flex-1 xl:flex-row">
-            <Card className="h-full w-full rounded-2xl border border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
-              <CardHeader className="space-y-2 pb-3 pt-5">
-                <Badge variant="outline" className="w-fit border-gray-300 bg-gray-50 text-gray-600">
-                  {item.step}
-                </Badge>
-                <CardTitle className="text-lg font-semibold text-[#1a1a1a]">{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-5 text-sm leading-6 text-[#666666]">
-                {item.description}
-              </CardContent>
-            </Card>
-
-            {index < processSteps.length - 1 ? (
-              <div className="flex shrink-0 items-center justify-center py-2 text-2xl font-bold text-blue-600 xl:px-2 xl:py-0">
-                <span className="block xl:hidden">↓</span>
-                <span className="hidden xl:block">→</span>
+      <section className="mb-10 sm:mb-16">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {processSteps.map((item, index) => (
+            <Fragment key={item.step}>
+              <div className="group relative">
+                <button type="button" className="rounded-full border border-[#D9D9D9] bg-white px-5 py-2.5 text-sm font-medium text-[#1a1a1a] shadow-sm transition-colors hover:bg-[#2563EB] hover:text-white hover:border-[#2563EB] cursor-default">
+                  {item.title}
+                </button>
+                <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg">
+                    <p className="font-semibold mb-1">{item.step}</p>
+                    {item.description}
+                  </div>
+                </div>
               </div>
-            ) : null}
-          </div>
-        ))}
+              {index < processSteps.length - 1 && (
+                <span className="text-[#D9D9D9] text-lg">→</span>
+              )}
+            </Fragment>
+          ))}
+        </div>
       </section>
 
       <section className="space-y-4">

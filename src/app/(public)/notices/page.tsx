@@ -50,15 +50,12 @@ export default async function NoticesPage({
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 sm:mb-14 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div className="space-y-4">
-          <Badge
-            variant="outline"
-            className="border-blue-300 bg-blue-50 text-blue-700"
-          >
-            HRA NOTICE
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-[#1a1a1a]">
-            공지사항
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-[#1a1a1a]">
+              공지사항
+            </h1>
+          </div>
           <p className="max-w-2xl text-sm text-[#666666] md:text-base">
             HRA의 최신 소식과 중요 공지를 확인하세요.
           </p>

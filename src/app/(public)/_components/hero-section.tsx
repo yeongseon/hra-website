@@ -53,11 +53,11 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative flex flex-col items-start justify-center min-h-[90vh] px-4 overflow-hidden text-left bg-gray-900">
+    <section className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 overflow-hidden text-center bg-gray-900">
       <Image src="/images/hero-bg.jpeg" alt="HRA 수업 현장" fill className="object-cover z-0" priority />
       <div className="absolute inset-0 z-0 bg-black/50" />
 
-      <div className="relative z-10 flex flex-col items-start text-left max-w-5xl gap-6 w-full mx-auto">
+      <div className="relative z-10 flex flex-col items-center text-center max-w-5xl gap-6 w-full mx-auto">
         <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
           HUMAN RENAISSANCE ACADEMY
         </h2>
@@ -70,11 +70,13 @@ export function HeroSection() {
           {renderHeading()}
         </h1>
 
-        <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide px-6 sm:px-10 md:px-16 leading-relaxed mt-4 sm:whitespace-nowrap">
+        <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide leading-relaxed mt-4 sm:whitespace-nowrap">
           고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
         </p>
 
-        <div className="mt-10" />
+        <a href="/recruitment" className="inline-flex items-center rounded-full bg-[#2563EB] px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 mt-6">
+          모집안내 보기
+        </a>
       </div>
     </section>
   );

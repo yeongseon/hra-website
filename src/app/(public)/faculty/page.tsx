@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { asc } from "drizzle-orm";
 
-import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
+import { FacultyTabs } from "./_components/faculty-tabs";
 
 export const metadata: Metadata = {
   title: "교수진 소개",
@@ -60,44 +60,6 @@ const fallbackFacultyByCategory: Record<FacultyCategory, FacultyMember[]> = {
   LECTURE: fallbackSpecialLecture,
 };
 
-const categoryLabels: Record<FacultyCategory, string> = {
-  CLASSICS: "고전 명작",
-  BUSINESS: "케이스 스터디",
-  LECTURE: "특강",
-};
-
-function FacultyList({ members }: { members: FacultyMember[] }) {
-  if (members.length === 0) {
-    return (
-      <div className="rounded-2xl border border-[#D9D9D9] bg-white px-6 py-10 text-center text-sm text-[#666666] shadow-[var(--shadow-soft)] sm:text-base">
-        등록된 교수진 정보가 없습니다.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-[#D9D9D9] bg-white px-6 shadow-[var(--shadow-soft)]">
-      {members.map((member) => (
-        <div
-          key={member.id}
-          className="flex gap-6 border-b border-[#D9D9D9] py-6 last:border-0"
-        >
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-50 text-lg font-bold text-blue-600">
-            {member.name.charAt(0)}
-          </div>
-          <div className="flex flex-col justify-center">
-            <h3 className="mb-1 text-lg font-bold text-blue-600">{member.name}</h3>
-            <div className="space-y-1 text-sm leading-relaxed text-[#1a1a1a] md:text-base">
-              {member.currentPosition ? <p>(現) {member.currentPosition}</p> : null}
-              {member.formerPosition ? <p>(前) {member.formerPosition}</p> : null}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default async function FacultyPage() {
   let allFaculty: FacultyMember[] = [];
 
@@ -131,41 +93,18 @@ export default async function FacultyPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 text-center sm:mb-14 sm:text-left">
-        <Badge
-          variant="outline"
-          className="border-blue-300 bg-blue-50 text-blue-700"
-        >
-          HRA FACULTY
-        </Badge>
-        <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a] sm:text-4xl md:text-5xl">
-          교수진 소개
-        </h1>
+        <div className="flex items-center gap-3 justify-center sm:justify-start">
+          <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+          <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a] sm:text-4xl md:text-5xl">
+            교수진 소개
+          </h1>
+        </div>
         <p className="mx-auto max-w-2xl text-sm text-[#666666] sm:mx-0 md:text-base">
           HRA의 교육을 이끄는 교수진을 소개합니다.
         </p>
       </section>
 
-      <div className="space-y-12 sm:space-y-16">
-        {(["CLASSICS", "BUSINESS", "LECTURE"] as const).map((category) => (
-          <section key={category}>
-            <div className="mb-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
-                  {categoryLabels[category]}
-                </h2>
-                <Badge
-                  variant="outline"
-                  className="border-[#D9D9D9] bg-white text-[#666666]"
-                >
-                  {displayFacultyByCategory[category].length}명
-                </Badge>
-              </div>
-              <div className="mt-3 h-0.5 w-full bg-blue-600" />
-            </div>
-            <FacultyList members={displayFacultyByCategory[category]} />
-          </section>
-        ))}
-      </div>
+      <FacultyTabs displayFacultyByCategory={displayFacultyByCategory} />
     </div>
   );
 }

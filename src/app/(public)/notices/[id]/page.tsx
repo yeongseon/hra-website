@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, eq } from "drizzle-orm";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { and, eq, lt, gt, asc, desc } from "drizzle-orm";
+import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { z } from "zod/v4";
@@ -88,6 +88,30 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     notFound();
   }
 
+  const [prevNotice] = await db
+    .select({ id: notices.id, title: notices.title })
+    .from(notices)
+    .where(
+      and(
+        eq(notices.status, "PUBLISHED"),
+        lt(notices.createdAt, notice.createdAt)
+      )
+    )
+    .orderBy(desc(notices.createdAt))
+    .limit(1);
+
+  const [nextNotice] = await db
+    .select({ id: notices.id, title: notices.title })
+    .from(notices)
+    .where(
+      and(
+        eq(notices.status, "PUBLISHED"),
+        gt(notices.createdAt, notice.createdAt)
+      )
+    )
+    .orderBy(asc(notices.createdAt))
+    .limit(1);
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <div className="mb-8">
@@ -158,6 +182,30 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-8 flex items-center justify-between gap-4">
+        {prevNotice ? (
+          <Link href={`/notices/${prevNotice.id}`} className="flex items-center gap-2 text-sm text-[#666666] hover:text-[#1a1a1a] transition-colors">
+            <ArrowLeft className="size-4" />
+            <div>
+              <div className="text-xs text-[#666666]">이전글</div>
+              <div className="font-medium text-[#1a1a1a]">{prevNotice.title}</div>
+            </div>
+          </Link>
+        ) : <div />}
+        <Link href="/notices">
+          <Button variant="outline" className="border-[#D9D9D9] text-[#666666] hover:bg-gray-50">목록</Button>
+        </Link>
+        {nextNotice ? (
+          <Link href={`/notices/${nextNotice.id}`} className="flex items-center gap-2 text-sm text-[#666666] hover:text-[#1a1a1a] transition-colors text-right">
+            <div>
+              <div className="text-xs text-[#666666]">다음글</div>
+              <div className="font-medium text-[#1a1a1a]">{nextNotice.title}</div>
+            </div>
+            <ArrowRight className="size-4" />
+          </Link>
+        ) : <div />}
+      </div>
     </div>
   );
 }

@@ -33,7 +33,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-1.5 my-10">
+        <div className="flex flex-col items-center gap-1.5 my-14">
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
@@ -169,9 +169,13 @@ export default function Home() {
         </div>
       </section>
 
-      <StatsSection />
+      <div className="w-full bg-[#FFFFFF]">
+        <StatsSection />
+      </div>
 
-      <AlumniCarousel />
+      <div className="w-full bg-[#f5f5f5]">
+        <AlumniCarousel />
+      </div>
     </div>
   );
 }
