@@ -100,7 +100,7 @@ HRA의 매 기수 모집과 활동 정보를 관리해요.
 👉 기존 관리자가 '회원 관리' 메뉴에서 해당 회원의 역할을 '관리자'로 변경해 주면 돼요. 또는 `seed-admin` 스크립트로 새 계정을 생성할 수 있어요.
 
 **Q: 공지사항이 등록되지 않아요.**
-👉 `GITHUB_TOKEN` 환경변수가 올바르게 설정되어 있는지 확인이 필요해요.
+👉 데이터베이스(`DATABASE_URL`) 연결 상태를 확인해 주세요. 공지사항은 모두 DB에 저장됩니다.
 
 **Q: 이미지 업로드가 실패해요.**
 👉 `BLOB_READ_WRITE_TOKEN` 환경변수 설정이 비어있거나 만료되었을 수 있어요.
@@ -122,7 +122,6 @@ HRA의 매 기수 모집과 활동 정보를 관리해요.
 | **기본 사이트** | `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` | 사이트 접속 불가 |
 | **이미지 업로드** | `BLOB_READ_WRITE_TOKEN` | 갤러리 이미지 업로드 실패 |
 | **소셜 로그인** | `AUTH_GOOGLE_ID/SECRET`, `AUTH_KAKAO_ID/SECRET` | 로그인 화면에서 소셜 버튼이 사라짐 (관리자 로그인은 정상) |
-| **공지사항/갤러리** | `GITHUB_TOKEN`, `GITHUB_REPO` | 공지사항 및 갤러리 관리 불가 |
 | **지원서 조회** | `GOOGLE_SHEETS_API_KEY` | 지원서 목록 확인 불가 |
 
 > 👉 각 환경변수의 **상세 발급 방법**은 [배포 가이드 (DEPLOYMENT.md)](./DEPLOYMENT.md)의 2번 섹션에 스크린샷 수준으로 자세히 나와 있어요!

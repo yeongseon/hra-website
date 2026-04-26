@@ -157,40 +157,7 @@ https://hra-website-theta.vercel.app/api/auth/callback/kakao
 
 > 💡 이 설정이 없어도 사이트는 정상 작동해요! 카카오 로그인 버튼만 안 보일 뿐이에요.
 
-#### ⑦ GitHub CMS 설정 (`GITHUB_TOKEN`, `GITHUB_REPO`)
-
-관리자 화면에서 공지사항이나 갤러리를 직접 쓰고 수정하려면 이 설정이 필요해요. 이게 없으면 관리자 페이지에서 글을 올릴 수 없어요!
-
-**GITHUB_TOKEN 만드는 방법 (따라하기)**
-
-1. 브라우저에서 [github.com](https://github.com/)에 **로그인**해요
-2. 오른쪽 위에 있는 **프로필 사진**을 클릭해요
-3. 메뉴에서 **Settings** (설정)를 클릭해요
-4. 왼쪽 메뉴를 맨 아래까지 내려서 **Developer settings**를 클릭해요
-5. 왼쪽 메뉴에서 **Personal access tokens** → **Tokens (classic)** 클릭
-6. 오른쪽 위의 **Generate new token** → **Generate new token (classic)** 클릭
-7. 아래 내용을 입력해요:
-   - **Note** (메모): `hra-website-cms` (뭐에 쓰는 토큰인지 적는 거예요)
-   - **Expiration** (유효기간): `90 days` 또는 원하는 기간 선택
-   - **Select scopes** (권한): **`repo`** 항목에 체크 ✅ (맨 위에 있어요!)
-
-> ⚠️ `repo`에 체크하면 그 아래 항목들도 자동으로 체크돼요. 그게 정상이에요!
-
-8. 맨 아래 **Generate token** (초록색 버튼)을 클릭해요
-9. 화면에 `ghp_`로 시작하는 긴 문자열이 나와요 → **이걸 바로 복사**하세요!
-
-> ⚠️ **중요**: 이 토큰은 이 화면에서 **딱 한 번만** 보여요! 페이지를 벗어나면 다시 볼 수 없어요. 꼭 복사해서 안전한 곳에 저장해두세요!
-
-10. Vercel에 등록해요:
-    - **Key**: `GITHUB_TOKEN` / **Value**: 방금 복사한 `ghp_...` 값
-    - **Key**: `GITHUB_REPO` / **Value**: `yeongseon/hra-website`
-
-> 👉 `GITHUB_REPO`의 값은 GitHub 저장소 주소에서 `github.com/` 뒤에 오는 부분이에요!
-> 예를 들어 `https://github.com/yeongseon/hra-website`이면 → `yeongseon/hra-website`
-
-> 💡 토큰의 유효기간이 지나면 같은 방법으로 새로 만들어서 Vercel에서 값을 교체하면 돼요.
-
-#### ⑧ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
+#### ⑦ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
 
 관리자 화면에서 구글 폼으로 접수된 지원서를 바로 확인하고 싶을 때 설정해요.
 

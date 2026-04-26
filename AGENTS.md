@@ -132,7 +132,6 @@ src/app/(admin)/admin/[feature]/
 - `import { z } from "zod"` 금지 — 반드시 `"zod/v4"` 사용
 - 영어 UI 텍스트 금지
 - `content/` 폴더의 파일 기반 CMS는 더 이상 사용하지 않음 — 모든 콘텐츠는 DB 기반
-- `src/lib/github.ts`의 GitHub API는 콘텐츠 CRUD에 사용하지 않음
 
 ## 8. 문서화 규칙
 
