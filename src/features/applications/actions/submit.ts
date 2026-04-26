@@ -9,10 +9,15 @@
  */
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { headers } from "next/headers";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { applications, cohorts } from "@/lib/db/schema";
+import {
+  applicationSubmissionsLog,
+  applications,
+  cohorts,
+} from "@/lib/db/schema";
 
 /**
  * 지원서 입력값 유효성 검사 스키마
@@ -119,6 +124,53 @@ export async function submitApplication(
     };
   }
 
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+  const honeypot = normalizeText(formData.get("website"));
+  if (honeypot) {
+    return {
+      success: false,
+      message: "비정상적인 접근입니다.",
+    };
+  }
+
+  const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+  const [ipCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(applicationSubmissionsLog)
+    .where(
+      and(
+        eq(applicationSubmissionsLog.ip, ip),
+        gte(applicationSubmissionsLog.createdAt, oneMinuteAgo)
+      )
+    );
+
+  if (ipCount && ipCount.count >= 3) {
+    return {
+      success: false,
+      message: "너무 많은 요청입니다. 잠시 후 다시 시도해주세요.",
+    };
+  }
+
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [emailCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(applicationSubmissionsLog)
+    .where(
+      and(
+        eq(applicationSubmissionsLog.email, parsed.data.email),
+        gte(applicationSubmissionsLog.createdAt, oneDayAgo)
+      )
+    );
+
+  if (emailCount && emailCount.count >= 1) {
+    return {
+      success: false,
+      message: "동일 이메일로 24시간 내 재지원은 불가합니다.",
+    };
+  }
+
   await db.insert(applications).values({
     cohortId: parsed.data.cohortId,
     applicantName: parsed.data.name,
@@ -128,6 +180,11 @@ export async function submitApplication(
     major: parsed.data.major,
     motivation: parsed.data.motivation,
     additionalInfo: parsed.data.additionalInfo,
+  });
+
+  await db.insert(applicationSubmissionsLog).values({
+    ip,
+    email: parsed.data.email,
   });
 
   return {

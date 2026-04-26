@@ -82,14 +82,22 @@ function ApplyForm() {
         </CardHeader>
         <CardContent className="py-6">
            {/* 폼 시작: action={formAction}으로 Server Action 연결 */}
-           <form action={formAction} className="space-y-5">
-             {/* 기수 ID를 숨겨진 입력 필드로 전달합니다 */}
-             <input type="hidden" name="cohortId" value={cohortId} />
+            <form action={formAction} className="space-y-5">
+              {/* 기수 ID를 숨겨진 입력 필드로 전달합니다 */}
+              <input type="hidden" name="cohortId" value={cohortId} />
 
-             {!cohortId ? (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  모집 기수 정보가 없습니다. 모집안내 페이지에서 다시 접근해주세요.
-                </div>
+              <div
+                className="absolute opacity-0 pointer-events-none"
+                style={{ position: "absolute", left: "-9999px" }}
+                aria-hidden="true"
+              >
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+              </div>
+
+              {!cohortId ? (
+                 <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                   모집 기수 정보가 없습니다. 모집안내 페이지에서 다시 접근해주세요.
+                 </div>
              ) : null}
 
              {/* 

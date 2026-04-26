@@ -506,6 +506,13 @@ export const reportTemplates = pgTable("report_templates", {
     .$onUpdate(() => new Date()),
 });
 
+export const applicationSubmissionsLog = pgTable("application_submissions_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ip: varchar("ip", { length: 45 }),
+  email: varchar("email", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ============================================================
 // Type exports (타입 내보내기)
 // ============================================================
