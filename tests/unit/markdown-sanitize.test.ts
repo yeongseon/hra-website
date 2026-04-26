@@ -61,6 +61,15 @@ describe("sanitizeSchema", () => {
     expect(out).toContain("<table>");
     expect(out).toContain('href="https://example.com"');
   });
+
+  it("표 셀 안의 <br> 태그를 유지한다 (조원 명단 등)", async () => {
+    const out = await renderMarkdown(
+      "| 항목 | 값 |\n|---|---|\n| 조원 | 김철수<br>이영희<br>박민수 |",
+    );
+    expect(out).toContain("<br>");
+    expect(out).toContain("김철수");
+    expect(out).toContain("이영희");
+  });
 });
 
 describe("isAllowedImageUrl", () => {

@@ -46,6 +46,8 @@ export const sanitizeSchema: Options = {
     "blockquote",
     "pre",
     "code",
+    // 표 셀 안 줄바꿈 — 양식의 조원 명단 등에서 사용
+    "br",
   ].filter(
     // 명시적 차단 태그 제거 (이중 안전장치)
     (tag) =>

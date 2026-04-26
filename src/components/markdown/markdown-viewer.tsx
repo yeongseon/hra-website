@@ -15,6 +15,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { isAllowedImageUrl, sanitizeSchema } from "@/lib/markdown/sanitize";
 import { cn } from "@/lib/utils";
@@ -45,7 +46,9 @@ export function MarkdownViewer({ body, className }: MarkdownViewerProps) {
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+        // rehype-raw로 표 셀 안의 <br> 등 화이트리스트된 raw HTML을 파싱한 뒤
+        // rehype-sanitize로 위험 태그/속성을 차단한다 (순서 중요).
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
           // 외부 링크는 새 탭으로 열고 보안 속성을 강제
           a: ({ href, children, ...props }) => {
