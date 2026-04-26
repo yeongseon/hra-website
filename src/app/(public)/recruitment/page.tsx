@@ -31,7 +31,7 @@ const processSteps = [
   },
   {
     step: "3단계",
-    title: "면접",
+    title: "면접 진행",
     description:
       "3:1로 진행됩니다. 면접은 매년 5~6월 중 실시되며, 구체적인 일정은 서류 합격자에게 별도 안내됩니다.",
   },
@@ -43,13 +43,14 @@ const processSteps = [
   },
   {
     step: "5단계",
-    title: "입학식",
-    description: "매년 9월, 수료식과 동시에 신입 기수 입학식이 개최됩니다.",
+    title: "사전 학습",
+    description:
+      "합격자를 대상으로 입학 전 사전 학습 과정이 진행됩니다. 본 교육에 앞서 기본적인 소양을 쌓는 시간입니다.",
   },
   {
     step: "6단계",
-    title: "교육 시작",
-    description: "9월부터 약 1년간의 교육 프로그램이 시작됩니다.",
+    title: "입학식",
+    description: "매년 9월, 수료식과 동시에 신입 기수 입학식이 개최됩니다.",
   },
 ] as const;
 
@@ -97,26 +98,7 @@ export default async function RecruitmentPage() {
 
   const [settings] = await db.select().from(recruitmentSettings).limit(1);
 
-  const dDayText = (() => {
-    if (!settings?.deadlineDate) {
-      return null;
-    }
 
-    const now = new Date();
-    const deadline = new Date(settings.deadlineDate);
-    const diffMs = deadline.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 0) {
-      return `D-${diffDays}`;
-    }
-
-    if (diffDays === 0) {
-      return "D-DAY";
-    }
-
-    return `D+${Math.abs(diffDays)}`;
-  })();
 
   const qualifications = settings?.qualificationText
     ? settings.qualificationText.split("\n").map((value) => value.trim()).filter(Boolean)
@@ -145,15 +127,12 @@ export default async function RecruitmentPage() {
           </div>
           
           <div className="flex items-start gap-4 shrink-0">
-            {dDayText ? (
-              <Badge className="shrink-0 border-red-300 bg-red-50 text-red-700 mt-1">{dDayText}</Badge>
-            ) : null}
-            <EnvelopeIcon url={openCohort?.googleFormUrl ?? null} />
+            <EnvelopeIcon isOpen={isRecruitmentOpen} />
           </div>
         </div>
 
         <p className="mt-4 max-w-3xl text-sm text-[#666666] md:text-base">
-          HRA는 성장에 진심인 사람을 기다립니다.
+          HRA는 배우고 성장하고 싶은 모두를 환영합니다.
         </p>
 
         <div className="mt-8 rounded-2xl border border-[#D9D9D9] bg-white p-6">
@@ -181,7 +160,7 @@ export default async function RecruitmentPage() {
                 <p className="mt-3 text-sm leading-6 text-[#666666]">{item.description}</p>
               </article>
               {index < processSteps.length - 1 && (
-                <span className="hidden self-center text-lg text-[#D9D9D9] md:inline-flex">→</span>
+                <span className="hidden self-center text-lg text-[#D9D9D9] md:inline-flex">&gt;</span>
               )}
             </Fragment>
           ))}
