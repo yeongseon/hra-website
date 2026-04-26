@@ -142,26 +142,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return true;
 
-      if (!account || !user.email) return false;
+      if (!account) return false;
+
+      // 카카오는 비즈앱 심사 없이 이메일을 제공하지 않음
+      // 이메일이 없는 경우 provider + 고유 ID 조합으로 placeholder 이메일 생성
+      const email =
+        user.email || `${account.provider}_${account.providerAccountId}@oauth.placeholder`;
 
       const existingUser = await db.query.users.findFirst({
-        where: eq(users.email, user.email),
+        where: eq(users.email, email),
       });
 
       if (!existingUser) {
         await db.insert(users).values({
           name: user.name || "이름 없음",
-          email: user.email,
+          email,
           image: user.image,
           role: "MEMBER",
         });
       } else if (user.image && existingUser.image !== user.image) {
-        // 프로필 이미지가 변경된 경우 업데이트
         await db
           .update(users)
           .set({ image: user.image })
-          .where(eq(users.email, user.email));
+          .where(eq(users.email, email));
       }
+
+      // NextAuth가 jwt 콜백에서 email로 DB 조회할 수 있도록 user.email 설정
+      user.email = email;
 
       return true;
     },
