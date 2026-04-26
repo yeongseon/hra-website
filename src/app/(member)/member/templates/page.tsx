@@ -56,7 +56,7 @@ export default async function MemberTemplatesPage() {
           보고서 양식
         </h1>
         <p className="max-w-2xl text-sm text-[#666666] md:text-base mx-auto sm:mx-0">
-          분야별 보고서 작성용 표준 양식입니다. 양식을 미리 보고 PDF로 다운로드하여 사용하세요.
+          분야별 보고서 작성용 표준 양식입니다. 양식을 미리 보고 PDF로 저장하여 사용하세요.
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Link

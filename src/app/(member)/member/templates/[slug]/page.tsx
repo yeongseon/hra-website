@@ -48,7 +48,7 @@ export default async function MemberTemplateDetailPage({ params }: Props) {
           className="bg-[#1a1a1a] text-white hover:bg-[#333333]"
         >
           <Printer className="size-4" />
-          PDF로 다운로드
+          PDF로 저장
         </Button>
       </div>
 
