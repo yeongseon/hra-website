@@ -19,6 +19,17 @@ npm test
 | TypeScript | `tsc --noEmit` 0 error | `as any` / `@ts-ignore` 금지 |
 | Next build | 빌드 성공 | `/admin/templates`, `/member/templates`, `/member/guides`, print 라우트 포함 |
 | Vitest | 마크다운 단위 테스트 PASS | `tests/unit/markdown-*.test.ts` |
+| Playwright (auth) | 보호 경로 회귀 PASS | `tests/e2e/auth-protection.spec.ts` — 비로그인 접근 시 `/login` 리다이렉트 |
+
+## 보호 경로 회귀 점검 (필수)
+
+회원/관리자 전용 라우트를 신규 추가하거나 옮길 때마다 **반드시** 다음 두 곳을 함께 갱신해야 한다. 한쪽만 누락되면 비로그인 사용자가 직접 URL로 접근 가능해진다.
+
+1. `src/proxy.ts` — `config.matcher` 배열에 `"/<신규경로>/:path*"` 추가
+2. `src/lib/auth.ts` — `authorized` 콜백에 `pathname.startsWith("/<신규경로>")` 분기 추가
+3. `tests/e2e/auth-protection.spec.ts` — `protectedPaths` 배열에 신규 경로 추가
+
+현재 보호되는 경로 prefix: `/admin`, `/resources`, `/member`, `/mypage`
 
 ## 수동 점검 체크리스트
 
