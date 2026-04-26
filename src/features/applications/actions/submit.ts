@@ -125,7 +125,12 @@ export async function submitApplication(
   }
 
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const forwarded =
+    headersList.get("x-forwarded-for") ??
+    headersList.get("x-real-ip") ??
+    headersList.get("cf-connecting-ip") ??
+    headersList.get("x-vercel-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || null;
 
   const honeypot = normalizeText(formData.get("website"));
   if (honeypot) {
@@ -135,60 +140,66 @@ export async function submitApplication(
     };
   }
 
-  const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-  const [ipCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(applicationSubmissionsLog)
-    .where(
-      and(
-        eq(applicationSubmissionsLog.ip, ip),
-        gte(applicationSubmissionsLog.createdAt, oneMinuteAgo)
-      )
-    );
+  const normalizedEmail = parsed.data.email.trim().toLowerCase();
 
-  if (ipCount && ipCount.count >= 3) {
+  return db.transaction(async (tx) => {
+    if (ip) {
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const [ipCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(applicationSubmissionsLog)
+        .where(
+          and(
+            eq(applicationSubmissionsLog.ip, ip),
+            gte(applicationSubmissionsLog.createdAt, oneMinuteAgo)
+          )
+        );
+
+      if (ipCount && ipCount.count >= 3) {
+        return {
+          success: false,
+          message: "너무 많은 요청입니다. 잠시 후 다시 시도해주세요.",
+        };
+      }
+    }
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [emailCount] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(applicationSubmissionsLog)
+      .where(
+        and(
+          eq(applicationSubmissionsLog.email, normalizedEmail),
+          gte(applicationSubmissionsLog.createdAt, oneDayAgo)
+        )
+      );
+
+    if (emailCount && emailCount.count >= 1) {
+      return {
+        success: false,
+        message: "동일 이메일로 24시간 내 재지원은 불가합니다.",
+      };
+    }
+
+    await tx.insert(applications).values({
+      cohortId: parsed.data.cohortId,
+      applicantName: parsed.data.name,
+      applicantEmail: normalizedEmail,
+      applicantPhone: parsed.data.phone,
+      university: parsed.data.university,
+      major: parsed.data.major,
+      motivation: parsed.data.motivation,
+      additionalInfo: parsed.data.additionalInfo,
+    });
+
+    await tx.insert(applicationSubmissionsLog).values({
+      ip,
+      email: normalizedEmail,
+    });
+
     return {
-      success: false,
-      message: "너무 많은 요청입니다. 잠시 후 다시 시도해주세요.",
+      success: true,
+      message: "지원서가 제출되었습니다. 감사합니다!",
     };
-  }
-
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [emailCount] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(applicationSubmissionsLog)
-    .where(
-      and(
-        eq(applicationSubmissionsLog.email, parsed.data.email),
-        gte(applicationSubmissionsLog.createdAt, oneDayAgo)
-      )
-    );
-
-  if (emailCount && emailCount.count >= 1) {
-    return {
-      success: false,
-      message: "동일 이메일로 24시간 내 재지원은 불가합니다.",
-    };
-  }
-
-  await db.insert(applications).values({
-    cohortId: parsed.data.cohortId,
-    applicantName: parsed.data.name,
-    applicantEmail: parsed.data.email,
-    applicantPhone: parsed.data.phone,
-    university: parsed.data.university,
-    major: parsed.data.major,
-    motivation: parsed.data.motivation,
-    additionalInfo: parsed.data.additionalInfo,
   });
-
-  await db.insert(applicationSubmissionsLog).values({
-    ip,
-    email: parsed.data.email,
-  });
-
-  return {
-    success: true,
-    message: "지원서가 제출되었습니다. 감사합니다!",
-  };
 }

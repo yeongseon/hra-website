@@ -58,45 +58,52 @@ export default async function AlumniPage() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-16 md:gap-24">
-        {stories.map((story, index) => (
-          <article
-            key={story.id}
-            className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-12`}
-          >
-            <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
-              {story.imageUrl ? (
-                <Image
-                  src={story.imageUrl}
-                  alt={`${story.name} 수료생 사진`}
-                  width={600}
-                  height={600}
-                  className="aspect-square w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
-                />
-              ) : (
-                <div
-                  className={`flex aspect-square w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
-                >
-                  <span className="text-sm font-medium text-white/40">수료생 사진</span>
-                </div>
-              )}
-            </div>
-
-            <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
-              <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl">
-                &quot;{story.quote}&quot;
-              </h2>
-              <p className="mt-6 text-lg leading-relaxed text-[#666666]">
-                {story.story}
-              </p>
-              <div className="mt-8">
-                <p className="font-bold text-blue-600">{story.name}</p>
-                {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+      {stories.length === 0 ? (
+        <section className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-12 text-center shadow-[var(--shadow-soft)]">
+          <p className="text-lg font-semibold text-[#1a1a1a]">아직 등록된 수료생 이야기가 없습니다.</p>
+          <p className="text-sm text-[#666666]">수료생 이야기가 등록되면 이곳에 표시됩니다.</p>
+        </section>
+      ) : (
+        <section className="flex flex-col gap-16 md:gap-24">
+          {stories.map((story, index) => (
+            <article
+              key={story.id}
+              className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-12`}
+            >
+              <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
+                {story.imageUrl ? (
+                  <Image
+                    src={story.imageUrl}
+                    alt={`${story.name} 수료생 사진`}
+                    width={600}
+                    height={600}
+                    className="aspect-square w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
+                  />
+                ) : (
+                  <div
+                    className={`flex aspect-square w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
+                  >
+                    <span className="text-sm font-medium text-white/40">수료생 사진</span>
+                  </div>
+                )}
               </div>
-            </div>
-          </article>
-        ))}
-      </section>
+
+              <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
+                <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl">
+                  &quot;{story.quote}&quot;
+                </h2>
+                <p className="mt-6 text-lg leading-relaxed text-[#666666]">
+                  {story.story}
+                </p>
+                <div className="mt-8">
+                  <p className="font-bold text-blue-600">{story.name}</p>
+                  {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
     </div>
   );
 }
