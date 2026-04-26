@@ -27,7 +27,11 @@ export function FacultyTabs({
 }: {
   displayFacultyByCategory: Record<FacultyCategory, FacultyMember[]>;
 }) {
-  const [activeTab, setActiveTab] = useState<FacultyCategory>("CLASSICS");
+  const firstNonEmptyCategory =
+    CATEGORIES.find((category) => displayFacultyByCategory[category.id].length > 0)?.id ??
+    "CLASSICS";
+
+  const [activeTab, setActiveTab] = useState<FacultyCategory>(firstNonEmptyCategory);
 
   const currentMembers = displayFacultyByCategory[activeTab];
 

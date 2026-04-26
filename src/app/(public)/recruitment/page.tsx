@@ -4,7 +4,7 @@ import { CalendarDays, ImageIcon, Check } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { EnvelopeIcon } from "./_components/envelope-icon";
@@ -18,36 +18,36 @@ export const metadata: Metadata = {
 
 const processSteps = [
   {
-    step: "STEP 1",
+    step: "1단계",
     title: "지원서 접수",
     description:
       "홈페이지 내 온라인 지원서를 작성하여 제출합니다. 자기소개, 지원 동기, 향후 계획 등의 항목을 성실하게 작성해 주세요.",
   },
   {
-    step: "STEP 2",
+    step: "2단계",
     title: "서류 심사",
     description:
       "제출된 지원서를 바탕으로 기본 소양, 성장 가능성, 지원 동기의 진정성을 중심으로 평가합니다. 합격자에게는 개별 연락으로 면접 일정을 안내드립니다.",
   },
   {
-    step: "STEP 3",
+    step: "3단계",
     title: "면접",
     description:
       "3:1로 진행됩니다. 면접은 매년 5~6월 중 실시되며, 구체적인 일정은 서류 합격자에게 별도 안내됩니다.",
   },
   {
-    step: "STEP 4",
+    step: "4단계",
     title: "최종 합격",
     description:
       "서류 및 면접 결과를 종합하여 최종 합격자를 선발합니다. 합격자 발표는 홈페이지 공지 및 개별 연락으로 진행됩니다.",
   },
   {
-    step: "STEP 5",
+    step: "5단계",
     title: "입학식",
     description: "매년 9월, 수료식과 동시에 신입 기수 입학식이 개최됩니다.",
   },
   {
-    step: "STEP 6",
+    step: "6단계",
     title: "교육 시작",
     description: "9월부터 약 1년간의 교육 프로그램이 시작됩니다.",
   },
@@ -172,22 +172,16 @@ export default async function RecruitmentPage() {
       </section>
 
       <section className="mb-10 sm:mb-16">
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:justify-center md:gap-2">
           {processSteps.map((item, index) => (
             <Fragment key={item.step}>
-              <div className="group relative">
-                <button type="button" className="rounded-full border border-[#D9D9D9] bg-white px-5 py-2.5 text-sm font-medium text-[#1a1a1a] shadow-sm transition-colors hover:bg-[#2563EB] hover:text-white hover:border-[#2563EB] cursor-default">
-                  {item.title}
-                </button>
-                <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <div className="rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg">
-                    <p className="font-semibold mb-1">{item.step}</p>
-                    {item.description}
-                  </div>
-                </div>
-              </div>
+              <article className="rounded-2xl border border-[#D9D9D9] bg-white p-5 shadow-[var(--shadow-soft)] md:flex md:w-44 md:flex-1 md:flex-col">
+                <p className="text-sm font-semibold text-[#2563EB]">{item.step}</p>
+                <h2 className="mt-2 text-base font-semibold text-[#1a1a1a]">{item.title}</h2>
+                <p className="mt-3 text-sm leading-6 text-[#666666]">{item.description}</p>
+              </article>
               {index < processSteps.length - 1 && (
-                <span className="text-[#D9D9D9] text-lg">→</span>
+                <span className="hidden self-center text-lg text-[#D9D9D9] md:inline-flex">→</span>
               )}
             </Fragment>
           ))}

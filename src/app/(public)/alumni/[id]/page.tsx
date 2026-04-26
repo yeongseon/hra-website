@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { alumniStories } from "@/lib/db/schema";
-import { eq, lt, gt, asc, desc } from "drizzle-orm";
+import { eq, lt, gt, asc, desc, or, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,21 +36,35 @@ export default async function AlumniDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 이전 이야기 (id가 더 작은 것)
   const prevStory = await db
     .select({ id: alumniStories.id, name: alumniStories.name })
     .from(alumniStories)
-    .where(lt(alumniStories.id, story.id))
-    .orderBy(desc(alumniStories.id))
+    .where(
+      or(
+        lt(alumniStories.order, story.order),
+        and(
+          eq(alumniStories.order, story.order),
+          lt(alumniStories.createdAt, story.createdAt)
+        )
+      )
+    )
+    .orderBy(desc(alumniStories.order), desc(alumniStories.createdAt))
     .limit(1)
     .then((rows) => rows[0] ?? null);
 
-  // 다음 이야기 (id가 더 큰 것)
   const nextStory = await db
     .select({ id: alumniStories.id, name: alumniStories.name })
     .from(alumniStories)
-    .where(gt(alumniStories.id, story.id))
-    .orderBy(asc(alumniStories.id))
+    .where(
+      or(
+        gt(alumniStories.order, story.order),
+        and(
+          eq(alumniStories.order, story.order),
+          gt(alumniStories.createdAt, story.createdAt)
+        )
+      )
+    )
+    .orderBy(asc(alumniStories.order), asc(alumniStories.createdAt))
     .limit(1)
     .then((rows) => rows[0] ?? null);
 

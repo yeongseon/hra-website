@@ -55,14 +55,24 @@ export default function AboutPage() {
         <div className="relative max-w-4xl mx-auto py-4">
           {/* 연결 선 (데스크탑) */}
           <div className="hidden md:block absolute top-1/2 left-0 w-full h-[1px] -translate-y-1/2 z-0">
-            <svg className="w-full h-full absolute inset-0 overflow-visible" preserveAspectRatio="none">
+            <svg
+              className="w-full h-full absolute inset-0 overflow-visible"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
               <line x1="16.66%" y1="50%" x2="50%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
               <line x1="50%" y1="50%" x2="83.33%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
             </svg>
           </div>
           {/* 연결 선 (모바일) */}
           <div className="md:hidden absolute left-1/2 top-0 w-[1px] h-full -translate-x-1/2 z-0">
-            <svg className="w-full h-full absolute inset-0 overflow-visible" preserveAspectRatio="none">
+            <svg
+              className="w-full h-full absolute inset-0 overflow-visible"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
               <line x1="50%" y1="16.66%" x2="50%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
               <line x1="50%" y1="50%" x2="50%" y2="83.33%" stroke="#D9D9D9" strokeWidth="1" />
             </svg>
@@ -83,7 +93,7 @@ export default function AboutPage() {
               <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6 transition-colors duration-300 group-hover:border-[#2563EB]">
                 <Globe className="w-10 h-10 text-[#2563EB]" />
               </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">비영리(NPO) 기반</h3>
+              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">비영리 기반</h3>
               <p className="text-[#666666] text-sm leading-relaxed max-w-[200px]">수익이 아닌 청년의 성장을 중심에 두고 운영됩니다.</p>
             </div>
             
@@ -112,7 +122,6 @@ export default function AboutPage() {
             <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Competence</div>
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">업무능력</h3>
               <p className="text-[#666666] leading-relaxed">
                 단순히 지식을 많이 아는 것이 아니라, 배운 내용을 실제 문제 해결과 실행으로 연결할 수 있는 힘입니다. 스스로 생각하고 판단하며 끝까지 해내는 능력을 기릅니다.
@@ -125,7 +134,6 @@ export default function AboutPage() {
             <span className="absolute bottom-4 left-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Character</div>
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">성품</h3>
               <p className="text-[#666666] leading-relaxed">
                 성품은 지식이나 성과만으로 드러나지 않습니다. HRA는 사람을 이해하는 마음, 함께 배우고 협력하는 자세, 그리고 바른 가치관 위에 서는 태도를 중요하게 여깁니다.
@@ -138,7 +146,6 @@ export default function AboutPage() {
             <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <div className="text-blue-600 font-mono text-sm tracking-widest uppercase mb-2">Commitment</div>
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">사명감</h3>
               <p className="text-[#666666] leading-relaxed">
                 사명감은 맡은 일을 끝까지 해내는 책임감에서 시작해, 나아가 공동체와 사회를 향한 의식으로 확장됩니다. HRA는 배움을 삶 속에서 실천하는 사람을 길러 내고자 합니다.

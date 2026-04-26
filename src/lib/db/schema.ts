@@ -24,6 +24,7 @@ import {
   varchar, // 제한된 길이의 텍스트 저장
   boolean, // true/false 저장
   integer, // 정수 저장
+  index,
   pgEnum, // PostgreSQL의 enum 타입 (정해진 선택지만 가능)
   uuid, // 고유 ID 저장 (128비트 무작위 값)
 } from "drizzle-orm/pg-core";
@@ -505,6 +506,20 @@ export const reportTemplates = pgTable("report_templates", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const applicationSubmissionsLog = pgTable(
+  "application_submissions_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ip: varchar("ip", { length: 45 }),
+    email: varchar("email", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_submissions_ip_created").on(table.ip, table.createdAt),
+    index("idx_submissions_email_created").on(table.email, table.createdAt),
+  ]
+);
 
 // ============================================================
 // Type exports (타입 내보내기)

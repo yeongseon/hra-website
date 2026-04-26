@@ -9,10 +9,15 @@
  */
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { headers } from "next/headers";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { applications, cohorts } from "@/lib/db/schema";
+import {
+  applicationSubmissionsLog,
+  applications,
+  cohorts,
+} from "@/lib/db/schema";
 
 /**
  * 지원서 입력값 유효성 검사 스키마
@@ -119,19 +124,88 @@ export async function submitApplication(
     };
   }
 
-  await db.insert(applications).values({
-    cohortId: parsed.data.cohortId,
-    applicantName: parsed.data.name,
-    applicantEmail: parsed.data.email,
-    applicantPhone: parsed.data.phone,
-    university: parsed.data.university,
-    major: parsed.data.major,
-    motivation: parsed.data.motivation,
-    additionalInfo: parsed.data.additionalInfo,
-  });
+  const headersList = await headers();
+  const forwarded =
+    headersList.get("x-forwarded-for") ??
+    headersList.get("x-real-ip") ??
+    headersList.get("cf-connecting-ip") ??
+    headersList.get("x-vercel-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || null;
 
-  return {
-    success: true,
-    message: "지원서가 제출되었습니다. 감사합니다!",
-  };
+  const honeypot = normalizeText(formData.get("website"));
+  if (honeypot) {
+    return {
+      success: false,
+      message: "비정상적인 접근입니다.",
+    };
+  }
+
+  const normalizedEmail = parsed.data.email.trim().toLowerCase();
+
+  return db.transaction(async (tx) => {
+    // advisory lock으로 동일 이메일 동시 제출 직렬화
+    const emailHash = normalizedEmail.split("").reduce((acc, ch) => {
+      return ((acc << 5) - acc + ch.charCodeAt(0)) | 0;
+    }, 0);
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${emailHash})`);
+
+    if (ip) {
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+      const [ipCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(applicationSubmissionsLog)
+        .where(
+          and(
+            eq(applicationSubmissionsLog.ip, ip),
+            gte(applicationSubmissionsLog.createdAt, oneMinuteAgo)
+          )
+        );
+
+      if (ipCount && ipCount.count >= 3) {
+        return {
+          success: false,
+          message: "너무 많은 요청입니다. 잠시 후 다시 시도해주세요.",
+        };
+      }
+    }
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [emailCount] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(applicationSubmissionsLog)
+      .where(
+        and(
+          eq(applicationSubmissionsLog.email, normalizedEmail),
+          gte(applicationSubmissionsLog.createdAt, oneDayAgo)
+        )
+      );
+
+    if (emailCount && emailCount.count >= 1) {
+      return {
+        success: false,
+        message: "동일 이메일로 24시간 내 재지원은 불가합니다.",
+      };
+    }
+
+    await tx.insert(applications).values({
+      cohortId: parsed.data.cohortId,
+      applicantName: parsed.data.name,
+      applicantEmail: normalizedEmail,
+      applicantPhone: parsed.data.phone,
+      university: parsed.data.university,
+      major: parsed.data.major,
+      motivation: parsed.data.motivation,
+      additionalInfo: parsed.data.additionalInfo,
+    });
+
+    await tx.insert(applicationSubmissionsLog).values({
+      ip,
+      email: normalizedEmail,
+    });
+
+    return {
+      success: true,
+      message: "지원서가 제출되었습니다. 감사합니다!",
+    };
+  });
 }
