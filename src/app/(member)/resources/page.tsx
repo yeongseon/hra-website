@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Download, Info } from "lucide-react";
+import { ArrowRight, BookOpen, Download, FileCheck2, Info, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +107,61 @@ export default async function ResourcesPage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-12 sm:mt-16">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">
+            보고서 양식·가이드
+          </h2>
+          <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
+            3개
+          </Badge>
+        </div>
+
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+          <Link href="/member/templates" className="block">
+            <Card className="h-full border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+              <CardHeader className="space-y-4">
+                <div className="flex size-11 items-center justify-center rounded-full border border-[#D9D9D9] bg-gray-50 text-[#2563EB]">
+                  <FileCheck2 className="size-5" />
+                </div>
+                <CardTitle className="text-lg">보고서 양식</CardTitle>
+                <CardDescription className="text-sm leading-6 text-[#666666]">
+                  경영서·고전명작·기업실무 보고서 작성용 표준 양식. PDF 다운로드 지원.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/member/guides/report-writing-guide" className="block">
+            <Card className="h-full border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+              <CardHeader className="space-y-4">
+                <div className="flex size-11 items-center justify-center rounded-full border border-[#D9D9D9] bg-gray-50 text-[#2563EB]">
+                  <BookOpen className="size-5" />
+                </div>
+                <CardTitle className="text-lg">작성 가이드</CardTitle>
+                <CardDescription className="text-sm leading-6 text-[#666666]">
+                  보고서 양식의 각 항목을 어떻게 채울지 상세 안내. Markdown 문법 포함.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link href="/member/guides/submission-guide" className="block">
+            <Card className="h-full border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+              <CardHeader className="space-y-4">
+                <div className="flex size-11 items-center justify-center rounded-full border border-[#D9D9D9] bg-gray-50 text-[#2563EB]">
+                  <Send className="size-5" />
+                </div>
+                <CardTitle className="text-lg">제출 안내</CardTitle>
+                <CardDescription className="text-sm leading-6 text-[#666666]">
+                  PDF 변환·파일명 규칙·제출 경로·마감 일정 등 실제 제출 절차.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       </section>
 
