@@ -37,7 +37,7 @@ npm test
 - [ ] `/resources` 카드 3종 → 정상 라우팅
 - [ ] DB에 항목이 있을 때 `source: db` 라벨 표시
 - [ ] DB에 없을 때 content/ 시드로 fallback (`source: content`)
-- [ ] 양식 상세에서 "PDF로 다운로드" → print 페이지 진입 후 `window.print()` 자동 호출
+- [ ] 양식 상세에서 "PDF로 저장" → print 페이지 진입 후 `window.print()` 자동 호출
 - [ ] 인쇄 시 A4 여백 적용, "다시 인쇄" 버튼은 화면에만 표시(no-print)
 
 ### 콘텐츠 검수

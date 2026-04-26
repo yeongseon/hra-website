@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `/resources` | 자료실 메인 (카드 3종) | 정적 | 양식·가이드 진입점 |
 | `/member/templates` | 보고서 양식 목록 | `listTemplates()` (DB → content) | 분야별 v버전 카드 |
-| `/member/templates/[slug]` | 양식 상세(웹 미리보기) | `resolveTemplate(slug)` | "PDF로 다운로드" CTA |
+| `/member/templates/[slug]` | 양식 상세(웹 미리보기) | `resolveTemplate(slug)` | "PDF로 저장" CTA |
 | `/member/templates/[slug]/print` | 양식 인쇄(PDF 저장) | `resolveTemplate(slug)` | A4 + auto `window.print()` |
 | `/member/guides/[slug]` | 가이드 상세 | `resolveGuide(slug)` | 인쇄 페이지 없음 |
 
