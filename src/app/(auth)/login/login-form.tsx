@@ -62,14 +62,30 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl text-white">로그인</CardTitle>
         <p className="text-sm text-slate-400 mt-2">
-          {hasAnySocial
-            ? "소셜 계정 또는 관리자 계정으로 로그인하세요"
-            : "관리자 계정으로 로그인하세요"}
+          {enabledProviders.kakao
+            ? "카카오톡으로 간편하게 로그인하세요"
+            : hasAnySocial
+              ? "소셜 계정 또는 관리자 계정으로 로그인하세요"
+              : "관리자 계정으로 로그인하세요"}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {hasAnySocial && (
           <div className="space-y-3">
+            {enabledProviders.kakao && (
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("kakao")}
+                disabled={isLoading !== null}
+                className="w-full flex items-center justify-center gap-3 rounded-md bg-[#FEE500] px-4 py-4 min-h-[52px] text-base font-semibold text-[#191919] shadow-sm hover:bg-[#FDD800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
+                  <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.72 1.8 5.108 4.512 6.467-.198.74-.716 2.68-.82 3.095-.127.506.186.499.39.363.16-.107 2.554-1.737 3.588-2.446.748.11 1.52.168 2.33.168 5.523 0 10-3.463 10-7.647C22 6.463 17.523 3 12 3z" />
+                </svg>
+                {isLoading === "kakao" ? "로그인 중..." : "카카오로 로그인"}
+              </button>
+            )}
+
             {enabledProviders.google && (
               <button
                 type="button"
@@ -96,20 +112,6 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
                   />
                 </svg>
                 {isLoading === "google" ? "로그인 중..." : "구글로 로그인"}
-              </button>
-            )}
-
-            {enabledProviders.kakao && (
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("kakao")}
-                disabled={isLoading !== null}
-                className="w-full flex items-center justify-center gap-3 rounded-md bg-[#FEE500] px-4 py-3 min-h-[44px] text-sm font-medium text-[#191919] shadow-sm hover:bg-[#FDD800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
-                  <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.72 1.8 5.108 4.512 6.467-.198.74-.716 2.68-.82 3.095-.127.506.186.499.39.363.16-.107 2.554-1.737 3.588-2.446.748.11 1.52.168 2.33.168 5.523 0 10-3.463 10-7.647C22 6.463 17.523 3 12 3z" />
-                </svg>
-                {isLoading === "kakao" ? "로그인 중..." : "카카오로 로그인"}
               </button>
             )}
           </div>
