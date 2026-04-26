@@ -61,15 +61,21 @@ function asReportCategory(
 }
 
 export async function resolveTemplate(slug: string): Promise<TemplateView | null> {
+  // 같은 slug의 DB row 존재 여부를 published와 무관하게 먼저 확인한다.
+  // 운영자가 관리자 페이지에서 비공개(published=false) 처리한 항목이라면
+  // content/ 시드로 fallback해서는 안 된다(= "삭제했는데 다시 보임" 방지).
   const dbRow = await db.query.reportTemplates.findFirst({
     where: and(
       eq(reportTemplates.slug, slug),
       eq(reportTemplates.category, "template"),
-      eq(reportTemplates.published, true),
     ),
   });
 
   if (dbRow) {
+    if (!dbRow.published) {
+      // DB row는 있지만 비공개 → 회원에게 노출하지 않는다(fallback 금지).
+      return null;
+    }
     return {
       slug: dbRow.slug,
       title: dbRow.title,
@@ -81,6 +87,7 @@ export async function resolveTemplate(slug: string): Promise<TemplateView | null
     };
   }
 
+  // DB row가 아예 없을 때만 content/ 시드로 fallback한다.
   const fileResult = await readTemplateFromContent(slug);
   if (!fileResult) return null;
 
@@ -96,15 +103,19 @@ export async function resolveTemplate(slug: string): Promise<TemplateView | null
 }
 
 export async function resolveGuide(slug: string): Promise<GuideView | null> {
+  // resolveTemplate과 동일한 정책: DB row가 있으면 published 여부에 따라
+  // 노출(true) 또는 차단(false)하고, DB row가 없을 때만 content/ fallback한다.
   const dbRow = await db.query.reportTemplates.findFirst({
     where: and(
       eq(reportTemplates.slug, slug),
       eq(reportTemplates.category, "guide"),
-      eq(reportTemplates.published, true),
     ),
   });
 
   if (dbRow) {
+    if (!dbRow.published) {
+      return null;
+    }
     return {
       slug: dbRow.slug,
       title: dbRow.title,
@@ -129,33 +140,33 @@ export async function resolveGuide(slug: string): Promise<GuideView | null> {
 }
 
 export async function listTemplates(): Promise<TemplateView[]> {
-  // DB에 등록된 양식 우선 (published=true)
+  // category=template인 모든 row를 published 무관하게 먼저 조회한다.
+  // - published=true row만 회원 목록에 노출한다.
+  // - published=false row의 slug는 content/ fallback에서 제외한다.
+  //   (운영자가 비공개로 돌린 양식이 시드로 다시 살아나는 것을 방지)
   const dbRows = await db
     .select()
     .from(reportTemplates)
-    .where(
-      and(
-        eq(reportTemplates.category, "template"),
-        eq(reportTemplates.published, true),
-      ),
-    )
+    .where(eq(reportTemplates.category, "template"))
     .orderBy(asc(reportTemplates.order), desc(reportTemplates.updatedAt));
 
-  const fromDb: TemplateView[] = dbRows.map((row) => ({
-    slug: row.slug,
-    title: row.title,
-    description: row.description,
-    reportCategory: asReportCategory(row.reportCategory),
-    version: row.version,
-    body: row.body,
-    source: "db",
-  }));
+  const fromDb: TemplateView[] = dbRows
+    .filter((row) => row.published)
+    .map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      description: row.description,
+      reportCategory: asReportCategory(row.reportCategory),
+      version: row.version,
+      body: row.body,
+      source: "db",
+    }));
 
-  const dbSlugs = new Set(fromDb.map((t) => t.slug));
-  // DB에 없는 시드(content/) 양식만 보충하여 중복 제거
+  // 비공개 슬러그까지 포함해 차단 집합을 만든다(=DB가 소유권을 주장한 slug).
+  const blockedSlugs = new Set(dbRows.map((row) => row.slug));
   const fromContentAll = await listAllTemplatesFromContent();
   const fromContent: TemplateView[] = fromContentAll
-    .filter((entry) => !dbSlugs.has(entry.slug))
+    .filter((entry) => !blockedSlugs.has(entry.slug))
     .map((entry) => ({
       slug: entry.slug,
       title: entry.data.frontmatter.title,

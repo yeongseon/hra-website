@@ -479,7 +479,9 @@ export const pressArticles = pgTable("press_articles", {
 //   * guide: 작성 가이드(보고서 작성 가이드, Markdown 가이드, 제출 안내 등)
 // - reportCategory: 양식의 분야 코드 (template일 때만 의미 있음)
 //   * "management-book" | "classic-book" | "business-practice"
-// - slug: URL 식별자 (예: "management-book-template", "report-writing-guide")
+// - slug: URL 식별자 (실제 라우팅 경로와 동일하게 사용)
+//   * template 예시: "management-book", "classic-book", "business-practice"
+//   * guide 예시: "report-writing-guide", "markdown-guide", "submission-guide"
 // - body: Markdown 본문 (frontmatter 제외, 순수 본문만 저장)
 export const reportTemplateCategoryEnum = pgEnum("report_template_category", [
   "template",
