@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { Target, Briefcase, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { AlumniCarousel } from "./_components/alumni-carousel";
 import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
@@ -172,24 +170,6 @@ export default function Home() {
       </section>
 
       <StatsSection />
-
-      <section className="py-24 px-4 bg-[var(--surface-subtle)] border-t border-[#D9D9D9]">
-        <div className="flex flex-col items-center text-center mb-16 mx-auto max-w-3xl">
-          <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
-            당신의 다음 성장을 HRA에서 시작해보세요
-          </h2>
-          <div className="w-12 h-1 bg-[var(--brand)] mx-auto mt-4 mb-4" />
-          <p className="text-lg text-[#666666] mt-0 mb-12">
-            최고의 동료들과 함께 압도적인 성장을 경험할 준비가 되셨나요?
-          </p>
-
-          <Link href="/recruitment">
-            <Button size="lg" className="bg-[var(--brand)] hover:bg-blue-700 text-white font-semibold h-14 px-10 text-lg rounded-lg transition-all duration-300">
-              모집 안내 보기
-            </Button>
-          </Link>
-        </div>
-      </section>
 
       <AlumniCarousel />
     </div>
