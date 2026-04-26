@@ -125,6 +125,7 @@ function revalidateTemplatePaths(slug?: string) {
   revalidatePath("/resources");
   if (slug) {
     revalidatePath(`/member/templates/${slug}`);
+    revalidatePath(`/member/templates/${slug}/print`);
     revalidatePath(`/member/guides/${slug}`);
   }
 }
@@ -214,6 +215,13 @@ export async function updateReportTemplate(
     };
   }
 
+  // 슬러그가 변경된 경우 이전 경로의 캐시도 함께 무효화해야 한다.
+  // 이전 slug를 미리 확보(update 후에는 조회 불가).
+  const previous = await db.query.reportTemplates.findFirst({
+    where: eq(reportTemplates.id, parsedId.data),
+  });
+  const oldSlug = previous?.slug;
+
   try {
     await db
       .update(reportTemplates)
@@ -237,6 +245,9 @@ export async function updateReportTemplate(
     };
   }
 
+  if (oldSlug && oldSlug !== parsed.data.slug) {
+    revalidateTemplatePaths(oldSlug);
+  }
   revalidateTemplatePaths(parsed.data.slug);
   redirect("/admin/templates");
 }
@@ -244,6 +255,10 @@ export async function updateReportTemplate(
 export async function deleteReportTemplate(
   id: string,
 ): Promise<TemplateActionState> {
+  // 회원 자료실 운영상 "삭제"는 published=false로 비공개 처리한다.
+  // 실제 row 삭제 시, 동일 slug의 content/ 시드가 존재하면 회원 페이지에 다시
+  // 노출되어 운영자 의도와 어긋난다(resolver fallback 정책 참조).
+  // DB row를 남겨두면 resolver가 published=false를 감지해 fallback을 차단한다.
   await requireAdmin();
 
   const parsedId = idSchema.safeParse(id);
@@ -263,16 +278,17 @@ export async function deleteReportTemplate(
     }
 
     await db
-      .delete(reportTemplates)
+      .update(reportTemplates)
+      .set({ published: false })
       .where(eq(reportTemplates.id, parsedId.data));
 
     revalidateTemplatePaths(target.slug);
-    return { success: true, message: "삭제되었습니다." };
+    return { success: true, message: "비공개 처리되었습니다." };
   } catch (error) {
-    console.error("[report-templates/delete] 삭제 오류:", error);
+    console.error("[report-templates/delete] 비공개 처리 오류:", error);
     return {
       success: false,
-      message: "양식 삭제에 실패했습니다.",
+      message: "양식 비공개 처리에 실패했습니다.",
     };
   }
 }
