@@ -210,6 +210,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return !!auth?.user;
       }
 
+      if (pathname.startsWith("/member")) {
+        return !!auth?.user;
+      }
+
       if (pathname.startsWith("/mypage")) {
         return !!auth?.user;
       }
