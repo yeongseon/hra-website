@@ -10,9 +10,9 @@
  */
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +47,6 @@ type TemplateFormProps = {
     order?: number;
   };
   submitLabel?: string;
-  successMessage?: string;
 };
 
 const initialState: TemplateFormResult = {
@@ -59,7 +58,6 @@ export function TemplateForm({
   action,
   defaultValues,
   submitLabel = "저장",
-  successMessage = "저장되었습니다.",
 }: TemplateFormProps) {
   const router = useRouter();
   // 카테고리 변경 시 분야 코드 노출 여부를 클라이언트에서 즉시 반영
@@ -67,17 +65,12 @@ export function TemplateForm({
     defaultValues?.category ?? "template",
   );
 
+  // 성공 시 서버 액션이 redirect("/admin/templates")로 이동을 처리하므로
+  // 클라이언트에서는 오류 메시지/필드 오류만 다룬다.
   const [state, formAction, isSubmitting] = useActionState(
     async (_prev: TemplateFormResult, formData: FormData) => action(formData),
     initialState,
   );
-
-  useEffect(() => {
-    if (state.success) {
-      router.push("/admin/templates");
-      router.refresh();
-    }
-  }, [router, state.success]);
 
   return (
     <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
@@ -90,13 +83,6 @@ export function TemplateForm({
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertCircle className="mt-0.5 size-4" />
               <span>{state.message}</span>
-            </div>
-          ) : null}
-
-          {state.success ? (
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              <CheckCircle2 className="mt-0.5 size-4" />
-              <span>{successMessage}</span>
             </div>
           ) : null}
 
