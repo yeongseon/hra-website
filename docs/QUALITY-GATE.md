@@ -30,13 +30,16 @@ npm test
 - [ ] 신규 등록 — 양식(template, reportCategory 포함) / 가이드(guide, reportCategory null) 둘 다 정상 저장
 - [ ] slug 중복 시 검증 메시지 노출
 - [ ] 수정 — 본문/버전/published 토글 반영
-- [ ] 삭제 다이얼로그 — 취소/확정 동작
-- [ ] 미공개(`published=false`) 항목은 회원 페이지에 노출 안 됨
+- [ ] slug 변경 시 이전 URL의 캐시도 무효화되어 옛 경로가 즉시 404 또는 새 데이터로 갱신
+- [ ] "비공개" 다이얼로그 — 취소/확정 동작, 실패 시 에러 메시지 노출
+- [ ] 비공개(`published=false`) 처리 후 회원 페이지에서 즉시 사라짐 (content/ 시드와 동일 slug여도 다시 노출되지 않음)
+- [ ] 비공개 항목을 수정 페이지에서 다시 published=true 로 전환 가능
 
 ### 회원 (`/member/templates`, `/member/guides`)
 - [ ] `/resources` 카드 3종 → 정상 라우팅
 - [ ] DB에 항목이 있을 때 `source: db` 라벨 표시
-- [ ] DB에 없을 때 content/ 시드로 fallback (`source: content`)
+- [ ] 같은 slug의 DB row가 없을 때만 content/ 시드로 fallback (`source: content`)
+- [ ] 같은 slug의 DB row가 있고 `published=false` 인 경우 fallback 없이 404
 - [ ] 양식 상세에서 "PDF로 저장" → print 페이지 진입 후 `window.print()` 자동 호출
 - [ ] 인쇄 시 A4 여백 적용, "다시 인쇄" 버튼은 화면에만 표시(no-print)
 
