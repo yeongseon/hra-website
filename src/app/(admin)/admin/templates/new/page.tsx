@@ -26,7 +26,6 @@ export default async function NewTemplatePage() {
       <TemplateForm
         action={createReportTemplate}
         submitLabel="양식 저장"
-        successMessage="양식이 생성되었습니다."
       />
     </section>
   );
