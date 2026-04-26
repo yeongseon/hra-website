@@ -35,6 +35,47 @@ const imageSchema = z.object({
 
 const idSchema = z.uuid("잘못된 ID입니다.");
 
+// 갤러리 이미지 업로드 제약 조건
+// - 허용 MIME: 일반 웹 이미지 포맷만 (JPEG/PNG/WEBP/GIF)
+// - 최대 크기: 10MB (사진 위주 콘텐츠라 프로필보다 여유 있게)
+const allowedImageTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+const maxImageSize = 10 * 1024 * 1024;
+
+// 파일명 정규화: 공백 -> 하이픈, 영숫자/._- 외 제거
+// Blob URL 가독성 + 비-ASCII 우회 업로드 방어
+function normalizeFileName(fileName: string) {
+  const trimmed = fileName.trim();
+  const sanitized = trimmed.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "");
+  return sanitized || "gallery-image";
+}
+
+// 업로드된 이미지 파일 검증
+// - File 인스턴스 여부, 비어있지 않은지
+// - MIME 타입 화이트리스트
+// - 최대 크기
+function validateGalleryImageFile(value: FormDataEntryValue | null) {
+  if (!(value instanceof File) || value.size === 0) {
+    return { error: "이미지 파일을 선택해주세요." } as const;
+  }
+
+  if (!allowedImageTypes.includes(value.type as (typeof allowedImageTypes)[number])) {
+    return {
+      error: "이미지 파일은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
+    } as const;
+  }
+
+  if (value.size > maxImageSize) {
+    return { error: "이미지 파일은 10MB 이하여야 합니다." } as const;
+  }
+
+  return { file: value } as const;
+}
+
 const initialError = (message: string): GalleryActionState => ({
   success: false,
   message,
@@ -179,9 +220,9 @@ export async function deleteGallery(id: string): Promise<GalleryActionState> {
 export async function addGalleryImage(id: string, formData: FormData): Promise<GalleryActionState> {
   await requireAdmin();
 
-  const fileEntry = formData.get("image");
-  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
-    return initialError("이미지 파일을 선택해주세요.");
+  const validated = validateGalleryImageFile(formData.get("image"));
+  if ("error" in validated) {
+    return initialError(validated.error ?? "이미지 파일을 확인해주세요.");
   }
 
   const parsed = imageSchema.safeParse({
@@ -198,9 +239,8 @@ export async function addGalleryImage(id: string, formData: FormData): Promise<G
     return initialError(galleryResult.error ?? "앨범을 찾을 수 없습니다.");
   }
 
-  // Blob 파일명에서 공백을 제거해 URL 가독성과 안정성을 높입니다.
-  const safeFileName = fileEntry.name.replace(/\s+/g, "-");
-  const blob = await put(safeFileName, fileEntry, {
+  const safeFileName = `gallery/${Date.now()}-${normalizeFileName(validated.file.name)}`;
+  const blob = await put(safeFileName, validated.file, {
     access: "public",
   });
 
