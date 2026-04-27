@@ -27,6 +27,13 @@ const tabs = [
       pathname === "/admin/resources/guidebooks" ||
       pathname.startsWith("/admin/resources/guidebooks/"),
   },
+  {
+    href: "/admin/resources/templates",
+    label: "보고서 양식",
+    isActive: (pathname: string) =>
+      pathname === "/admin/resources/templates" ||
+      pathname.startsWith("/admin/resources/templates/"),
+  },
 ];
 
 export function ResourcesTabNav() {

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, Eye, User } from "lucide-react";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ const getClassLogDetail = async (id: string) => {
       title: classLogs.title,
       content: classLogs.content,
       classDate: classLogs.classDate,
+      viewCount: classLogs.viewCount,
       authorName: users.name,
     })
     .from(classLogs)
@@ -78,6 +79,14 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
 
   const { log, images } = data;
 
+  void db
+    .update(classLogs)
+    .set({ viewCount: sql`${classLogs.viewCount} + 1` })
+    .where(eq(classLogs.id, log.id))
+    .catch((err: unknown) => {
+      console.error("수업일지 조회수 업데이트 실패:", err);
+    });
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <div className="mb-8">
@@ -100,6 +109,10 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
             <span className="inline-flex items-center gap-1.5">
               <User className="size-3.5" />
               {log.authorName}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="size-3.5" />
+              조회수 {log.viewCount}
             </span>
           </div>
         </CardHeader>

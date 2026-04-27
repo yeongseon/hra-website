@@ -26,6 +26,10 @@ export type UpdateRoleState = {
   message: string;
 };
 
+const deleteUserSchema = z.object({
+  userId: z.uuid("올바른 사용자 ID가 필요합니다."),
+});
+
 /**
  * 회원 역할을 변경하는 서버 액션
  * 관리자만 실행할 수 있습니다.
@@ -77,5 +81,40 @@ export async function updateUserRole(
   return {
     success: true,
     message: `역할이 "${roleLabels[parsed.data.role]}"(으)로 변경되었습니다.`,
+  };
+}
+
+export async function deleteUser(userId: string): Promise<UpdateRoleState> {
+  const session = await requireAdmin();
+
+  const parsed = deleteUserSchema.safeParse({ userId });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.",
+    };
+  }
+
+  if (session.user?.id === parsed.data.userId) {
+    return {
+      success: false,
+      message: "자기 자신은 삭제할 수 없습니다.",
+    };
+  }
+
+  const result = await db.delete(users).where(eq(users.id, parsed.data.userId));
+
+  if (result.rowCount === 0) {
+    return {
+      success: false,
+      message: "해당 사용자를 찾을 수 없습니다.",
+    };
+  }
+
+  revalidatePath("/admin/users");
+
+  return {
+    success: true,
+    message: "회원이 삭제되었습니다.",
   };
 }

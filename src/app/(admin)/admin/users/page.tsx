@@ -1,11 +1,3 @@
-/**
- * 회원 관리 페이지
- * 
- * 관리자가 전체 회원 목록을 확인하고 역할을 변경할 수 있는 페이지입니다.
- * - 회원 목록을 테이블로 표시
- * - 각 회원의 역할을 변경하는 버튼 제공
- */
-
 import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +71,7 @@ export default async function AdminUsersPage() {
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">회원 관리</h1>
-        <p className="mt-1 text-sm text-slate-500">전체 회원 목록을 확인하고 역할을 변경할 수 있습니다.</p>
+        <p className="mt-1 text-sm text-slate-500">전체 회원 목록을 확인하고 역할을 변경하거나 삭제할 수 있습니다.</p>
       </div>
 
       <Card className="border-slate-200 bg-white py-0 shadow-sm">
@@ -100,7 +92,7 @@ export default async function AdminUsersPage() {
                   <TableHead>이메일</TableHead>
                   <TableHead>역할</TableHead>
                   <TableHead>가입일</TableHead>
-                  <TableHead>역할 변경</TableHead>
+                  <TableHead>관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

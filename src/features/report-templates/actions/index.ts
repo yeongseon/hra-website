@@ -1,12 +1,12 @@
 /**
  * 보고서 양식·작성 가이드 서버 액션
  *
- * 역할: 관리자 페이지(/admin/templates)에서 보고서 양식과 작성 가이드(Markdown)
+ * 역할: 관리자 페이지(/admin/resources/templates)에서 보고서 양식과 작성 가이드(Markdown)
  *       문서의 CRUD를 처리한다. 본문은 DB에 저장되며, 회원 페이지에서 동일 데이터를 읽는다.
  *
  * 사용 위치:
- *   - src/app/(admin)/admin/templates/_components/template-form.tsx (생성/수정 폼)
- *   - src/app/(admin)/admin/templates/_components/template-row-actions.tsx (삭제)
+ *   - src/app/(admin)/admin/resources/templates/_components/template-form.tsx (생성/수정 폼)
+ *   - src/app/(admin)/admin/resources/templates/_components/template-row-actions.tsx (삭제)
  *
  * 보안:
  *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
@@ -120,6 +120,7 @@ function parseFormData(formData: FormData) {
 
 function revalidateTemplatePaths(slug?: string) {
   revalidatePath("/admin/templates");
+  revalidatePath("/admin/resources/templates");
   revalidatePath("/member/templates");
   revalidatePath("/member/guides");
   revalidatePath("/resources");
@@ -177,7 +178,7 @@ export async function createReportTemplate(
   }
 
   revalidateTemplatePaths(parsed.data.slug);
-  redirect("/admin/templates");
+  redirect("/admin/resources/templates");
 }
 
 export async function updateReportTemplate(
@@ -249,7 +250,7 @@ export async function updateReportTemplate(
     revalidateTemplatePaths(oldSlug);
   }
   revalidateTemplatePaths(parsed.data.slug);
-  redirect("/admin/templates");
+  redirect("/admin/resources/templates");
 }
 
 export async function deleteReportTemplate(

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -54,6 +54,7 @@ export default async function ClassLogsPage() {
       content: classLogs.content,
       classDate: classLogs.classDate,
       createdAt: classLogs.createdAt,
+      viewCount: classLogs.viewCount,
       authorName: users.name,
     })
     .from(classLogs)
@@ -106,6 +107,10 @@ export default async function ClassLogsPage() {
                         {formatDate(log.classDate)}
                       </Badge>
                       <span>{log.authorName}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="size-3.5" />
+                        조회 {log.viewCount}
+                      </span>
                     </div>
                     <CardTitle className="line-clamp-2 text-lg">{log.title}</CardTitle>
                   </CardHeader>

@@ -181,6 +181,7 @@ export const classLogs = pgTable("class_logs", {
   authorId: uuid("author_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }), // 작성자 ID (사용자가 삭제되면 수업일지도 삭제됨)
+  viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 수업일지 작성 시간
   updatedAt: timestamp("updated_at")
     .notNull()
