@@ -7,7 +7,7 @@
  */
 
 import type { Metadata } from "next";
-import { asc, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
@@ -35,7 +35,7 @@ export default async function PressPage() {
   const articles = await db
     .select()
     .from(pressArticles)
-    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt));
+    .orderBy(desc(pressArticles.publishedAt));
 
   // 게시판 번호는 최신순(상단)부터 큰 번호 부여
   const totalCount = articles.length;
