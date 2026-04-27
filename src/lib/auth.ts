@@ -57,7 +57,7 @@ if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
       clientSecret: process.env.AUTH_KAKAO_SECRET,
       authorization: {
         params: {
-          scope: "profile_nickname profile_image account_email",
+          scope: "profile_nickname profile_image",
         },
       },
     }),
