@@ -44,12 +44,13 @@ async function readFileSafe(filePath: string): Promise<string | null> {
   try {
     return await fs.readFile(filePath, "utf-8");
   } catch (error) {
-    // ENOENT(파일 없음)는 호출 측에서 처리하도록 null 반환
+    // ENOENT(파일 없음), ENOTDIR(경로 없음)는 호출 측에서 처리하도록 null 반환
+    // content/ 폴더 자체가 없는 환경(Vercel 등)에서도 안전하게 동작
     if (
       typeof error === "object" &&
       error !== null &&
       "code" in error &&
-      (error as { code: string }).code === "ENOENT"
+      ["ENOENT", "ENOTDIR"].includes((error as { code: string }).code)
     ) {
       return null;
     }
