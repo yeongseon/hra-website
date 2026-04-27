@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
+import { z } from "zod/v4";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,11 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
   const session = await requireAdmin();
   const { id } = await params;
 
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   const [user] = await db
     .select({
       id: users.id,
@@ -39,17 +45,17 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
       image: users.image,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      passwordHash: users.passwordHash,
+      hasPassword: isNotNull(users.passwordHash),
     })
     .from(users)
-    .where(eq(users.id, id))
+    .where(eq(users.id, parsedId.data))
     .limit(1);
 
   if (!user) {
     notFound();
   }
 
-  const isOAuthUser = !user.passwordHash;
+  const isOAuthUser = !user.hasPassword;
   const isSelf = session.user?.id === user.id;
 
   return (

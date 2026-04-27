@@ -48,11 +48,18 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
 }
 
 // 카카오 로그인: AUTH_KAKAO_ID, AUTH_KAKAO_SECRET 둘 다 있어야 활성화
+// scope에 profile_nickname, profile_image를 명시해야 카카오가 닉네임·프로필 사진 동의를 요청함
+// 기본 authorization URL의 scope가 비어있어서 nickname이 undefined로 오는 버그 수정
 if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
   providers.push(
     Kakao({
       clientId: process.env.AUTH_KAKAO_ID,
       clientSecret: process.env.AUTH_KAKAO_SECRET,
+      authorization: {
+        params: {
+          scope: "profile_nickname profile_image account_email",
+        },
+      },
     }),
   );
 }
@@ -155,7 +162,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (!existingUser) {
         await db.insert(users).values({
-          name: user.name || "이름 없음",
+          name:
+            user.name?.trim() ||
+            (account.provider === "kakao" ? "카카오 사용자" : "구글 사용자"),
           email,
           image: user.image,
           role: "MEMBER",
@@ -189,17 +198,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * 소셜 로그인은 외부 서비스에서 사용자 정보를 받아오므로,
      * 우리 DB에서 해당 사용자를 찾아 id와 role을 토큰에 추가합니다.
      */
-    async jwt({ token, account }) {
-      if (account && token.email) {
-        const dbUser = await db.query.users.findFirst({
-          where: eq(users.email, token.email),
-        });
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.role = dbUser.role;
-          token.name = dbUser.name;
-        }
+    async jwt({ token }) {
+      if (!token.email) {
+        return token;
       }
+
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.email, token.email),
+      });
+
+      if (dbUser) {
+        token.id = dbUser.id;
+        token.role = dbUser.role;
+        token.name = dbUser.name;
+      }
+
       return token;
     },
 
@@ -210,6 +223,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as "ADMIN" | "MEMBER";
+        if (typeof token.name === "string") {
+          session.user.name = token.name;
+        }
       }
       return session;
     },
@@ -225,18 +241,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (pathname.startsWith("/admin")) {
+        if (!auth?.user) {
+          const loginUrl = new URL("/admin/login", request.url);
+          loginUrl.searchParams.set("callbackUrl", pathname);
+          return Response.redirect(loginUrl);
+        }
+
         return auth?.user?.role === "ADMIN";
       }
 
-      if (pathname.startsWith("/resources")) {
-        return !!auth?.user;
-      }
-
-      if (pathname.startsWith("/member")) {
-        return !!auth?.user;
-      }
-
-      if (pathname.startsWith("/mypage")) {
+      if (
+        pathname.startsWith("/resources") ||
+        pathname.startsWith("/member") ||
+        pathname.startsWith("/mypage")
+      ) {
         return !!auth?.user;
       }
 

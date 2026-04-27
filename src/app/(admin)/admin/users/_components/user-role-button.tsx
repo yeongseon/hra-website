@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { updateUserRole } from "@/features/users/actions";
 
@@ -10,6 +11,7 @@ type UserRoleButtonProps = {
 };
 
 export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -22,6 +24,8 @@ export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
       const result = await updateUserRole(userId, targetRole);
       if (!result.success) {
         setMessage(result.message);
+      } else {
+        router.refresh();
       }
     });
   };

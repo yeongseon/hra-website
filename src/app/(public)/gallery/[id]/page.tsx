@@ -78,10 +78,13 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
   }
 
   // 조회수 증가 (fire-and-forget)
-  db.update(galleries)
+  void db
+    .update(galleries)
     .set({ viewCount: sql`${galleries.viewCount} + 1` })
     .where(eq(galleries.id, gallery.id))
-    .then(() => {});
+    .catch((err: unknown) => {
+      console.error("갤러리 조회수 업데이트 실패:", err);
+    });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20">

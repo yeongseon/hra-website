@@ -66,6 +66,7 @@ export async function updateUserRole(
   }
 
   revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${parsed.data.userId}`);
 
   const roleLabels: Record<string, string> = {
     ADMIN: "관리자",

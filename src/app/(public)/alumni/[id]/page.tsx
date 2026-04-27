@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
+import { z } from "zod/v4";
 import { AlumniSidebar } from "./_components/alumni-sidebar";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +23,13 @@ interface PageProps {
 
 export default async function AlumniDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const storyId = id;
+  const parsedId = z.uuid().safeParse(id);
 
-  if (!storyId) {
+  if (!parsedId.success) {
     notFound();
   }
+
+  const storyId = parsedId.data;
 
   const story = await db.query.alumniStories.findFirst({
     where: eq(alumniStories.id, storyId),
@@ -37,10 +40,13 @@ export default async function AlumniDetailPage({ params }: PageProps) {
   }
 
   // 조회수 증가 (fire-and-forget)
-  db.update(alumniStories)
+  void db
+    .update(alumniStories)
     .set({ viewCount: sql`${alumniStories.viewCount} + 1` })
     .where(eq(alumniStories.id, story.id))
-    .then(() => {});
+    .catch((err: unknown) => {
+      console.error("수료생 조회수 업데이트 실패:", err);
+    });
 
   const prevStory = await db
     .select({ id: alumniStories.id, name: alumniStories.name })

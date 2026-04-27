@@ -11,7 +11,7 @@ interface PressLinkProps {
 
 export function PressLink({ articleId, href, children, className }: PressLinkProps) {
   const handleClick = () => {
-    trackPressView(articleId);
+    void trackPressView(articleId).catch(() => {});
   };
 
   return (

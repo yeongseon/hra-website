@@ -17,7 +17,10 @@ const alumniStoryFormSchema = z.object({
   title: z.string().trim().max(100, "소속/직함은 100자 이하여야 합니다.").optional(),
   quote: z.string().trim().min(1, "인용구를 입력해주세요.").max(500, "인용구는 500자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요.").max(5000, "내용은 5000자 이하여야 합니다."),
-  imageUrl: z.string().trim().optional(),
+  imageUrl: z
+    .union([z.literal(""), z.url("올바른 이미지 URL을 입력해주세요.")])
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
   isFeatured: z
     .union([z.literal("true"), z.literal("on"), z.null(), z.undefined()])
     .transform((value) => value === "true" || value === "on"),
@@ -178,13 +181,11 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     .from(alumniStories)
     .where(eq(alumniStories.id, parsedId.data));
 
+  const oldImageUrl = existing?.imageUrl ?? null;
+
   let imageUrl: string | null;
 
   if (validatedImage.file) {
-    // 새 파일 업로드 → 기존 Blob 이미지 삭제
-    if (existing?.imageUrl && isBlobUrl(existing.imageUrl)) {
-      await del(existing.imageUrl);
-    }
     imageUrl = await uploadAlumniImage(validatedImage.file);
   } else {
     // 파일 업로드 없음 → URL 입력값 사용
@@ -203,6 +204,10 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
       order: parsed.data.order,
     })
     .where(eq(alumniStories.id, parsedId.data));
+
+  if (validatedImage.file && oldImageUrl && isBlobUrl(oldImageUrl)) {
+    await del(oldImageUrl).catch(() => {});
+  }
 
   revalidateAlumniPaths();
   redirect("/admin/alumni");
