@@ -160,11 +160,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image,
           role: "MEMBER",
         });
-      } else if (user.image && existingUser.image !== user.image) {
-        await db
-          .update(users)
-          .set({ image: user.image })
-          .where(eq(users.email, email));
+      } else {
+        // 기존 사용자: 소셜 프로필에서 이름/이미지가 변경되었으면 DB에도 반영
+        const updates: Partial<{ name: string; image: string }> = {};
+        if (user.name && existingUser.name !== user.name) {
+          updates.name = user.name;
+        }
+        if (user.image && existingUser.image !== user.image) {
+          updates.image = user.image;
+        }
+        if (Object.keys(updates).length > 0) {
+          await db
+            .update(users)
+            .set(updates)
+            .where(eq(users.email, email));
+        }
       }
 
       // NextAuth가 jwt 콜백에서 email로 DB 조회할 수 있도록 user.email 설정
@@ -187,6 +197,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
+          token.name = dbUser.name;
         }
       }
       return token;
@@ -208,6 +219,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      */
     async authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
+
+      if (pathname === "/admin/login") {
+        return true;
+      }
 
       if (pathname.startsWith("/admin")) {
         return auth?.user?.role === "ADMIN";

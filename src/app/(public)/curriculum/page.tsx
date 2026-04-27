@@ -2,30 +2,6 @@
 
 import { useState } from "react";
 import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent, ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-
-const timelineSteps = [
-  { 
-    label: "전반기", 
-    period: "9~12월",
-    description: "고전 읽기·토론, 케이스 스터디, 경영서 리뷰 시작. 매주 토요일 09:00–18:00 진행."
-  },
-  { 
-    label: "겨울캠프", 
-    period: "1~2월",
-    description: "7박 8일 합숙 집중 훈련. 강도 높은 토론·특강·팀 프로젝트로 사고력 극대화."
-  },
-  { 
-    label: "하반기", 
-    period: "3~6월",
-    description: "전반기 역량 심화. 하계 인턴·봉사활동·실전 케이스 스터디 병행."
-  },
-  { 
-    label: "수료식/입학식", 
-    period: "9월",
-    description: "52주 과정 마무리. 수료증·추천서 수여 및 차기 기수 입학식 동시 개최."
-  },
-];
 
 const curriculumItems = [
   {
@@ -65,75 +41,94 @@ const curriculumItems = [
   },
 ];
 
+const months = [
+  { label: "Sep.", segment: "first" },
+  { label: "Oct.", segment: "first" },
+  { label: "Nov.", segment: "first" },
+  { label: "Dec.", segment: "first" },
+  { label: "Jan.", segment: null },
+  { label: "Feb.", segment: "winter" },
+  { label: "Mar.", segment: "second" },
+  { label: "Apr.", segment: "second" },
+  { label: "May.", segment: "second" },
+  { label: "Jun.", segment: "second" },
+  { label: "Jul.", segment: null },
+  { label: "Aug.", segment: "graduation" }
+];
+
+const segmentDetails = {
+  first: { title: "전반기 (9~12월)", desc: "고전 읽기·토론, 케이스 스터디, 경영서 리뷰 시작. 매주 토요일 09:00–18:00 진행.", position: "left-0", width: "w-[33%]" },
+  winter: { title: "겨울캠프 (1~2월)", desc: "7박 8일 합숙 집중 훈련. 강도 높은 토론·특강·팀 프로젝트로 사고력 극대화.", position: "left-1/2 -translate-x-1/2", width: "w-max px-8" },
+  second: { title: "하반기 (3~6월)", desc: "전반기 역량 심화. 하계 인턴·봉사활동·실전 케이스 스터디 병행.", position: "left-1/2", width: "w-[33%]" },
+  graduation: { title: "수료식/입학식 (8월)", desc: "52주 과정 마무리. 수료증·추천서 수여 및 차기 기수 입학식 동시 개최.", position: "right-0", width: "w-max px-8" }
+};
+
 export default function CurriculumPage() {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a] selection:bg-blue-100">
+      <style>{`
+        @keyframes walk {
+          0% { transform: translateX(-5%); }
+          100% { transform: translateX(105%); }
+        }
+      `}</style>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
         <section className="mb-10 space-y-4 sm:mb-14">
-          <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-            HRA CURRICULUM
-          </Badge>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
-            커리큘럼
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+              커리큘럼
+            </h1>
+          </div>
           <p className="max-w-2xl text-sm text-[#666666] md:text-base">
             HRA의 52주 교육 프로그램은 단순한 지식 전달을 넘어, 참가자들이 스스로 사고하고 문제를 해결하며 성장할 수 있도록 설계된 몰입형 여정입니다.
           </p>
         </section>
 
-        <section className="mb-32 relative">
-          <div className="absolute top-0 left-6 sm:left-0 sm:top-[23px] sm:-translate-y-1/2 w-px h-full sm:w-full sm:h-[2px] bg-[#D9D9D9] -z-10" />
-          
-          <div className="flex flex-col sm:flex-row justify-between gap-12 sm:gap-4 relative z-10 pl-16 sm:pl-0">
-            {timelineSteps.map((step, index) => (
-              <button 
-                key={step.label} 
-                type="button"
-                className="flex flex-col sm:items-center relative group focus:outline-none text-left appearance-none"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                onFocus={() => setHoveredIndex(index)}
-                onBlur={() => setHoveredIndex(null)}
-                aria-label={`${step.label} 정보`}
-              >
-                 <div className="absolute -left-16 sm:left-auto sm:relative w-12 h-12 rounded-full bg-white border-2 border-[#D9D9D9] flex items-center justify-center mb-6 group-hover:border-blue-400 transition-colors duration-500 shadow-[var(--shadow-soft)] cursor-pointer">
-                   <span className="text-sm font-bold text-[#666666] group-hover:text-[#2563EB] transition-colors">
-                    {index + 1}
+        <section className="mb-32 relative pt-10">
+          <div className="relative w-full h-12 bg-[#111] rounded-full flex items-center justify-between px-4 sm:px-8">
+            <span 
+              className="absolute top-1/2 -translate-y-1/2 text-2xl z-10 select-none"
+              style={{ animation: 'walk 12s linear infinite' }}
+            >
+              🚶
+            </span>
+            
+            {months.map((m) => {
+              const isHovered = hoveredSegment === m.segment && m.segment !== null;
+              return (
+                <button
+                  key={m.label}
+                  className="relative z-20 cursor-default py-4"
+                  onMouseEnter={() => setHoveredSegment(m.segment)}
+                  onMouseLeave={() => setHoveredSegment(null)}
+                  onFocus={() => setHoveredSegment(m.segment)}
+                  onBlur={() => setHoveredSegment(null)}
+                  type="button"
+                >
+                  <span className={`transition-all duration-300 ${
+                    isHovered ? 'text-[#2563EB] text-lg font-bold' : 'text-gray-400 text-sm font-medium'
+                  }`}>
+                    {m.label}
                   </span>
-                </div>
-                
-                {index < timelineSteps.length - 1 && (
-                  <div className="hidden sm:block absolute top-[23px] left-[calc(50%+3rem)] w-[calc(100%-6rem)] h-px">
-                     <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 text-[#D9D9D9] w-4 h-4 -translate-x-full" />
-                  </div>
-                )}
+                </button>
+              );
+            })}
+          </div>
 
-                <div className="sm:text-center">
-                   <h3 className="text-xl font-bold text-[#1a1a1a] mb-2">{step.label}</h3>
-                   <p className="text-sm font-mono text-[#666666] bg-gray-50 px-3 py-1 rounded-full inline-block border border-[#D9D9D9]">
-                    {step.period}
-                  </p>
+          <div className="relative h-32 mt-6">
+            {hoveredSegment && segmentDetails[hoveredSegment as keyof typeof segmentDetails] && (
+              <div 
+                className={`absolute top-0 ${segmentDetails[hoveredSegment as keyof typeof segmentDetails].position} ${segmentDetails[hoveredSegment as keyof typeof segmentDetails].width} animate-in fade-in slide-in-from-top-2 duration-300`}
+              >
+                <div className="bg-[#F0F4FF] rounded-xl p-6 border border-blue-100 shadow-[var(--shadow-soft)]">
+                  <h3 className="font-bold text-[#2563EB] mb-2">{segmentDetails[hoveredSegment as keyof typeof segmentDetails].title}</h3>
+                  <p className="text-sm text-[#666666] whitespace-pre-line">{segmentDetails[hoveredSegment as keyof typeof segmentDetails].desc}</p>
                 </div>
-
-                {/* Hover Tooltip */}
-                {hoveredIndex === index && (
-                  <div className="hidden sm:block absolute top-full mt-3 left-1/2 -translate-x-1/2 w-64 p-4 bg-white border border-[#D9D9D9] rounded-xl shadow-[var(--shadow-soft)] text-sm text-[#666666] z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-t border-l border-[#D9D9D9] rotate-45" />
-                    <div className="relative z-10 leading-relaxed">
-                      {step.description}
-                    </div>
-                  </div>
-                )}
-                {/* Mobile Tooltip (appears inline) */}
-                {hoveredIndex === index && (
-                  <div className="sm:hidden mt-3 p-4 bg-white border border-[#D9D9D9] rounded-xl shadow-[var(--shadow-soft)] text-sm text-[#666666] animate-in fade-in slide-in-from-top-2 duration-200">
-                    {step.description}
-                  </div>
-                )}
-              </button>
-            ))}
+              </div>
+            )}
           </div>
         </section>
 

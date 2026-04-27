@@ -9,7 +9,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 import { z } from "zod/v4";
@@ -77,6 +77,12 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
     notFound();
   }
 
+  // 조회수 증가 (fire-and-forget)
+  db.update(galleries)
+    .set({ viewCount: sql`${galleries.viewCount} + 1` })
+    .where(eq(galleries.id, gallery.id))
+    .then(() => {});
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20">
       <section className="mb-10 space-y-4">
@@ -96,6 +102,7 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl">
           {gallery.title}
         </h1>
+        <p className="text-xs text-[#666666]">조회수 {gallery.viewCount}</p>
         {gallery.description ? (
           <p className="max-w-3xl whitespace-pre-line text-sm text-[#666666] md:text-base">
             {gallery.description}

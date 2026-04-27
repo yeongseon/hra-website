@@ -7,6 +7,7 @@
  */
 
 import { desc } from "drizzle-orm";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -94,7 +95,11 @@ export default async function AdminUsersPage() {
                 ) : (
                   rows.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell className="font-medium text-slate-900">{row.name}</TableCell>
+                      <TableCell className="font-medium text-slate-900">
+                        <Link href={`/admin/users/${row.id}`} className="hover:text-[#2563EB] hover:underline">
+                          {row.name}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-slate-600">{row.email}</TableCell>
                       <TableCell>
                         <Badge

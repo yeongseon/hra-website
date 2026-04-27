@@ -89,7 +89,7 @@ export default async function GalleryPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-6 pb-5 text-center text-sm text-[#666666]">
-                    이미지 {imageCount}장
+                    이미지 {imageCount}장 · 조회 {album.viewCount}
                   </CardContent>
                 </Card>
               </Link>

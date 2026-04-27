@@ -33,7 +33,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-1.5 my-14">
+        <div className="flex flex-col items-center gap-1.5 my-16">
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
           <div className="w-1.5 h-1.5 rounded-full bg-[#D9D9D9]" />
@@ -90,7 +90,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 px-4 w-full bg-[#f5f5f5]">
+      <section className="py-24 px-4 w-full bg-[#EFF6FF]">
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col items-center text-center mb-16">
             <h2 className="text-[40px] font-bold text-[#1a1a1a] tracking-tight">
@@ -173,7 +173,7 @@ export default function Home() {
         <StatsSection />
       </div>
 
-      <div className="w-full bg-[#f5f5f5]">
+      <div className="w-full bg-[#EFF6FF]">
         <AlumniCarousel />
       </div>
     </div>

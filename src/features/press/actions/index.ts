@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -141,4 +141,14 @@ export async function deletePressArticle(id: string): Promise<void> {
 
   await db.delete(pressArticles).where(eq(pressArticles.id, parsedId.data));
   revalidatePressPaths();
+}
+
+export async function trackPressView(id: string) {
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) return;
+
+  await db
+    .update(pressArticles)
+    .set({ viewCount: sql`${pressArticles.viewCount} + 1` })
+    .where(eq(pressArticles.id, parsedId.data));
 }

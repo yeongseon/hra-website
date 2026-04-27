@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { alumniStories } from "@/lib/db/schema";
-import { eq, lt, gt, asc, desc, or, and } from "drizzle-orm";
+import { eq, lt, gt, asc, desc, or, and, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
+import { AlumniSidebar } from "./_components/alumni-sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,6 @@ export default async function AlumniDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 현재 이야기 가져오기
   const story = await db.query.alumniStories.findFirst({
     where: eq(alumniStories.id, storyId),
   });
@@ -35,6 +35,12 @@ export default async function AlumniDetailPage({ params }: PageProps) {
   if (!story) {
     notFound();
   }
+
+  // 조회수 증가 (fire-and-forget)
+  db.update(alumniStories)
+    .set({ viewCount: sql`${alumniStories.viewCount} + 1` })
+    .where(eq(alumniStories.id, story.id))
+    .then(() => {});
 
   const prevStory = await db
     .select({ id: alumniStories.id, name: alumniStories.name })
@@ -68,23 +74,51 @@ export default async function AlumniDetailPage({ params }: PageProps) {
     .limit(1)
     .then((rows) => rows[0] ?? null);
 
+  const allStories = await db
+    .select({
+      id: alumniStories.id,
+      name: alumniStories.name,
+      title: alumniStories.title,
+      content: alumniStories.content,
+      imageUrl: alumniStories.imageUrl,
+    })
+    .from(alumniStories)
+    .orderBy(asc(alumniStories.order));
+
   return (
     <div className="container mx-auto px-4 py-16 max-w-5xl">
-      {/* 헤더 부분 */}
       <h1 className="text-3xl md:text-4xl font-bold text-center text-[#1a1a1a] mb-4">
         수료생 이야기
       </h1>
       <div className="w-16 h-1 bg-[#2563EB] mx-auto mb-2 rounded-full" />
-      <p className="text-center text-[#666666] mb-12">{story.name}의 이야기</p>
+      <p className="text-center text-[#666666] mb-2">{story.name}의 이야기</p>
+      <p className="text-center text-xs text-[#666666] mb-12">조회수 {story.viewCount}</p>
 
-      {/* 메인 레이아웃 (65% / 35%) */}
       <div className="md:grid md:grid-cols-[65fr_35fr] gap-12">
-        {/* 왼쪽: 본문 콘텐츠 */}
         <div className="order-2 md:order-1">
+          {story.imageUrl && (
+            <div className="relative w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden mb-8 border border-[#D9D9D9]">
+              <Image
+                src={story.imageUrl}
+                alt={story.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 65vw"
+              />
+            </div>
+          )}
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-[#1a1a1a] mb-2">{story.name}</h2>
+            {story.title && (
+              <p className="text-[#666666] font-medium">{story.title}</p>
+            )}
+          </div>
+
           {story.quote && (
             <div className="mb-8 p-6 bg-gray-50 rounded-2xl border border-[#D9D9D9]">
               <p className="text-xl font-bold text-[#1a1a1a] italic leading-relaxed">
-                "{story.quote}"
+                &quot;{story.quote}&quot;
               </p>
             </div>
           )}
@@ -93,31 +127,11 @@ export default async function AlumniDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* 오른쪽: 프로필 사이드바 */}
         <div className="order-1 md:order-2 mb-8 md:mb-0">
-          <div className="sticky top-24 bg-white rounded-2xl border border-[#D9D9D9] p-6 shadow-sm flex flex-col items-center text-center">
-            <div className="w-48 h-48 relative mb-6 rounded-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-[#D9D9D9] shadow-inner flex items-center justify-center flex-shrink-0">
-              {story.imageUrl ? (
-                <Image
-                  src={story.imageUrl}
-                  alt={story.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 192px, 192px"
-                />
-              ) : (
-                <User className="w-16 h-16 text-gray-400" />
-              )}
-            </div>
-            <h2 className="text-2xl font-bold text-[#1a1a1a] mb-2">{story.name}</h2>
-            {story.title && (
-              <p className="text-[#666666] font-medium">{story.title}</p>
-            )}
-          </div>
+          <AlumniSidebar stories={allStories} currentStoryId={story.id} />
         </div>
       </div>
 
-      {/* 하단 네비게이션 */}
       <div className="flex items-center justify-between mt-16 pt-8 border-t border-[#D9D9D9]">
         {prevStory ? (
           <Link

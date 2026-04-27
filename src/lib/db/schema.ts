@@ -238,6 +238,7 @@ export const galleries = pgTable("galleries", {
   title: varchar("title", { length: 300 }).notNull(), // 갤러리 제목 (최대 300자)
   description: text("description"), // 갤러리 설명 (선택사항)
   coverImageUrl: text("cover_image_url"), // 갤러리 커버 사진 URL (앨범 썸네일, 선택사항)
+  viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 갤러리 생성 시간
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -347,6 +348,7 @@ export const alumniStories = pgTable("alumni_stories", {
   content: text("content").notNull(), // 본문 내용
   imageUrl: text("image_url"), // 수료생 사진 URL
   isFeatured: boolean("is_featured").notNull().default(false), // 메인 페이지 배너 노출 여부
+  viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
@@ -462,6 +464,7 @@ export const pressArticles = pgTable("press_articles", {
   description: text("description"),
   imageUrl: text("image_url"),
   order: integer("order").notNull().default(0),
+  viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()

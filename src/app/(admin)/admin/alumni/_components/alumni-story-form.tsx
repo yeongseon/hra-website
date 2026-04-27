@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,21 @@ export function AlumniStoryForm({
     },
     initialState
   );
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const previewUrl = useMemo(() => {
+    if (selectedImage) {
+      return URL.createObjectURL(selectedImage);
+    }
+    return defaultValues?.imageUrl ?? null;
+  }, [defaultValues?.imageUrl, selectedImage]);
+
+  useEffect(() => {
+    if (!selectedImage || !previewUrl) return;
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl, selectedImage]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
@@ -124,16 +140,54 @@ export function AlumniStoryForm({
                 {state.fieldErrors?.content ? <p className="text-xs text-red-600">{state.fieldErrors.content}</p> : null}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="image" className="text-[#1a1a1a]">
+                  프로필 이미지
+                </Label>
+                <div className="flex items-start gap-4">
+                  {previewUrl ? (
+                    <Image
+                      src={previewUrl}
+                      alt="프로필 이미지 미리보기"
+                      width={120}
+                      height={120}
+                      unoptimized
+                      className="h-[120px] w-[120px] rounded-full border border-[#D9D9D9] object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full border border-dashed border-[#D9D9D9] text-sm text-[#666666]">
+                      미리보기 없음
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="h-10 border-[#D9D9D9] file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[#1a1a1a]"
+                      onChange={(event) => {
+                        setSelectedImage(event.target.files?.[0] ?? null);
+                      }}
+                    />
+                    <p className="text-xs text-[#666666]">JPG, PNG, WEBP 형식만 가능하며 최대 5MB까지 업로드할 수 있습니다.</p>
+                    {state.fieldErrors?.image ? <p className="text-xs text-red-600">{state.fieldErrors.image}</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="imageUrl" className="text-[#1a1a1a]">
-                  이미지 URL
+                  이미지 URL <span className="text-xs text-[#666666]">(파일 업로드 대신 URL 직접 입력)</span>
                 </Label>
                 <Input
                   id="imageUrl"
                   name="imageUrl"
+                  placeholder="https://example.com/image.jpg"
                   defaultValue={defaultValues?.imageUrl ?? ""}
                   className="border-[#D9D9D9] text-[#1a1a1a]"
                 />
+                <p className="text-xs text-[#666666]">파일을 업로드하면 이 URL은 무시됩니다.</p>
                 {state.fieldErrors?.imageUrl ? <p className="text-xs text-red-600">{state.fieldErrors.imageUrl}</p> : null}
               </div>
 

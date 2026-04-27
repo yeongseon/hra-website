@@ -11,6 +11,7 @@ import { asc, desc } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
+import { PressLink } from "./_components/press-link";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,11 @@ export default async function PressPage() {
           className="overflow-hidden rounded-lg border border-[#D9D9D9] bg-white"
         >
           {/* 데스크톱용 헤더 행 (모바일에서는 숨김) */}
-          <div className="hidden border-b border-[#D9D9D9] bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_140px] md:items-center md:px-6 md:py-3">
+          <div className="hidden border-b border-[#D9D9D9] bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_100px_140px] md:items-center md:px-6 md:py-3">
             <span className="text-sm font-semibold text-[#666666]">번호</span>
             <span className="text-sm font-semibold text-[#666666]">제목</span>
             <span className="text-sm font-semibold text-[#666666]">매체</span>
+            <span className="text-center text-sm font-semibold text-[#666666]">조회</span>
             <span className="text-right text-sm font-semibold text-[#666666]">날짜</span>
           </div>
 
@@ -76,11 +78,10 @@ export default async function PressPage() {
               const number = totalCount - index;
               return (
                 <li key={article.id}>
-                  <a
+                  <PressLink
+                    articleId={article.id}
                     href={article.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block px-4 py-4 transition-colors hover:bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_140px] md:items-center md:gap-4 md:px-6 md:py-4"
+                    className="block px-4 py-4 transition-colors hover:bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_100px_140px] md:items-center md:gap-4 md:px-6 md:py-4"
                   >
                     {/* 번호 (모바일 숨김) */}
                     <span className="hidden text-sm text-[#666666] md:block">{number}</span>
@@ -97,10 +98,13 @@ export default async function PressPage() {
                     <span className="hidden text-sm text-[#666666] md:block md:truncate">
                       {article.source}
                     </span>
+                    <span className="hidden text-center text-sm text-[#666666] md:block">
+                      {article.viewCount}
+                    </span>
                     <span className="hidden text-right text-sm text-[#666666] md:block">
                       {formatDate(article.publishedAt)}
                     </span>
-                  </a>
+                  </PressLink>
                 </li>
               );
             })}

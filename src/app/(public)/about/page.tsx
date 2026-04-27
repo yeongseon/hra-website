@@ -1,5 +1,5 @@
-import { Award, BookOpen, Briefcase, Compass, Globe, Star } from "lucide-react";
 import type { Metadata } from "next";
+import { BenefitsSection } from "./_components/benefits-section";
 
 export const metadata: Metadata = {
   title: "소개",
@@ -31,79 +31,59 @@ export default function AboutPage() {
           </div>
           {/* 오른쪽: 텍스트 설명 */}
           <div className="space-y-6">
-            <p className="text-lg md:text-xl text-[#666666] leading-relaxed font-medium">
-              HRA는 Human Renaissance Academy로, 단순한 지식 전달을 넘어, 청년들이 자기 삶의 주인이 되어 사회에 기여할 수 있도록 돕는 아카데미입니다.
-            </p>
-            <p className="text-[#666666] leading-relaxed">
-              참가자들은 1년 동안 고전 읽기와 토의·토론, 케이스 스터디, 특강, 겨울 합숙을 거치며 배우고 성찰하고 실천하는 힘을 기릅니다.
-            </p>
-            <p className="text-[#666666] leading-relaxed">
-              이를 통해 단기적으로는 사회가 요구하는 취업 역량을 갖추고, 장기적으로는 우리 사회의 발전을 이끄는 리더로 성장하는 것을 목표로 합니다.
+            <p className="text-lg md:text-xl text-[#666666] leading-relaxed font-medium whitespace-pre-line">
+              {`사회에 나가기 전, 무엇이 필요할까요?
+
+              HRA는 고전 읽기, 토론, 케이스 스터디, 겨울 합숙을
+              통해 생각하고 성찰하고 실천하는 힘을 기릅니다.
+
+              1년의 과정이 끝날 때,
+              취업할 준비가 된 사람이 아니라
+              스스로 삶을 이끄는 사람이 됩니다.`}
             </p>
           </div>
         </div>
       </section>
 
-      {/* 3. 주요 목적 및 비전 섹션 (순환 연결 다이어그램) */}
+      {/* 3. 주요 목적 및 비전 섹션 */}
       <section className="mb-32">
-        <div className="text-center mb-16 relative">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-4">주요 목적 및 비전</h2>
-          <div className="w-12 h-1 bg-[#2563EB] mx-auto rounded-full mb-4" />
-          <p className="text-[#666666] text-lg">HRA가 나아가는 방향</p>
+        <div className="text-center mb-12">
+          <p className="text-[#999999] tracking-[0.15em] text-sm font-semibold uppercase mb-4">PURPOSE & VISION</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-6">주요 목적 및 비전</h2>
+          <div className="w-12 h-1 bg-[#2563EB] mx-auto rounded-full mb-8" />
+          <p className="text-[#666666] text-lg leading-relaxed max-w-2xl mx-auto">
+            HRA는 단순한 지식 전달을 넘어, 업무능력과 성품, 사명감을 고루 갖춘 3C 인재를 양성합니다.<br />
+            비영리 기반으로 수익이 아닌 청년의 성장을 중심에 두며, 사고력과 표현력, 실천력을 기르는 학습자 주도형 교육을 지향합니다.
+          </p>
         </div>
 
-        <div className="relative max-w-4xl mx-auto py-4">
-          {/* 연결 선 (데스크탑) */}
-          <div className="hidden md:block absolute top-1/2 left-0 w-full h-[1px] -translate-y-1/2 z-0">
-            <svg
-              className="w-full h-full absolute inset-0 overflow-visible"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <line x1="16.66%" y1="50%" x2="50%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
-              <line x1="50%" y1="50%" x2="83.33%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
-            </svg>
-          </div>
-          {/* 연결 선 (모바일) */}
-          <div className="md:hidden absolute left-1/2 top-0 w-[1px] h-full -translate-x-1/2 z-0">
-            <svg
-              className="w-full h-full absolute inset-0 overflow-visible"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <line x1="50%" y1="16.66%" x2="50%" y2="50%" stroke="#D9D9D9" strokeWidth="1" />
-              <line x1="50%" y1="50%" x2="50%" y2="83.33%" stroke="#D9D9D9" strokeWidth="1" />
-            </svg>
-          </div>
+        <div className="max-w-4xl mx-auto bg-[#f9fafb] rounded-2xl p-8 md:p-12 relative">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-24 relative">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-[#D9D9D9]" />
+            {/* Connecting Line (Mobile) */}
+            <div className="md:hidden absolute left-1/2 top-12 -translate-x-1/2 w-[1px] h-32 bg-[#D9D9D9]" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 relative z-10">
-            {/* 노드 1: 3C 인재 양성 */}
-            <div className="flex flex-col items-center text-center group cursor-default">
-              <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6 transition-colors duration-300 group-hover:border-[#2563EB]">
-                <Star className="w-10 h-10 text-[#2563EB]" />
+            {/* Left Circle: 목적 */}
+            <div className="relative flex flex-col items-center text-center z-10 w-full max-w-[280px]">
+              <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6">
+                <span className="text-xl font-bold text-[#1a1a1a]">목적</span>
               </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">3C 인재 양성</h3>
-              <p className="text-[#666666] text-sm leading-relaxed max-w-[200px]">업무능력과 성품, 사명감을 고루 갖춘 인재를 길러냅니다.</p>
+              <p className="text-[#666666] leading-relaxed">
+                업무능력과 성품, 사명감을 고루 갖춘<br />
+                인재를 길러냅니다.
+              </p>
             </div>
-            
-            {/* 노드 2: 비영리 기반 */}
-            <div className="flex flex-col items-center text-center group cursor-default">
-              <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6 transition-colors duration-300 group-hover:border-[#2563EB]">
-                <Globe className="w-10 h-10 text-[#2563EB]" />
+
+            {/* Right Circle: 비전 */}
+            <div className="relative flex flex-col items-center text-center z-10 w-full max-w-[280px]">
+              <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6">
+                <span className="text-xl font-bold text-[#1a1a1a]">비전</span>
               </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">비영리 기반</h3>
-              <p className="text-[#666666] text-sm leading-relaxed max-w-[200px]">수익이 아닌 청년의 성장을 중심에 두고 운영됩니다.</p>
-            </div>
-            
-            {/* 노드 3: 교육 중점 */}
-            <div className="flex flex-col items-center text-center group cursor-default">
-              <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6 transition-colors duration-300 group-hover:border-[#2563EB]">
-                <BookOpen className="w-10 h-10 text-[#2563EB]" />
-              </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">사고력·표현력·실천력</h3>
-              <p className="text-[#666666] text-sm leading-relaxed max-w-[200px]">발표와 토론을 바탕으로 한 학습자 주도형 교육을 지향합니다.</p>
+              <p className="text-[#666666] leading-relaxed">
+                청년의 성장을 중심에 둔 비영리 운영과<br />
+                학습자 주도형 교육을 지향합니다.
+              </p>
             </div>
           </div>
         </div>
@@ -112,8 +92,7 @@ export default function AboutPage() {
       {/* 4. 핵심 가치 (3C) 섹션 */}
       <section className="mb-32">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-4">핵심 가치</h2>
-          <p className="text-[#666666] text-lg">HRA가 추구하는 3C 인재상</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a]">핵심가치: 3C 인재상</h2>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -157,31 +136,25 @@ export default function AboutPage() {
 
       {/* 5. 수업 운영 방식 섹션 */}
       <section className="mb-32">
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-8 text-center">수업 운영 방식</h2>
-        <div className="max-w-4xl mx-auto rounded-2xl border border-[#D9D9D9] overflow-hidden shadow-[var(--shadow-soft)]">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-[#D9D9D9]">
-                <th className="py-4 px-6 font-semibold text-[#1a1a1a] w-1/3 text-center sm:text-left">항목</th>
-                <th className="py-4 px-6 font-semibold text-[#1a1a1a] text-center sm:text-left">내용</th>
+        <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-8 text-center">수업 운영 방식</h2>
+        <div className="max-w-4xl mx-auto">
+          <table className="w-full border-collapse">
+            <tbody className="divide-y divide-[#D9D9D9] border-t border-[#D9D9D9]">
+              <tr className="bg-white transition-colors">
+                <td className="py-6 px-4 md:px-6 text-[#666666] font-medium text-left w-1/3">교육 기간</td>
+                <td className="py-6 px-4 md:px-6 text-[#1a1a1a] text-right">52주 (매년 9월~다음 해 8월까지 교실수업 40주, 합숙 캠프 7박 8일 포함)</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D9D9D9]">
-              <tr className="bg-white hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 text-[#666666] font-medium text-center sm:text-left">교육 기간</td>
-                <td className="py-4 px-6 text-[#1a1a1a]">52주 (매년 9월~다음 해 8월까지 교실수업 40주, 합숙 캠프 7박 8일 포함)</td>
+              <tr className="bg-white transition-colors">
+                <td className="py-6 px-4 md:px-6 text-[#666666] font-medium text-left">교육 일시</td>
+                <td className="py-6 px-4 md:px-6 text-[#1a1a1a] text-right">매주 토요일 09:00~18:00</td>
               </tr>
-              <tr className="bg-gray-50/30 hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 text-[#666666] font-medium text-center sm:text-left">교육 일시</td>
-                <td className="py-4 px-6 text-[#1a1a1a]">매주 토요일 09:00~18:00</td>
+              <tr className="bg-white transition-colors">
+                <td className="py-6 px-4 md:px-6 text-[#666666] font-medium text-left">교육 장소</td>
+                <td className="py-6 px-4 md:px-6 text-[#1a1a1a] text-right">제주대학교</td>
               </tr>
-              <tr className="bg-white hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 text-[#666666] font-medium text-center sm:text-left">교육 장소</td>
-                <td className="py-4 px-6 text-[#1a1a1a]">제주대학교</td>
-              </tr>
-              <tr className="bg-gray-50/30 hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 text-[#666666] font-medium text-center sm:text-left">수업료</td>
-                <td className="py-4 px-6 text-[#2563EB] font-bold">무료</td>
+              <tr className="bg-white transition-colors">
+                <td className="py-6 px-4 md:px-6 text-[#666666] font-medium text-left">수업료</td>
+                <td className="py-6 px-4 md:px-6 text-[#2563EB] font-bold text-right">무료</td>
               </tr>
             </tbody>
           </table>
@@ -190,35 +163,8 @@ export default function AboutPage() {
 
       {/* 6. 수료 후 혜택 섹션 */}
       <section>
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1a1a1a] mb-8 text-center">수료 후 혜택</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Benefit 1 */}
-          <div className="group border border-[#D9D9D9] border-t-4 border-t-transparent hover:border-t-[#2563EB] bg-white rounded-2xl p-8 shadow-[var(--shadow-soft)] hover:shadow-lg transition-all duration-300 hover:scale-[1.02] flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-6">
-              <Award className="w-8 h-8 text-[#2563EB]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">수료증 및 추천서 수여</h3>
-            <p className="text-[#666666] text-sm leading-relaxed">과정 수료 후 공식 수료증과 추천서를 발급받으실 수 있습니다.</p>
-          </div>
-          
-          {/* Benefit 2 */}
-          <div className="group border border-[#D9D9D9] border-t-4 border-t-transparent hover:border-t-[#2563EB] bg-white rounded-2xl p-8 shadow-[var(--shadow-soft)] hover:shadow-lg transition-all duration-300 hover:scale-[1.02] flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-6">
-              <Compass className="w-8 h-8 text-[#2563EB]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">진로 지도</h3>
-            <p className="text-[#666666] text-sm leading-relaxed">전문 멘토진이 1:1 진로 상담을 통해 여러분의 미래를 함께 설계합니다.</p>
-          </div>
-
-          {/* Benefit 3 */}
-          <div className="group border border-[#D9D9D9] border-t-4 border-t-transparent hover:border-t-[#2563EB] bg-white rounded-2xl p-8 shadow-[var(--shadow-soft)] hover:shadow-lg transition-all duration-300 hover:scale-[1.02] flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-6">
-              <Briefcase className="w-8 h-8 text-[#2563EB]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#1a1a1a] mb-3">취업 알선</h3>
-            <p className="text-[#666666] text-sm leading-relaxed">HRA 네트워크를 통한 기업 연결 및 취업 기회를 제공합니다.</p>
-          </div>
-        </div>
+        <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-8 text-center">수료 후 혜택</h2>
+        <BenefitsSection />
       </section>
     </div>
   );
