@@ -33,6 +33,10 @@ const imageSchema = z.object({
   order: z.number().int().min(0, "정렬 순서는 0 이상이어야 합니다."),
 });
 
+const galleryImageBulkSchema = z.object({
+  alt: z.string().trim().max(255, "대체 텍스트는 255자 이하여야 합니다.").optional(),
+});
+
 const idSchema = z.uuid("잘못된 ID입니다.");
 
 // 갤러리 이미지 업로드 제약 조건
@@ -263,6 +267,101 @@ export async function addGalleryImage(id: string, formData: FormData): Promise<G
 
   revalidateGalleryPaths(galleryResult.gallery.id);
   return successState("이미지가 추가되었습니다.");
+}
+
+export async function addGalleryImages(id: string, formData: FormData): Promise<GalleryActionState> {
+  await requireAdmin();
+
+  const parsed = galleryImageBulkSchema.safeParse({
+    alt: normalizeOptionalText(formData.get("alt")),
+  });
+
+  if (!parsed.success) {
+    return initialError(parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.");
+  }
+
+  const imageEntries = formData.getAll("images");
+  if (imageEntries.length === 0) {
+    return initialError("이미지 파일을 선택해주세요.");
+  }
+
+  const validatedFiles = imageEntries.map((entry, index) => {
+    const validated = validateGalleryImageFile(entry);
+
+    if ("error" in validated) {
+      const fileName = entry instanceof File && entry.name ? entry.name : `${index + 1}번째 파일`;
+      return {
+        error: `${fileName}: ${validated.error ?? "이미지 파일을 확인해주세요."}`,
+      } as const;
+    }
+
+    return {
+      file: validated.file,
+    } as const;
+  });
+
+  const invalidFile = validatedFiles.find((file) => "error" in file);
+  if (invalidFile && "error" in invalidFile) {
+    return initialError(invalidFile.error ?? "이미지 파일을 확인해주세요.");
+  }
+
+  const galleryResult = await getValidatedGallery(id);
+  if ("error" in galleryResult) {
+    return initialError(galleryResult.error ?? "앨범을 찾을 수 없습니다.");
+  }
+
+  const files: File[] = [];
+
+  validatedFiles.forEach((file) => {
+    if ("file" in file && file.file) {
+      files.push(file.file);
+    }
+  });
+  const baseOrder = galleryResult.gallery.images.length;
+  const uploadedBlobs: Array<{ url: string }> = [];
+
+  try {
+    const blobs = await Promise.all(
+      files.map(async (file) => {
+        const safeFileName = `gallery/${Date.now()}-${normalizeFileName(file.name)}`;
+        const blob = await put(safeFileName, file, {
+          access: "public",
+        });
+
+        uploadedBlobs.push({ url: blob.url });
+        return blob;
+      }),
+    );
+
+    await db.insert(galleryImages).values(
+      blobs.map((blob, index) => ({
+        galleryId: galleryResult.gallery.id,
+        url: blob.url,
+        alt: parsed.data.alt ?? null,
+        order: baseOrder + index,
+      })),
+    );
+
+    const firstBlob = blobs[0];
+
+    if (!galleryResult.gallery.coverImageUrl && firstBlob) {
+      await db
+        .update(galleries)
+        .set({
+          coverImageUrl: firstBlob.url,
+        })
+        .where(eq(galleries.id, galleryResult.gallery.id));
+    }
+  } catch {
+    if (uploadedBlobs.length > 0) {
+      await Promise.all(uploadedBlobs.map((blob) => del(blob.url).catch(() => undefined)));
+    }
+
+    return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
+  }
+
+  revalidateGalleryPaths(galleryResult.gallery.id);
+  return successState(`${files.length}장의 이미지가 추가되었습니다.`);
 }
 
 export async function deleteGalleryImage(id: string, imageId: string): Promise<GalleryActionState> {

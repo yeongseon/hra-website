@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Lock } from "lucide-react";
+import { asc, desc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
+import { createWeeklyTextAsMember } from "@/features/weekly-texts/actions";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { weeklyTexts } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { cohorts, weeklyTexts } from "@/lib/db/schema";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "주차별 텍스트",
@@ -21,42 +25,85 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 export default async function WeeklyTextsPage() {
-  const texts = await db
-    .select()
-    .from(weeklyTexts)
-    .orderBy(desc(weeklyTexts.createdAt));
+  const session = await auth();
+  const role = session?.user?.role;
+  const canUpload = role === "ADMIN" || role === "MEMBER";
+
+  const [texts, cohortRows] = await Promise.all([
+    db
+      .select({
+        id: weeklyTexts.id,
+        title: weeklyTexts.title,
+        fileUrl: weeklyTexts.fileUrl,
+        fileName: weeklyTexts.fileName,
+        createdAt: weeklyTexts.createdAt,
+        cohortName: cohorts.name,
+      })
+      .from(weeklyTexts)
+      .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
+      .orderBy(desc(weeklyTexts.createdAt)),
+    db
+      .select({
+        id: cohorts.id,
+        name: cohorts.name,
+      })
+      .from(cohorts)
+      .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+  ]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
       <div className="mb-8">
-        <Link 
-          href="/resources" 
-          className="inline-flex items-center text-sm font-medium text-[#666666] hover:text-[#1a1a1a] transition-colors"
+        <Link
+          href="/resources"
+          className="inline-flex items-center text-sm font-medium text-[#666666] transition-colors hover:text-[#1a1a1a]"
         >
           <ArrowLeft className="mr-2 size-4" />
           자료실
         </Link>
       </div>
 
-      <section className="mb-10 sm:mb-14 space-y-4 text-center sm:text-left">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#1a1a1a]">
+      <section className="mb-10 space-y-4 text-center sm:mb-14 sm:text-left">
+        <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a] sm:text-4xl md:text-5xl">
           주차별 텍스트
         </h1>
-        <p className="max-w-2xl text-sm text-[#666666] md:text-base mx-auto sm:mx-0">
-          수업에 필요한 주차별 텍스트 자료를 제공합니다.
+        <p className="mx-auto max-w-2xl text-sm text-[#666666] sm:mx-0 md:text-base">
+          수업에 필요한 주차별 텍스트 자료를 확인하고, 승인된 회원은 새 텍스트를 직접 업로드할
+          수 있습니다.
         </p>
       </section>
 
+      <section className="mb-10 sm:mb-12">
+        {canUpload ? (
+          <MemberUploadForm action={createWeeklyTextAsMember} cohorts={cohortRows} />
+        ) : (
+          <Card className="rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
+            <CardHeader className="border-b border-[#D9D9D9] py-6">
+              <CardTitle className="flex items-center gap-2 text-xl text-[#1a1a1a]">
+                <Lock className="size-5 text-[#2563EB]" />
+                업로드 권한 안내
+              </CardTitle>
+              <CardDescription className="text-sm leading-6 text-[#666666]">
+                승인 대기 상태에서는 자료 업로드를 사용할 수 없습니다. 관리자 승인 후 다시 이용해
+                주세요.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+      </section>
+
       <section>
-        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-4">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1a1a1a]">전체 목록</h2>
+        <div className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
+          <h2 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
+            전체 목록
+          </h2>
           <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
             {texts.length}개
           </Badge>
         </div>
 
         {texts.length === 0 ? (
-          <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
+          <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
             <CardContent className="text-center text-base text-[#666666]">
               등록된 주차별 텍스트가 없습니다.
             </CardContent>
@@ -65,12 +112,26 @@ export default async function WeeklyTextsPage() {
           <div className="space-y-4">
             {texts.map((text) => (
               <a key={text.id} href={text.fileUrl} download={text.fileName} className="block">
-                <Card className="border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] rounded-2xl transition hover:border-blue-400 hover:bg-gray-50">
+                <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
                   <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-2">
-                      <Badge variant="secondary" className="w-fit border border-[#D9D9D9] bg-gray-50 text-[#666666]">
-                        {formatDate(text.createdAt)}
-                      </Badge>
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="w-fit border border-[#D9D9D9] bg-gray-50 text-[#666666]"
+                        >
+                          {formatDate(text.createdAt)}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "w-fit border-[#D9D9D9] bg-white text-[#666666]",
+                            text.cohortName ? "inline-flex" : "hidden",
+                          )}
+                        >
+                          {text.cohortName}
+                        </Badge>
+                      </div>
                       <CardTitle className="text-lg">{text.title}</CardTitle>
                       <CardDescription className="text-sm text-[#666666]">
                         파일을 눌러 바로 다운로드하세요.

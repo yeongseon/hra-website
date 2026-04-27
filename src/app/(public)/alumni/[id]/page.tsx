@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { alumniStories } from "@/lib/db/schema";
-import { eq, lt, gt, asc, desc, or, and, sql } from "drizzle-orm";
+import { eq, lt, gt, asc, desc, or, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,15 +38,6 @@ export default async function AlumniDetailPage({ params }: PageProps) {
   if (!story) {
     notFound();
   }
-
-  // 조회수 증가 (fire-and-forget)
-  void db
-    .update(alumniStories)
-    .set({ viewCount: sql`${alumniStories.viewCount} + 1` })
-    .where(eq(alumniStories.id, story.id))
-    .catch((err: unknown) => {
-      console.error("수료생 조회수 업데이트 실패:", err);
-    });
 
   const prevStory = await db
     .select({ id: alumniStories.id, name: alumniStories.name })
@@ -98,7 +89,7 @@ export default async function AlumniDetailPage({ params }: PageProps) {
       </h1>
       <div className="w-16 h-1 bg-[#2563EB] mx-auto mb-2 rounded-full" />
       <p className="text-center text-[#666666] mb-2">{story.name}의 이야기</p>
-      <p className="text-center text-xs text-[#666666] mb-12">조회수 {story.viewCount}</p>
+      <div className="mb-12" />
 
       <div className="md:grid md:grid-cols-[65fr_35fr] gap-12">
         <div className="order-2 md:order-1">

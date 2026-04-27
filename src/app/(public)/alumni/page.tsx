@@ -19,7 +19,6 @@ type AlumniStoryViewModel = {
   story: string;
   title?: string | null;
   imageUrl?: string | null;
-  viewCount: number;
   gradient: string;
 };
 
@@ -42,7 +41,6 @@ export default async function AlumniPage() {
     story: story.content,
     title: story.title,
     imageUrl: story.imageUrl,
-    viewCount: story.viewCount,
     gradient: gradients[index % gradients.length],
   }));
 
@@ -100,7 +98,7 @@ export default async function AlumniPage() {
                 <div className="mt-8">
                   <p className="font-bold text-blue-600">{story.name}</p>
                   {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
-                  <p className="mt-1 text-xs text-[#666666]">조회 {story.viewCount}</p>
+
                 </div>
               </div>
             </article>

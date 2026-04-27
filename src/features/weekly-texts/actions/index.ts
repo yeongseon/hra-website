@@ -20,6 +20,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { weeklyTexts } from "@/lib/db/schema";
 
@@ -88,9 +89,7 @@ const revalidateWeeklyTextPaths = () => {
   revalidatePath("/resources/weekly-texts");
 };
 
-export async function createWeeklyText(formData: FormData): Promise<WeeklyTextActionState> {
-  await requireAdmin();
-
+const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
   const parsed = weeklyTextFormSchema.safeParse({
     title: formData.get("title"),
     cohortId: parseCohortId(formData.get("cohortId")),
@@ -135,6 +134,35 @@ export async function createWeeklyText(formData: FormData): Promise<WeeklyTextAc
       error: "주차별 텍스트 저장에 실패했습니다.",
     };
   }
+};
+
+export async function createWeeklyText(formData: FormData): Promise<WeeklyTextActionState> {
+  await requireAdmin();
+
+  return createWeeklyTextRecord(formData);
+}
+
+export async function createWeeklyTextAsMember(
+  formData: FormData,
+): Promise<WeeklyTextActionState> {
+  const session = await auth();
+  const role = session?.user?.role;
+
+  if (!session?.user) {
+    return {
+      success: false,
+      error: "로그인 후 이용해주세요.",
+    };
+  }
+
+  if (role !== "ADMIN" && role !== "MEMBER") {
+    return {
+      success: false,
+      error: "승인된 회원만 업로드할 수 있습니다.",
+    };
+  }
+
+  return createWeeklyTextRecord(formData);
 }
 
 export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionState> {

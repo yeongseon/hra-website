@@ -11,6 +11,7 @@
  */
 
 import matter from "gray-matter";
+import yaml from "js-yaml";
 import {
   frontmatterSchemas,
   type FrontmatterKind,
@@ -47,7 +48,15 @@ export function parseMarkdown(
 ): ParseResult<ReportFrontmatter | GuideFrontmatter | TemplateFrontmatter> {
   let parsed: matter.GrayMatterFile<string>;
   try {
-    parsed = matter(raw);
+    // gray-matter는 YAML Date(예: 2026-04-26)를 JS Date 객체로 자동 변환하는데,
+    // Zod 스키마는 문자열("YYYY-MM-DD")을 기대하므로 engines 옵션으로
+    // Date 자동 변환을 비활성화한다.
+    parsed = matter(raw, {
+      engines: {
+        yaml: (str: string) =>
+          yaml.load(str, { schema: yaml.JSON_SCHEMA }) as Record<string, unknown>,
+      },
+    });
   } catch (error) {
     return {
       ok: false,

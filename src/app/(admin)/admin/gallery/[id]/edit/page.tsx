@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GalleryForm } from "@/app/(admin)/admin/gallery/_components/gallery-form";
 import { GalleryImageForm } from "@/app/(admin)/admin/gallery/_components/gallery-image-form";
 import {
-  addGalleryImage,
+  addGalleryImages,
   deleteGalleryImage,
   updateGallery,
 } from "@/features/gallery/actions";
@@ -90,7 +90,7 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
   }
 
   const updateAction = updateGallery.bind(null, gallery.id);
-  const addImageAction = addGalleryImage.bind(null, gallery.id);
+  const addImageAction = addGalleryImages.bind(null, gallery.id);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-6 py-10">
