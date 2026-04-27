@@ -57,8 +57,6 @@ if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
     Kakao({
       clientId: process.env.AUTH_KAKAO_ID,
       clientSecret: process.env.AUTH_KAKAO_SECRET,
-      authorization:
-        "https://kauth.kakao.com/oauth/authorize?scope=profile_nickname+profile_image",
     }),
   );
 }
