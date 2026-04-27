@@ -41,6 +41,9 @@ src/
 │   ├── notices/actions/
 │   ├── press/actions/
 │   ├── recruitment/actions/
+│   ├── recruitment-settings/actions/
+│   ├── report-templates/actions/
+│   ├── users/actions/
 │   └── ...
 ├── lib/
 │   ├── db/schema.ts      # Drizzle 스키마 (모든 테이블 정의)
@@ -63,10 +66,16 @@ src/
 | 공지사항 | DB | Markdown 본문은 text 컬럼 |
 | 언론보도 | DB | |
 | 갤러리 메타 | DB | 이미지는 Vercel Blob |
+| 모집 포스터 이미지 | Vercel Blob | 관리자 페이지에서 업로드 |
 | 수료생 이야기 | DB | |
 | FAQ 연락처 | DB | |
 | 자료실 | DB | 파일은 Vercel Blob |
 | 지원서, 회원 | DB | |
+
+### 회원 역할 (Role)
+- **ADMIN**: 관리자 (모든 기능 접근 가능)
+- **MEMBER**: 일반 멤버 (로그인 후 자료실 접근 가능)
+- **PENDING**: 승인 대기 (로그인 가능하나 자료실 접근 불가, 관리자 승인 필요)
 
 ## 5. 코딩 패턴
 

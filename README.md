@@ -1,181 +1,171 @@
-# HRA (Human Renaissance Academy) 프로젝트 가이드
+# 🌟 HRA (Human Renaissance Academy) 프로젝트 가이드
 
-대학 연합 교육 프로그램 **HRA (Human Renaissance Academy)**의 공식 웹사이트 프로젝트입니다. 이 가이드는 개발이 처음인 대학생분들도 쉽게 프로젝트를 이해하고, 본인의 컴퓨터에서 실행하며, 실제 인터넷에 배포까지 할 수 있도록 구성되었습니다.
+안녕하세요! 대학 연합 교육 프로그램 **HRA (Human Renaissance Academy)**의 공식 웹사이트 프로젝트에 오신 것을 환영합니다. 👋
 
-- **실제 서비스 주소**: [https://hra-website-theta.vercel.app](https://hra-website-theta.vercel.app)
-- **GitHub 저장소**: [https://github.com/yeongseon/hra-website.git](https://github.com/yeongseon/hra-website.git)
+이 가이드는 코딩이 처음인 고등학생이나 대학생분들도 "나도 웹사이트를 만들 수 있겠는데?"라는 생각이 들 정도로 쉽고 친절하게 작성되었습니다. 우리 함께 멋진 웹사이트를 만들어봐요!
 
----
-
-## 1. 프로젝트 소개
-HRA 웹사이트는 교육 프로그램의 정보를 공유하고, 회원들이 자료를 열람하거나 관리자가 학사 일정을 관리할 수 있는 통합 플랫폼입니다.
-누구나 접속해서 프로그램 소개를 볼 수 있고, 회원가입 후에는 자료실 등 전용 기능을 사용할 수 있습니다. 관리자는 모든 콘텐츠(공지사항, 갤러리, 교수진, 기수 등)를 관리자 페이지에서 직접 CRUD 할 수 있습니다.
+- **실제 서비스 구경하기**: [https://hra-website-theta.vercel.app](https://hra-website-theta.vercel.app)
+- **코드 저장소**: [https://github.com/yeongseon/hra-website.git](https://github.com/yeongseon/hra-website.git)
 
 ---
 
-## 2. 기술 스택
+## 1. 🏫 프로젝트 소개
+HRA 웹사이트는 교육 프로그램의 정보를 널리 알리고, 공부하는 친구들이 필요한 자료를 쉽게 찾을 수 있도록 돕는 '온라인 본부'예요.
 
-*   **Next.js 16** (App Router) + **React 19** + **TypeScript**
-*   **Tailwind CSS v4** (`@import "tailwindcss"`, `tailwind.config.js` 없음)
-*   **shadcn/ui v4** (`src/components/ui/`)
-*   **Drizzle ORM** + **Neon Postgres** — `src/lib/db/schema.ts`에 모든 테이블 정의
-*   **NextAuth v5 beta** — 아이디/비밀번호(Credentials) + 구글/카카오 소셜 로그인
-*   **Vercel Blob** — 이미지/파일 업로드 저장소
-*   **Zod v4** — `import { z } from "zod/v4"` (NOT `"zod"`)
+- **누구나**: HRA가 어떤 곳인지 소개를 보고, 공지사항이나 갤러리를 구경할 수 있어요.
+- **멤버**: 로그인하면 수업 자료나 보고서 양식을 내려받을 수 있어요.
+- **관리자**: 복잡한 코드 없이도 버튼 클릭만으로 공지사항을 올리고, 사진을 등록하고, 회원을 관리할 수 있는 '비밀 대시보드'를 가지고 있어요.
 
 ---
 
-## 3. 폴더 구조
+## 2. 🛠️ 기술 스택 (쉬운 설명)
+웹사이트를 만드는 데 사용된 도구들이에요. 이름은 어렵지만 실제로는 우리가 익숙한 것들과 비슷하답니다!
+
+- **Next.js 16**: **"웹사이트를 만드는 튼튼한 뼈대"**예요. 레고 조립 설명서처럼 웹사이트의 전체적인 구조를 잡아줘요.
+- **React 19**: **"화면을 부품처럼 조립하는 도구"**예요. 버튼 하나, 메뉴 하나를 따로 만들어서 조립할 수 있게 해줘요.
+- **TypeScript**: **"똑똑한 맞춤법 검사기"**예요. 코드를 쓰다가 오타가 나면 실행하기 전에 미리 알려줘서 실수를 줄여줘요.
+- **Tailwind CSS**: **"붓과 팔레트"**예요. HTML 코드에 직접 색칠하고 디자인을 입히는 아주 간편한 스타일 도구예요.
+- **Drizzle ORM**: **"데이터베이스 번역기"**예요. 컴퓨터가 이해하는 복잡한 데이터 언어를 우리가 이해하기 쉬운 말로 바꿔줘요.
+- **Neon Postgres**: **"인터넷 보물 창고"**예요. 엑셀 시트 같은 데이터들이 구글 드라이브처럼 클라우드(인터넷)에 저장되어 있다고 생각하면 돼요.
+- **NextAuth**: **"우리 집 문지기"**예요. 로그인하고 회원가입 하는 까다로운 과정을 대신 처리해 주는 든든한 도우미예요.
+- **Vercel Blob**: **"무한 창고"**예요. 사진이나 무거운 파일들을 인터넷에 안전하게 올려두고 필요할 때 꺼내 쓸 수 있게 해줘요.
+- **Zod**: **"철저한 검문소"**예요. 사용자가 이름 칸에 숫자를 쓰진 않았는지, 이메일 형식을 잘 지켰는지 꼼꼼하게 검사해요.
+
+---
+
+## 3. 📁 폴더 구조
+프로젝트 폴더를 열었을 때 보이는 이름들의 역할이에요.
 
 ```text
 src/
-├── app/
-│   ├── (public)/         # 누구나: 홈, 소개, 커리큘럼, 교수진, 기수, 모집, 공지, 언론보도, 갤러리, 수료생, FAQ
-│   ├── (auth)/login/     # 로그인 페이지
-│   ├── (admin)/admin/    # 관리자 전용 (대시보드, 모든 콘텐츠 CRUD)
-│   └── (member)/         # 로그인 필요: 자료실, 마이페이지
-├── features/             # 비즈니스 로직 (서버 액션 — CRUD)
-│   ├── alumni/actions/
-│   ├── faculty/actions/
-│   ├── gallery/actions/
-│   ├── notices/actions/
-│   ├── press/actions/
-│   ├── recruitment/actions/
-│   ├── applications/actions/
-│   ├── guidebooks/actions/
-│   └── weekly-texts/actions/
-├── lib/
-│   ├── db/schema.ts      # Drizzle 스키마 (모든 테이블)
-│   ├── db/index.ts       # DB 연결
-│   ├── admin.ts          # requireAdmin() — 관리자 권한 확인
-│   ├── auth.ts           # NextAuth 설정
-│   ├── google-sheets.ts  # 구글 시트 (지원서 조회 — 선택)
-│   └── utils.ts
-├── components/
-│   ├── ui/               # shadcn/ui
-│   ├── layout/           # header, footer
-│   └── admin/            # 관리자 전용 컴포넌트
-└── scripts/              # 관리 스크립트 (관리자 시딩, 맞춤법 검사)
+├── app/                  # 화면에 보이는 '페이지'들이 모여 있어요.
+│   ├── (public)/         # 누구나 볼 수 있는 페이지 (홈, 소개, 공지사항 등)
+│   ├── (auth)/           # 로그인과 회원가입 관련 페이지
+│   ├── (admin)/admin/    # 관리자 선생님들만 들어가는 비밀 관리 페이지
+│   └── (member)/         # 멤버들만 볼 수 있는 페이지 (자료실, 마이페이지)
+├── features/             # 실제 기능을 담당하는 '일꾼'들이 있어요.
+│   ├── alumni/           # 수료생 이야기 기능
+│   ├── faculty/          # 교수진 소개 기능
+│   ├── gallery/          # 사진첩 기능
+│   ├── recruitment/      # 신입생 모집 기능
+│   ├── users/            # 회원 관리 기능 (역할 변경, 삭제 등)
+│   └── ...               # (공지사항, 보도자료, 자료실 등 더 많은 기능이 있어요!)
+├── lib/                  # 도구 상자예요. DB 연결 방법이나 공통 도구들이 들어있어요.
+│   ├── db/schema.ts      # 데이터 보물 창고(DB)에 어떤 정보를 담을지 적어둔 명세서예요.
+│   └── admin.ts          # "너 관리자 맞니?" 하고 확인해 주는 도구예요.
+├── components/           # 버튼, 입력창 같은 '작은 부품'들을 모아둔 곳이에요.
+└── scripts/              # 관리자 계정을 만들거나 맞춤법을 검사하는 '특수 도구'예요.
 ```
 
 ---
 
-## 4. 사이트 구조 및 이용 권한
+## 4. 🔒 사이트 구조 및 권한
+누가 어디까지 들어갈 수 있는지 정해져 있어요. 이번에 '승인 대기(PENDING)' 상태가 추가되었답니다!
 
-| 영역 | 접근 권한 | 페이지 |
-| --- | --- | --- |
-| 공개 | 누구나 | 홈, 소개, 커리큘럼, 교수진, 기수, 모집, 공지사항, 언론보도, 갤러리, 수료생 이야기, FAQ |
-| 회원 | 로그인 필요 | 자료실, 마이페이지 |
-| 관리자 | 관리자 권한 필요 | `/admin` 이하 전부 (대시보드, 콘텐츠 관리, 회원 관리) |
-
----
-
-## 5. 데이터 저장 아키텍처
-
-> **원칙: 텍스트/메타데이터는 DB, 이미지/파일만 Vercel Blob**
-
-| 콘텐츠 | 저장 방식 | 비고 |
-| --- | --- | --- |
-| 교수진, 기수, 모집 설정 | **Neon Postgres** (DB) | |
-| 공지사항 (Markdown 본문) | **Neon Postgres** (DB) | `text` 컬럼 |
-| 언론보도 | **Neon Postgres** (DB) | |
-| 갤러리 메타 | **Neon Postgres** (DB) | 이미지 URL은 Blob |
-| 수료생 이야기, FAQ, 자료실 메타 | **Neon Postgres** (DB) | |
-| 지원서, 회원 | **Neon Postgres** (DB) | |
-| 갤러리 이미지, 자료실 파일, 교수진 사진 | **Vercel Blob** | 업로드 시 MIME/크기 검증 |
-| 지원서(외부 폼 연동 시) | **Google Sheets** | `GOOGLE_SHEETS_API_KEY` 설정 시 관리자 페이지에서 조회 |
+| 영역 | 들어갈 수 있는 사람 | 주요 페이지 |
+| :--- | :--- | :--- |
+| **공개 영역** | 누구나 | 홈, HRA 소개, 커리큘럼, 공지사항, 갤러리, FAQ 등 |
+| **대기(PENDING)** | 가입 직후 상태 | 기본 정보는 보이지만, **자료실은 아직 볼 수 없어요.** (승인 대기 중!) |
+| **회원(MEMBER)** | 승인된 멤버 | **자료실(수업 자료, 보고서 양식)**을 마음껏 이용할 수 있어요. |
+| **관리자(ADMIN)** | 운영진 | 대시보드, 회원 승인/삭제, 모든 콘텐츠 등록/수정/삭제 |
 
 ---
 
-## 6. 환경변수
+## 5. 💾 데이터 저장 방식
+정보의 종류에 따라 저장하는 장소가 달라요.
 
-`.env` 파일에 필요한 설정값입니다.
-
-### 필수 항목
-
-| 키 | 설명 |
-| --- | --- |
-| `DATABASE_URL` | Neon Postgres 연결 주소 |
-| `AUTH_SECRET` | NextAuth 보안 키 (`npx auth secret`로 생성) |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 토큰 |
-| `NEXT_PUBLIC_APP_URL` | 사이트 주소 (로컬: `http://localhost:3000`) |
-
-### 선택 항목
-
-| 키 | 설명 |
-| --- | --- |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | 구글 로그인 (없으면 버튼 자동 숨김) |
-| `AUTH_KAKAO_ID` / `AUTH_KAKAO_SECRET` | 카카오 로그인 (없으면 버튼 자동 숨김) |
-| `GOOGLE_SHEETS_API_KEY` | 관리자 페이지에서 외부 구글폼 지원서 조회 |
-
-> 👉 각 항목의 발급 방법은 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)를 참고하세요.
+| 콘텐츠 내용 | 저장 장소 | 비고 |
+| :--- | :--- | :--- |
+| 교수진 이름, 기수 정보, 모집 날짜 | **DB (인터넷 저장소)** | 글자로 된 정보들 |
+| 공지사항 본문, FAQ 내용 | **DB (인터넷 저장소)** | 긴 글 내용도 안전하게! |
+| **모집 포스터 이미지** | **Vercel Blob (사진 창고)** | 용량이 큰 이미지는 전용 창고에! 📸 |
+| 갤러리 사진, 자료실 파일 | **Vercel Blob (사진 창고)** | 사진과 파일 원본은 여기서 관리해요. |
+| 회원 정보 및 지원서 | **DB (인터넷 저장소)** | 개인 정보와 신청 내역 |
 
 ---
 
-## 7. 주요 명령어
+## 6. 🔑 환경변수 (.env)
+웹사이트가 돌아가기 위해 필요한 '비밀 열쇠'들이에요. `.env`라는 파일에 적어줘야 해요.
 
-| 명령어 | 설명 |
-| --- | --- |
-| `npm install` | 의존성 설치 |
-| `npm run dev` | 개발 서버 실행 |
-| `npm run build` | 프로덕션 빌드 |
-| `npm run lint` | ESLint |
-| `npm test` | Vitest |
-| `npm run test:e2e` | Playwright E2E |
-| `npx drizzle-kit push` | DB 스키마 반영 |
-| `npm run seed-admin` | 초기 관리자 계정 생성 (`ADMIN_EMAIL=... ADMIN_PASSWORD=... npm run seed-admin`) |
-| `npm run spell-check` | 한국어 맞춤법 검사 |
+- `DATABASE_URL`: 인터넷 보물 창고(Neon) 주소예요.
+- `AUTH_SECRET`: 문지기가 쓸 보안용 비밀번호예요.
+- `BLOB_READ_WRITE_TOKEN`: 사진 창고(Vercel Blob)에 접근하는 열쇠예요.
+- `NEXT_PUBLIC_APP_URL`: 우리 웹사이트의 진짜 주소예요.
+
+> 👉 자세한 발급 방법은 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)를 확인하세요!
 
 ---
 
-## 8. 시작하기 (로컬 실행)
+## 7. ⌨️ 주요 명령어
+터미널이라는 검은 창에 입력해서 컴퓨터를 시키는 명령어예요.
 
-1. **Node.js 18+** 설치
-2. `npm install`
-3. `.env.example`을 복사해 `.env` 작성 → 필수 항목 채우기
-4. `npx drizzle-kit push` — DB 스키마 반영
-5. `npm run seed-admin` — 첫 관리자 계정 생성
-6. `npm run dev` → http://localhost:3000
+- `npm install`: "필요한 도구들 다 가져와!" (처음 시작할 때 딱 한 번)
+- `npm run dev`: "테스트용 웹사이트 띄워줘!" (코딩하면서 결과를 바로 볼 때)
+- `npm run build`: "진짜 서비스용으로 튼튼하게 만들어줘!" (배포하기 전 필수)
+- `npx drizzle-kit push`: "데이터 창고 구조를 최신으로 업데이트해줘!"
+- `npm run seed-admin`: "첫 번째 대장 관리자를 한 명 만들어줘!"
+- `npm run spell-check`: "한국어 맞춤법 틀린 거 있나 봐줘!"
 
 ---
 
-## 9. 핵심 패턴 (코드 작성 시 참고)
+## 8. 🚀 시작하기 (로컬 실행 10단계)
+내 컴퓨터에서 이 웹사이트를 직접 띄워보는 방법이에요!
 
-### 서버 액션 패턴 (`src/features/*/actions/index.ts`)
+1.  **엔진 설치**: [Node.js](https://nodejs.org/ko/)를 설치하세요. (LTS 버전 추천)
+2.  **스마트 메모장**: [VS Code](https://code.visualstudio.com/)를 설치하세요.
+3.  **코드 가져오기**: 터미널을 열고 `git clone https://github.com/yeongseon/hra-website.git`을 입력하세요.
+4.  **폴더 들어가기**: `cd hra-website`를 입력해 프로젝트 폴더로 이동하세요.
+5.  **도구 설치**: `npm install`을 입력하고 잠시 기다려주세요.
+6.  **비밀 설정**: 폴더 안의 `.env.example` 파일을 복사해서 이름을 `.env`로 바꾸세요.
+7.  **열쇠 채우기**: `.env` 파일 안에 `DATABASE_URL` 등 필수 항목들을 채워 넣으세요. (관리자에게 문의!)
+8.  **창고 정리**: `npx drizzle-kit push`를 입력해서 데이터베이스를 준비하세요.
+9.  **관리자 생성**: `npm run seed-admin`으로 로그인할 계정을 만드세요.
+10. **실행!**: `npm run dev`를 입력하고, 인터넷 창에 `http://localhost:3000`을 치면 끝! 🎉
 
+- **💡 힌트**: 빨간 글씨로 에러가 나면 대부분 `npm install`을 안 했거나 `.env` 설정이 틀린 경우예요.
+- **성공하면?**: 예쁜 HRA 메인 화면이 짠! 하고 나타날 거예요.
+
+---
+
+## 9. 🏗️ 핵심 패턴 (코드 작성 규칙)
+개발자 친구들은 이 규칙을 꼭 지켜주세요!
+
+### 1️⃣ 서버 일꾼 패턴 (Server Actions)
+`src/features/*/actions/index.ts`에 기능을 만들 때는 이 순서를 지켜요.
 ```typescript
 "use server";
 
-import { z } from "zod/v4";              // ← zod/v4 필수
-import { requireAdmin } from "@/lib/admin";
-import { db } from "@/lib/db";
-import { revalidatePath } from "next/cache";
-
-// 1. Zod 스키마 검증 → 2. requireAdmin() → 3. DB CRUD → 4. revalidatePath() → 5. redirect()
+import { z } from "zod/v4";              // 1. 검문소(Zod) 통과!
+import { requireAdmin } from "@/lib/admin"; // 2. "너 관리자니?" 확인!
+import { db } from "@/lib/db";           // 3. 데이터 창고(DB) 작업 시작!
+import { revalidatePath } from "next/cache"; // 4. "화면 새로고침해!" 하고 알려주기
 ```
-
-### 권한 관리
-
-- 미들웨어(`src/proxy.ts`) + `requireAdmin()` 조합
-- 비로그인 사용자가 회원 전용 페이지 접근 시 자동으로 로그인 페이지로 이동
-- 관리자가 아닌 사용자가 `/admin/*` 접근 시 차단
-
-### 디자인 토큰
-
-- 텍스트: `text-[#1a1a1a]` (주), `text-[#666666]` (보조)
-- 테두리: `border-[#D9D9D9]`
-- 브랜드 블루: `text-[#2563EB]`, `bg-[#2563EB]`
-- 관리자 버튼: `bg-[#1a1a1a] text-white hover:bg-[#333333]`
-
-> 더 자세한 규칙은 [AGENTS.md](AGENTS.md)를 참고하세요.
 
 ---
 
-## 10. 배포
+## 10. ✨ 최근의 멋진 변화들 (Recent Changes)
+최근에 우리 웹사이트가 이렇게 더 똑똑해졌어요!
 
-- **프로덕션**: Vercel (`https://hra-website-theta.vercel.app`)
-- **개발 문서**: MkDocs GitHub Pages (`https://yeongseon.github.io/hra-website/`)
-- **DB 마이그레이션**: `npx drizzle-kit push`
-- **변경 후 반드시**: `npm run build`로 빌드 확인
+- **👀 얼마나 봤을까?**: 공지사항과 자료실에 **조회수** 기능이 생겼어요. 어떤 글이 인기 있는지 알 수 있죠!
+- **🛤️ 멋진 여정**: 커리큘럼 페이지의 '여정' 디자인이 더 예쁘고 보기 편하게 바뀌었어요.
+- **📰 최신 뉴스**: 언론보도가 항상 최신순으로 정렬되어 가장 따끈따끈한 소식을 먼저 보여줘요.
+- **👥 꼼꼼한 회원 관리**: '승인 대기' 상태가 추가되어 운영진이 확인한 분들만 멤버로 승인할 수 있고, 역할 변경도 드롭다운으로 톡! 선택할 수 있어요.
+- **📄 서류 양식 통합**: 자료실에서 보고서 양식을 한눈에 모아볼 수 있게 탭으로 정리했답니다.
+- **🖼️ 포스터 업로드**: 이제 신입생 모집 포스터를 컴퓨터에서 바로 업로드하거나 주소만 넣어서 등록할 수 있어요.
 
-궁금한 점이 있다면 언제든 프로젝트 관리자에게 문의하세요!
+---
+
+## 11. 🚢 배포
+- **우리 사이트**: Vercel을 통해 전 세계 어디서든 접속할 수 있게 되어 있어요.
+- **설명서**: MkDocs를 이용해 [온라인 문서](https://yeongseon.github.io/hra-website/)도 운영 중이에요.
+- **주의사항**: 코드를 고친 뒤에는 꼭 `npm run build`를 해서 문제가 없는지 확인해야 해요!
+
+---
+
+## 🙋‍♀️ 도움이 필요해요!
+더 자세한 내용은 `docs/` 폴더를 확인해 보세요.
+- [관리자용 가이드](docs/ADMIN-GUIDE.md): 사이트 운영 방법이 궁금할 때 ⭐
+- [배포 가이드](docs/DEPLOYMENT.md): 내 사이트를 인터넷에 직접 올리고 싶을 때
+- [시작하기 가이드](docs/getting-started/prerequisites.md): 도구 설치부터 차근차근 배우고 싶을 때
+
+여러분의 멋진 기여를 기다릴게요! 즐거운 코딩 되세요! 🎈
