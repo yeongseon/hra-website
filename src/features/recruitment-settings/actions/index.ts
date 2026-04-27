@@ -3,6 +3,7 @@
 import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import sharp from "sharp";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
@@ -77,6 +78,11 @@ function normalizePosterFileName(fileName: string) {
   return fileName.trim().replace(/\s+/g, "-");
 }
 
+function toWebpFileName(fileName: string) {
+  // 마지막 확장자만 교체해 다중 점(.)이 포함된 파일명도 안전하게 처리한다.
+  return fileName.replace(/\.[^./\\]+$/, "") + ".webp";
+}
+
 function validatePosterFile(fileEntry: FormDataEntryValue | null) {
   if (!(fileEntry instanceof File) || fileEntry.size === 0) {
     return {
@@ -108,10 +114,26 @@ function validatePosterFile(fileEntry: FormDataEntryValue | null) {
 }
 
 async function uploadPosterFile(file: File) {
+  const originalBuffer = Buffer.from(await file.arrayBuffer());
   const safeFileName = normalizePosterFileName(file.name);
-  const blob = await put(`recruitment/포스터-${safeFileName}`, file, { access: "public" });
 
-  return blob.url;
+  try {
+    const webpBuffer = await sharp(originalBuffer).webp({ quality: 85 }).toBuffer();
+    const webpFileName = toWebpFileName(safeFileName);
+    const blob = await put(`recruitment/포스터-${webpFileName}`, webpBuffer, {
+      access: "public",
+      contentType: "image/webp",
+    });
+
+    return blob.url;
+  } catch {
+    const blob = await put(`recruitment/포스터-${safeFileName}`, originalBuffer, {
+      access: "public",
+      contentType: file.type || undefined,
+    });
+
+    return blob.url;
+  }
 }
 
 function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: string }>) {
