@@ -1,7 +1,7 @@
 /**
  * 회원 역할 변경 서버 액션
  * 
- * 관리자가 회원의 역할(ADMIN/MEMBER)을 변경할 때 사용합니다.
+ * 관리자가 회원의 역할을 변경할 때 사용합니다.
  * 
  * "use server" 표기: 이 파일의 함수는 서버에서만 실행됩니다.
  */
@@ -16,8 +16,8 @@ import { users } from "@/lib/db/schema";
 
 const updateRoleSchema = z.object({
   userId: z.uuid("올바른 사용자 ID가 필요합니다."),
-  role: z.enum(["ADMIN", "MEMBER"], {
-    error: "올바른 역할이 아닙니다. (ADMIN 또는 MEMBER)",
+  role: z.enum(["ADMIN", "MEMBER", "PENDING"], {
+    error: "올바른 역할이 아닙니다. (ADMIN, MEMBER 또는 PENDING)",
   }),
 });
 
@@ -33,7 +33,7 @@ export type UpdateRoleState = {
  */
 export async function updateUserRole(
   userId: string,
-  role: "ADMIN" | "MEMBER"
+  role: "ADMIN" | "MEMBER" | "PENDING"
 ): Promise<UpdateRoleState> {
   const session = await requireAdmin();
 
@@ -71,6 +71,7 @@ export async function updateUserRole(
   const roleLabels: Record<string, string> = {
     ADMIN: "관리자",
     MEMBER: "멤버",
+    PENDING: "승인 대기",
   };
 
   return {

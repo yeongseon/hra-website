@@ -29,10 +29,10 @@ declare module "next-auth" {
    * NextAuth의 기본 User 타입에 'role'을 추가합니다.
    * 역할(role)은 사용자가 시스템에서 무엇을 할 수 있는지를 결정합니다:
    * - "ADMIN": 관리자 - 전체 관리 기능 사용 가능
-   * - "MEMBER": 일반회원 - 수업일지 제출 등 기본 기능만 사용 가능
-   */
+    * - "MEMBER": 일반회원 - 수업일지 제출 등 기본 기능만 사용 가능
+    */
   interface User {
-    role: "ADMIN" | "MEMBER";
+    role: "ADMIN" | "MEMBER" | "PENDING";
   }
 
   /**
@@ -42,14 +42,14 @@ declare module "next-auth" {
    * 사용자가 로그인하면 session.user를 통해 그 사용자의 정보에 접근할 수 있습니다.
    * 여기서는 session.user에 다음 정보들을 추가합니다:
    * - id: 사용자의 고유 번호 (데이터베이스에서 사용)
-   * - role: 사용자의 역할 (ADMIN 또는 MEMBER)
+    * - role: 사용자의 역할 (ADMIN 또는 MEMBER)
    * 
    * 예시: if (session.user.role === "ADMIN") { 관리자 기능 }
    */
   interface Session {
     user: User & {
       id: string;
-      role: "ADMIN" | "MEMBER";
+      role: "ADMIN" | "MEMBER" | "PENDING";
     };
   }
 }
@@ -69,6 +69,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: "ADMIN" | "MEMBER";
+    role: "ADMIN" | "MEMBER" | "PENDING";
   }
 }

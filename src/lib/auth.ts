@@ -28,6 +28,8 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
+const MEMBER_ONLY_PREFIXES = ["/resources", "/member", "/mypage"] as const;
+
 /**
  * 활성화할 로그인 프로바이더 목록을 동적으로 구성합니다.
  *
@@ -161,14 +163,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       });
 
       if (!existingUser) {
-        await db.insert(users).values({
-          name:
-            user.name?.trim() ||
-            (account.provider === "kakao" ? "카카오 사용자" : "구글 사용자"),
-          email,
-          image: user.image,
-          role: "MEMBER",
-        });
+         await db.insert(users).values({
+           name:
+             user.name?.trim() ||
+             (account.provider === "kakao" ? "카카오 사용자" : "구글 사용자"),
+           email,
+           image: user.image,
+           role: "PENDING",
+         });
       } else {
         // 기존 사용자: 소셜 프로필에서 이름/이미지가 변경되었으면 DB에도 반영
         const updates: Partial<{ name: string; image: string }> = {};
@@ -222,7 +224,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "ADMIN" | "MEMBER";
+         session.user.role = token.role as "ADMIN" | "MEMBER" | "PENDING";
         if (typeof token.name === "string") {
           session.user.name = token.name;
         }
@@ -250,13 +252,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return auth?.user?.role === "ADMIN";
       }
 
-      if (
-        pathname.startsWith("/resources") ||
-        pathname.startsWith("/member") ||
-        pathname.startsWith("/mypage")
-      ) {
-        return !!auth?.user;
-      }
+       if (MEMBER_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+         if (!auth?.user) {
+           return false;
+         }
+
+         if (auth.user.role === "PENDING") {
+           return Response.redirect(new URL("/pending", request.url));
+         }
+
+         return auth.user.role === "MEMBER" || auth.user.role === "ADMIN";
+       }
 
       return true;
     },

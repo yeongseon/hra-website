@@ -7,7 +7,7 @@ import { updateUserRole } from "@/features/users/actions";
 
 type UserRoleButtonProps = {
   userId: string;
-  currentRole: "ADMIN" | "MEMBER";
+  currentRole: "ADMIN" | "MEMBER" | "PENDING";
 };
 
 export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
@@ -15,8 +15,18 @@ export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
-  const targetRole = currentRole === "ADMIN" ? "MEMBER" : "ADMIN";
-  const targetLabel = targetRole === "ADMIN" ? "관리자로 변경" : "멤버로 변경";
+  const targetRole =
+    currentRole === "PENDING"
+      ? "MEMBER"
+      : currentRole === "ADMIN"
+        ? "MEMBER"
+        : "ADMIN";
+  const targetLabel =
+    currentRole === "PENDING"
+      ? "멤버로 승인"
+      : targetRole === "ADMIN"
+        ? "관리자로 변경"
+        : "멤버로 변경";
 
   const handleClick = () => {
     setMessage(null);

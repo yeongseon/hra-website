@@ -1,7 +1,7 @@
 /**
  * 회원 관리 페이지
  * 
- * 관리자가 전체 회원 목록을 확인하고 역할(ADMIN/MEMBER)을 변경할 수 있는 페이지입니다.
+ * 관리자가 전체 회원 목록을 확인하고 역할을 변경할 수 있는 페이지입니다.
  * - 회원 목록을 테이블로 표시
  * - 각 회원의 역할을 변경하는 버튼 제공
  */
@@ -24,6 +24,24 @@ import { users } from "@/lib/db/schema";
 import { UserRoleButton } from "./_components/user-role-button";
 
 export const dynamic = "force-dynamic";
+
+const roleBadgeMap = {
+  ADMIN: {
+    label: "관리자",
+    className: "bg-blue-100 text-blue-700",
+    variant: "default" as const,
+  },
+  MEMBER: {
+    label: "멤버",
+    className: "bg-slate-100 text-slate-700",
+    variant: "secondary" as const,
+  },
+  PENDING: {
+    label: "승인 대기",
+    className: "bg-amber-100 text-amber-700",
+    variant: "secondary" as const,
+  },
+};
 
 const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
@@ -102,16 +120,12 @@ export default async function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="text-slate-600">{row.email}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={row.role === "ADMIN" ? "default" : "secondary"}
-                          className={
-                            row.role === "ADMIN"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-slate-100 text-slate-700"
-                          }
-                        >
-                          {row.role === "ADMIN" ? "관리자" : "멤버"}
-                        </Badge>
+                         <Badge
+                           variant={roleBadgeMap[row.role].variant}
+                           className={roleBadgeMap[row.role].className}
+                         >
+                           {roleBadgeMap[row.role].label}
+                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-600">{formatDate(row.createdAt)}</TableCell>
                       <TableCell>

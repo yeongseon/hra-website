@@ -11,7 +11,7 @@ type SessionUser = {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  role?: "ADMIN" | "MEMBER";
+  role?: "ADMIN" | "MEMBER" | "PENDING";
 };
 
 type HeaderProps = {
@@ -69,9 +69,10 @@ export function Header({ session }: HeaderProps) {
   const user = session?.user;
   const isLoggedIn = !!user;
   const isAdmin = user?.role === "ADMIN";
+  const canAccessResources = user?.role === "ADMIN" || user?.role === "MEMBER";
 
   /** 로그인 사용자에게만 자료실 메뉴 추가 */
-  const visibleNavItems: NavItem[] = isLoggedIn
+  const visibleNavItems: NavItem[] = canAccessResources
     ? [...navItems, { label: "자료실", href: "/resources" }]
     : navItems;
 

@@ -40,7 +40,7 @@ import { relations } from "drizzle-orm";
 // 사용자의 역할 종류
 // - ADMIN: 관리자 (공지사항, 수업일지 작성 권한 있음)
 // - MEMBER: 일반 멤버 (제한된 권한)
-export const userRoleEnum = pgEnum("user_role", ["ADMIN", "MEMBER"]);
+export const userRoleEnum = pgEnum("user_role", ["ADMIN", "MEMBER", "PENDING"]);
 
 // 동아리 모집 상태
 // - UPCOMING: 곧 시작될 예정
