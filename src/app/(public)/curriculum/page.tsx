@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent, ArrowRight } from "lucide-react";
+import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent } from "lucide-react";
 
 const curriculumItems = [
   {
@@ -41,41 +41,42 @@ const curriculumItems = [
   },
 ];
 
-const months = [
-  { label: "Sep.", segment: "first" },
-  { label: "Oct.", segment: "first" },
-  { label: "Nov.", segment: "first" },
-  { label: "Dec.", segment: "first" },
-  { label: "Jan.", segment: null },
-  { label: "Feb.", segment: "winter" },
-  { label: "Mar.", segment: "second" },
-  { label: "Apr.", segment: "second" },
-  { label: "May.", segment: "second" },
-  { label: "Jun.", segment: "second" },
-  { label: "Jul.", segment: null },
-  { label: "Aug.", segment: "graduation" }
+const journeyPhases = [
+  {
+    id: "first",
+    title: "전반기",
+    months: "9월 - 12월",
+    desc: "고전 읽기·토론, 케이스 스터디, 경영서 리뷰 시작. 매주 토요일 09:00–18:00 진행.",
+  },
+  {
+    id: "winter",
+    title: "겨울캠프",
+    months: "1월 - 2월",
+    desc: "7박 8일 합숙 집중 훈련. 강도 높은 토론·특강·팀 프로젝트로 사고력 극대화.",
+  },
+  {
+    id: "second",
+    title: "하반기",
+    months: "3월 - 6월",
+    desc: "전반기 역량 심화. 하계 인턴·봉사활동·실전 케이스 스터디 병행.",
+  },
+  {
+    id: "graduation",
+    title: "수료식",
+    months: "7월 - 8월",
+    desc: "52주 과정 마무리. 수료증·추천서 수여 및 차기 기수 입학식 동시 개최.",
+  }
 ];
 
-const segmentDetails = {
-  first: { title: "전반기 (9~12월)", desc: "고전 읽기·토론, 케이스 스터디, 경영서 리뷰 시작. 매주 토요일 09:00–18:00 진행.", position: "left-0", width: "w-[33%]" },
-  winter: { title: "겨울캠프 (1~2월)", desc: "7박 8일 합숙 집중 훈련. 강도 높은 토론·특강·팀 프로젝트로 사고력 극대화.", position: "left-1/2 -translate-x-1/2", width: "w-max px-8" },
-  second: { title: "하반기 (3~6월)", desc: "전반기 역량 심화. 하계 인턴·봉사활동·실전 케이스 스터디 병행.", position: "left-1/2", width: "w-[33%]" },
-  graduation: { title: "수료식/입학식 (8월)", desc: "52주 과정 마무리. 수료증·추천서 수여 및 차기 기수 입학식 동시 개최.", position: "right-0", width: "w-max px-8" }
-};
-
 export default function CurriculumPage() {
-  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [activePhase, setActivePhase] = useState(journeyPhases[0].id);
+
+  const activePhaseData = journeyPhases.find(p => p.id === activePhase);
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a] selection:bg-blue-100">
-      <style>{`
-        @keyframes walk {
-          0% { transform: translateX(-5%); }
-          100% { transform: translateX(105%); }
-        }
-      `}</style>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
-        <section className="mb-10 space-y-4 sm:mb-14">
+        <section className="mb-12 sm:mb-20 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
@@ -87,48 +88,69 @@ export default function CurriculumPage() {
           </p>
         </section>
 
-        <section className="mb-32 relative pt-10">
-          <div className="relative w-full h-12 bg-[#111] rounded-full flex items-center justify-between px-4 sm:px-8">
-            <span 
-              className="absolute top-1/2 -translate-y-1/2 text-2xl z-10 select-none"
-              style={{ animation: 'walk 12s linear infinite' }}
-            >
-              🚶
-            </span>
+        {/* 52주 여정 타임라인 섹션 (개선됨) */}
+        <section className="mb-24 sm:mb-32">
+          <h2 className="text-xl font-bold text-[#1a1a1a] mb-8 sm:mb-12">52주 여정</h2>
+          
+          <div className="relative">
+            {/* 데스크탑 선 */}
+            <div className="hidden md:block absolute top-[45px] left-[12.5%] right-[12.5%] h-0.5 bg-[#D9D9D9] z-0" />
             
-            {months.map((m) => {
-              const isHovered = hoveredSegment === m.segment && m.segment !== null;
-              return (
-                <button
-                  key={m.label}
-                  className="relative z-20 cursor-default py-4"
-                  onMouseEnter={() => setHoveredSegment(m.segment)}
-                  onMouseLeave={() => setHoveredSegment(null)}
-                  onFocus={() => setHoveredSegment(m.segment)}
-                  onBlur={() => setHoveredSegment(null)}
-                  type="button"
-                >
-                  <span className={`transition-all duration-300 ${
-                    isHovered ? 'text-[#2563EB] text-lg font-bold' : 'text-gray-400 text-sm font-medium'
-                  }`}>
-                    {m.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+            {/* 모바일 선 */}
+            <div className="md:hidden absolute top-4 bottom-4 left-[23px] w-0.5 bg-[#D9D9D9] z-0" />
 
-          <div className="relative h-32 mt-6">
-            {hoveredSegment && segmentDetails[hoveredSegment as keyof typeof segmentDetails] && (
-              <div 
-                className={`absolute top-0 ${segmentDetails[hoveredSegment as keyof typeof segmentDetails].position} ${segmentDetails[hoveredSegment as keyof typeof segmentDetails].width} animate-in fade-in slide-in-from-top-2 duration-300`}
-              >
-                <div className="bg-[#F0F4FF] rounded-xl p-6 border border-blue-100 shadow-[var(--shadow-soft)]">
-                  <h3 className="font-bold text-[#2563EB] mb-2">{segmentDetails[hoveredSegment as keyof typeof segmentDetails].title}</h3>
-                  <p className="text-sm text-[#666666] whitespace-pre-line">{segmentDetails[hoveredSegment as keyof typeof segmentDetails].desc}</p>
-                </div>
-              </div>
-            )}
+            <div className="flex flex-col md:flex-row gap-8 md:gap-0 relative z-10">
+              {journeyPhases.map((phase) => {
+                const isActive = activePhase === phase.id;
+                
+                return (
+                  <div key={phase.id} className="flex-1 flex flex-row md:flex-col items-start md:items-center relative group">
+                    {/* 타임라인 노드 및 모바일 레이아웃 */}
+                    <button
+                      type="button"
+                      onClick={() => setActivePhase(phase.id)}
+                      className="flex md:flex-col items-center gap-4 md:gap-4 text-left md:text-center w-full focus:outline-none group"
+                    >
+                      {/* 노드 원형 마커 */}
+                      <div className="relative flex-shrink-0 flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full bg-white border-2 transition-all duration-300 z-10"
+                           style={{ 
+                             borderColor: isActive ? '#2563EB' : '#D9D9D9',
+                             boxShadow: isActive ? '0 0 0 4px rgba(37, 99, 235, 0.1)' : 'none'
+                           }}>
+                        <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full transition-colors duration-300 ${isActive ? 'bg-[#2563EB]' : 'bg-transparent group-hover:bg-gray-200'}`} />
+                      </div>
+                      
+                      {/* 라벨 */}
+                      <div className="flex flex-col">
+                        <span className={`text-lg font-bold transition-colors duration-300 ${isActive ? 'text-[#2563EB]' : 'text-[#1a1a1a] group-hover:text-gray-600'}`}>
+                          {phase.title}
+                        </span>
+                        <span className="text-sm font-medium text-[#666666] mt-1">
+                          {phase.months}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* 모바일용 인라인 설명 카드 (선택된 항목 아래에 표시) */}
+                    <div className={`md:hidden overflow-hidden transition-all duration-300 w-full pl-16 ${isActive ? 'max-h-48 opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                      <div className="p-5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] shadow-sm">
+                        <p className="text-[#475569] text-sm leading-relaxed">
+                          {phase.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* 데스크탑용 하단 설명 카드 */}
+            <div className="hidden md:block mt-12 bg-[#F8FAFC] rounded-2xl p-8 border border-[#E2E8F0] shadow-sm max-w-3xl mx-auto transition-all duration-500 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-bold text-[#2563EB] mb-3">{activePhaseData?.title}</h3>
+              <p className="text-[#475569] leading-relaxed text-base">
+                {activePhaseData?.desc}
+              </p>
+            </div>
           </div>
         </section>
 

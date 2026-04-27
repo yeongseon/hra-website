@@ -88,10 +88,14 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     notFound();
   }
 
-  db.update(notices)
+  // 조회수 증가 (fire-and-forget)
+  void db
+    .update(notices)
     .set({ viewCount: sql`${notices.viewCount} + 1` })
     .where(eq(notices.id, notice.id))
-    .then(() => {});
+    .catch((err: unknown) => {
+      console.error("공지사항 조회수 업데이트 실패:", err);
+    });
 
   const [prevNotice] = await db
     .select({ id: notices.id, title: notices.title })
