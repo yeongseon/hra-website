@@ -57,27 +57,7 @@ export default async function ResourcesPage() {
       date: book.createdAt,
       downloadUrl: book.fileUrl,
     })),
-    {
-      id: "template-1",
-      title: "보고서 양식",
-      category: "보고서 양식",
-      date: new Date("2024-09-01"),
-      href: "/member/templates",
-    },
-    {
-      id: "template-2",
-      title: "작성 가이드",
-      category: "보고서 양식",
-      date: new Date("2024-09-01"),
-      href: "/member/guides/report-writing-guide",
-    },
-    {
-      id: "template-3",
-      title: "제출 안내",
-      category: "보고서 양식",
-      date: new Date("2024-09-01"),
-      href: "/member/guides/submission-guide",
-    },
+
   ];
 
   items.sort((a, b) => b.date.getTime() - a.date.getTime());

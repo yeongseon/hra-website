@@ -6,7 +6,7 @@ import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export type ResourceCategory = "수업일지" | "주차별 텍스트" | "보고서 양식" | "가이드북";
+export type ResourceCategory = "수업일지" | "주차별 텍스트" | "가이드북";
 
 export type ResourceItem = {
   id: number | string;
@@ -22,7 +22,7 @@ interface ResourcesTabsProps {
   items: ResourceItem[];
 }
 
-const tabs: ("전체" | ResourceCategory)[] = ["전체", "수업일지", "주차별 텍스트", "보고서 양식", "가이드북"];
+const tabs: ("전체" | ResourceCategory)[] = ["전체", "수업일지", "주차별 텍스트", "가이드북"];
 
 export function ResourcesTabs({ items }: ResourcesTabsProps) {
   const [activeTab, setActiveTab] = useState<"전체" | ResourceCategory>("전체");
@@ -62,7 +62,6 @@ export function ResourcesTabs({ items }: ResourcesTabsProps) {
     switch (category) {
       case "수업일지": return "bg-blue-50 text-blue-700 border-blue-200";
       case "주차별 텍스트": return "bg-green-50 text-green-700 border-green-200";
-      case "보고서 양식": return "bg-purple-50 text-purple-700 border-purple-200";
       case "가이드북": return "bg-orange-50 text-orange-700 border-orange-200";
       default: return "bg-gray-50 text-gray-700 border-gray-200";
     }
