@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Info } from "lucide-react";
+import Link from "next/link";
+import { Info, Plus } from "lucide-react";
 import { db } from "@/lib/db";
 import { classLogs, guidebooks, users, weeklyTexts } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
@@ -17,6 +18,8 @@ export default async function ResourcesPage() {
   const userRole = session?.user?.role;
   // ADMIN/MEMBER는 열람 권한이 있으므로 경고 불필요
   const showAccessWarning = userRole !== "ADMIN" && userRole !== "MEMBER";
+  const isAdmin = userRole === "ADMIN";
+
   const logs = await db
     .select({
       id: classLogs.id,
@@ -77,6 +80,19 @@ export default async function ResourcesPage() {
         <p className="max-w-2xl text-sm text-[#666666] md:text-base mx-auto sm:mx-0">
           수업일지, 주차별 텍스트, 가이드북 등 HRA 교육 자료를 확인하세요.
         </p>
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <Link href="/admin/resources/new" className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors">
+              <Plus className="size-4" />수업일지 추가
+            </Link>
+            <Link href="/admin/resources/weekly-texts/new" className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors">
+              <Plus className="size-4" />주차별 텍스트 추가
+            </Link>
+            <Link href="/admin/resources/guidebooks/new" className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-md bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors">
+              <Plus className="size-4" />가이드북 추가
+            </Link>
+          </div>
+        )}
       </section>
 
       {showAccessWarning && (
