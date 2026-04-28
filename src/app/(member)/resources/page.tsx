@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import { db } from "@/lib/db";
 import { classLogs, guidebooks, users, weeklyTexts } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 import { ResourcesTabs, type ResourceItem } from "./_components/resources-tabs";
 
 export const metadata: Metadata = {
@@ -12,6 +13,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ResourcesPage() {
+  const session = await auth();
+  const userRole = session?.user?.role;
+  // ADMIN/MEMBER는 열람 권한이 있으므로 경고 불필요
+  const showAccessWarning = userRole !== "ADMIN" && userRole !== "MEMBER";
   const logs = await db
     .select({
       id: classLogs.id,
@@ -74,6 +79,7 @@ export default async function ResourcesPage() {
         </p>
       </section>
 
+      {showAccessWarning && (
       <section className="mb-12">
         <div className="relative overflow-hidden rounded-2xl bg-amber-50 border border-amber-200 p-6 md:p-8 shadow-[var(--shadow-soft)]">
           <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
@@ -90,6 +96,7 @@ export default async function ResourcesPage() {
           </div>
         </div>
       </section>
+      )}
 
       <ResourcesTabs items={items} />
     </div>
