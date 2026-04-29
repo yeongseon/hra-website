@@ -39,8 +39,10 @@ import { relations } from "drizzle-orm";
 
 // 사용자의 역할 종류
 // - ADMIN: 관리자 (공지사항, 수업일지 작성 권한 있음)
-// - MEMBER: 일반 멤버 (제한된 권한)
-export const userRoleEnum = pgEnum("user_role", ["ADMIN", "MEMBER", "PENDING"]);
+// - FACULTY: 교수 (강의를 담당하는 교수 그룹)
+// - MEMBER: 일반 멤버 (특정 기수에 소속된 회원)
+// - PENDING: 승인 대기 (가입 후 아직 승인되지 않은 상태)
+export const userRoleEnum = pgEnum("user_role", ["ADMIN", "FACULTY", "MEMBER", "PENDING"]);
 
 // 동아리 모집 상태
 // - UPCOMING: 곧 시작될 예정
@@ -81,7 +83,8 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 100 }).notNull(), // 사용자 이름 (최대 100자)
   email: varchar("email", { length: 255 }).notNull().unique(), // 이메일 (중복 불가, 로그인할 때 사용)
   passwordHash: text("password_hash"), // 비밀번호를 암호화한 값 (소셜 로그인 사용자는 null)
-  role: userRoleEnum("role").notNull().default("MEMBER"), // 사용자 역할 (기본값: 일반 멤버)
+  role: userRoleEnum("role").notNull().default("PENDING"), // 사용자 역할 (기본값: 승인 대기)
+  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 소속 기수 ID (MEMBER일 때만 의미 있음, 기수 삭제 시 null로 초기화)
   image: text("image"), // 프로필 사진 URL (선택사항)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 계정 생성 시간
   updatedAt: timestamp("updated_at")
@@ -92,9 +95,14 @@ export const users = pgTable("users", {
 
 // Users 테이블과 다른 테이블의 관계 정의
 // 한 사용자가 여러 개의 공지사항과 수업일지를 작성할 수 있음
-export const usersRelations = relations(users, ({ many }) => ({
+// MEMBER 역할일 경우 하나의 기수에 소속됨
+export const usersRelations = relations(users, ({ one, many }) => ({
   notices: many(notices), // 이 사용자가 작성한 모든 공지사항
   classLogs: many(classLogs), // 이 사용자가 작성한 모든 수업일지
+  cohort: one(cohorts, { // 이 사용자가 소속된 기수 (MEMBER일 때만 의미 있음)
+    fields: [users.cohortId],
+    references: [cohorts.id],
+  }),
 }));
 
 // ============================================================

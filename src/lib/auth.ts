@@ -219,7 +219,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-         session.user.role = token.role as "ADMIN" | "MEMBER" | "PENDING";
+         session.user.role = token.role as "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
         if (typeof token.name === "string") {
           session.user.name = token.name;
         }
@@ -256,7 +256,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
            return Response.redirect(new URL("/pending", request.url));
          }
 
-         return auth.user.role === "MEMBER" || auth.user.role === "ADMIN";
+         return auth.user.role === "MEMBER" || auth.user.role === "ADMIN" || auth.user.role === "FACULTY";
        }
 
       return true;

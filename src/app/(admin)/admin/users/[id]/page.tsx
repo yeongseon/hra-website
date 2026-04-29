@@ -1,4 +1,4 @@
-import { eq, isNotNull } from "drizzle-orm";
+import { asc, eq, isNotNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { cohorts, users } from "@/lib/db/schema";
 import { UserRoleButton } from "../_components/user-role-button";
 
 export const dynamic = "force-dynamic";
@@ -36,20 +36,28 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
     notFound();
   }
 
-  const [user] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      image: users.image,
-      createdAt: users.createdAt,
-      updatedAt: users.updatedAt,
-      hasPassword: isNotNull(users.passwordHash),
-    })
-    .from(users)
-    .where(eq(users.id, parsedId.data))
-    .limit(1);
+  // 사용자 정보와 기수 목록을 병렬 조회
+  const [[user], cohortList] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        cohortId: users.cohortId,
+        image: users.image,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        hasPassword: isNotNull(users.passwordHash),
+      })
+      .from(users)
+      .where(eq(users.id, parsedId.data))
+      .limit(1),
+    db
+      .select({ id: cohorts.id, name: cohorts.name })
+      .from(cohorts)
+      .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+  ]);
 
   if (!user) {
     notFound();
@@ -116,21 +124,36 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
               <div className="flex items-center gap-3">
                 <p className="text-sm text-slate-500">현재 역할</p>
                 <Badge
-                  variant={user.role === "ADMIN" ? "default" : "secondary"}
+                  variant={user.role === "ADMIN" || user.role === "FACULTY" ? "default" : "secondary"}
                   className={
                     user.role === "ADMIN"
                       ? "bg-blue-100 text-blue-700"
-                      : "bg-slate-100 text-slate-700"
+                      : user.role === "FACULTY"
+                        ? "bg-purple-100 text-purple-700"
+                        : user.role === "PENDING"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-700"
                   }
                 >
-                  {user.role === "ADMIN" ? "관리자" : "멤버"}
+                  {user.role === "ADMIN"
+                    ? "관리자"
+                    : user.role === "FACULTY"
+                      ? "교수"
+                      : user.role === "PENDING"
+                        ? "승인 대기"
+                        : "멤버"}
                 </Badge>
               </div>
 
               {isSelf ? (
                 <span className="text-sm text-slate-400">본인 계정은 변경할 수 없습니다</span>
               ) : (
-                <UserRoleButton userId={user.id} currentRole={user.role} />
+                <UserRoleButton
+                  userId={user.id}
+                  currentRole={user.role}
+                  currentCohortId={user.cohortId ?? null}
+                  cohorts={cohortList}
+                />
               )}
             </div>
           </CardContent>

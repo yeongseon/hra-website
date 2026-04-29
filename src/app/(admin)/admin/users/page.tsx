@@ -1,4 +1,10 @@
-import { desc } from "drizzle-orm";
+/**
+ * 관리자 회원 관리 페이지
+ *
+ * 전체 회원 목록을 표시하고 그룹(관리자/교수/기수/승인대기)을 변경하거나 삭제할 수 있습니다.
+ * 기수 목록을 함께 조회하여 드롭다운에 동적으로 표시합니다.
+ */
+import { asc, desc } from "drizzle-orm";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,15 +18,21 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { UserRoleButton } from "./_components/user-role-button";
+import { cohorts, users } from "@/lib/db/schema";
+import { UserGroupButton } from "./_components/user-role-button";
 
 export const dynamic = "force-dynamic";
 
+// 역할별 뱃지 스타일 및 레이블 정의
 const roleBadgeMap = {
   ADMIN: {
     label: "관리자",
     className: "bg-blue-100 text-blue-700",
+    variant: "default" as const,
+  },
+  FACULTY: {
+    label: "교수",
+    className: "bg-purple-100 text-purple-700",
     variant: "default" as const,
   },
   MEMBER: {
@@ -45,27 +57,36 @@ const formatDate = (value: Date) =>
 export default async function AdminUsersPage() {
   const session = await requireAdmin();
 
-  // DB 조회 결과와 오류 여부를 함께 반환해 렌더 이후 재할당을 피합니다.
-  const { rows, hasDbError } = await (async () => {
-    try {
-      const rows = await db
-        .select({
-          id: users.id,
-          name: users.name,
-          email: users.email,
-          role: users.role,
-          image: users.image,
-          createdAt: users.createdAt,
-        })
-        .from(users)
-        .orderBy(desc(users.createdAt));
+  // 회원 목록과 기수 목록을 병렬로 조회
+  const [{ rows, hasDbError }, cohortList] = await Promise.all([
+    (async () => {
+      try {
+        const rows = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            role: users.role,
+            cohortId: users.cohortId,
+            image: users.image,
+            createdAt: users.createdAt,
+          })
+          .from(users)
+          .orderBy(desc(users.createdAt));
+        return { rows, hasDbError: false };
+      } catch (error) {
+        console.error("[admin/users] DB 조회 오류:", error);
+        return { rows: [], hasDbError: true };
+      }
+    })(),
+    db
+      .select({ id: cohorts.id, name: cohorts.name })
+      .from(cohorts)
+      .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+  ]);
 
-      return { rows, hasDbError: false };
-    } catch (error) {
-      console.error("[admin/users] DB 조회 오류:", error);
-      return { rows: [], hasDbError: true };
-    }
-  })();
+  // cohortId → cohort name 빠른 조회를 위한 맵
+  const cohortMap = new Map(cohortList.map((c) => [c.id, c.name]));
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
@@ -91,6 +112,7 @@ export default async function AdminUsersPage() {
                   <TableHead>이름</TableHead>
                   <TableHead>이메일</TableHead>
                   <TableHead>역할</TableHead>
+                  <TableHead>소속 기수</TableHead>
                   <TableHead>가입일</TableHead>
                   <TableHead>관리</TableHead>
                 </TableRow>
@@ -98,7 +120,7 @@ export default async function AdminUsersPage() {
               <TableBody>
                 {rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-slate-500">
+                    <TableCell colSpan={6} className="py-8 text-center text-slate-500">
                       등록된 회원이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -112,21 +134,26 @@ export default async function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="text-slate-600">{row.email}</TableCell>
                       <TableCell>
-                         <Badge
-                           variant={roleBadgeMap[row.role].variant}
-                           className={roleBadgeMap[row.role].className}
-                         >
-                           {roleBadgeMap[row.role].label}
-                         </Badge>
+                        <Badge
+                          variant={roleBadgeMap[row.role].variant}
+                          className={roleBadgeMap[row.role].className}
+                        >
+                          {roleBadgeMap[row.role].label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-600 text-sm">
+                        {row.cohortId ? (cohortMap.get(row.cohortId) ?? "-") : "-"}
                       </TableCell>
                       <TableCell className="text-slate-600">{formatDate(row.createdAt)}</TableCell>
                       <TableCell>
                         {row.id === session.user?.id ? (
                           <span className="text-xs text-slate-400">본인</span>
                         ) : (
-                          <UserRoleButton
+                          <UserGroupButton
                             userId={row.id}
                             currentRole={row.role}
+                            currentCohortId={row.cohortId ?? null}
+                            cohorts={cohortList}
                           />
                         )}
                       </TableCell>

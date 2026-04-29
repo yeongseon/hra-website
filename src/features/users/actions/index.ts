@@ -1,47 +1,47 @@
 /**
- * 회원 역할 변경 서버 액션
- * 
- * 관리자가 회원의 역할을 변경할 때 사용합니다.
- * 
- * "use server" 표기: 이 파일의 함수는 서버에서만 실행됩니다.
+ * 회원 그룹 변경 서버 액션
+ *
+ * 관리자가 회원의 그룹(관리자/교수/기수 멤버/승인대기)을 변경할 때 사용합니다.
+ * 드롭다운 값은 "ADMIN" | "FACULTY" | "PENDING" | "<cohort-uuid>" 형태입니다.
+ * - ADMIN/FACULTY/PENDING: role만 업데이트, cohortId는 null로 초기화
+ * - cohort UUID: role을 MEMBER로, cohortId를 해당 UUID로 업데이트
  */
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod/v4";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { cohorts, users } from "@/lib/db/schema";
 
-const updateRoleSchema = z.object({
+// "ADMIN" | "FACULTY" | "PENDING" | "<uuid>" 형태의 드롭다운 값
+const groupValueSchema = z.union([
+  z.enum(["ADMIN", "FACULTY", "PENDING"]),
+  z.uuid("올바른 기수 ID가 아닙니다."),
+]);
+
+const updateGroupSchema = z.object({
   userId: z.uuid("올바른 사용자 ID가 필요합니다."),
-  role: z.enum(["ADMIN", "MEMBER", "PENDING"], {
-    error: "올바른 역할이 아닙니다. (ADMIN, MEMBER 또는 PENDING)",
-  }),
+  groupValue: groupValueSchema,
 });
 
-export type UpdateRoleState = {
+export type ActionResult = {
   success: boolean;
   message: string;
 };
 
-const deleteUserSchema = z.object({
-  userId: z.uuid("올바른 사용자 ID가 필요합니다."),
-});
-
 /**
- * 회원 역할을 변경하는 서버 액션
- * 관리자만 실행할 수 있습니다.
- * 자기 자신의 역할은 변경할 수 없습니다. (실수 방지)
+ * 회원 그룹을 변경하는 서버 액션
+ * groupValue에 따라 role과 cohortId를 함께 업데이트합니다.
  */
-export async function updateUserRole(
+export async function updateUserGroup(
   userId: string,
-  role: "ADMIN" | "MEMBER" | "PENDING"
-): Promise<UpdateRoleState> {
+  groupValue: string
+): Promise<ActionResult> {
   const session = await requireAdmin();
 
-  const parsed = updateRoleSchema.safeParse({ userId, role });
+  const parsed = updateGroupSchema.safeParse({ userId, groupValue });
   if (!parsed.success) {
     return {
       success: false,
@@ -49,42 +49,65 @@ export async function updateUserRole(
     };
   }
 
-  // 자기 자신의 역할 변경 방지
   if (session.user?.id === parsed.data.userId) {
     return {
       success: false,
-      message: "자기 자신의 역할은 변경할 수 없습니다.",
+      message: "자기 자신의 그룹은 변경할 수 없습니다.",
     };
   }
 
-  const result = await db
-    .update(users)
-    .set({ role: parsed.data.role })
-    .where(eq(users.id, parsed.data.userId));
+  // groupValue가 고정 역할인지, 기수 UUID인지 분기
+  const isFixedRole =
+    parsed.data.groupValue === "ADMIN" ||
+    parsed.data.groupValue === "FACULTY" ||
+    parsed.data.groupValue === "PENDING";
 
-  if (result.rowCount === 0) {
-    return {
-      success: false,
-      message: "해당 사용자를 찾을 수 없습니다.",
-    };
+  if (isFixedRole) {
+    // 관리자/교수/승인대기 → role 설정, cohortId null 초기화
+    const result = await db
+      .update(users)
+      .set({
+        role: parsed.data.groupValue as "ADMIN" | "FACULTY" | "PENDING",
+        cohortId: null,
+      })
+      .where(eq(users.id, parsed.data.userId));
+
+    if (result.rowCount === 0) {
+      return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
+    }
+  } else {
+    // 기수 UUID → 해당 기수가 실제로 존재하는지 확인 후 MEMBER로 배정
+    const cohort = await db
+      .select({ id: cohorts.id, name: cohorts.name })
+      .from(cohorts)
+      .where(eq(cohorts.id, parsed.data.groupValue))
+      .limit(1);
+
+    if (cohort.length === 0) {
+      return { success: false, message: "해당 기수를 찾을 수 없습니다." };
+    }
+
+    const result = await db
+      .update(users)
+      .set({ role: "MEMBER", cohortId: parsed.data.groupValue })
+      .where(eq(users.id, parsed.data.userId));
+
+    if (result.rowCount === 0) {
+      return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
+    }
   }
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${parsed.data.userId}`);
 
-  const roleLabels: Record<string, string> = {
-    ADMIN: "관리자",
-    MEMBER: "멤버",
-    PENDING: "승인 대기",
-  };
-
-  return {
-    success: true,
-    message: `역할이 "${roleLabels[parsed.data.role]}"(으)로 변경되었습니다.`,
-  };
+  return { success: true, message: "그룹이 변경되었습니다." };
 }
 
-export async function deleteUser(userId: string): Promise<UpdateRoleState> {
+const deleteUserSchema = z.object({
+  userId: z.uuid("올바른 사용자 ID가 필요합니다."),
+});
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
   const session = await requireAdmin();
 
   const parsed = deleteUserSchema.safeParse({ userId });
@@ -96,25 +119,20 @@ export async function deleteUser(userId: string): Promise<UpdateRoleState> {
   }
 
   if (session.user?.id === parsed.data.userId) {
-    return {
-      success: false,
-      message: "자기 자신은 삭제할 수 없습니다.",
-    };
+    return { success: false, message: "자기 자신은 삭제할 수 없습니다." };
   }
 
   const result = await db.delete(users).where(eq(users.id, parsed.data.userId));
 
   if (result.rowCount === 0) {
-    return {
-      success: false,
-      message: "해당 사용자를 찾을 수 없습니다.",
-    };
+    return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
   }
 
   revalidatePath("/admin/users");
 
-  return {
-    success: true,
-    message: "회원이 삭제되었습니다.",
-  };
+  return { success: true, message: "회원이 삭제되었습니다." };
 }
+
+// 기존 updateUserRole은 updateUserGroup으로 대체되었으나
+// 다른 곳에서 import하는 경우를 대비해 alias로 유지합니다.
+export { updateUserGroup as updateUserRole };

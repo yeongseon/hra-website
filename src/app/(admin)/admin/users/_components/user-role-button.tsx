@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * 회원 그룹 변경 버튼 컴포넌트
+ *
+ * 관리자, 교수, 기수별 멤버, 승인 대기를 하나의 드롭다운으로 선택합니다.
+ * - ADMIN / FACULTY / PENDING: 고정 역할
+ * - 기수 UUID: MEMBER 역할 + cohortId 배정
+ */
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
@@ -18,46 +26,47 @@ import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteUser, updateUserRole } from "@/features/users/actions";
+import { deleteUser, updateUserGroup } from "@/features/users/actions";
 
-type UserRole = "ADMIN" | "MEMBER" | "PENDING";
-
-const roleOptions: Array<{ value: UserRole; label: string }> = [
-  { value: "ADMIN", label: "관리자" },
-  { value: "MEMBER", label: "멤버" },
-  { value: "PENDING", label: "승인 대기" },
-];
-
-type UserRoleButtonProps = {
+type Props = {
   userId: string;
-  currentRole: UserRole;
+  currentRole: "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
+  currentCohortId: string | null;
+  cohorts: { id: string; name: string }[];
 };
 
-export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
+// 드롭다운 현재 값 계산: MEMBER면 cohortId, 아니면 role 자체
+function toGroupValue(
+  role: "ADMIN" | "FACULTY" | "MEMBER" | "PENDING",
+  cohortId: string | null
+): string {
+  if (role === "MEMBER" && cohortId) return cohortId;
+  return role;
+}
+
+export function UserGroupButton({ userId, currentRole, currentCohortId, cohorts }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [role, setRole] = useState<UserRole>(currentRole);
+  const [groupValue, setGroupValue] = useState(() => toGroupValue(currentRole, currentCohortId));
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const handleRoleChange = (nextRole: string | null) => {
-    if (!nextRole || nextRole === role) {
-      return;
-    }
-
+  const handleGroupChange = (next: string | null) => {
+    if (!next || next === groupValue) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await updateUserRole(userId, nextRole as UserRole);
+      const result = await updateUserGroup(userId, next);
       if (!result.success) {
         setMessage(result.message);
         return;
       }
-
-      setRole(nextRole as UserRole);
+      setGroupValue(next);
       router.refresh();
     });
   };
@@ -70,7 +79,6 @@ export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
         setMessage(result.message);
         return;
       }
-
       setIsDeleteOpen(false);
       router.refresh();
     });
@@ -79,16 +87,30 @@ export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <Select value={role} onValueChange={handleRoleChange} disabled={isPending}>
-          <SelectTrigger className="h-8 w-[128px] text-slate-900">
+        <Select value={groupValue} onValueChange={handleGroupChange} disabled={isPending}>
+          <SelectTrigger className="h-8 w-[148px] text-slate-900">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {roleOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            {/* 고정 역할 그룹 */}
+            <SelectGroup>
+              <SelectLabel className="text-xs text-slate-400">역할</SelectLabel>
+              <SelectItem value="ADMIN">관리자</SelectItem>
+              <SelectItem value="FACULTY">교수</SelectItem>
+              <SelectItem value="PENDING">승인 대기</SelectItem>
+            </SelectGroup>
+
+            {/* 기수별 멤버 그룹 (기수가 하나 이상 있을 때만 표시) */}
+            {cohorts.length > 0 && (
+              <SelectGroup>
+                <SelectLabel className="text-xs text-slate-400">기수 멤버</SelectLabel>
+                {cohorts.map((cohort) => (
+                  <SelectItem key={cohort.id} value={cohort.id}>
+                    {cohort.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
           </SelectContent>
         </Select>
 
@@ -132,9 +154,10 @@ export function UserRoleButton({ userId, currentRole }: UserRoleButtonProps) {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      {message && (
-        <p className="text-xs text-red-600">{message}</p>
-      )}
+      {message && <p className="text-xs text-red-600">{message}</p>}
     </div>
   );
 }
+
+// 기존 이름으로도 import 가능하도록 alias export 유지
+export { UserGroupButton as UserRoleButton };
