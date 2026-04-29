@@ -133,6 +133,3 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   return { success: true, message: "회원이 삭제되었습니다." };
 }
 
-// 기존 updateUserRole은 updateUserGroup으로 대체되었으나
-// 다른 곳에서 import하는 경우를 대비해 alias로 유지합니다.
-export { updateUserGroup as updateUserRole };
