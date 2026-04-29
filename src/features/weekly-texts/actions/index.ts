@@ -31,9 +31,18 @@ export type WeeklyTextActionState = {
 
 const weeklyTextIdSchema = z.uuid("유효하지 않은 주차별 텍스트 ID입니다.");
 
+/** 주차별 텍스트 분류 값 (DB: varchar 20, nullable) */
+const WEEKLY_TEXT_TYPE_VALUES = ["고전명작", "경영서", "기업실무"] as const;
+
 const weeklyTextFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   cohortId: z.union([z.uuid(), z.literal("")]).optional(),
+  // "__none__" 또는 빈 문자열이면 null로 변환 (미분류)
+  textType: z
+    .enum(WEEKLY_TEXT_TYPE_VALUES)
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
 });
 
 const allowedFileTypes = new Set([
@@ -90,9 +99,16 @@ const revalidateWeeklyTextPaths = () => {
 };
 
 const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
+  const rawTextType = formData.get("textType");
+  const parsedTextType =
+    typeof rawTextType === "string" && rawTextType !== "__none__" && rawTextType !== ""
+      ? rawTextType
+      : null;
+
   const parsed = weeklyTextFormSchema.safeParse({
     title: formData.get("title"),
     cohortId: parseCohortId(formData.get("cohortId")),
+    textType: parsedTextType,
   });
 
   if (!parsed.success) {
@@ -121,6 +137,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
       fileUrl: blob.url,
       fileName: validatedFile.file.name,
       cohortId: parsed.data.cohortId || null,
+      textType: parsed.data.textType ?? null,
     });
 
     revalidateWeeklyTextPaths();

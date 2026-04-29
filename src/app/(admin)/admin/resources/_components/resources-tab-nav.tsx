@@ -28,6 +28,13 @@ const tabs = [
       pathname.startsWith("/admin/resources/guidebooks/"),
   },
   {
+    href: "/admin/resources/class-materials",
+    label: "강의 자료",
+    isActive: (pathname: string) =>
+      pathname === "/admin/resources/class-materials" ||
+      pathname.startsWith("/admin/resources/class-materials/"),
+  },
+  {
     href: "/admin/resources/templates",
     label: "보고서 양식",
     isActive: (pathname: string) =>

@@ -14,16 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
+import type { ClassMaterialActionState } from "@/features/class-materials/actions";
 import { cn } from "@/lib/utils";
 
-type MemberUploadFormProps = {
-  action: (formData: FormData) => Promise<WeeklyTextActionState>;
-  cohorts: Array<{ id: string; name: string }>;
-  userCohortId?: string | null; // MEMBER일 때 기수 드롭다운 고정에 사용
+type ClassMaterialUploadFormProps = {
+  action: (formData: FormData) => Promise<ClassMaterialActionState>;
 };
 
-const initialState: WeeklyTextActionState = {
+const initialState: ClassMaterialActionState = {
   success: false,
 };
 
@@ -32,19 +30,23 @@ const acceptValue = [
   ".hwp",
   ".doc",
   ".docx",
+  ".ppt",
+  ".pptx",
   "application/pdf",
   "application/x-hwp",
   "application/vnd.hancom.hwp",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ].join(",");
 
-export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
+export function ClassMaterialUploadForm({ action }: ClassMaterialUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: WeeklyTextActionState, formData: FormData) => action(formData),
+    async (_previous: ClassMaterialActionState, formData: FormData) => action(formData),
     initialState,
   );
 
@@ -63,16 +65,15 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <CardTitle className="text-2xl font-semibold tracking-tight text-[#1a1a1a]">
-              주차별 텍스트 업로드
+              강의 자료 업로드
             </CardTitle>
             <CardDescription className="max-w-2xl text-sm leading-6 text-[#666666]">
-              수업 자료를 바로 공유할 수 있도록 업로드 영역을 열어두었습니다. 승인된 회원만
-              파일을 등록할 수 있습니다.
+              교수진과 운영진이 수업 자료를 빠르게 공유할 수 있도록 업로드 영역을 제공합니다.
             </CardDescription>
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#D9D9D9] bg-white/90 px-3 py-1.5 text-xs font-medium text-[#2563EB]">
             <Upload className="size-3.5" />
-            회원 업로드 가능
+            교수·관리자 업로드 가능
           </div>
         </div>
       </CardHeader>
@@ -95,7 +96,7 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
               )}
               <span>
                 {submissionState.success
-                  ? "주차별 텍스트가 업로드되었습니다. 목록을 새로 불러오는 중입니다."
+                  ? "강의 자료가 업로드되었습니다. 목록을 새로 불러오는 중입니다."
                   : submissionState.error}
               </span>
             </div>
@@ -111,63 +112,53 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
                 name="title"
                 required
                 className="h-11 border-[#D9D9D9] bg-white text-[#1a1a1a]"
-                placeholder="예: 3주차 읽기 자료"
+                placeholder="예: 5주차 특강 발표 자료"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="textType" className="text-[#1a1a1a]">
-                텍스트 분류
+              <Label htmlFor="weekNumber" className="text-[#1a1a1a]">
+                주차
               </Label>
-              <Select name="textType" defaultValue="__none__">
-                <SelectTrigger id="textType" className="h-11 w-full border-[#D9D9D9] bg-white text-[#1a1a1a]">
-                  <SelectValue placeholder="분류 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">미선택</SelectItem>
-                  <SelectItem value="고전명작">고전명작</SelectItem>
-                  <SelectItem value="경영서">경영서</SelectItem>
-                  <SelectItem value="기업실무">기업실무</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="weekNumber"
+                name="weekNumber"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                className="h-11 border-[#D9D9D9] bg-white text-[#1a1a1a]"
+                placeholder="예: 5"
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cohortId" className="text-[#1a1a1a]">
-              기수
-            </Label>
-            {userCohortId ? (
-              <>
-                <input type="hidden" name="cohortId" value={userCohortId} />
-                <Select disabled defaultValue={userCohortId}>
-                  <SelectTrigger id="cohortId" className="h-11 w-full border-[#D9D9D9] bg-gray-50 text-[#666666]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cohorts.map((cohort) => (
-                      <SelectItem key={cohort.id} value={cohort.id}>
-                        {cohort.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : (
-              <Select name="cohortId" defaultValue="__none__">
-                <SelectTrigger id="cohortId" className="h-11 w-full border-[#D9D9D9] bg-white text-[#1a1a1a]">
-                  <SelectValue placeholder="기수를 선택하세요" />
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-2">
+              <Label htmlFor="lectureTitle" className="text-[#1a1a1a]">
+                강의명
+              </Label>
+              <Input
+                id="lectureTitle"
+                name="lectureTitle"
+                className="h-11 border-[#D9D9D9] bg-white text-[#1a1a1a]"
+                placeholder="예: 디지털 전환과 조직 혁신"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="audience" className="text-[#1a1a1a]">
+                대상
+              </Label>
+              <Select name="audience" defaultValue="STUDENT">
+                <SelectTrigger id="audience" className="h-11 w-full border-[#D9D9D9] bg-white text-[#1a1a1a]">
+                  <SelectValue placeholder="대상 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">미선택</SelectItem>
-                  {cohorts.map((cohort) => (
-                    <SelectItem key={cohort.id} value={cohort.id}>
-                      {cohort.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="STUDENT">학생용</SelectItem>
+                  <SelectItem value="FACULTY">교수용</SelectItem>
                 </SelectContent>
               </Select>
-            )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -183,20 +174,18 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
               className="border-[#D9D9D9] bg-white text-[#1a1a1a] file:mr-4 file:rounded-full file:border-0 file:bg-[#2563EB]/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-[#2563EB] hover:file:bg-[#2563EB]/15"
             />
             <p className="text-sm leading-6 text-[#666666]">
-              PDF, HWP, DOC, DOCX 파일만 업로드할 수 있으며 최대 용량은 30MB입니다.
+              PDF, HWP, DOC, DOCX, PPT, PPTX 파일만 업로드할 수 있으며 최대 용량은 50MB입니다.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[#666666]">
-              업로드한 자료는 즉시 전체 회원 목록에 반영됩니다.
-            </p>
+            <p className="text-sm text-[#666666]">업로드한 자료는 자료실 강의 자료 탭에 즉시 반영됩니다.</p>
             <Button
               type="submit"
               disabled={isSubmitting}
               className="h-11 rounded-full bg-[#1a1a1a] px-6 text-white hover:bg-[#333333]"
             >
-              {isSubmitting ? "업로드 중..." : "주차별 텍스트 올리기"}
+              {isSubmitting ? "업로드 중..." : "강의 자료 올리기"}
             </Button>
           </div>
         </form>

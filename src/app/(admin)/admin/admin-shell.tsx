@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Newspaper,
   Phone,
+   Presentation,
   Settings,
   Users,
   UserCog,
@@ -63,6 +64,7 @@ const navItems = [
   { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
   { href: "/admin/faq-contact", label: "FAQ 연락처", icon: Phone },
   { href: "/admin/resources", label: "자료실", icon: FolderOpen },
+  { href: "/admin/resources/class-materials", label: "강의 자료", icon: Presentation },
   { href: "/admin/applications", label: "지원서", icon: FileText },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
 ];

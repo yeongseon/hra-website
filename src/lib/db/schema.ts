@@ -440,6 +440,7 @@ export const weeklyTexts = pgTable("weekly_texts", {
   fileUrl: text("file_url").notNull(), // 파일 URL
   fileName: varchar("file_name", { length: 500 }).notNull(),
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  textType: varchar("text_type", { length: 20 }), // 텍스트 분류: "고전명작" | "경영서" | "기업실무" | null(미분류)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -448,6 +449,26 @@ export const weeklyTextsRelations = relations(weeklyTexts, ({ one }) => ({
   cohort: one(cohorts, {
     fields: [weeklyTexts.cohortId],
     references: [cohorts.id],
+  }),
+}));
+
+export const classMaterials = pgTable("class_materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 300 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: varchar("file_name", { length: 500 }).notNull(),
+  weekNumber: integer("week_number"),
+  lectureTitle: varchar("lecture_title", { length: 200 }),
+  audience: varchar("audience", { length: 20 }).notNull().default("STUDENT"),
+  uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const classMaterialsRelations = relations(classMaterials, ({ one }) => ({
+  uploadedBy: one(users, {
+    fields: [classMaterials.uploadedById],
+    references: [users.id],
   }),
 }));
 
@@ -554,6 +575,7 @@ export type FaqContactInfo = typeof faqContact.$inferSelect;
 export type RecruitmentSetting = typeof recruitmentSettings.$inferSelect;
 export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
 export type WeeklyText = typeof weeklyTexts.$inferSelect;
+export type ClassMaterial = typeof classMaterials.$inferSelect;
 export type Guidebook = typeof guidebooks.$inferSelect;
 export type PressArticle = typeof pressArticles.$inferSelect;
 export type ReportTemplate = typeof reportTemplates.$inferSelect;
