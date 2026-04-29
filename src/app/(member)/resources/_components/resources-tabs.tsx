@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * 자료실 탭 컴포넌트
+ * 자료실 필터 + 목록 컴포넌트
  *
- * 기수 탭 (전체/1기/2기/...) + 카테고리 탭으로 자료를 필터링합니다.
- * - MEMBER: 자신의 기수 탭에서만 업로드 버튼 노출
- * - ADMIN/FACULTY: 기수 탭 선택 시 업로드 버튼 노출
- * - 가이드북은 기수 구분 없이 모든 탭에서 표시
+ * - 기수 드롭다운 (기본값: 마지막 기수, 예: 19기)
+ * - 카테고리 탭 (전체/주차별 수업일지/주차별 텍스트/가이드북)
+ * - MEMBER: 자신의 기수가 선택될 때만 업로드 버튼 노출
+ * - ADMIN/FACULTY: 특정 기수 선택 시 업로드 버튼 노출
+ * - 가이드북은 기수 무관 모든 탭에서 표시
  */
 
 import { useState } from "react";
@@ -14,6 +15,13 @@ import Link from "next/link";
 import { Search, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type ResourceCategory = "주차별 수업일지" | "주차별 텍스트" | "가이드북";
 
@@ -51,7 +59,10 @@ const getCategoryColor = (category: ResourceCategory) => {
 };
 
 export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: ResourcesTabsProps) {
-  const [activeCohort, setActiveCohort] = useState<string>("전체");
+  // 기본값: 마지막 기수(최신 기수). 기수 없으면 "전체"
+  const defaultCohort = cohorts.length > 0 ? cohorts[cohorts.length - 1].id : "전체";
+
+  const [activeCohort, setActiveCohort] = useState<string>(defaultCohort);
   const [activeCategory, setActiveCategory] = useState<"전체" | ResourceCategory>("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,12 +71,12 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
   const isAdminOrFaculty = userRole === "ADMIN" || userRole === "FACULTY";
   const isMember = userRole === "MEMBER";
 
-  // MEMBER는 자신의 기수 탭에서만, ADMIN/FACULTY는 기수 탭 선택 시 업로드 버튼 노출
+  // MEMBER: 자신의 기수가 선택될 때만 업로드 버튼 노출
+  // ADMIN/FACULTY: 특정 기수 선택 시 업로드 버튼 노출
   const showUploadButton =
     (isAdminOrFaculty && activeCohort !== "전체") ||
     (isMember && userCohortId !== null && activeCohort === userCohortId);
 
-  // 업로드 링크에 넣을 기수 ID
   const uploadCohortId = isMember ? userCohortId : activeCohort !== "전체" ? activeCohort : null;
 
   const filteredItems = items.filter((item) => {
@@ -73,7 +84,7 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
     if (activeCohort === "전체") {
       matchesCohort = true;
     } else if (item.category === "가이드북") {
-      matchesCohort = true; // 가이드북은 모든 기수 탭에서 표시
+      matchesCohort = true; // 가이드북은 기수 무관 항상 표시
     } else {
       matchesCohort = item.cohortId === activeCohort;
     }
@@ -86,8 +97,8 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleCohortChange = (cohortId: string) => {
-    setActiveCohort(cohortId);
+  const handleCohortChange = (value: string | null) => {
+    setActiveCohort(value ?? "전체");
     setCurrentPage(1);
   };
 
@@ -110,76 +121,68 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
 
   return (
     <div className="space-y-6">
-      {/* 기수 탭 (pill 형태) */}
-      {cohorts.length > 0 && (
-        <div className="flex overflow-x-auto pb-1 gap-2">
-          <button
-            type="button"
-            onClick={() => handleCohortChange("전체")}
-            className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeCohort === "전체"
-                ? "bg-[#1a1a1a] text-white"
-                : "bg-white border border-[#D9D9D9] text-[#666666] hover:border-[#1a1a1a] hover:text-[#1a1a1a]"
-            }`}
-          >
-            전체
-          </button>
-          {cohorts.map((cohort) => (
-            <button
-              key={cohort.id}
-              type="button"
-              onClick={() => handleCohortChange(cohort.id)}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                activeCohort === cohort.id
-                  ? "bg-[#2563EB] text-white"
-                  : "bg-white border border-[#D9D9D9] text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB]"
-              }`}
-            >
-              {cohort.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* 상단 필터 영역: 기수 드롭다운 + 카테고리 탭 + 검색 + 업로드 */}
+      <div className="flex flex-col gap-4">
+        {/* 기수 드롭다운 */}
+        {cohorts.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-[#1a1a1a] shrink-0">기수</span>
+            <Select value={activeCohort} onValueChange={handleCohortChange}>
+              <SelectTrigger className="w-36 h-9 border-[#D9D9D9] bg-white text-[#1a1a1a] text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="전체">전체</SelectItem>
+                {cohorts.map((cohort) => (
+                  <SelectItem key={cohort.id} value={cohort.id}>
+                    {cohort.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-      {/* 카테고리 탭 + 검색 + 업로드 버튼 */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto gap-4 sm:gap-6 border-b border-[#D9D9D9]">
-          {categoryTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => handleCategoryChange(tab)}
-              className={`whitespace-nowrap pb-3 text-sm md:text-base transition-colors relative ${
-                activeCategory === tab
-                  ? "border-b-2 border-[#2563EB] text-[#2563EB] font-medium"
-                  : "text-[#666666] hover:text-[#1a1a1a]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {/* 카테고리 탭 + 검색 + 업로드 버튼 */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="flex overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto gap-4 sm:gap-6 border-b border-[#D9D9D9]">
+            {categoryTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => handleCategoryChange(tab)}
+                className={`whitespace-nowrap pb-3 text-sm md:text-base transition-colors relative ${
+                  activeCategory === tab
+                    ? "border-b-2 border-[#2563EB] text-[#2563EB] font-medium"
+                    : "text-[#666666] hover:text-[#1a1a1a]"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* 해당 기수 멤버 또는 관리자/교수만 업로드 버튼 노출 */}
-          {showUploadButton && uploadCohortId && (
-            <Link
-              href={`/resources/weekly-texts?cohortId=${uploadCohortId}`}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors whitespace-nowrap"
-            >
-              <Upload className="size-3.5" />
-              업로드
-            </Link>
-          )}
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" />
-            <input
-              type="text"
-              placeholder="자료 검색..."
-              className="w-full pl-10 pr-4 py-2.5 border border-[#D9D9D9] rounded-lg text-sm focus:outline-none focus:border-[#2563EB] transition-colors"
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
+          <div className="flex items-center gap-2 shrink-0">
+            {/* 해당 기수 멤버 또는 관리자/교수만 업로드 버튼 노출 */}
+            {showUploadButton && uploadCohortId && (
+              <Link
+                href={`/resources/weekly-texts?cohortId=${uploadCohortId}`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors whitespace-nowrap"
+              >
+                <Upload className="size-3.5" />
+                업로드
+              </Link>
+            )}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" />
+              <input
+                type="text"
+                placeholder="자료 검색..."
+                className="w-full pl-10 pr-4 py-2.5 border border-[#D9D9D9] rounded-lg text-sm focus:outline-none focus:border-[#2563EB] transition-colors"
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
+            </div>
           </div>
         </div>
       </div>
