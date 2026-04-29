@@ -22,7 +22,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { weeklyTexts } from "@/lib/db/schema";
+import { users, weeklyTexts } from "@/lib/db/schema";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -155,11 +155,34 @@ export async function createWeeklyTextAsMember(
     };
   }
 
-  if (role !== "ADMIN" && role !== "MEMBER") {
+  // ADMIN, FACULTY, MEMBER만 업로드 가능 (PENDING 불가)
+  if (role !== "ADMIN" && role !== "FACULTY" && role !== "MEMBER") {
     return {
       success: false,
       error: "승인된 회원만 업로드할 수 있습니다.",
     };
+  }
+
+  // MEMBER는 자신의 기수에만 업로드 가능 — 서버 사이드 검증
+  if (role === "MEMBER") {
+    const cohortIdValue = formData.get("cohortId");
+    const submittedCohortId =
+      typeof cohortIdValue === "string" && cohortIdValue !== "__none__" ? cohortIdValue : null;
+
+    if (submittedCohortId) {
+      const [userRow] = await db
+        .select({ cohortId: users.cohortId })
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
+
+      if (userRow?.cohortId !== submittedCohortId) {
+        return {
+          success: false,
+          error: "자신의 기수에만 업로드할 수 있습니다.",
+        };
+      }
+    }
   }
 
   return createWeeklyTextRecord(formData);

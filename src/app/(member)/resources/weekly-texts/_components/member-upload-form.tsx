@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 type MemberUploadFormProps = {
   action: (formData: FormData) => Promise<WeeklyTextActionState>;
   cohorts: Array<{ id: string; name: string }>;
+  userCohortId?: string | null; // MEMBER일 때 기수 드롭다운 고정에 사용
 };
 
 const initialState: WeeklyTextActionState = {
@@ -38,7 +39,7 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function MemberUploadForm({ action, cohorts }: MemberUploadFormProps) {
+export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -118,19 +119,38 @@ export function MemberUploadForm({ action, cohorts }: MemberUploadFormProps) {
               <Label htmlFor="cohortId" className="text-[#1a1a1a]">
                 기수
               </Label>
-              <Select name="cohortId" defaultValue="__none__">
-                <SelectTrigger id="cohortId" className="h-11 w-full border-[#D9D9D9] bg-white text-[#1a1a1a]">
-                  <SelectValue placeholder="기수를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">미선택</SelectItem>
-                  {cohorts.map((cohort) => (
-                    <SelectItem key={cohort.id} value={cohort.id}>
-                      {cohort.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* MEMBER는 자신의 기수만 선택 가능 (드롭다운 비활성화 + hidden input으로 전송) */}
+              {userCohortId ? (
+                <>
+                  <input type="hidden" name="cohortId" value={userCohortId} />
+                  <Select disabled defaultValue={userCohortId}>
+                    <SelectTrigger id="cohortId" className="h-11 w-full border-[#D9D9D9] bg-gray-50 text-[#666666]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cohorts.map((cohort) => (
+                        <SelectItem key={cohort.id} value={cohort.id}>
+                          {cohort.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <Select name="cohortId" defaultValue="__none__">
+                  <SelectTrigger id="cohortId" className="h-11 w-full border-[#D9D9D9] bg-white text-[#1a1a1a]">
+                    <SelectValue placeholder="기수를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">미선택</SelectItem>
+                    {cohorts.map((cohort) => (
+                      <SelectItem key={cohort.id} value={cohort.id}>
+                        {cohort.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 

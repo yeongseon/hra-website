@@ -8,7 +8,7 @@ import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_compone
 import { createWeeklyTextAsMember } from "@/features/weekly-texts/actions";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { cohorts, weeklyTexts } from "@/lib/db/schema";
+import { cohorts, users, weeklyTexts } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -27,7 +27,18 @@ const formatDate = (value: Date) =>
 export default async function WeeklyTextsPage() {
   const session = await auth();
   const role = session?.user?.role;
-  const canUpload = role === "ADMIN" || role === "MEMBER";
+  // ADMIN, FACULTY, MEMBER 업로드 가능 (PENDING 불가)
+  const canUpload = role === "ADMIN" || role === "FACULTY" || role === "MEMBER";
+
+  // 로그인 사용자의 cohortId 조회 (MEMBER일 때 기수 드롭다운 고정에 사용)
+  const userCohortId = session?.user?.id
+    ? await db
+        .select({ cohortId: users.cohortId })
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1)
+        .then((rows) => rows[0]?.cohortId ?? null)
+    : null;
 
   const [texts, cohortRows] = await Promise.all([
     db
@@ -75,7 +86,7 @@ export default async function WeeklyTextsPage() {
 
       <section className="mb-10 sm:mb-12">
         {canUpload ? (
-          <MemberUploadForm action={createWeeklyTextAsMember} cohorts={cohortRows} />
+          <MemberUploadForm action={createWeeklyTextAsMember} cohorts={cohortRows} userCohortId={userCohortId} />
         ) : (
           <Card className="rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
             <CardHeader className="border-b border-[#D9D9D9] py-6">
