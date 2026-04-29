@@ -30,7 +30,6 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { deleteUser, updateUserGroup } from "@/features/users/actions";
 
@@ -50,11 +49,19 @@ function toGroupValue(
   return role;
 }
 
+// groupValue → 표시 레이블 (SelectValue가 동적 항목 레이블을 못 찾는 문제 우회)
+function toDisplayLabel(groupValue: string, cohorts: { id: string; name: string }[]): string {
+  if (groupValue === "ADMIN") return "관리자";
+  if (groupValue === "FACULTY") return "교수";
+  if (groupValue === "PENDING") return "승인 대기";
+  if (groupValue === "MEMBER") return "멤버 (기수 미배정)";
+  return cohorts.find((c) => c.id === groupValue)?.name ?? groupValue;
+}
+
 export function UserGroupButton({ userId, currentRole, currentCohortId, cohorts }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [groupValue, setGroupValue] = useState(() => toGroupValue(currentRole, currentCohortId));
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [groupValue, setGroupValue] = useState(() => toGroupValue(currentRole, currentCohortId));  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const handleGroupChange = (next: string | null) => {
@@ -89,7 +96,7 @@ export function UserGroupButton({ userId, currentRole, currentCohortId, cohorts 
       <div className="flex items-center gap-2">
         <Select value={groupValue} onValueChange={handleGroupChange} disabled={isPending}>
           <SelectTrigger className="h-8 w-[148px] text-slate-900">
-            <SelectValue />
+            <span className="truncate">{toDisplayLabel(groupValue, cohorts)}</span>
           </SelectTrigger>
           <SelectContent>
             {/* 고정 역할 그룹 */}
