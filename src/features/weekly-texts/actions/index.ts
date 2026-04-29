@@ -19,6 +19,7 @@ import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
+import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -31,9 +32,6 @@ export type WeeklyTextActionState = {
 
 const weeklyTextIdSchema = z.uuid("유효하지 않은 주차별 텍스트 ID입니다.");
 
-/** 주차별 텍스트 분류 값 (DB: varchar 20, nullable) */
-const WEEKLY_TEXT_TYPE_VALUES = ["고전명작", "경영서", "기업실무"] as const;
-
 const weeklyTextFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   cohortId: z.union([z.uuid(), z.literal("")]).optional(),
@@ -43,6 +41,17 @@ const weeklyTextFormSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => v ?? null),
+  body: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((value) => {
+      if (typeof value !== "string") {
+        return null;
+      }
+
+      return value.trim().length > 0 ? value : null;
+    }),
 });
 
 const allowedFileTypes = new Set([
@@ -74,7 +83,7 @@ const parseCohortId = (value: FormDataEntryValue | null) => {
 
 const getValidatedFile = (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
-    return { error: "파일을 선택해주세요." } as const;
+    return { file: null } as const;
   }
 
   if (!allowedFileTypes.has(value.type)) {
@@ -109,6 +118,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     title: formData.get("title"),
     cohortId: parseCohortId(formData.get("cohortId")),
     textType: parsedTextType,
+    body: formData.get("body"),
   });
 
   if (!parsed.success) {
@@ -126,16 +136,25 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     };
   }
 
+  if (!validatedFile.file && !parsed.data.body) {
+    return {
+      success: false,
+      error: "파일을 업로드하거나 마크다운을 작성해주세요.",
+    };
+  }
+
   try {
-    const safeFileName = normalizeFileName(validatedFile.file.name);
-    const blob = await put(`weekly-texts/${safeFileName}`, validatedFile.file, {
-      access: "public",
-    });
+    const blob = validatedFile.file
+      ? await put(`weekly-texts/${normalizeFileName(validatedFile.file.name)}`, validatedFile.file, {
+          access: "public",
+        })
+      : null;
 
     await db.insert(weeklyTexts).values({
       title: parsed.data.title,
-      fileUrl: blob.url,
-      fileName: validatedFile.file.name,
+      fileUrl: blob?.url ?? "",
+      fileName: validatedFile.file?.name ?? null,
+      body: parsed.data.body ?? null,
       cohortId: parsed.data.cohortId || null,
       textType: parsed.data.textType ?? null,
     });
@@ -228,7 +247,10 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
       };
     }
 
-    await del(target.fileUrl);
+    if (target.fileUrl) {
+      await del(target.fileUrl);
+    }
+
     await db.delete(weeklyTexts).where(eq(weeklyTexts.id, parsedId.data));
 
     revalidateWeeklyTextPaths();

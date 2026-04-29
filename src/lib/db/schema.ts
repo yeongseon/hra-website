@@ -437,8 +437,9 @@ export const noticeAttachmentsRelations = relations(noticeAttachments, ({ one })
 export const weeklyTexts = pgTable("weekly_texts", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: varchar("title", { length: 300 }).notNull(),
-  fileUrl: text("file_url").notNull(), // 파일 URL
-  fileName: varchar("file_name", { length: 500 }).notNull(),
+  fileUrl: text("file_url").notNull().default(""),
+  fileName: varchar("file_name", { length: 500 }),
+  body: text("body"),
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
   textType: varchar("text_type", { length: 20 }), // 텍스트 분류: "고전명작" | "경영서" | "기업실무" | null(미분류)
   createdAt: timestamp("created_at").notNull().defaultNow(),

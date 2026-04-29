@@ -81,10 +81,11 @@ export default async function ResourcesPage() {
 
       // 주차별 텍스트 (textType 포함)
       db
-        .select({
+       .select({
           id: weeklyTexts.id,
           title: weeklyTexts.title,
           fileUrl: weeklyTexts.fileUrl,
+          body: weeklyTexts.body,
           createdAt: weeklyTexts.createdAt,
           cohortId: weeklyTexts.cohortId,
           textType: weeklyTexts.textType,
@@ -162,7 +163,8 @@ export default async function ResourcesPage() {
       date: text.createdAt,
       cohortId: text.cohortId,
       textType: text.textType ?? null,
-      downloadUrl: text.fileUrl,
+      href: text.body ? `/resources/weekly-texts/${text.id}` : undefined,
+      downloadUrl: !text.body && text.fileUrl ? text.fileUrl : undefined,
     })),
     ...allClassMaterials.map((material) => ({
       id: `cm-${material.id}`,
@@ -185,14 +187,14 @@ export default async function ResourcesPage() {
       cohortId: null,
       downloadUrl: book.fileUrl,
     })),
-    // 보고서 양식 — 가이드북 탭에 함께 표시 (마크다운 뷰어로 이동)
+    // 보고서 양식 — 가이드북 탭에 함께 표시 (마크다운 .md 파일로 다운로드)
     ...allTemplates.map((tmpl) => ({
       id: `tmpl-${tmpl.id}`,
       title: tmpl.title,
       category: "가이드북" as const,
       date: tmpl.createdAt,
       cohortId: null,
-      href: `/member/templates/${tmpl.slug}`,
+      downloadUrl: `/api/templates/${tmpl.slug}/download`,
     })),
   ];
 

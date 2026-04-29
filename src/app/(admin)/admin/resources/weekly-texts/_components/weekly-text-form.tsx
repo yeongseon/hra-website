@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileUp, PenSquare } from "lucide-react";
+import { useWeeklyTextUploadForm } from "@/components/resources/weekly-texts/use-weekly-text-upload-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
+import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
+import { cn } from "@/lib/utils";
 
 type WeeklyTextFormProps = {
   action: (formData: FormData) => Promise<WeeklyTextActionState>;
@@ -39,6 +43,32 @@ const acceptValue = [
 
 export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const {
+    body,
+    cohortId,
+    fileInputRef,
+    handleTextTypeChange,
+    isTemplateLoading,
+    resetForm,
+    setBody,
+    setCohortId,
+    setTitle,
+    switchUploadMode,
+    templateError,
+    textType,
+    title,
+    uploadMode,
+  } = useWeeklyTextUploadForm();
+
+  const textTypeSelectItems = [
+    { value: "__none__", label: "미선택" },
+    ...WEEKLY_TEXT_TYPE_VALUES.map((value) => ({ value, label: value })),
+  ];
+  const cohortSelectItems = [
+    { value: "__none__", label: "미선택" },
+    ...cohorts.map((cohort) => ({ value: cohort.id, label: cohort.name })),
+  ];
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
     async (_previous: WeeklyTextActionState, formData: FormData) => action(formData),
@@ -47,10 +77,12 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
 
   useEffect(() => {
     if (submissionState.success) {
+      formRef.current?.reset();
+      resetForm();
       router.push("/admin/resources/weekly-texts");
       router.refresh();
     }
-  }, [router, submissionState.success]);
+  }, [resetForm, router, submissionState.success]);
 
   return (
     <Card className="border-slate-200 bg-white py-0 shadow-sm">
@@ -58,7 +90,9 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
         <CardTitle className="text-xl text-slate-900">주차별 텍스트 정보</CardTitle>
       </CardHeader>
       <CardContent className="py-6">
-        <form action={submissionAction} className="space-y-5">
+        <form ref={formRef} action={submissionAction} className="space-y-5">
+          <input type="hidden" name="uploadMode" value={uploadMode} />
+
           {submissionState.error ? (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertCircle className="mt-0.5 size-4" />
@@ -73,26 +107,77 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
             </div>
           ) : null}
 
+          <div className="space-y-3">
+            <span className="text-sm font-medium text-[#1a1a1a]">업로드 방식</span>
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => switchUploadMode("file")}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
+                  uploadMode === "file"
+                    ? "border-[#2563EB] bg-blue-50 text-[#2563EB]"
+                    : "border-[#D9D9D9] bg-white text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB]",
+                )}
+              >
+                <FileUp className="size-4" />
+                <div>
+                  <p className="text-sm font-semibold">파일 업로드</p>
+                  <p className="text-xs leading-5">문서 파일을 그대로 등록합니다.</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => switchUploadMode("markdown")}
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors",
+                  uploadMode === "markdown"
+                    ? "border-[#2563EB] bg-blue-50 text-[#2563EB]"
+                    : "border-[#D9D9D9] bg-white text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB]",
+                )}
+              >
+                <PenSquare className="size-4" />
+                <div>
+                  <p className="text-sm font-semibold">마크다운 작성</p>
+                  <p className="text-xs leading-5">최신 템플릿을 불러와 바로 등록합니다.</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title" className="text-slate-700">
               제목
             </Label>
-            <Input id="title" name="title" required className="h-10 border-slate-300" />
+            <Input
+              id="title"
+              name="title"
+              required
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="h-10 border-slate-300"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="textType" className="text-slate-700">
               텍스트 분류
             </Label>
-            <Select name="textType" defaultValue="__none__">
+            <Select
+              name="textType"
+              items={textTypeSelectItems}
+              value={textType ?? "__none__"}
+              onValueChange={handleTextTypeChange}
+            >
               <SelectTrigger id="textType" className="h-10 w-full border-slate-300 bg-white">
                 <SelectValue placeholder="분류를 선택하세요" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">미선택</SelectItem>
-                <SelectItem value="고전명작">고전명작</SelectItem>
-                <SelectItem value="경영서">경영서</SelectItem>
-                <SelectItem value="기업실무">기업실무</SelectItem>
+                {textTypeSelectItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -101,41 +186,71 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
             <Label htmlFor="cohortId" className="text-slate-700">
               기수
             </Label>
-            <Select name="cohortId" defaultValue="__none__">
+            <Select
+              name="cohortId"
+              items={cohortSelectItems}
+              value={cohortId}
+              onValueChange={(value) => setCohortId(value ?? "__none__")}
+            >
               <SelectTrigger id="cohortId" className="h-10 w-full border-slate-300 bg-white">
                 <SelectValue placeholder="기수를 선택하세요" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">미선택</SelectItem>
-                {cohorts.map((cohort) => (
-                  <SelectItem key={cohort.id} value={cohort.id}>
-                    {cohort.name}
+                {cohortSelectItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="file" className="text-slate-700">
-              파일
-            </Label>
-            <Input
-              id="file"
-              name="file"
-              type="file"
-              required
-              accept={acceptValue}
-              className="border-slate-300 bg-white"
-            />
-            <p className="text-sm text-slate-500">
-              PDF, HWP, DOC, DOCX 파일만 업로드할 수 있으며 최대 용량은 30MB입니다.
-            </p>
-          </div>
+          {uploadMode === "file" ? (
+            <div className="space-y-2">
+              <Label htmlFor="file" className="text-slate-700">
+                파일
+              </Label>
+              <Input
+                id="file"
+                ref={fileInputRef}
+                name="file"
+                type="file"
+                required
+                accept={acceptValue}
+                className="border-slate-300 bg-white"
+              />
+              <p className="text-sm text-slate-500">
+                PDF, HWP, DOC, DOCX 파일만 업로드할 수 있으며 최대 용량은 30MB입니다.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="body" className="text-slate-700">
+                마크다운 본문
+              </Label>
+              <Textarea
+                id="body"
+                name="body"
+                value={isTemplateLoading ? "템플릿 불러오는 중..." : body}
+                onChange={(event) => setBody(event.target.value)}
+                disabled={isTemplateLoading}
+                placeholder="분류를 선택하면 최신 템플릿이 자동으로 채워집니다. 직접 작성도 가능합니다."
+                className="min-h-[400px] border-slate-300 bg-white font-mono text-sm leading-6 text-[#1a1a1a]"
+              />
+              <p className="text-sm text-slate-500">
+                분류를 선택하면 최신 템플릿을 불러오며, 선택하지 않아도 직접 작성할 수 있습니다.
+              </p>
+              {templateError ? <p className="text-sm text-red-600">{templateError}</p> : null}
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
-            <Button type="submit" disabled={isSubmitting} className="h-10 bg-slate-900 text-white">
-              {isSubmitting ? "저장 중..." : "주차별 텍스트 저장"}
+            <Button
+              type="submit"
+              disabled={isSubmitting || isTemplateLoading}
+              className="h-10 bg-slate-900 text-white"
+            >
+              {isSubmitting ? "저장 중..." : uploadMode === "file" ? "주차별 텍스트 저장" : "마크다운 텍스트 저장"}
             </Button>
             <Button
               variant="outline"

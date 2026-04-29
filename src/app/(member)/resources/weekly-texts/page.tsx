@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Download, Lock } from "lucide-react";
+import { ArrowLeft, Download, Eye, Lock } from "lucide-react";
 import { asc, desc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,14 +42,16 @@ export default async function WeeklyTextsPage() {
 
   const [texts, cohortRows] = await Promise.all([
     db
-      .select({
-        id: weeklyTexts.id,
-        title: weeklyTexts.title,
-        fileUrl: weeklyTexts.fileUrl,
-        fileName: weeklyTexts.fileName,
-        createdAt: weeklyTexts.createdAt,
-        cohortName: cohorts.name,
-      })
+        .select({
+          id: weeklyTexts.id,
+          title: weeklyTexts.title,
+          fileUrl: weeklyTexts.fileUrl,
+          fileName: weeklyTexts.fileName,
+          body: weeklyTexts.body,
+          textType: weeklyTexts.textType,
+          createdAt: weeklyTexts.createdAt,
+          cohortName: cohorts.name,
+        })
       .from(weeklyTexts)
       .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
       .orderBy(desc(weeklyTexts.createdAt)),
@@ -122,39 +124,95 @@ export default async function WeeklyTextsPage() {
         ) : (
           <div className="space-y-4">
             {texts.map((text) => (
-              <a key={text.id} href={text.fileUrl} download={text.fileName} className="block">
-                <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
-                  <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant="secondary"
-                          className="w-fit border border-[#D9D9D9] bg-gray-50 text-[#666666]"
-                        >
-                          {formatDate(text.createdAt)}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "w-fit border-[#D9D9D9] bg-white text-[#666666]",
-                            text.cohortName ? "inline-flex" : "hidden",
-                          )}
-                        >
-                          {text.cohortName}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-lg">{text.title}</CardTitle>
-                      <CardDescription className="text-sm text-[#666666]">
-                        파일을 눌러 바로 다운로드하세요.
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
-                      <Download className="size-4" />
-                      다운로드
-                    </div>
-                  </CardHeader>
-                </Card>
-              </a>
+              <div key={text.id} className="block">
+                {text.body ? (
+                  <Link href={`/resources/weekly-texts/${text.id}`} className="block">
+                    <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
+                      <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="secondary"
+                              className="w-fit border border-[#D9D9D9] bg-gray-50 text-[#666666]"
+                            >
+                              {formatDate(text.createdAt)}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "w-fit border-[#D9D9D9] bg-white text-[#666666]",
+                                text.cohortName ? "inline-flex" : "hidden",
+                              )}
+                            >
+                              {text.cohortName}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "w-fit border-[#D9D9D9] bg-white text-[#666666]",
+                                text.textType ? "inline-flex" : "hidden",
+                              )}
+                            >
+                              {text.textType}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-lg">{text.title}</CardTitle>
+                          <CardDescription className="text-sm text-[#666666]">
+                            마크다운으로 작성된 텍스트입니다. 클릭해 바로 읽을 수 있습니다.
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
+                          <Eye className="size-4" />
+                          보기
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </Link>
+                ) : (
+                  <a href={text.fileUrl} download={text.fileName ?? undefined} className="block">
+                    <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
+                      <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="secondary"
+                              className="w-fit border border-[#D9D9D9] bg-gray-50 text-[#666666]"
+                            >
+                              {formatDate(text.createdAt)}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "w-fit border-[#D9D9D9] bg-white text-[#666666]",
+                                text.cohortName ? "inline-flex" : "hidden",
+                              )}
+                            >
+                              {text.cohortName}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "w-fit border-[#D9D9D9] bg-white text-[#666666]",
+                                text.textType ? "inline-flex" : "hidden",
+                              )}
+                            >
+                              {text.textType}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-lg">{text.title}</CardTitle>
+                          <CardDescription className="text-sm text-[#666666]">
+                            파일을 눌러 바로 다운로드하세요.
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
+                          <Download className="size-4" />
+                          다운로드
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </a>
+                )}
+              </div>
             ))}
           </div>
         )}

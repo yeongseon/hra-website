@@ -36,6 +36,7 @@ export default async function AdminWeeklyTextsPage() {
           title: weeklyTexts.title,
           fileUrl: weeklyTexts.fileUrl,
           fileName: weeklyTexts.fileName,
+          body: weeklyTexts.body,
           createdAt: weeklyTexts.createdAt,
           cohortName: cohorts.name,
         })
@@ -76,8 +77,8 @@ export default async function AdminWeeklyTextsPage() {
                 <TableRow>
                   <TableHead>제목</TableHead>
                   <TableHead>기수</TableHead>
-                  <TableHead>파일명</TableHead>
-                  <TableHead>다운로드</TableHead>
+                  <TableHead>등록 방식</TableHead>
+                  <TableHead>열기</TableHead>
                   <TableHead>작성일</TableHead>
                   <TableHead>관리</TableHead>
                 </TableRow>
@@ -96,15 +97,26 @@ export default async function AdminWeeklyTextsPage() {
                         {row.title}
                       </TableCell>
                       <TableCell className="text-slate-700">{row.cohortName ?? "-"}</TableCell>
-                      <TableCell className="max-w-[240px] truncate text-slate-700">{row.fileName}</TableCell>
+                      <TableCell className="max-w-[240px] truncate text-slate-700">
+                        {row.body ? "마크다운 작성" : row.fileName ?? "파일 업로드"}
+                      </TableCell>
                       <TableCell>
-                        <a
-                          href={row.fileUrl}
-                          download={row.fileName}
-                          className="text-sm font-medium text-[#2563EB] hover:underline"
-                        >
-                          파일 받기
-                        </a>
+                        {row.body ? (
+                          <Link
+                            href={`/resources/weekly-texts/${row.id}`}
+                            className="text-sm font-medium text-[#2563EB] hover:underline"
+                          >
+                            내용 보기
+                          </Link>
+                        ) : (
+                          <a
+                            href={row.fileUrl}
+                            download={row.fileName ?? undefined}
+                            className="text-sm font-medium text-[#2563EB] hover:underline"
+                          >
+                            파일 받기
+                          </a>
+                        )}
                       </TableCell>
                       <TableCell className="text-slate-700">{formatDate(row.createdAt)}</TableCell>
                       <TableCell>
