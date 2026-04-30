@@ -178,23 +178,23 @@ export default async function ResourcesPage() {
       author: material.uploaderName,
       downloadUrl: material.fileUrl,
     })),
-    // 가이드북 파일 (기수 무관)
+    // 가이드북 파일 — 클릭 시 뷰어 페이지(/resources/guidebooks/[id])로 이동
     ...allGuidebooks.map((book) => ({
       id: `guide-${book.id}`,
       title: book.title,
       category: "가이드북" as const,
       date: book.createdAt,
       cohortId: null,
-      downloadUrl: book.fileUrl,
+      href: `/resources/guidebooks/${book.id}`,
     })),
-    // 보고서 양식 — 가이드북 탭에 함께 표시 (마크다운 .md 파일로 다운로드)
+    // 보고서 양식 — 클릭 시 마크다운 뷰어(/member/templates/[slug])로 이동
     ...allTemplates.map((tmpl) => ({
       id: `tmpl-${tmpl.id}`,
       title: tmpl.title,
       category: "가이드북" as const,
       date: tmpl.createdAt,
       cohortId: null,
-      downloadUrl: `/api/templates/${tmpl.slug}/download`,
+      href: `/member/templates/${tmpl.slug}`,
     })),
   ];
 
