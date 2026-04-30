@@ -20,11 +20,12 @@
 
 "use server";
 
+import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { classLogs } from "@/lib/db/schema";
+import { classLogImages, classLogs } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
 /**
@@ -58,6 +59,15 @@ type ClassLogActionState = {
   success: boolean;
   error?: string;
 };
+
+const allowedImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+const maxImageSize = 10 * 1024 * 1024;
 
 /**
  * 수업일지 관련 페이지들의 캐시를 새로고침하는 헬퍼 함수
@@ -111,6 +121,73 @@ const parseCohortId = (value: FormDataEntryValue | null) => {
   return value;
 };
 
+const normalizeFileName = (fileName: string) => {
+  const trimmed = fileName.trim();
+  const sanitized = trimmed.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "");
+
+  return sanitized || "class-log-image";
+};
+
+const getValidatedImageFiles = (formData: FormData) => {
+  const files = formData
+    .getAll("images")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  for (const file of files) {
+    if (!allowedImageTypes.has(file.type)) {
+      return {
+        error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
+      } as const;
+    }
+
+    if (file.size > maxImageSize) {
+      return {
+        error: "사진 파일은 10MB 이하여야 합니다.",
+      } as const;
+    }
+  }
+
+  return { files } as const;
+};
+
+const uploadClassLogImages = async (classLogId: string, title: string, files: File[]) => {
+  if (files.length === 0) {
+    return [];
+  }
+
+  const uploadedImages = await Promise.all(
+    files.map(async (file, index) => {
+      const blob = await put(`class-logs/${Date.now()}-${index}-${normalizeFileName(file.name)}`, file, {
+        access: "public",
+      });
+
+      return {
+        classLogId,
+        url: blob.url,
+        alt: `${title} 사진 ${index + 1}`,
+        order: index,
+      };
+    }),
+  );
+
+  await db.insert(classLogImages).values(uploadedImages);
+
+  return uploadedImages;
+};
+
+const deleteClassLogImagesFromBlob = async (classLogId: string) => {
+  const existingImages = await db
+    .select({ url: classLogImages.url })
+    .from(classLogImages)
+    .where(eq(classLogImages.classLogId, classLogId));
+
+  if (existingImages.length === 0) {
+    return;
+  }
+
+  await Promise.all(existingImages.map((image) => del(image.url)));
+};
+
 /**
  * 📝 새로운 수업일지를 생성하는 서버 액션
  *
@@ -152,22 +229,38 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
     };
   }
 
+  const validatedImages = getValidatedImageFiles(formData);
+  if ("error" in validatedImages) {
+    return {
+      success: false,
+      error: validatedImages.error,
+    };
+  }
+
   try {
-    // 4️⃣ 데이터베이스에 새로운 수업일지 저장
-    await db.insert(classLogs).values({
+    const [createdLog] = await db.insert(classLogs).values({
       title: parsed.data.title,
       content: parsed.data.content,
       classDate,
       cohortId: parsed.data.cohortId || null,
-      authorId: session.user.id, // 현재 로그인한 관리자 ID
-    });
+      authorId: session.user.id,
+    }).returning({ id: classLogs.id });
 
-    // 5️⃣ 캐시 새로고침 (화면에 새 글이 보이도록)
+    if (!createdLog) {
+      return {
+        success: false,
+        error: "수업일지 생성에 실패했습니다.",
+      };
+    }
+
+    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+
     revalidateClassLogPaths();
 
     return { success: true };
-  } catch {
-    // 예상치 못한 에러 발생 시
+  } catch (error) {
+    console.error("[class-logs/create] 생성 오류:", error);
+
     return {
       success: false,
       error: "수업일지 생성에 실패했습니다.",
@@ -230,8 +323,15 @@ export async function updateClassLog(
     };
   }
 
+  const validatedImages = getValidatedImageFiles(formData);
+  if ("error" in validatedImages) {
+    return {
+      success: false,
+      error: validatedImages.error,
+    };
+  }
+
   try {
-    // 5️⃣ 데이터베이스 업데이트 (특정 ID의 수업일지만 수정)
     await db
       .update(classLogs)
       .set({
@@ -240,14 +340,20 @@ export async function updateClassLog(
         classDate,
         cohortId: parsed.data.cohortId || null,
       })
-      .where(eq(classLogs.id, parsedId.data)); // ID가 일치하는 것만
+      .where(eq(classLogs.id, parsedId.data));
 
-    // 6️⃣ 캐시 새로고침
+    if (validatedImages.files.length > 0) {
+      await deleteClassLogImagesFromBlob(parsedId.data);
+      await db.delete(classLogImages).where(eq(classLogImages.classLogId, parsedId.data));
+      await uploadClassLogImages(parsedId.data, parsed.data.title, validatedImages.files);
+    }
+
     revalidateClassLogPaths();
 
     return { success: true };
-  } catch {
-    // 예상치 못한 에러
+  } catch (error) {
+    console.error("[class-logs/update] 수정 오류:", error);
+
     return {
       success: false,
       error: "수업일지 수정에 실패했습니다.",
@@ -283,15 +389,15 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
   }
 
   try {
-    // 3️⃣ 데이터베이스에서 해당 ID의 수업일지 삭제
+    await deleteClassLogImagesFromBlob(parsedId.data);
     await db.delete(classLogs).where(eq(classLogs.id, parsedId.data));
 
-    // 4️⃣ 캐시 새로고침 (삭제된 글이 페이지에서 사라지도록)
     revalidateClassLogPaths();
 
     return { success: true };
-  } catch {
-    // 예상치 못한 에러
+  } catch (error) {
+    console.error("[class-logs/delete] 삭제 오류:", error);
+
     return {
       success: false,
       error: "수업일지 삭제에 실패했습니다.",

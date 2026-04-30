@@ -15,7 +15,7 @@ import { ClassLogForm } from "@/app/(admin)/admin/resources/_components/class-lo
 import { updateClassLog } from "@/features/class-logs/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { classLogs, cohorts } from "@/lib/db/schema";
+import { classLogImages, classLogs, cohorts } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +35,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
   const { id } = await params;
 
   // 데이터 조회와 오류 처리를 렌더 바깥에서 마무리해 React lint 규칙을 지킵니다.
-  const { log, cohortRows, hasDbError } = await (async () => {
+  const { log, cohortRows, existingImageCount, hasDbError } = await (async () => {
     try {
       const [log] = await db
         .select({
@@ -54,10 +54,15 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
         .from(cohorts)
         .orderBy(asc(cohorts.order), asc(cohorts.name));
 
-      return { log, cohortRows, hasDbError: false };
+      const imageRows = await db
+        .select({ id: classLogImages.id })
+        .from(classLogImages)
+        .where(eq(classLogImages.classLogId, id));
+
+      return { log, cohortRows, existingImageCount: imageRows.length, hasDbError: false };
     } catch (error) {
       console.error("[admin/resources/edit] DB 조회 오류:", error);
-      return { log: null, cohortRows: [], hasDbError: true };
+      return { log: null, cohortRows: [], existingImageCount: 0, hasDbError: true };
     }
   })();
 
@@ -102,6 +107,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
           content: log.content,
           classDate: toDateInputValue(log.classDate),
           cohortId: log.cohortId,
+          existingImageCount,
         }}
         submitLabel="수정 저장"
         successMessage="수업일지가 수정되었습니다."

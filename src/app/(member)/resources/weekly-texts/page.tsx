@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Download, Eye, Lock } from "lucide-react";
-import { asc, desc, eq } from "drizzle-orm";
+import { ArrowLeft, Download, Eye, ImageIcon, Lock } from "lucide-react";
+import { asc, eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
 import { createWeeklyTextAsMember } from "@/features/weekly-texts/actions";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { cohorts, users, weeklyTexts } from "@/lib/db/schema";
+import { cohorts, users } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -41,20 +41,13 @@ export default async function WeeklyTextsPage() {
     : null;
 
   const [texts, cohortRows] = await Promise.all([
-    db
-        .select({
-          id: weeklyTexts.id,
-          title: weeklyTexts.title,
-          fileUrl: weeklyTexts.fileUrl,
-          fileName: weeklyTexts.fileName,
-          body: weeklyTexts.body,
-          textType: weeklyTexts.textType,
-          createdAt: weeklyTexts.createdAt,
-          cohortName: cohorts.name,
-        })
-      .from(weeklyTexts)
-      .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
-      .orderBy(desc(weeklyTexts.createdAt)),
+    db.query.weeklyTexts.findMany({
+      with: {
+        cohort: true,
+        images: true,
+      },
+      orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.createdAt)],
+    }),
     db
       .select({
         id: cohorts.id,
@@ -125,7 +118,7 @@ export default async function WeeklyTextsPage() {
           <div className="space-y-4">
             {texts.map((text) => (
               <div key={text.id} className="block">
-                {text.body ? (
+                {text.body || text.images.length > 0 ? (
                   <Link href={`/resources/weekly-texts/${text.id}`} className="block">
                     <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
                       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -141,10 +134,10 @@ export default async function WeeklyTextsPage() {
                               variant="outline"
                               className={cn(
                                 "w-fit border-[#D9D9D9] bg-white text-[#666666]",
-                                text.cohortName ? "inline-flex" : "hidden",
+                                text.cohort?.name ? "inline-flex" : "hidden",
                               )}
                             >
-                              {text.cohortName}
+                              {text.cohort?.name}
                             </Badge>
                             <Badge
                               variant="outline"
@@ -158,12 +151,24 @@ export default async function WeeklyTextsPage() {
                           </div>
                           <CardTitle className="text-lg">{text.title}</CardTitle>
                           <CardDescription className="text-sm text-[#666666]">
-                            마크다운으로 작성된 텍스트입니다. 클릭해 바로 읽을 수 있습니다.
+                            {text.body && text.images.length > 0
+                              ? "본문과 첨부 사진을 함께 볼 수 있습니다."
+                              : text.body
+                                ? "마크다운으로 작성된 텍스트를 바로 읽을 수 있습니다."
+                                : "첨부 사진과 문서를 함께 확인할 수 있습니다."}
                           </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
-                          <Eye className="size-4" />
-                          보기
+                        <div className="flex items-center gap-4 text-sm font-medium text-blue-600">
+                          {text.images.length > 0 ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <ImageIcon className="size-4" />
+                              사진 {text.images.length}장
+                            </span>
+                          ) : null}
+                          <span className="inline-flex items-center gap-2">
+                            <Eye className="size-4" />
+                            보기
+                          </span>
                         </div>
                       </CardHeader>
                     </Card>
@@ -184,10 +189,10 @@ export default async function WeeklyTextsPage() {
                               variant="outline"
                               className={cn(
                                 "w-fit border-[#D9D9D9] bg-white text-[#666666]",
-                                text.cohortName ? "inline-flex" : "hidden",
+                                text.cohort?.name ? "inline-flex" : "hidden",
                               )}
                             >
-                              {text.cohortName}
+                              {text.cohort?.name}
                             </Badge>
                             <Badge
                               variant="outline"

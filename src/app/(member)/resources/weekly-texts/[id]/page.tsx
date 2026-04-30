@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays } from "lucide-react";
-import { eq } from "drizzle-orm";
+import { ArrowLeft, CalendarDays, Download } from "lucide-react";
+import { asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { weeklyTexts } from "@/lib/db/schema";
+import { cohorts, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -30,21 +30,40 @@ const getWeeklyText = async (id: string) => {
       id: weeklyTexts.id,
       title: weeklyTexts.title,
       body: weeklyTexts.body,
+      fileUrl: weeklyTexts.fileUrl,
+      fileName: weeklyTexts.fileName,
+      cohortName: cohorts.name,
       textType: weeklyTexts.textType,
       createdAt: weeklyTexts.createdAt,
     })
     .from(weeklyTexts)
+    .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
     .where(eq(weeklyTexts.id, id))
     .limit(1);
 
-  return text ?? null;
+  if (!text) {
+    return null;
+  }
+
+  const images = await db
+    .select({
+      id: weeklyTextImages.id,
+      url: weeklyTextImages.url,
+      alt: weeklyTextImages.alt,
+      order: weeklyTextImages.order,
+    })
+    .from(weeklyTextImages)
+    .where(eq(weeklyTextImages.weeklyTextId, id))
+    .orderBy(asc(weeklyTextImages.order), asc(weeklyTextImages.createdAt));
+
+  return { ...text, images };
 };
 
 export async function generateMetadata({ params }: WeeklyTextViewerPageProps): Promise<Metadata> {
   const { id } = await params;
   const text = await getWeeklyText(id);
 
-  if (!text?.body) {
+  if (!text) {
     return { title: "주차별 텍스트" };
   }
 
@@ -66,7 +85,7 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
   const { id } = await params;
   const text = await getWeeklyText(id);
 
-  if (!text?.body) {
+  if (!text) {
     notFound();
   }
 
@@ -89,6 +108,11 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
                 <CalendarDays className="size-3.5" />
                 {formatDate(text.createdAt)}
               </Badge>
+              {text.cohortName ? (
+                <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
+                  {text.cohortName}
+                </Badge>
+              ) : null}
               {text.textType ? (
                 <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
                   {text.textType}
@@ -101,8 +125,44 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
           </div>
         </CardHeader>
 
-        <CardContent className="py-6 sm:py-10">
-          <MarkdownViewer body={text.body} />
+        <CardContent className="space-y-8 py-6 sm:py-10">
+          {text.body ? (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-[#1a1a1a]">본문</h2>
+              <MarkdownViewer body={text.body} />
+            </section>
+          ) : null}
+
+          {text.fileUrl ? (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-[#1a1a1a]">첨부 문서</h2>
+              <a
+                href={text.fileUrl}
+                download={text.fileName ?? undefined}
+                className="inline-flex items-center gap-2 rounded-full border border-[#D9D9D9] bg-white px-4 py-2 text-sm font-medium text-[#2563EB] transition-colors hover:border-[#2563EB] hover:bg-blue-50"
+              >
+                <Download className="size-4" />
+                {text.fileName ?? "첨부 파일 내려받기"}
+              </a>
+            </section>
+          ) : null}
+
+          {text.images.length > 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-base font-semibold text-[#1a1a1a]">첨부 사진</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {text.images.map((image) => (
+                  <div key={image.id} className="overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]">
+                    <img
+                      src={image.url}
+                      alt={image.alt?.trim() || `${text.title} 사진`}
+                      className="h-44 w-full object-cover sm:h-52"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </CardContent>
       </Card>
     </div>

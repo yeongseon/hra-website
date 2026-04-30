@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { ImageIcon } from "lucide-react";
+import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,7 +15,7 @@ import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resou
 import { WeeklyTextRowActions } from "@/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { cohorts, weeklyTexts } from "@/lib/db/schema";
+import { cohorts } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -30,19 +31,13 @@ export default async function AdminWeeklyTextsPage() {
 
   const { rows, hasDbError } = await (async () => {
     try {
-      const rows = await db
-        .select({
-          id: weeklyTexts.id,
-          title: weeklyTexts.title,
-          fileUrl: weeklyTexts.fileUrl,
-          fileName: weeklyTexts.fileName,
-          body: weeklyTexts.body,
-          createdAt: weeklyTexts.createdAt,
-          cohortName: cohorts.name,
-        })
-        .from(weeklyTexts)
-        .leftJoin(cohorts, eq(weeklyTexts.cohortId, cohorts.id))
-        .orderBy(desc(weeklyTexts.createdAt));
+      const rows = await db.query.weeklyTexts.findMany({
+        with: {
+          cohort: true,
+          images: true,
+        },
+        orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.createdAt)],
+      });
 
       return { rows, hasDbError: false };
     } catch (error) {
@@ -96,16 +91,17 @@ export default async function AdminWeeklyTextsPage() {
                       <TableCell className="max-w-[260px] truncate font-medium text-slate-900">
                         {row.title}
                       </TableCell>
-                      <TableCell className="text-slate-700">{row.cohortName ?? "-"}</TableCell>
+                      <TableCell className="text-slate-700">{row.cohort?.name ?? "-"}</TableCell>
                       <TableCell className="max-w-[240px] truncate text-slate-700">
                         {row.body ? "마크다운 작성" : row.fileName ?? "파일 업로드"}
                       </TableCell>
                       <TableCell>
-                        {row.body ? (
+                        {row.body || row.images.length > 0 ? (
                           <Link
                             href={`/resources/weekly-texts/${row.id}`}
-                            className="text-sm font-medium text-[#2563EB] hover:underline"
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2563EB] hover:underline"
                           >
+                            {row.images.length > 0 ? <ImageIcon className="size-4" /> : null}
                             내용 보기
                           </Link>
                         ) : (

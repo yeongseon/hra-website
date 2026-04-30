@@ -23,7 +23,7 @@ import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, weeklyTexts } from "@/lib/db/schema";
+import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -64,6 +64,15 @@ const allowedFileTypes = new Set([
 
 const maxFileSize = 30 * 1024 * 1024;
 
+const allowedImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+const maxImageSize = 10 * 1024 * 1024;
+
 const normalizeFileName = (fileName: string) => {
   const trimmed = fileName.trim();
   const sanitized = trimmed
@@ -101,10 +110,70 @@ const getValidatedFile = (value: FormDataEntryValue | null) => {
   return { file: value } as const;
 };
 
+const getValidatedImageFiles = (formData: FormData) => {
+  const files = formData
+    .getAll("images")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  for (const file of files) {
+    if (!allowedImageTypes.has(file.type)) {
+      return {
+        error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
+      } as const;
+    }
+
+    if (file.size > maxImageSize) {
+      return {
+        error: "사진 파일은 10MB 이하여야 합니다.",
+      } as const;
+    }
+  }
+
+  return { files } as const;
+};
+
 const revalidateWeeklyTextPaths = () => {
   revalidatePath("/admin/resources/weekly-texts");
   revalidatePath("/resources");
   revalidatePath("/resources/weekly-texts");
+};
+
+const uploadWeeklyTextImages = async (weeklyTextId: string, title: string, files: File[]) => {
+  if (files.length === 0) {
+    return [];
+  }
+
+  const uploadedImages = await Promise.all(
+    files.map(async (file, index) => {
+      const blob = await put(`weekly-texts/images/${Date.now()}-${index}-${normalizeFileName(file.name)}`, file, {
+        access: "public",
+      });
+
+      return {
+        weeklyTextId,
+        url: blob.url,
+        alt: `${title} 사진 ${index + 1}`,
+        order: index,
+      };
+    }),
+  );
+
+  await db.insert(weeklyTextImages).values(uploadedImages);
+
+  return uploadedImages;
+};
+
+const deleteWeeklyTextImagesFromBlob = async (weeklyTextId: string) => {
+  const existingImages = await db
+    .select({ url: weeklyTextImages.url })
+    .from(weeklyTextImages)
+    .where(eq(weeklyTextImages.weeklyTextId, weeklyTextId));
+
+  if (existingImages.length === 0) {
+    return;
+  }
+
+  await Promise.all(existingImages.map((image) => del(image.url)));
 };
 
 const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
@@ -136,6 +205,14 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     };
   }
 
+  const validatedImages = getValidatedImageFiles(formData);
+  if ("error" in validatedImages) {
+    return {
+      success: false,
+      error: validatedImages.error,
+    };
+  }
+
   if (!validatedFile.file && !parsed.data.body) {
     return {
       success: false,
@@ -150,14 +227,23 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
         })
       : null;
 
-    await db.insert(weeklyTexts).values({
+    const [createdWeeklyText] = await db.insert(weeklyTexts).values({
       title: parsed.data.title,
       fileUrl: blob?.url ?? "",
       fileName: validatedFile.file?.name ?? null,
       body: parsed.data.body ?? null,
       cohortId: parsed.data.cohortId || null,
       textType: parsed.data.textType ?? null,
-    });
+    }).returning({ id: weeklyTexts.id });
+
+    if (!createdWeeklyText) {
+      return {
+        success: false,
+        error: "주차별 텍스트 저장에 실패했습니다.",
+      };
+    }
+
+    await uploadWeeklyTextImages(createdWeeklyText.id, parsed.data.title, validatedImages.files);
 
     revalidateWeeklyTextPaths();
 
@@ -250,6 +336,8 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
     if (target.fileUrl) {
       await del(target.fileUrl);
     }
+
+    await deleteWeeklyTextImagesFromBlob(parsedId.data);
 
     await db.delete(weeklyTexts).where(eq(weeklyTexts.id, parsedId.data));
 

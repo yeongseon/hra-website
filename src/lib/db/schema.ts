@@ -445,11 +445,30 @@ export const weeklyTexts = pgTable("weekly_texts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const weeklyTextImages = pgTable("weekly_text_images", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  weeklyTextId: uuid("weekly_text_id")
+    .notNull()
+    .references(() => weeklyTexts.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  alt: varchar("alt", { length: 255 }),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Weekly Texts 관계 정의
-export const weeklyTextsRelations = relations(weeklyTexts, ({ one }) => ({
+export const weeklyTextsRelations = relations(weeklyTexts, ({ one, many }) => ({
   cohort: one(cohorts, {
     fields: [weeklyTexts.cohortId],
     references: [cohorts.id],
+  }),
+  images: many(weeklyTextImages),
+}));
+
+export const weeklyTextImagesRelations = relations(weeklyTextImages, ({ one }) => ({
+  weeklyText: one(weeklyTexts, {
+    fields: [weeklyTextImages.weeklyTextId],
+    references: [weeklyTexts.id],
   }),
 }));
 
@@ -576,6 +595,7 @@ export type FaqContactInfo = typeof faqContact.$inferSelect;
 export type RecruitmentSetting = typeof recruitmentSettings.$inferSelect;
 export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
 export type WeeklyText = typeof weeklyTexts.$inferSelect;
+export type WeeklyTextImage = typeof weeklyTextImages.$inferSelect;
 export type ClassMaterial = typeof classMaterials.$inferSelect;
 export type Guidebook = typeof guidebooks.$inferSelect;
 export type PressArticle = typeof pressArticles.$inferSelect;
