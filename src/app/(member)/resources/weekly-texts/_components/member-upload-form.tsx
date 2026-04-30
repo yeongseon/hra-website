@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, FileUp, PenSquare, Upload } from "lucide-react";
 import { useWeeklyTextUploadForm } from "@/components/resources/weekly-texts/use-weekly-text-upload-form";
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,6 @@ const acceptValue = [
 export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const [selectedImageNames, setSelectedImageNames] = useState<string[]>([]);
   const {
     body,
     cohortId,
@@ -84,7 +83,6 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
 
     formRef.current?.reset();
     resetForm();
-    setSelectedImageNames([]);
     router.refresh();
   }, [resetForm, router, submissionState.success]);
 
@@ -276,55 +274,30 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="body" className="text-[#1a1a1a]">
                 마크다운 본문
               </Label>
-              <Textarea
-                id="body"
-                name="body"
-                value={isTemplateLoading ? "템플릿 불러오는 중..." : body}
-                onChange={(event) => setBody(event.target.value)}
-                disabled={isTemplateLoading}
-                placeholder="분류를 선택하면 최신 템플릿이 자동으로 채워집니다. 직접 작성도 가능합니다."
-                className="min-h-[400px] border-[#D9D9D9] bg-white font-mono text-sm leading-6 text-[#1a1a1a]"
-              />
+              <div className="relative">
+                {isTemplateLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-lg">
+                    <span className="font-medium text-[#2563EB]">템플릿 불러오는 중...</span>
+                  </div>
+                )}
+                <MarkdownEditor
+                  id="body"
+                  name="body"
+                  value={body}
+                  onChange={setBody}
+                  placeholder="분류를 선택하면 최신 템플릿이 자동으로 채워집니다. 직접 작성도 가능합니다."
+                />
+              </div>
               <p className="text-sm leading-6 text-[#666666]">
                 분류를 선택하면 최신 템플릿을 불러오며, 선택하지 않아도 직접 작성할 수 있습니다.
               </p>
               {templateError ? <p className="text-sm text-red-600">{templateError}</p> : null}
             </div>
           )}
-
-          <div className="space-y-2">
-            <Label htmlFor="images" className="text-[#1a1a1a]">
-              사진 첨부
-            </Label>
-            <Input
-              id="images"
-              name="images"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="border-[#D9D9D9] bg-white text-[#1a1a1a] file:mr-4 file:rounded-full file:border-0 file:bg-[#2563EB]/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-[#2563EB] hover:file:bg-[#2563EB]/15"
-              onChange={(event) => {
-                setSelectedImageNames(Array.from(event.target.files ?? []).map((file) => file.name));
-              }}
-            />
-            <p className="text-sm leading-6 text-[#666666]">
-              문서 또는 마크다운 본문과 함께 사진을 여러 장 첨부할 수 있습니다. 각 파일은 10MB
-              이하여야 합니다.
-            </p>
-            {selectedImageNames.length > 0 ? (
-              <ul className="space-y-1 rounded-2xl border border-[#D9D9D9] bg-gray-50 px-3 py-3 text-sm text-[#666666]">
-                {selectedImageNames.map((name) => (
-                  <li key={name} className="truncate">
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[#666666]">

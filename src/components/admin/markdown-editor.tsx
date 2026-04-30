@@ -9,6 +9,8 @@ interface MarkdownEditorProps {
   defaultValue?: string;
   required?: boolean;
   placeholder?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 export function MarkdownEditor({
@@ -17,8 +19,27 @@ export function MarkdownEditor({
   defaultValue = "",
   required = false,
   placeholder = "마크다운으로 내용을 작성해주세요...",
+  value,
+  onChange,
 }: MarkdownEditorProps) {
-  const [content, setContent] = useState(defaultValue);
+  const isControlled = value !== undefined;
+  const [internalContent, setInternalContent] = useState(defaultValue);
+  const content = isControlled ? value : internalContent;
+
+  const setContent = (nextContent: string | ((prev: string) => string)) => {
+    let nextValue: string;
+    if (typeof nextContent === "function") {
+      nextValue = nextContent(content);
+    } else {
+      nextValue = nextContent;
+    }
+    
+    if (!isControlled) {
+      setInternalContent(nextValue);
+    }
+    onChange?.(nextValue);
+  };
+
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
