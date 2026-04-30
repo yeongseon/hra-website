@@ -22,6 +22,11 @@ type NoticeActionResult = {
   fieldErrors?: Record<string, string>;
 };
 
+const noticeStatusLabels = {
+  DRAFT: "임시저장",
+  PUBLISHED: "게시됨",
+} as const;
+
 type NoticeFormProps = {
   action: (formData: FormData) => Promise<NoticeActionResult>;
   defaultValues?: {
@@ -118,15 +123,15 @@ export function NoticeForm({
               <Label htmlFor="status" className="text-slate-700">
                 상태
               </Label>
-              <Select name="status" defaultValue={defaultValues?.status ?? "DRAFT"}>
-                <SelectTrigger id="status" className="h-10 w-full border-slate-300 bg-white">
-                  <SelectValue placeholder="상태를 선택하세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRAFT">DRAFT</SelectItem>
-                  <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select name="status" defaultValue={defaultValues?.status ?? "DRAFT"}>
+                  <SelectTrigger id="status" className="h-10 w-full border-slate-300 bg-white">
+                    <SelectValue placeholder="상태를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DRAFT">{noticeStatusLabels.DRAFT}</SelectItem>
+                    <SelectItem value="PUBLISHED">{noticeStatusLabels.PUBLISHED}</SelectItem>
+                  </SelectContent>
+                </Select>
               {submissionState.fieldErrors?.status ? (
                 <p className="text-sm text-red-600">{submissionState.fieldErrors.status}</p>
               ) : null}

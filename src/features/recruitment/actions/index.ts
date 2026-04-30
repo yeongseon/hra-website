@@ -8,12 +8,13 @@
  */
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
@@ -357,7 +358,7 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
     .where(eq(cohorts.id, parsedId.data));
 
   if (imageToDelete) {
-    await del(imageToDelete);
+    await deleteBlobIfExists(imageToDelete);
   }
 
   revalidatePath("/admin/recruitment");

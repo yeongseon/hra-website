@@ -23,6 +23,11 @@ export type TemplateFormResult = {
   fieldErrors?: Record<string, string>;
 };
 
+const templateCategoryLabels = {
+  template: "양식",
+  guide: "가이드",
+} as const;
+
 type TemplateFormProps = {
   action: (formData: FormData) => Promise<TemplateFormResult>;
   defaultValues?: {
@@ -138,8 +143,8 @@ export function TemplateForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="template">양식 (template)</SelectItem>
-                  <SelectItem value="guide">가이드 (guide)</SelectItem>
+                  <SelectItem value="template">{templateCategoryLabels.template}</SelectItem>
+                  <SelectItem value="guide">{templateCategoryLabels.guide}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

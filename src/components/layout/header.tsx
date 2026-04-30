@@ -26,22 +26,19 @@ type NavItem = {
   subItems?: { label: string; href: string }[];
 };
 
-/** 공개 네비게이션 메뉴 (비로그인 포함 모든 사용자에게 노출) */
 const navItems: NavItem[] = [
   {
-    label: "HRA소개",
+    label: "소개",
     subItems: [
       { label: "HRA", href: "/about" },
       { label: "커리큘럼", href: "/curriculum" },
       { label: "교수진", href: "/faculty" },
+      { label: "기수", href: "/cohorts" },
     ],
   },
   {
-    label: "입학안내",
-    subItems: [
-      { label: "모집안내", href: "/recruitment" },
-      { label: "FAQ", href: "/faq" },
-    ],
+    label: "모집안내",
+    href: "/recruitment",
   },
   {
     label: "소식",
@@ -54,8 +51,8 @@ const navItems: NavItem[] = [
   {
     label: "커뮤니티",
     subItems: [
-      { label: "기수", href: "/cohorts" },
       { label: "수료생 이야기", href: "/alumni" },
+      { label: "FAQ", href: "/faq" },
     ],
   },
 ];

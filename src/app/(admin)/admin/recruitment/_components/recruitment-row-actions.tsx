@@ -2,7 +2,7 @@
  * 모집 행 액션 컴포넌트 (클라이언트 컴포넌트)
  *
  * 역할: 각 기수 행의 우측에 표시되는 액션 버튼/드롭다운
- * - 모집 상태 드롭다운: 상태 변경 (UPCOMING → OPEN → CLOSED)
+ * - 모집 상태 드롭다운: 상태 변경 (예정 → 모집중 → 마감)
  * - 수정 버튼: 수정 페이지로 이동
  * - 삭제 버튼: 확인 대화상자 표시 후 삭제 처리
  *
@@ -39,6 +39,12 @@ type RecruitmentRowActionsProps = {
   currentStatus: "UPCOMING" | "OPEN" | "CLOSED";
 };
 
+const recruitmentStatusLabels = {
+  UPCOMING: "예정",
+  OPEN: "모집중",
+  CLOSED: "마감",
+} as const;
+
 export function RecruitmentRowActions({ id, currentStatus }: RecruitmentRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -60,9 +66,9 @@ export function RecruitmentRowActions({ id, currentStatus }: RecruitmentRowActio
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="UPCOMING">UPCOMING</SelectItem>
-          <SelectItem value="OPEN">OPEN</SelectItem>
-          <SelectItem value="CLOSED">CLOSED</SelectItem>
+          <SelectItem value="UPCOMING">{recruitmentStatusLabels.UPCOMING}</SelectItem>
+          <SelectItem value="OPEN">{recruitmentStatusLabels.OPEN}</SelectItem>
+          <SelectItem value="CLOSED">{recruitmentStatusLabels.CLOSED}</SelectItem>
         </SelectContent>
       </Select>
 

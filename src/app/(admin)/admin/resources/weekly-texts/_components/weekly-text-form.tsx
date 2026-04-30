@@ -63,11 +63,11 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
   } = useWeeklyTextUploadForm();
 
   const textTypeSelectItems = [
-    { value: "__none__", label: "미선택" },
+    { value: "__none__", label: "분류 선택" },
     ...WEEKLY_TEXT_TYPE_VALUES.map((value) => ({ value, label: value })),
   ];
   const cohortSelectItems = [
-    { value: "__none__", label: "미선택" },
+    { value: "__none__", label: "기수 선택" },
     ...cohorts.map((cohort) => ({ value: cohort.id, label: cohort.name })),
   ];
 

@@ -17,6 +17,11 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
 
+const noticeStatusLabels = {
+  DRAFT: "임시저장",
+  PUBLISHED: "게시됨",
+} as const;
+
 const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -83,7 +88,7 @@ export default async function AdminNoticesPage() {
                               : "bg-slate-100 text-slate-700"
                           }
                         >
-                          {notice.status}
+                          {noticeStatusLabels[notice.status]}
                         </Badge>
                       </TableCell>
                       <TableCell>

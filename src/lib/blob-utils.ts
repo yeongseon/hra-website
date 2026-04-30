@@ -13,7 +13,7 @@ import { del } from "@vercel/blob";
  * 이전의 url.includes() 방식은 외부 URL에 해당 문자열이 우연히 포함될 경우
  * 오인식할 수 있어 hostname 기반 검사로 교체한다.
  */
-function isVercelBlobUrl(url: string): boolean {
+export function isBlobUrl(url: string): boolean {
   try {
     const { hostname } = new URL(url);
     // *.vercel-storage.com 또는 *.public.blob.vercel-storage.com 허용
@@ -47,7 +47,7 @@ export function extractMarkdownBlobUrls(markdown: string): string[] {
   while (match !== null) {
     const url = match[1];
 
-    if (isVercelBlobUrl(url)) {
+    if (isBlobUrl(url)) {
       urls.add(url);
     }
 
@@ -74,7 +74,7 @@ export async function deleteMarkdownBlobImages(markdown: string): Promise<void> 
  * 단일 URL이 실제 Blob URL일 때만 삭제한다.
  */
 export async function deleteBlobIfExists(url: string | null | undefined): Promise<void> {
-  if (!url || !isVercelBlobUrl(url)) {
+  if (!url || !isBlobUrl(url)) {
     return;
   }
 

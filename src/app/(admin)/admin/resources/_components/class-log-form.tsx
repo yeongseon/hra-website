@@ -137,7 +137,7 @@ export function ClassLogForm({
                   <SelectValue placeholder="기수를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">미선택</SelectItem>
+                  <SelectItem value="__none__">기수 선택</SelectItem>
                   {cohorts.map((cohort) => (
                     <SelectItem key={cohort.id} value={cohort.id}>
                       {cohort.name}

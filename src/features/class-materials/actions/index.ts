@@ -1,11 +1,12 @@
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
 
@@ -161,7 +162,7 @@ export async function createClassMaterial(
 
     if (uploadedBlobUrl) {
       try {
-        await del(uploadedBlobUrl);
+        await deleteBlobIfExists(uploadedBlobUrl);
       } catch (blobDeleteError) {
         console.error("[class-materials/create] 업로드 롤백 오류:", blobDeleteError);
       }
@@ -197,7 +198,7 @@ export async function deleteClassMaterial(id: string): Promise<ClassMaterialActi
       };
     }
 
-    await del(target.fileUrl);
+    await deleteBlobIfExists(target.fileUrl);
     await db.delete(classMaterials).where(eq(classMaterials.id, parsedId.data));
 
     revalidateClassMaterialPaths();

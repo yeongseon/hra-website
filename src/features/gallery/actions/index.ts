@@ -9,12 +9,13 @@
  * - 관리자 페이지와 공개 페이지가 최신 데이터를 바로 보도록 경로를 재검증합니다.
  */
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { galleries, galleryImages } from "@/lib/db/schema";
 
@@ -213,7 +214,7 @@ export async function deleteGallery(id: string): Promise<GalleryActionState> {
   }
 
   // DB 레코드를 지우기 전에 Blob 이미지를 먼저 정리해 고아 파일을 남기지 않습니다.
-  await Promise.all(galleryResult.gallery.images.map((image) => del(image.url)));
+  await Promise.all(galleryResult.gallery.images.map((image) => deleteBlobIfExists(image.url)));
 
   await db.delete(galleries).where(eq(galleries.id, galleryResult.gallery.id));
 
@@ -354,7 +355,7 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     }
   } catch {
     if (uploadedBlobs.length > 0) {
-      await Promise.all(uploadedBlobs.map((blob) => del(blob.url).catch(() => undefined)));
+      await Promise.all(uploadedBlobs.map((blob) => deleteBlobIfExists(blob.url)));
     }
 
     return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -401,7 +402,7 @@ export async function deleteGalleryImage(id: string, imageId: string): Promise<G
       ? (nextImages[0]?.url ?? null)
       : (gallery.coverImageUrl ?? nextImages[0]?.url ?? null);
 
-  await del(targetImage.url);
+  await deleteBlobIfExists(targetImage.url);
 
   await db
     .delete(galleryImages)

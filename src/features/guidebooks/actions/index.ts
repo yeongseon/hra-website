@@ -15,11 +15,12 @@
  */
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
 
@@ -148,7 +149,7 @@ export async function deleteGuidebook(id: string): Promise<GuidebookActionState>
       };
     }
 
-    await del(target.fileUrl);
+    await deleteBlobIfExists(target.fileUrl);
     await db.delete(guidebooks).where(eq(guidebooks.id, parsedId.data));
 
     revalidateGuidebookPaths();

@@ -1,11 +1,12 @@
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { recruitmentSettings } from "@/lib/db/schema";
 
@@ -68,10 +69,6 @@ function normalizeText(value: FormDataEntryValue | null) {
 function toDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
-}
-
-function isBlobUrl(url: string) {
-  return url.includes(".vercel-storage.com") || url.includes(".blob.vercel-storage.com");
 }
 
 function normalizePosterFileName(fileName: string) {
@@ -204,7 +201,7 @@ export async function updateRecruitmentSettings(
 
   if (removePoster) {
     if (existingSettings?.posterImageUrl && isBlobUrl(existingSettings.posterImageUrl)) {
-      await del(existingSettings.posterImageUrl);
+      await deleteBlobIfExists(existingSettings.posterImageUrl);
     }
 
     nextPosterImageUrl = null;
@@ -213,7 +210,7 @@ export async function updateRecruitmentSettings(
   if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
       if (existingSettings?.posterImageUrl && !removePoster && isBlobUrl(existingSettings.posterImageUrl)) {
-        await del(existingSettings.posterImageUrl);
+        await deleteBlobIfExists(existingSettings.posterImageUrl);
       }
 
       nextPosterImageUrl = await uploadPosterFile(validatedPosterFile.file);

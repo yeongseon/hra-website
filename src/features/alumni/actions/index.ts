@@ -1,11 +1,12 @@
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { alumniStories } from "@/lib/db/schema";
 
@@ -93,10 +94,6 @@ async function uploadAlumniImage(file: File) {
   const safeFileName = file.name.replace(/\s+/g, "-");
   const blob = await put(`alumni/${safeFileName}`, file, { access: "public" });
   return blob.url;
-}
-
-function isBlobUrl(url: string) {
-  return url.includes(".vercel-storage.com") || url.includes(".blob.vercel-storage.com");
 }
 
 function revalidateAlumniPaths() {
@@ -206,7 +203,7 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     .where(eq(alumniStories.id, parsedId.data));
 
   if (validatedImage.file && oldImageUrl && isBlobUrl(oldImageUrl)) {
-    await del(oldImageUrl).catch(() => {});
+    await deleteBlobIfExists(oldImageUrl);
   }
 
   revalidateAlumniPaths();
@@ -227,7 +224,7 @@ export async function deleteAlumniStory(id: string): Promise<void> {
     .where(eq(alumniStories.id, parsedId.data));
 
   if (existing?.imageUrl && isBlobUrl(existing.imageUrl)) {
-    await del(existing.imageUrl);
+    await deleteBlobIfExists(existing.imageUrl);
   }
 
   await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));

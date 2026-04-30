@@ -59,9 +59,9 @@ const initialState: CohortActionState = {
 };
 
 const statusOptions: Array<{ value: RecruitmentStatus; label: string }> = [
-  { value: "UPCOMING", label: "UPCOMING" },
-  { value: "OPEN", label: "OPEN" },
-  { value: "CLOSED", label: "CLOSED" },
+  { value: "UPCOMING", label: "예정" },
+  { value: "OPEN", label: "모집중" },
+  { value: "CLOSED", label: "마감" },
 ];
 
 export function CohortForm({ title, description, submitLabel, action, defaultValues }: CohortFormProps) {
@@ -409,7 +409,7 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                   className="h-10"
                 />
                 <p className="text-xs text-slate-500">
-                  모집 상태가 &quot;OPEN&quot;일 때 공개 모집 페이지의 &quot;지원하기&quot; 버튼이 이 링크로 연결됩니다.
+                  모집 상태가 &quot;모집중&quot;일 때 공개 모집 페이지의 &quot;지원하기&quot; 버튼이 이 링크로 연결됩니다.
                 </p>
                 {state.fieldErrors?.googleFormUrl ? (
                   <p className="text-xs text-red-600">{state.fieldErrors.googleFormUrl}</p>

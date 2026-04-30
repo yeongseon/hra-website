@@ -1,4 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
+
+export const dynamic = "force-dynamic";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ApplyForm from "./_components/apply-form";

@@ -3,7 +3,7 @@
  *
  * 역할: 관리자가 등록된 모든 기수를 테이블 형태로 볼 수 있는 페이지
  * - 기수 목록 조회 (기수명, 모집 상태, 활성 여부, 기간, 지원자 수)
- * - 각 기수의 모집 상태 변경 (UPCOMING → OPEN → CLOSED)
+ * - 각 기수의 모집 상태 변경 (예정 → 모집중 → 마감)
  * - 각 기수별 수정/삭제 액션
  * - "새 기수 추가" 버튼으로 새 항목 생성 가능
  *
@@ -41,9 +41,9 @@ const formatDate = (value: Date | null) => {
 };
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  UPCOMING: { label: "UPCOMING", className: "bg-amber-100 text-amber-800" },
-  OPEN: { label: "OPEN", className: "bg-emerald-100 text-emerald-800" },
-  CLOSED: { label: "CLOSED", className: "bg-slate-100 text-slate-600" },
+  UPCOMING: { label: "예정", className: "bg-amber-100 text-amber-800" },
+  OPEN: { label: "모집중", className: "bg-emerald-100 text-emerald-800" },
+  CLOSED: { label: "마감", className: "bg-slate-100 text-slate-600" },
 };
 
 export default async function AdminRecruitmentPage() {

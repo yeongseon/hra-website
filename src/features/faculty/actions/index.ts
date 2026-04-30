@@ -1,11 +1,12 @@
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
 
@@ -198,7 +199,7 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
 
   if (validatedImage.file) {
     if (existingFaculty?.imageUrl) {
-      await del(existingFaculty.imageUrl);
+      await deleteBlobIfExists(existingFaculty.imageUrl);
     }
 
     updateValues.imageUrl = await uploadFacultyImage(validatedImage.file);
@@ -228,7 +229,7 @@ export async function deleteFaculty(id: string): Promise<void> {
     .where(eq(faculty.id, parsedId.data));
 
   if (existingFaculty?.imageUrl) {
-    await del(existingFaculty.imageUrl);
+    await deleteBlobIfExists(existingFaculty.imageUrl);
   }
 
   await db.delete(faculty).where(eq(faculty.id, parsedId.data));
