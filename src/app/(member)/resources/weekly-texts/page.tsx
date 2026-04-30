@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, ImageIcon, Lock } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { weeklyTexts as weeklyTextsTable } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,21 +42,24 @@ export default async function WeeklyTextsPage() {
     : null;
 
   // ADMIN/FACULTY는 전체 기수 조회, MEMBER는 본인 기수 글만 조회
+  // MEMBER인데 기수가 없으면 빈 목록 처리 (DB 조회 생략)
   const isAdminOrFaculty = role === "ADMIN" || role === "FACULTY";
+  const isMemberWithoutCohort = role === "MEMBER" && userCohortId === null;
 
   const [texts, cohortRows] = await Promise.all([
-    db.query.weeklyTexts.findMany({
-      with: {
-        cohort: true,
-        images: true,
-      },
-      // MEMBER이고 cohortId가 있을 때만 기수 필터 적용
-      where:
-        !isAdminOrFaculty && userCohortId !== null
-          ? eq(weeklyTextsTable.cohortId, userCohortId)
-          : undefined,
-      orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.classDate), desc(weeklyTextsTable.createdAt)],
-    }),
+    isMemberWithoutCohort
+      ? Promise.resolve([])
+      : db.query.weeklyTexts.findMany({
+          with: {
+            cohort: true,
+            images: true,
+          },
+          where:
+            !isAdminOrFaculty && userCohortId !== null
+              ? eq(weeklyTextsTable.cohortId, userCohortId)
+              : undefined,
+          orderBy: (table) => [sql`${table.classDate} DESC NULLS LAST`, sql`${table.createdAt} DESC`],
+        }),
     db
       .select({
         id: cohorts.id,
@@ -121,7 +124,13 @@ export default async function WeeklyTextsPage() {
           </Badge>
         </div>
 
-        {texts.length === 0 ? (
+        {isMemberWithoutCohort ? (
+          <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
+            <CardContent className="text-center text-base text-[#666666]">
+              아직 기수가 배정되지 않았습니다. 관리자에게 문의해주세요.
+            </CardContent>
+          </Card>
+        ) : texts.length === 0 ? (
           <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
             <CardContent className="text-center text-base text-[#666666]">
               등록된 주차별 텍스트가 없습니다.

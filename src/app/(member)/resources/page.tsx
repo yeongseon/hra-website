@@ -9,7 +9,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Info, Plus } from "lucide-react";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -79,19 +79,20 @@ export default async function ResourcesPage() {
         .innerJoin(users, eq(classLogs.authorId, users.id))
         .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt)),
 
-      // 주차별 텍스트 (textType 포함)
+      // 주차별 텍스트 (textType 포함) — classDate 기준 최신순, null은 맨 뒤로
       db
        .select({
           id: weeklyTexts.id,
           title: weeklyTexts.title,
           fileUrl: weeklyTexts.fileUrl,
           body: weeklyTexts.body,
+          classDate: weeklyTexts.classDate,
           createdAt: weeklyTexts.createdAt,
           cohortId: weeklyTexts.cohortId,
           textType: weeklyTexts.textType,
         })
         .from(weeklyTexts)
-        .orderBy(desc(weeklyTexts.createdAt)),
+        .orderBy(sql`${weeklyTexts.classDate} DESC NULLS LAST`, desc(weeklyTexts.createdAt)),
 
       (canViewFacultyMaterials
         ? db
@@ -99,6 +100,7 @@ export default async function ResourcesPage() {
               id: classMaterials.id,
               title: classMaterials.title,
               fileUrl: classMaterials.fileUrl,
+              classDate: classMaterials.classDate,
               createdAt: classMaterials.createdAt,
               audience: classMaterials.audience,
               weekNumber: classMaterials.weekNumber,
@@ -107,12 +109,13 @@ export default async function ResourcesPage() {
             })
             .from(classMaterials)
             .leftJoin(users, eq(classMaterials.uploadedById, users.id))
-            .orderBy(desc(classMaterials.classDate), desc(classMaterials.createdAt))
+            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt))
         : db
             .select({
               id: classMaterials.id,
               title: classMaterials.title,
               fileUrl: classMaterials.fileUrl,
+              classDate: classMaterials.classDate,
               createdAt: classMaterials.createdAt,
               audience: classMaterials.audience,
               weekNumber: classMaterials.weekNumber,
@@ -122,7 +125,7 @@ export default async function ResourcesPage() {
             .from(classMaterials)
             .leftJoin(users, eq(classMaterials.uploadedById, users.id))
             .where(eq(classMaterials.audience, "STUDENT"))
-            .orderBy(desc(classMaterials.classDate), desc(classMaterials.createdAt))),
+            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt))),
 
       // 가이드북 파일 (Vercel Blob)
       db.select().from(guidebooks).orderBy(desc(guidebooks.createdAt)),
@@ -160,7 +163,7 @@ export default async function ResourcesPage() {
       id: `text-${text.id}`,
       title: text.title,
       category: "주차별 텍스트" as const,
-      date: text.createdAt,
+      date: text.classDate ?? text.createdAt,
       cohortId: text.cohortId,
       textType: text.textType ?? null,
       href: text.body ? `/resources/weekly-texts/${text.id}` : undefined,
@@ -170,7 +173,7 @@ export default async function ResourcesPage() {
       id: `cm-${material.id}`,
       title: material.title,
       category: "강의 자료" as const,
-      date: material.createdAt,
+      date: material.classDate ?? material.createdAt,
       cohortId: null,
       audience: material.audience,
       weekNumber: material.weekNumber,

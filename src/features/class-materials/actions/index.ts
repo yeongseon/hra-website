@@ -143,6 +143,14 @@ export async function createClassMaterial(
     });
     uploadedBlobUrl = blob.url;
 
+    const classDateObj = parsed.data.classDate
+      ? new Date(`${parsed.data.classDate}T00:00:00`)
+      : null;
+
+    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    }
+
     await db.insert(classMaterials).values({
       title: parsed.data.title,
       fileUrl: blob.url,
@@ -154,7 +162,7 @@ export async function createClassMaterial(
           : parsed.data.lectureTitle,
       audience: parsed.data.audience,
       uploadedById: session.user.id,
-      classDate: parsed.data.classDate ? new Date(`${parsed.data.classDate}T00:00:00`) : null,
+      classDate: classDateObj,
     });
 
     revalidateClassMaterialPaths();

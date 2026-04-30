@@ -208,29 +208,27 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
     return { success: false, error: "승인된 회원만 업로드할 수 있습니다." };
   }
 
+  // MEMBER는 DB에서 본인 cohortId를 직접 조회해 강제 적용 (폼값 신뢰 금지)
+  let forcedCohortId: string | null = null;
   if (role === "MEMBER") {
-    const cohortIdValue = formData.get("cohortId");
-    const submittedCohortId =
-      typeof cohortIdValue === "string" && cohortIdValue !== "__none__" ? cohortIdValue : null;
+    const [userRow] = await db
+      .select({ cohortId: users.cohortId })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
 
-    if (submittedCohortId) {
-      const [userRow] = await db
-        .select({ cohortId: users.cohortId })
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-
-      if (userRow?.cohortId !== submittedCohortId) {
-        return { success: false, error: "자신의 기수에만 업로드할 수 있습니다." };
-      }
+    if (!userRow?.cohortId) {
+      return { success: false, error: "기수가 배정되지 않은 회원은 업로드할 수 없습니다." };
     }
+
+    forcedCohortId = userRow.cohortId;
   }
 
   const parsed = classLogFormSchema.safeParse({
     title: formData.get("title"),
     content: formData.get("content"),
     classDate: formData.get("classDate"),
-    cohortId: parseCohortId(formData.get("cohortId")),
+    cohortId: forcedCohortId ?? parseCohortId(formData.get("cohortId")),
   });
 
   if (!parsed.success) {

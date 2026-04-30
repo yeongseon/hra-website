@@ -229,6 +229,14 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
         })
       : null;
 
+    const classDateObj = parsed.data.classDate
+      ? new Date(`${parsed.data.classDate}T00:00:00`)
+      : null;
+
+    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    }
+
     const [createdWeeklyText] = await db.insert(weeklyTexts).values({
       title: parsed.data.title,
       fileUrl: blob?.url ?? "",
@@ -236,7 +244,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
       body: parsed.data.body ?? null,
       cohortId: parsed.data.cohortId || null,
       textType: parsed.data.textType ?? null,
-      classDate: parsed.data.classDate ? new Date(`${parsed.data.classDate}T00:00:00`) : null,
+      classDate: classDateObj,
     }).returning({ id: weeklyTexts.id });
 
     if (!createdWeeklyText) {
@@ -288,26 +296,19 @@ export async function createWeeklyTextAsMember(
     };
   }
 
-  // MEMBER는 자신의 기수에만 업로드 가능 — 서버 사이드 검증
+  // MEMBER는 DB에서 본인 cohortId를 직접 조회해 강제 적용 (폼값 신뢰 금지)
   if (role === "MEMBER") {
-    const cohortIdValue = formData.get("cohortId");
-    const submittedCohortId =
-      typeof cohortIdValue === "string" && cohortIdValue !== "__none__" ? cohortIdValue : null;
+    const [userRow] = await db
+      .select({ cohortId: users.cohortId })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
 
-    if (submittedCohortId) {
-      const [userRow] = await db
-        .select({ cohortId: users.cohortId })
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .limit(1);
-
-      if (userRow?.cohortId !== submittedCohortId) {
-        return {
-          success: false,
-          error: "자신의 기수에만 업로드할 수 있습니다.",
-        };
-      }
+    if (!userRow?.cohortId) {
+      return { success: false, error: "기수가 배정되지 않은 회원은 업로드할 수 없습니다." };
     }
+
+    formData.set("cohortId", userRow.cohortId);
   }
 
   return createWeeklyTextRecord(formData);

@@ -62,25 +62,29 @@ export default async function ClassLogsPage() {
         .then((rows) => rows[0]?.cohortId ?? null)
     : null;
 
+  const isMemberWithoutCohort = role === "MEMBER" && userCohortId === null;
+
   const [logs, cohortRows] = await Promise.all([
-    db
-      .select({
-        id: classLogs.id,
-        title: classLogs.title,
-        content: classLogs.content,
-        classDate: classLogs.classDate,
-        createdAt: classLogs.createdAt,
-        viewCount: classLogs.viewCount,
-        authorName: users.name,
-      })
-      .from(classLogs)
-      .innerJoin(users, eq(classLogs.authorId, users.id))
-      .where(
-        !isAdminOrFaculty && userCohortId !== null
-          ? eq(classLogs.cohortId, userCohortId)
-          : undefined,
-      )
-      .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt)),
+    isMemberWithoutCohort
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: classLogs.id,
+            title: classLogs.title,
+            content: classLogs.content,
+            classDate: classLogs.classDate,
+            createdAt: classLogs.createdAt,
+            viewCount: classLogs.viewCount,
+            authorName: users.name,
+          })
+          .from(classLogs)
+          .innerJoin(users, eq(classLogs.authorId, users.id))
+          .where(
+            !isAdminOrFaculty && userCohortId !== null
+              ? eq(classLogs.cohortId, userCohortId)
+              : undefined,
+          )
+          .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt)),
     db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
@@ -145,7 +149,13 @@ export default async function ClassLogsPage() {
           </Badge>
         </div>
 
-        {logs.length === 0 ? (
+        {isMemberWithoutCohort ? (
+          <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
+            <CardContent className="text-center text-base text-[#666666]">
+              아직 기수가 배정되지 않았습니다. 관리자에게 문의해주세요.
+            </CardContent>
+          </Card>
+        ) : logs.length === 0 ? (
           <Card className="rounded-2xl border-[#D9D9D9] bg-white py-10 shadow-[var(--shadow-soft)]">
             <CardContent className="text-center text-base text-[#666666]">
               등록된 수업일지가 없습니다.
