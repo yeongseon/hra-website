@@ -2,6 +2,7 @@
 
 import { useState, useRef, ChangeEvent, DragEvent, ClipboardEvent } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MarkdownEditorProps {
   id?: string;
@@ -218,7 +219,23 @@ export function MarkdownEditor({
             {content ? (
               <div className="markdown-preview break-words">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
+                    // GFM 표 스타일링
+                    table: (props) => (
+                      <div className="overflow-x-auto mb-4">
+                        <table className="w-full text-sm border-collapse" {...props} />
+                      </div>
+                    ),
+                    thead: (props) => <thead className="bg-slate-700" {...props} />,
+                    tbody: (props) => <tbody {...props} />,
+                    tr: (props) => <tr className="border-b border-slate-700 even:bg-slate-800/40" {...props} />,
+                    th: (props) => (
+                      <th className="px-3 py-2 text-left font-semibold text-slate-200 border border-slate-600" {...props} />
+                    ),
+                    td: (props) => (
+                      <td className="px-3 py-2 text-slate-300 border border-slate-600" {...props} />
+                    ),
                     h1: (props) => <h1 className="text-2xl font-bold mb-4" {...props} />,
                     h2: (props) => <h2 className="text-xl font-semibold mb-3" {...props} />,
                     h3: (props) => <h3 className="text-lg font-semibold mb-2" {...props} />,
