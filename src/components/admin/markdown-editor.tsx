@@ -26,18 +26,17 @@ export function MarkdownEditor({
   const [internalContent, setInternalContent] = useState(defaultValue);
   const content = isControlled ? value : internalContent;
 
-  const setContent = (nextContent: string | ((prev: string) => string)) => {
-    let nextValue: string;
-    if (typeof nextContent === "function") {
-      nextValue = nextContent(content);
-    } else {
-      nextValue = nextContent;
-    }
-    
+  // 최신 content를 항상 ref로 추적한다.
+  // async 함수(uploadImage) 내부에서 await 이후 content를 읽을 때
+  // 클로저가 stale해지는 문제를 막기 위해 사용한다.
+  const contentRef = useRef(content);
+  contentRef.current = content;
+
+  const setContent = (next: string) => {
     if (!isControlled) {
-      setInternalContent(nextValue);
+      setInternalContent(next);
     }
-    onChange?.(nextValue);
+    onChange?.(next);
   };
 
   const [isUploading, setIsUploading] = useState(false);
@@ -45,6 +44,7 @@ export function MarkdownEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 커서 위치에 텍스트를 삽입하는 유틸리티 함수
+  // contentRef.current로 최신 내용을 읽어 stale closure 문제를 방지한다.
   const insertTextAtCursor = (text: string) => {
     if (!textareaRef.current) return;
     
@@ -52,9 +52,9 @@ export function MarkdownEditor({
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     
-    // 삽입할 위치를 기준으로 텍스트 분리
-    const before = content.slice(0, start);
-    const after = content.slice(end);
+    const current = contentRef.current;
+    const before = current.slice(0, start);
+    const after = current.slice(end);
     
     const newContent = before + text + after;
     setContent(newContent);
@@ -67,8 +67,9 @@ export function MarkdownEditor({
   };
 
   // 기존 텍스트를 새로운 텍스트로 치환하는 유틸리티 함수 (예: 플레이스홀더를 실제 URL로 변경)
+  // contentRef.current를 사용해 async 완료 후에도 최신값을 기반으로 치환한다.
   const replaceText = (oldText: string, newText: string) => {
-    setContent((prev) => prev.replace(oldText, newText));
+    setContent(contentRef.current.replace(oldText, newText));
   };
 
   // 이미지 업로드 로직 (API 호출)
