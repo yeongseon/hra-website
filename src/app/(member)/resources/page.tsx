@@ -187,14 +187,14 @@ export default async function ResourcesPage() {
       cohortId: null,
       href: `/resources/guidebooks/${book.id}`,
     })),
-    // 보고서 양식 — 클릭 시 마크다운 뷰어(/member/templates/[slug])로 이동
+    // 보고서 양식 — 클릭 시 .md 파일 다운로드 (마크다운 양식)
     ...allTemplates.map((tmpl) => ({
       id: `tmpl-${tmpl.id}`,
       title: tmpl.title,
       category: "가이드북" as const,
       date: tmpl.createdAt,
       cohortId: null,
-      href: `/member/templates/${tmpl.slug}`,
+      downloadUrl: `/api/templates/${tmpl.slug}/download`,
     })),
   ];
 
