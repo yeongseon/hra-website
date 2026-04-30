@@ -55,3 +55,5 @@ next-env.d.ts
 # 테스트 산출물 (Playwright last-run 등)
 test-results/
 update-curriculum.js
+*.png
+screenshots/
