@@ -194,7 +194,7 @@ export default async function ResourcesPage() {
       category: "가이드북" as const,
       date: tmpl.createdAt,
       cohortId: null,
-      downloadUrl: `/api/templates/${tmpl.slug}/download`,
+      href: `/member/templates/${tmpl.slug}`,
     })),
   ];
 

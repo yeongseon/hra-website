@@ -8,7 +8,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Download, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
@@ -43,13 +43,21 @@ export default async function MemberTemplateDetailPage({ params }: Props) {
           <ArrowLeft className="size-4" />
           목록으로
         </Button>
-        <Button
-          render={<Link href={`/member/templates/${template.slug}/print`} />}
-          className="bg-[#1a1a1a] text-white hover:bg-[#333333]"
-        >
-          <Printer className="size-4" />
-          PDF로 저장
-        </Button>
+        <div className="flex gap-2">
+          <a href={`/api/templates/${template.slug}/download`} download>
+            <Button variant="outline">
+              <Download className="size-4" />
+              마크다운 다운로드
+            </Button>
+          </a>
+          <Button
+            render={<Link href={`/member/templates/${template.slug}/print`} />}
+            className="bg-[#1a1a1a] text-white hover:bg-[#333333]"
+          >
+            <Printer className="size-4" />
+            PDF로 저장
+          </Button>
+        </div>
       </div>
 
       <header className="mb-8 space-y-3 border-b border-[#D9D9D9] pb-6">
