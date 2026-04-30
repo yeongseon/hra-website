@@ -8,8 +8,12 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
-    if (session.user.role === "PENDING") {
-      return NextResponse.json({ error: "승인 대기 중인 계정입니다." }, { status: 403 });
+    // 마크다운 이미지 업로드는 ADMIN/FACULTY만 허용 (MEMBER/PENDING 불가)
+    if (session.user.role !== "ADMIN" && session.user.role !== "FACULTY") {
+      return NextResponse.json(
+        { error: "관리자 또는 교수진만 이미지를 업로드할 수 있습니다." },
+        { status: 403 }
+      );
     }
 
     const formData = await request.formData();

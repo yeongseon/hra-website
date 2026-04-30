@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, ImageIcon, Lock } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
+import { weeklyTexts as weeklyTextsTable } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
@@ -40,12 +41,20 @@ export default async function WeeklyTextsPage() {
         .then((rows) => rows[0]?.cohortId ?? null)
     : null;
 
+  // ADMIN/FACULTY는 전체 기수 조회, MEMBER는 본인 기수 글만 조회
+  const isAdminOrFaculty = role === "ADMIN" || role === "FACULTY";
+
   const [texts, cohortRows] = await Promise.all([
     db.query.weeklyTexts.findMany({
       with: {
         cohort: true,
         images: true,
       },
+      // MEMBER이고 cohortId가 있을 때만 기수 필터 적용
+      where:
+        !isAdminOrFaculty && userCohortId !== null
+          ? eq(weeklyTextsTable.cohortId, userCohortId)
+          : undefined,
       orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.createdAt)],
     }),
     db
@@ -101,7 +110,11 @@ export default async function WeeklyTextsPage() {
       <section>
         <div className="mb-6 flex items-center justify-between gap-4 sm:mb-8">
           <h2 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl">
-            전체 목록
+            {isAdminOrFaculty
+              ? "전체 목록"
+              : cohortRows.find((c) => c.id === userCohortId)?.name
+                ? `${cohortRows.find((c) => c.id === userCohortId)?.name} 목록`
+                : "내 기수 목록"}
           </h2>
           <Badge variant="outline" className="border-[#D9D9D9] bg-white text-[#666666]">
             {texts.length}개

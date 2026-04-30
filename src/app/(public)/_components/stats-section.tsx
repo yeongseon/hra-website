@@ -41,7 +41,8 @@ function AnimatedNumber({ end, duration = 2000, suffix = "", visible = false }: 
     window.requestAnimationFrame(step);
   }, [visible, end, duration]);
 
-  return <span>{count}{suffix}</span>;
+  // visible 전(SSR 포함)에는 최종값을 표시해 검색엔진·느린 네트워크 환경에서도 실제 숫자가 보임
+  return <span>{visible ? count : end}{suffix}</span>;
 }
 
 function AnimatedDecimal({ end, duration = 2000, suffix = "", visible = false }: AnimatedCountProps) {
@@ -71,7 +72,8 @@ function AnimatedDecimal({ end, duration = 2000, suffix = "", visible = false }:
     window.requestAnimationFrame(step);
   }, [visible, end, duration]);
 
-  return <span>{count.toFixed(1)}{suffix}</span>;
+  // visible 전(SSR 포함)에는 최종값을 표시해 검색엔진·느린 네트워크 환경에서도 실제 숫자가 보임
+  return <span>{visible ? count.toFixed(1) : end.toFixed(1)}{suffix}</span>;
 }
 
 export function StatsSection() {
