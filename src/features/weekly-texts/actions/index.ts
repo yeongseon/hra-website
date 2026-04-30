@@ -22,6 +22,7 @@ import { z } from "zod/v4";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
+import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 
@@ -336,6 +337,8 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
     if (target.fileUrl) {
       await del(target.fileUrl);
     }
+
+    await deleteMarkdownBlobImages(target.body ?? "");
 
     await deleteWeeklyTextImagesFromBlob(parsedId.data);
 

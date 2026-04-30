@@ -20,6 +20,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reportTemplates } from "@/lib/db/schema";
 
@@ -277,6 +278,8 @@ export async function deleteReportTemplate(
     if (!target) {
       return { success: false, message: "양식을 찾을 수 없습니다." };
     }
+
+    await deleteMarkdownBlobImages(target.body);
 
     await db
       .update(reportTemplates)

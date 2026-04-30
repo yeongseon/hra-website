@@ -24,6 +24,7 @@ import { del, put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
+import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
@@ -389,6 +390,22 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
   }
 
   try {
+    const target = await db.query.classLogs.findFirst({
+      where: eq(classLogs.id, parsedId.data),
+      columns: {
+        content: true,
+      },
+    });
+
+    if (!target) {
+      return {
+        success: false,
+        error: "수업일지를 찾을 수 없습니다.",
+      };
+    }
+
+    await deleteMarkdownBlobImages(target.content);
+
     await deleteClassLogImagesFromBlob(parsedId.data);
     await db.delete(classLogs).where(eq(classLogs.id, parsedId.data));
 

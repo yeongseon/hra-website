@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
 
@@ -147,17 +148,23 @@ export async function deleteNotice(id: string): Promise<NoticeActionState> {
     };
   }
 
-  const deletedRows = await db
-    .delete(notices)
-    .where(eq(notices.id, parsedId.data))
-    .returning({ id: notices.id });
+  const target = await db.query.notices.findFirst({
+    where: eq(notices.id, parsedId.data),
+    columns: {
+      content: true,
+    },
+  });
 
-  if (deletedRows.length === 0) {
+  if (!target) {
     return {
       success: false,
       message: "공지사항을 찾을 수 없습니다.",
     };
   }
+
+  await deleteMarkdownBlobImages(target.content);
+
+  await db.delete(notices).where(eq(notices.id, parsedId.data));
 
   revalidateNoticePaths();
   return {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
 
@@ -138,6 +139,15 @@ export async function deletePressArticle(id: string): Promise<void> {
   if (!parsedId.success) {
     return;
   }
+
+  const target = await db.query.pressArticles.findFirst({
+    where: eq(pressArticles.id, parsedId.data),
+    columns: {
+      imageUrl: true,
+    },
+  });
+
+  await deleteBlobIfExists(target?.imageUrl);
 
   await db.delete(pressArticles).where(eq(pressArticles.id, parsedId.data));
   revalidatePressPaths();
