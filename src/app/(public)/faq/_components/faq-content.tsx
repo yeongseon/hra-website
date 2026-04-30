@@ -72,10 +72,10 @@ const faqItems = [
   {
     question: "추가적으로 궁금한 점은 어디에 문의할 수 있나요?",
     answer:
-      "추가 문의사항은 FAQ에 안내된 모집위원장 연락처 또는 인스타그램 DM을 통해 문의해주시기 바랍니다.\n많은 관심 부탁드립니다!",
+      "또 궁금하신 점이 있다면 FAQ에 나와 있는 모집위원장 전화번호로 연락주시거나 인스타그램 DM으로 연락주시길 바랍니다. 많은 관심 부탁드립니다!",
   },
   {
-    question: "여기까지 읽은 당신! HRA에 들어와야겠지? 😎",
+    question: "이스터에그 : 여기까지 읽은 당신은 HRA에 들어와야겠지?",
     answer:
       "축하합니다, 이스터에그를 발견하셨군요! 🎉 여기까지 꼼꼼히 읽어보셨다면 이미 HRA에 관심이 있으시다는 뜻이겠죠? 지금 바로 지원해보세요!",
   },
@@ -87,7 +87,6 @@ type FaqContentProps = {
 
 export function FaqContent({ contactText }: FaqContentProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
-  const [showContact, setShowContact] = useState(false);
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6 lg:px-8">
@@ -97,27 +96,30 @@ export function FaqContent({ contactText }: FaqContentProps) {
         <p className="mt-5 text-lg leading-relaxed text-[#666666]">HRA에 대해 궁금한 점을 확인하세요</p>
       </section>
 
+      {/* 담당자 연락처 — hover 시 아이콘 위에 툴팁 등장 */}
       <div className="relative my-8 flex flex-col items-center">
-        <button
-          type="button"
-          onClick={() => setShowContact(!showContact)}
-          className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-blue-600 transition-colors hover:bg-blue-700"
-          aria-label="담당자에게 연락하기"
-        >
-          <Phone className="h-6 w-6 text-white" />
-        </button>
-        <span className="mt-2 text-sm text-[#666666]">담당자에게 연락하기</span>
-
-        <div
-          className={`absolute top-full mt-4 z-10 transition-all duration-300 ease-out ${
-            showContact ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
-          }`}
-        >
-          <div className="relative whitespace-nowrap rounded-xl border border-[#D9D9D9] bg-white px-6 py-4 text-sm text-[#666666] shadow-[var(--shadow-soft)]">
-            <div className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-t border-l border-[#D9D9D9] bg-white" />
-            <span className="relative z-10">{contactText}</span>
+        <div className="group relative flex flex-col items-center">
+          {/* 툴팁: 아이콘 위쪽에 hover 시 부드럽게 등장 */}
+          <div
+            className="pointer-events-none absolute bottom-full left-1/2 mb-3 -translate-x-1/2 translate-y-1 opacity-0 transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+            style={{ zIndex: 10 }}
+          >
+            <div className="relative whitespace-nowrap rounded-xl border border-[#D9D9D9] bg-white px-6 py-4 text-sm text-[#666666] shadow-[var(--shadow-soft)]">
+              {/* 아래를 가리키는 삼각형 화살표 */}
+              <div className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-b border-r border-[#D9D9D9] bg-white" />
+              <span className="relative z-10">{contactText}</span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-blue-600 transition-colors hover:bg-blue-700"
+            aria-label="담당자에게 연락하기"
+          >
+            <Phone className="h-6 w-6 text-white" />
+          </button>
         </div>
+        <span className="mt-2 text-sm text-[#666666]">담당자에게 연락하기</span>
       </div>
 
       <section className="space-y-4">

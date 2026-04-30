@@ -70,19 +70,19 @@ export default function AboutPage() {
                 <span className="text-xl font-bold text-[#1a1a1a]">목적</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                업무능력과 성품, 사명감을 고루 갖춘<br />
-                인재를 길러냅니다.
+                AI 활용 능력과 인간 중심 가치를 겸비한<br />
+                차세대 리더를 육성한다.
               </p>
             </div>
 
-            {/* Right Circle: 비전 */}
+            {/* Right Circle: 미션 */}
             <div className="relative flex flex-col items-center text-center z-10 w-full max-w-[280px]">
               <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6">
-                <span className="text-xl font-bold text-[#1a1a1a]">비전</span>
+                <span className="text-xl font-bold text-[#1a1a1a]">미션</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                청년의 성장을 중심에 둔 비영리 운영과<br />
-                학습자 주도형 교육을 지향합니다.
+                매주 고전 읽기와 케이스 스터디로 청년의<br />
+                사고력·실무력·인성을 1년간 체계적으로 성장시킨다.
               </p>
             </div>
           </div>
