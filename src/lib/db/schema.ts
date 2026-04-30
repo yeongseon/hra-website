@@ -442,6 +442,7 @@ export const weeklyTexts = pgTable("weekly_texts", {
   body: text("body"),
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
   textType: varchar("text_type", { length: 20 }), // 텍스트 분류: "고전명작" | "경영서" | "기업실무" | null(미분류)
+  classDate: timestamp("class_date"), // 수업 날짜 (정렬 기준, 선택사항)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -482,6 +483,7 @@ export const classMaterials = pgTable("class_materials", {
   audience: varchar("audience", { length: 20 }).notNull().default("STUDENT"),
   uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
   order: integer("order").notNull().default(0),
+  classDate: timestamp("class_date"), // 수업 날짜 (정렬 기준, 선택사항)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -107,7 +107,7 @@ export default async function ResourcesPage() {
             })
             .from(classMaterials)
             .leftJoin(users, eq(classMaterials.uploadedById, users.id))
-            .orderBy(desc(classMaterials.createdAt))
+            .orderBy(desc(classMaterials.classDate), desc(classMaterials.createdAt))
         : db
             .select({
               id: classMaterials.id,
@@ -122,7 +122,7 @@ export default async function ResourcesPage() {
             .from(classMaterials)
             .leftJoin(users, eq(classMaterials.uploadedById, users.id))
             .where(eq(classMaterials.audience, "STUDENT"))
-            .orderBy(desc(classMaterials.createdAt))),
+            .orderBy(desc(classMaterials.classDate), desc(classMaterials.createdAt))),
 
       // 가이드북 파일 (Vercel Blob)
       db.select().from(guidebooks).orderBy(desc(guidebooks.createdAt)),

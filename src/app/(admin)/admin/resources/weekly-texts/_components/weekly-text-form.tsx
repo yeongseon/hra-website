@@ -162,6 +162,18 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="classDate" className="text-slate-700">
+              수업 날짜
+            </Label>
+            <Input
+              id="classDate"
+              name="classDate"
+              type="date"
+              className="h-10 border-slate-300"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="textType" className="text-slate-700">
               텍스트 분류
             </Label>

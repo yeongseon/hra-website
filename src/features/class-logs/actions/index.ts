@@ -26,8 +26,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
-import { classLogImages, classLogs } from "@/lib/db/schema";
+import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
+import { auth } from "@/lib/auth";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
@@ -56,7 +57,7 @@ const classLogFormSchema = z.object({
  * - success: 성공했는지 여부 (true/false)
  * - error: 실패했을 때의 에러 메시지 (선택사항)
  */
-type ClassLogActionState = {
+export type ClassLogActionState = {
   success: boolean;
   error?: string;
 };
@@ -188,6 +189,91 @@ const deleteClassLogImagesFromBlob = async (classLogId: string) => {
 
   await Promise.all(existingImages.map((image) => deleteBlobIfExists(image.url)));
 };
+
+/**
+ * 📝 새로운 수업일지를 생성하는 서버 액션 (멤버용)
+ *
+ * ADMIN, FACULTY, MEMBER 역할만 사용 가능. PENDING은 차단.
+ * MEMBER는 본인 기수에만 업로드 가능.
+ */
+export async function createClassLogAsMember(formData: FormData): Promise<ClassLogActionState> {
+  const session = await auth();
+  const role = session?.user?.role;
+
+  if (!session?.user) {
+    return { success: false, error: "로그인 후 이용해주세요." };
+  }
+
+  if (role !== "ADMIN" && role !== "FACULTY" && role !== "MEMBER") {
+    return { success: false, error: "승인된 회원만 업로드할 수 있습니다." };
+  }
+
+  if (role === "MEMBER") {
+    const cohortIdValue = formData.get("cohortId");
+    const submittedCohortId =
+      typeof cohortIdValue === "string" && cohortIdValue !== "__none__" ? cohortIdValue : null;
+
+    if (submittedCohortId) {
+      const [userRow] = await db
+        .select({ cohortId: users.cohortId })
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1);
+
+      if (userRow?.cohortId !== submittedCohortId) {
+        return { success: false, error: "자신의 기수에만 업로드할 수 있습니다." };
+      }
+    }
+  }
+
+  const parsed = classLogFormSchema.safeParse({
+    title: formData.get("title"),
+    content: formData.get("content"),
+    classDate: formData.get("classDate"),
+    cohortId: parseCohortId(formData.get("cohortId")),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.",
+    };
+  }
+
+  const classDate = toClassDate(parsed.data.classDate);
+  if (!classDate) {
+    return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+  }
+
+  const validatedImages = getValidatedImageFiles(formData);
+  if ("error" in validatedImages) {
+    return { success: false, error: validatedImages.error };
+  }
+
+  try {
+    const [createdLog] = await db.insert(classLogs).values({
+      title: parsed.data.title,
+      content: parsed.data.content,
+      classDate,
+      cohortId: parsed.data.cohortId || null,
+      authorId: session.user.id,
+    }).returning({ id: classLogs.id });
+
+    if (!createdLog) {
+      return { success: false, error: "수업일지 생성에 실패했습니다." };
+    }
+
+    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+
+    revalidateClassLogPaths();
+    revalidatePath("/resources/class-logs");
+
+    return { success: true };
+  } catch (error) {
+    console.error("[class-logs/createAsMember] 생성 오류:", error);
+    return { success: false, error: "수업일지 생성에 실패했습니다." };
+  }
+}
 
 /**
  * 📝 새로운 수업일지를 생성하는 서버 액션

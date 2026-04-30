@@ -36,12 +36,12 @@ const weeklyTextIdSchema = z.uuid("유효하지 않은 주차별 텍스트 ID입
 const weeklyTextFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   cohortId: z.union([z.uuid(), z.literal("")]).optional(),
-  // "__none__" 또는 빈 문자열이면 null로 변환 (미분류)
   textType: z
     .enum(WEEKLY_TEXT_TYPE_VALUES)
     .nullable()
     .optional()
     .transform((v) => v ?? null),
+  classDate: z.string().optional().nullable(),
   body: z
     .string()
     .optional()
@@ -188,6 +188,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     title: formData.get("title"),
     cohortId: parseCohortId(formData.get("cohortId")),
     textType: parsedTextType,
+    classDate: formData.get("classDate"),
     body: formData.get("body"),
   });
 
@@ -235,6 +236,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
       body: parsed.data.body ?? null,
       cohortId: parsed.data.cohortId || null,
       textType: parsed.data.textType ?? null,
+      classDate: parsed.data.classDate ? new Date(`${parsed.data.classDate}T00:00:00`) : null,
     }).returning({ id: weeklyTexts.id });
 
     if (!createdWeeklyText) {

@@ -30,6 +30,7 @@ const classMaterialFormSchema = z.object({
   audience: z.enum(CLASS_MATERIAL_AUDIENCE_VALUES, {
     error: "자료 대상을 선택해주세요.",
   }),
+  classDate: z.string().optional().nullable(),
 });
 
 const allowedExtensions = new Set(["pdf", "hwp", "doc", "docx", "ppt", "pptx"]);
@@ -115,6 +116,7 @@ export async function createClassMaterial(
     weekNumber: formData.get("weekNumber"),
     lectureTitle: formData.get("lectureTitle"),
     audience: formData.get("audience"),
+    classDate: formData.get("classDate"),
   });
 
   if (!parsed.success) {
@@ -152,6 +154,7 @@ export async function createClassMaterial(
           : parsed.data.lectureTitle,
       audience: parsed.data.audience,
       uploadedById: session.user.id,
+      classDate: parsed.data.classDate ? new Date(`${parsed.data.classDate}T00:00:00`) : null,
     });
 
     revalidateClassMaterialPaths();

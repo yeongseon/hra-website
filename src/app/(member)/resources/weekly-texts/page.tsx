@@ -55,7 +55,7 @@ export default async function WeeklyTextsPage() {
         !isAdminOrFaculty && userCohortId !== null
           ? eq(weeklyTextsTable.cohortId, userCohortId)
           : undefined,
-      orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.createdAt)],
+      orderBy: (weeklyTextsTable, { desc }) => [desc(weeklyTextsTable.classDate), desc(weeklyTextsTable.createdAt)],
     }),
     db
       .select({

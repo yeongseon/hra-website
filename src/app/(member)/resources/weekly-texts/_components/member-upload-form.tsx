@@ -187,6 +187,20 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="classDate" className="text-[#1a1a1a]">
+                수업 날짜
+              </Label>
+              <Input
+                id="classDate"
+                name="classDate"
+                type="date"
+                className="h-11 border-[#D9D9D9] bg-white text-[#1a1a1a]"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-2">
               <Label htmlFor="textType" className="text-[#1a1a1a]">
                 텍스트 분류
               </Label>
