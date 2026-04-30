@@ -58,9 +58,26 @@ export default async function MemberGuideDetailPage({ params }: Props) {
           >
             v{guide.version}
           </Badge>
-          <span className="text-xs text-[#666666]">
-            {guide.source === "db" ? "DB 등록 가이드" : "기본 시드 가이드"}
-          </span>
+          {guide.createdAt ? (
+            <span className="text-xs text-[#666666]">
+              등록일:{" "}
+              {new Intl.DateTimeFormat("ko-KR", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }).format(guide.createdAt)}
+            </span>
+          ) : null}
+          {guide.updatedAt ? (
+            <span className="text-xs text-[#666666]">
+              최종 수정:{" "}
+              {new Intl.DateTimeFormat("ko-KR", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }).format(guide.updatedAt)}
+            </span>
+          ) : null}
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">
           {guide.title}

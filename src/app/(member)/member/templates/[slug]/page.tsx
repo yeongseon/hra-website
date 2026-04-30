@@ -77,9 +77,26 @@ export default async function MemberTemplateDetailPage({ params }: Props) {
                   : "기업실무·한국경제사"}
             </Badge>
           ) : null}
-          <span className="text-xs text-[#666666]">
-            {template.source === "db" ? "DB 등록 양식" : "기본 시드 양식"}
-          </span>
+          {template.createdAt ? (
+            <span className="text-xs text-[#666666]">
+              등록일:{" "}
+              {new Intl.DateTimeFormat("ko-KR", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }).format(template.createdAt)}
+            </span>
+          ) : null}
+          {template.updatedAt ? (
+            <span className="text-xs text-[#666666]">
+              최종 수정:{" "}
+              {new Intl.DateTimeFormat("ko-KR", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }).format(template.updatedAt)}
+            </span>
+          ) : null}
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a]">
           {template.title}

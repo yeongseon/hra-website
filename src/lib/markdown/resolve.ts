@@ -34,6 +34,8 @@ export type TemplateView = {
   version: string;
   body: string;
   source: "db" | "content";
+  createdAt: Date | null;
+  updatedAt: Date | null;
 };
 
 export type GuideView = {
@@ -43,6 +45,8 @@ export type GuideView = {
   version: string;
   body: string;
   source: "db" | "content";
+  createdAt: Date | null;
+  updatedAt: Date | null;
 };
 
 const knownReportCategories = new Set([
@@ -84,6 +88,8 @@ export async function resolveTemplate(slug: string): Promise<TemplateView | null
       version: dbRow.version,
       body: dbRow.body,
       source: "db",
+      createdAt: dbRow.createdAt,
+      updatedAt: dbRow.updatedAt,
     };
   }
 
@@ -99,6 +105,8 @@ export async function resolveTemplate(slug: string): Promise<TemplateView | null
     version: fileResult.frontmatter.version,
     body: fileResult.body,
     source: "content",
+    createdAt: null,
+    updatedAt: null,
   };
 }
 
@@ -123,6 +131,8 @@ export async function resolveGuide(slug: string): Promise<GuideView | null> {
       version: dbRow.version,
       body: dbRow.body,
       source: "db",
+      createdAt: dbRow.createdAt,
+      updatedAt: dbRow.updatedAt,
     };
   }
 
@@ -136,6 +146,8 @@ export async function resolveGuide(slug: string): Promise<GuideView | null> {
     version: fileResult.frontmatter.version,
     body: fileResult.body,
     source: "content",
+    createdAt: null,
+    updatedAt: null,
   };
 }
 
@@ -159,7 +171,9 @@ export async function listTemplates(): Promise<TemplateView[]> {
       reportCategory: asReportCategory(row.reportCategory),
       version: row.version,
       body: row.body,
-      source: "db",
+      source: "db" as const,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     }));
 
   // 비공개 슬러그까지 포함해 차단 집합을 만든다(=DB가 소유권을 주장한 slug).
@@ -175,6 +189,8 @@ export async function listTemplates(): Promise<TemplateView[]> {
       version: entry.data.frontmatter.version,
       body: entry.data.body,
       source: "content" as const,
+      createdAt: null,
+      updatedAt: null,
     }));
 
   return [...fromDb, ...fromContent];
