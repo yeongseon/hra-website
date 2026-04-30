@@ -26,7 +26,7 @@ export default function Home() {
           <p className="text-lg text-[#666666] mt-0 font-medium">
             깊이 사고하고 넓게 실천하는 교육
           </p>
-          <p className="text-lg leading-8 text-[#666666] max-w-3xl mt-4 text-left">
+          <p className="text-lg leading-8 text-[#666666] max-w-3xl mt-4 text-center">
             HRA는 청년들이 더 깊이 사고하고, 더 넓게 실천하며, 공동체 안에서 성장하도록 돕는 교육 프로그램입니다.<br />
             고전 읽기와 토론, 케이스 스터디를 통해 생각을 훈련하고, 배움을 삶과 사회로 연결합니다.<br />
             단순한 지식 습득을 넘어, 업무능력·성품·사명감을 함께 기르는 것을 목표로 합니다.
