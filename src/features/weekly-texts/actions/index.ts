@@ -15,14 +15,14 @@
  */
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
-import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
+import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 
@@ -174,7 +174,7 @@ const deleteWeeklyTextImagesFromBlob = async (weeklyTextId: string) => {
     return;
   }
 
-  await Promise.all(existingImages.map((image) => del(image.url)));
+  await Promise.all(existingImages.map((image) => deleteBlobIfExists(image.url)));
 };
 
 const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
@@ -334,9 +334,7 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
       };
     }
 
-    if (target.fileUrl) {
-      await del(target.fileUrl);
-    }
+    await deleteBlobIfExists(target.fileUrl);
 
     await deleteMarkdownBlobImages(target.body ?? "");
 

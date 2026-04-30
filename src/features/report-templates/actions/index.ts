@@ -20,7 +20,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reportTemplates } from "@/lib/db/schema";
 
@@ -279,8 +278,8 @@ export async function deleteReportTemplate(
       return { success: false, message: "양식을 찾을 수 없습니다." };
     }
 
-    await deleteMarkdownBlobImages(target.body);
-
+    // soft delete이므로 Blob 이미지는 삭제하지 않는다.
+    // DB row가 남아 있어야 published=false 감지로 fallback이 차단된다.
     await db
       .update(reportTemplates)
       .set({ published: false })

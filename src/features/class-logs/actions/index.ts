@@ -20,11 +20,11 @@
 
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
-import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
+import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
@@ -186,7 +186,7 @@ const deleteClassLogImagesFromBlob = async (classLogId: string) => {
     return;
   }
 
-  await Promise.all(existingImages.map((image) => del(image.url)));
+  await Promise.all(existingImages.map((image) => deleteBlobIfExists(image.url)));
 };
 
 /**

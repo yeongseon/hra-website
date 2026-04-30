@@ -8,9 +8,20 @@ import { del } from "@vercel/blob";
 /**
  * 삭제 대상이 Blob 저장소 URL인지 판별한다.
  * 외부 이미지 URL에 del()을 호출하지 않기 위한 보안 가드다.
+ *
+ * hostname을 파싱하여 vercel-storage.com 계열 도메인인지 엄격하게 검사한다.
+ * 이전의 url.includes() 방식은 외부 URL에 해당 문자열이 우연히 포함될 경우
+ * 오인식할 수 있어 hostname 기반 검사로 교체한다.
  */
 function isVercelBlobUrl(url: string): boolean {
-  return url.includes("vercel-storage.com") || url.includes("public.blob");
+  try {
+    const { hostname } = new URL(url);
+    // *.vercel-storage.com 또는 *.public.blob.vercel-storage.com 허용
+    return hostname.endsWith(".vercel-storage.com");
+  } catch {
+    // URL 파싱 실패 → 안전하게 false 반환
+    return false;
+  }
 }
 
 /**
