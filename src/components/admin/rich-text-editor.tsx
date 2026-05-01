@@ -23,6 +23,7 @@ import {
   Minus,
   Undo,
   Redo,
+  FileCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,16 @@ export function RichTextEditor({
   required,
 }: RichTextEditorProps) {
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
+  // 마크다운 소스 모드 토글 상태
+  // - false: TipTap WYSIWYG 에디터 표시 (기본)
+  // - true: <textarea> 로 원본 마크다운 직접 편집
+  // 동기화 규칙:
+  //   1) 소스 모드 진입 시: editor.getMarkdown() → internalValue (이미 onUpdate 로 최신 보장)
+  //   2) WYSIWYG 복귀 시: textarea 의 internalValue → editor.setContent → editor.getMarkdown 재읽어
+  //      internalValue 와 onChange 를 정규화된 값으로 갱신 (표시값=제출값 일치 보장)
+  //   3) 외부 value prop sync useEffect 는 소스 모드일 때 skip (textarea 입력 충돌 방지)
+  //   4) 소스 모드에서는 토글 외 모든 툴바 버튼 비활성화 (hidden editor 조작으로 인한 textarea 덮어쓰기 방지)
+  const [isSourceMode, setIsSourceMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -84,10 +95,14 @@ export function RichTextEditor({
   useEffect(() => {
     if (!editor) return;
     if (value === undefined) return;
+    // 소스 모드 중에는 textarea 가 진실 소스이므로 외부 value prop 동기화를 건너뛴다.
+    // (controlled 사용처에서 키 입력 → onChange → setState → value prop 변경 → setContent
+    //  라운드트립으로 textarea 가 즉시 정규화되는 race 를 방지)
+    if (isSourceMode) return;
     if (value === editor.getMarkdown()) return;
     editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
     setInternalValue(editor.getMarkdown());
-  }, [value, editor]);
+  }, [value, editor, isSourceMode]);
 
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,7 +141,10 @@ export function RichTextEditor({
   return (
     <div className="w-full border border-[#D9D9D9] rounded-md overflow-hidden bg-white shadow-[var(--shadow-soft)]">
       <div className="flex flex-wrap items-center gap-1 bg-gray-50 p-2 border-b border-[#D9D9D9]">
-        <ToolbarButton
+        {/* fieldset[disabled] 로 소스 모드일 때 모든 WYSIWYG 툴바 버튼을 일괄 비활성화. */}
+        {/* display:contents 로 layout 영향 없이 disabled 만 자식 버튼들에 전파됨. */}
+        <fieldset disabled={isSourceMode} className="contents">
+          <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
           title="굵게 (Ctrl+B 또는 **텍스트**)"
@@ -259,11 +277,49 @@ export function RichTextEditor({
         >
           <Redo className="w-4 h-4" />
         </ToolbarButton>
+        </fieldset>
+
+        <div className="ml-auto">
+          <ToolbarButton
+            onClick={() => {
+              if (isSourceMode) {
+                // 소스 → WYSIWYG: textarea 의 raw 마크다운을 editor 로 푸시한 뒤,
+                // editor 가 정규화한 결과를 다시 internalValue/onChange 로 반영해
+                // 표시값과 제출값이 어긋나지 않게 한다.
+                editor.commands.setContent(internalValue, {
+                  contentType: "markdown",
+                  emitUpdate: false,
+                });
+                const normalized = editor.getMarkdown();
+                setInternalValue(normalized);
+                onChange?.(normalized);
+              }
+              setIsSourceMode((prev) => !prev);
+            }}
+            isActive={isSourceMode}
+            title={isSourceMode ? "WYSIWYG 보기로 전환" : "마크다운 소스 보기로 전환"}
+          >
+            <FileCode className="w-4 h-4" />
+          </ToolbarButton>
+        </div>
       </div>
 
-      <div className="p-4 text-[#1a1a1a] min-h-[300px] prose max-w-none focus:outline-none focus-within:ring-2 focus-within:ring-[#2563EB]/20">
-        <EditorContent editor={editor} />
-      </div>
+      {isSourceMode ? (
+        <textarea
+          className="w-full p-4 text-[#1a1a1a] min-h-[300px] font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 resize-y"
+          value={internalValue}
+          onChange={(e) => {
+            setInternalValue(e.target.value);
+            onChange?.(e.target.value);
+          }}
+          placeholder={placeholder || "마크다운 소스를 직접 입력하세요..."}
+          spellCheck={false}
+        />
+      ) : (
+        <div className="p-4 text-[#1a1a1a] min-h-[300px] prose max-w-none focus:outline-none focus-within:ring-2 focus-within:ring-[#2563EB]/20">
+          <EditorContent editor={editor} />
+        </div>
+      )}
 
       <input
         type="hidden"
