@@ -1,15 +1,16 @@
 /**
  * 관리자 모집 설정 페이지
  *
- * 역할: 모집 포스터(이미지 업로드/드래그앤드롭), 세부 안내 텍스트,
- *       D-day 마감일, 자격요건 등 모집 관련 전반 설정을 관리한다.
+ * 역할: 모집 포스터(드래그앤드롭), 세부 안내(마크다운 에디터 + 미리보기),
+ *       D-day 마감일, 지원 자격 안내 등 모집 관련 전반 설정을 관리한다.
  * 사용 위치: /admin/recruitment-settings (관리자 전용)
  */
 "use client";
 
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, ImageIcon, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, ImageIcon, Pencil, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,11 +27,7 @@ type FormValues = {
   nextRecruitmentYear: string;
   nextRecruitmentMonth: string;
   qualificationText: string;
-  recruitmentPeriodText: string;
-  activityPeriodText: string;
-  targetText: string;
-  scheduleText: string;
-  additionalInfoText: string;
+  detailsMarkdown: string;
 };
 
 const emptyFormValues: FormValues = {
@@ -38,11 +35,7 @@ const emptyFormValues: FormValues = {
   nextRecruitmentYear: "",
   nextRecruitmentMonth: "",
   qualificationText: "",
-  recruitmentPeriodText: "",
-  activityPeriodText: "",
-  targetText: "",
-  scheduleText: "",
-  additionalInfoText: "",
+  detailsMarkdown: "",
 };
 
 function formatDateForInput(date: Date | null) {
@@ -55,9 +48,7 @@ function formatDateForInput(date: Date | null) {
 
 export default function AdminRecruitmentSettingsPage() {
   const [formValues, setFormValues] = useState<FormValues>(emptyFormValues);
-  // 현재 DB에 저장된 포스터 URL (미리보기용)
   const [currentPosterImageUrl, setCurrentPosterImageUrl] = useState<string>("");
-  // 새로 선택한 파일의 로컬 미리보기 URL
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
   const [removePoster, setRemovePoster] = useState(false);
@@ -65,6 +56,7 @@ export default function AdminRecruitmentSettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, startLoadingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
+  const [markdownTab, setMarkdownTab] = useState<"edit" | "preview">("edit");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,11 +76,7 @@ export default function AdminRecruitmentSettingsPage() {
             nextRecruitmentYear: settings.nextRecruitmentYear?.toString() ?? "",
             nextRecruitmentMonth: settings.nextRecruitmentMonth?.toString() ?? "",
             qualificationText: settings.qualificationText ?? "",
-            recruitmentPeriodText: settings.recruitmentPeriodText ?? "",
-            activityPeriodText: settings.activityPeriodText ?? "",
-            targetText: settings.targetText ?? "",
-            scheduleText: settings.scheduleText ?? "",
-            additionalInfoText: settings.additionalInfoText ?? "",
+            detailsMarkdown: settings.detailsMarkdown ?? "",
           });
           setCurrentPosterImageUrl(settings.posterImageUrl ?? "");
           setLocalPreviewUrl("");
@@ -104,7 +92,6 @@ export default function AdminRecruitmentSettingsPage() {
     setFormValues((current) => ({ ...current, [field]: value }));
   };
 
-  // 파일 선택 시 로컬 미리보기 URL 생성 + 기존 포스터 삭제 플래그 해제
   const handleFileSelect = useCallback((file: File) => {
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     setLocalPreviewUrl(URL.createObjectURL(file));
@@ -116,7 +103,6 @@ export default function AdminRecruitmentSettingsPage() {
     if (file) handleFileSelect(file);
   };
 
-  // 드래그앤드롭 — 파일을 숨겨진 input에 연결해 form submit 시 전달
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
@@ -138,7 +124,6 @@ export default function AdminRecruitmentSettingsPage() {
   const handleSubmit = async (formData: FormData) => {
     setMessageState(null);
     setLoadError(null);
-    // 파일 업로드 모드 고정 (URL 입력 방식 제거)
     formData.set("posterInputMode", "file");
     formData.set("removePoster", removePoster ? "true" : "false");
 
@@ -203,7 +188,6 @@ export default function AdminRecruitmentSettingsPage() {
                 <p className="text-sm text-[#666666]">이미지 파일을 드래그하거나 클릭해서 업로드하세요. (10MB 이하)</p>
               </div>
 
-              {/* 드래그앤드롭 존 — label을 써서 파일 input 연결 (onClick 없이 접근성 확보) */}
               <label
                 htmlFor="posterFile"
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -223,7 +207,6 @@ export default function AdminRecruitmentSettingsPage() {
                 </div>
               </label>
 
-              {/* 숨겨진 파일 input */}
               <input
                 ref={fileInputRef}
                 id="posterFile"
@@ -235,7 +218,6 @@ export default function AdminRecruitmentSettingsPage() {
                 disabled={isLoading || isSaving}
               />
 
-              {/* 포스터 미리보기 */}
               {previewUrl ? (
                 <div className="space-y-3 rounded-xl border border-[#D9D9D9] p-4">
                   <div className="flex items-center justify-between">
@@ -274,79 +256,83 @@ export default function AdminRecruitmentSettingsPage() {
               )}
             </section>
 
-            {/* 모집 세부 안내 텍스트 섹션 */}
-            <section className="space-y-4">
+            {/* 모집 세부 안내 — 마크다운 에디터 */}
+            <section className="space-y-3">
               <div>
                 <h3 className="text-base font-semibold text-[#1a1a1a]">모집 세부 안내</h3>
-                <p className="text-sm text-[#666666]">포스터 옆 좌측 영역에 표시되는 세부 정보를 입력하세요. 비워두면 해당 항목은 표시되지 않습니다.</p>
+                <p className="text-sm text-[#666666]">
+                  포스터 옆 좌측 영역에 표시됩니다. 마크다운 문법으로 자유롭게 작성하세요.
+                </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="recruitmentPeriodText">모집 기간</Label>
-                  <Input
-                    id="recruitmentPeriodText"
-                    name="recruitmentPeriodText"
-                    value={formValues.recruitmentPeriodText}
-                    onChange={(e) => handleChange("recruitmentPeriodText", e.target.value)}
-                    placeholder="예: 2025년 3월 1일 ~ 4월 15일"
-                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="activityPeriodText">활동 기간</Label>
-                  <Input
-                    id="activityPeriodText"
-                    name="activityPeriodText"
-                    value={formValues.activityPeriodText}
-                    onChange={(e) => handleChange("activityPeriodText", e.target.value)}
-                    placeholder="예: 2025년 9월 ~ 2026년 6월"
-                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="targetText">지원 대상</Label>
-                  <Input
-                    id="targetText"
-                    name="targetText"
-                    value={formValues.targetText}
-                    onChange={(e) => handleChange("targetText", e.target.value)}
-                    placeholder="예: 4년제 대학교 재학생 또는 졸업생"
-                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="scheduleText">선발 일정</Label>
-                  <Textarea
-                    id="scheduleText"
-                    name="scheduleText"
-                    value={formValues.scheduleText}
-                    onChange={(e) => handleChange("scheduleText", e.target.value)}
-                    placeholder={"예:\n서류 접수: 3월 1일 ~ 4월 15일\n서류 발표: 4월 20일\n면접: 5월 3일 ~ 5월 10일\n최종 발표: 5월 15일"}
-                    className="min-h-24 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="additionalInfoText">기타 안내사항</Label>
-                  <Textarea
-                    id="additionalInfoText"
-                    name="additionalInfoText"
-                    value={formValues.additionalInfoText}
-                    onChange={(e) => handleChange("additionalInfoText", e.target.value)}
-                    placeholder="줄바꿈으로 여러 항목을 입력할 수 있습니다."
-                    className="min-h-28 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                </div>
+              {/* 편집 / 미리보기 탭 */}
+              <div className="flex gap-1 rounded-lg border border-[#D9D9D9] bg-gray-50 p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setMarkdownTab("edit")}
+                  className={[
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    markdownTab === "edit"
+                      ? "bg-white text-[#1a1a1a] shadow-sm"
+                      : "text-[#666666] hover:text-[#1a1a1a]",
+                  ].join(" ")}
+                >
+                  <Pencil className="size-3" />
+                  편집
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMarkdownTab("preview")}
+                  className={[
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    markdownTab === "preview"
+                      ? "bg-white text-[#1a1a1a] shadow-sm"
+                      : "text-[#666666] hover:text-[#1a1a1a]",
+                  ].join(" ")}
+                >
+                  <Eye className="size-3" />
+                  미리보기
+                </button>
               </div>
+
+              {markdownTab === "edit" ? (
+                <Textarea
+                  id="detailsMarkdown"
+                  name="detailsMarkdown"
+                  value={formValues.detailsMarkdown}
+                  onChange={(e) => handleChange("detailsMarkdown", e.target.value)}
+                  placeholder={"## 모집 기간\n2026년 4월 14일 ~ 5월 19일\n\n## 활동 기간\n2026년 9월 ~ 2027년 6월\n\n## 지원 대상\n4년제 대학교 재학생 또는 졸업생\n\n## 선발 일정\n- 서류 접수: 4월 14일 ~ 5월 19일\n- 서류 발표: 5월 23일\n- 면접: 6월 7일 ~ 6월 14일\n- 최종 발표: 6월 20일"}
+                  className="min-h-64 font-mono text-sm border-[#D9D9D9] text-[#1a1a1a] resize-y"
+                  disabled={isLoading}
+                />
+              ) : (
+                <div className="min-h-64 rounded-md border border-[#D9D9D9] bg-white p-4">
+                  {formValues.detailsMarkdown.trim() ? (
+                    <div className="markdown-preview text-sm text-[#1a1a1a] prose prose-sm max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          h1: (props) => <h1 className="text-lg font-bold mb-3 text-[#1a1a1a]" {...props} />,
+                          h2: (props) => <h2 className="text-base font-semibold mb-2 mt-4 text-[#2563EB]" {...props} />,
+                          h3: (props) => <h3 className="text-sm font-semibold mb-1 mt-3 text-[#1a1a1a]" {...props} />,
+                          p: (props) => <p className="mb-2 leading-relaxed text-[#1a1a1a]" {...props} />,
+                          ul: (props) => <ul className="list-disc ml-5 mb-3 space-y-1" {...props} />,
+                          ol: (props) => <ol className="list-decimal ml-5 mb-3 space-y-1" {...props} />,
+                          li: (props) => <li className="text-sm text-[#1a1a1a]" {...props} />,
+                          strong: (props) => <strong className="font-semibold text-[#1a1a1a]" {...props} />,
+                          hr: (props) => <hr className="border-[#D9D9D9] my-3" {...props} />,
+                        }}
+                      >
+                        {formValues.detailsMarkdown}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#666666]">작성된 내용이 없습니다. 편집 탭에서 내용을 입력하세요.</p>
+                  )}
+                </div>
+              )}
+              {messageState?.fieldErrors?.detailsMarkdown ? (
+                <p className="text-xs text-red-600">{messageState.fieldErrors.detailsMarkdown}</p>
+              ) : null}
             </section>
 
             {/* D-day / 자격요건 섹션 */}

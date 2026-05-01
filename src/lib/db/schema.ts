@@ -396,11 +396,7 @@ export const recruitmentSettings = pgTable("recruitment_settings", {
   nextRecruitmentYear: integer("next_recruitment_year"), // 다음 모집 예정 연도
   nextRecruitmentMonth: integer("next_recruitment_month"), // 다음 모집 예정 월
   qualificationText: text("qualification_text"), // 지원 자격 안내 문구
-  recruitmentPeriodText: text("recruitment_period_text"), // 모집 기간 (예: 2025년 3월~4월)
-  activityPeriodText: text("activity_period_text"), // 활동 기간 (예: 2025년 9월~2026년 6월)
-  targetText: text("target_text"), // 지원 대상 (예: 4년제 대학교 재학생)
-  scheduleText: text("schedule_text"), // 선발 일정 (예: 서류→면접→최종)
-  additionalInfoText: text("additional_info_text"), // 기타 안내사항 (마크다운 지원)
+  detailsMarkdown: text("details_markdown"), // 모집 세부 안내 (마크다운 자유 편집)
   updatedAt: timestamp("updated_at")
     .notNull()
     .defaultNow()

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
 import { CalendarDays, Check } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Fragment } from "react";
@@ -220,52 +221,29 @@ export default async function RecruitmentPage() {
 
       <section className="mt-16 sm:mt-24">
         {/* 세부사항 또는 포스터 중 하나라도 있으면 좌우 분할 레이아웃 */}
-        {settings?.posterImageUrl || settings?.recruitmentPeriodText || settings?.activityPeriodText || settings?.targetText || settings?.scheduleText || settings?.additionalInfoText ? (
+        {settings?.posterImageUrl || settings?.detailsMarkdown ? (
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
-            {/* 좌측: 모집 세부 안내 */}
+            {/* 좌측: 모집 세부 안내 (마크다운 렌더링) */}
             <div className="space-y-6 lg:flex-1">
               <h2 className="text-xl font-semibold text-[#1a1a1a]">모집 세부 안내</h2>
 
-              {settings?.recruitmentPeriodText && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">모집 기간</p>
-                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.recruitmentPeriodText}</p>
-                </div>
-              )}
-
-              {settings?.activityPeriodText && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">활동 기간</p>
-                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.activityPeriodText}</p>
-                </div>
-              )}
-
-              {settings?.targetText && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">지원 대상</p>
-                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.targetText}</p>
-                </div>
-              )}
-
-              {settings?.scheduleText && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">선발 일정</p>
-                  <div className="space-y-1">
-                    {settings.scheduleText.split("\n").filter(Boolean).map((line) => (
-                      <p key={line} className="text-sm text-[#1a1a1a] leading-relaxed">{line}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {settings?.additionalInfoText && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">기타 안내</p>
-                  <div className="space-y-1">
-                    {settings.additionalInfoText.split("\n").filter(Boolean).map((line) => (
-                      <p key={line} className="text-sm text-[#666666] leading-relaxed">{line}</p>
-                    ))}
-                  </div>
+              {settings?.detailsMarkdown && (
+                <div className="markdown-preview text-sm text-[#1a1a1a]">
+                  <ReactMarkdown
+                    components={{
+                      h1: (props) => <h1 className="text-base font-bold mb-3 text-[#1a1a1a]" {...props} />,
+                      h2: (props) => <h2 className="text-xs font-semibold uppercase tracking-widest mb-1 mt-5 first:mt-0 text-[#2563EB]" {...props} />,
+                      h3: (props) => <h3 className="text-sm font-semibold mb-1 mt-3 text-[#1a1a1a]" {...props} />,
+                      p: (props) => <p className="leading-relaxed text-[#1a1a1a] mb-2" {...props} />,
+                      ul: (props) => <ul className="list-disc ml-5 mb-3 space-y-1" {...props} />,
+                      ol: (props) => <ol className="list-decimal ml-5 mb-3 space-y-1" {...props} />,
+                      li: (props) => <li className="text-sm text-[#1a1a1a]" {...props} />,
+                      strong: (props) => <strong className="font-semibold text-[#1a1a1a]" {...props} />,
+                      hr: (props) => <hr className="border-[#D9D9D9] my-4" {...props} />,
+                    }}
+                  >
+                    {settings.detailsMarkdown}
+                  </ReactMarkdown>
                 </div>
               )}
 
