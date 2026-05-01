@@ -1,8 +1,15 @@
+/**
+ * 관리자 모집 설정 페이지
+ *
+ * 역할: 모집 포스터(이미지 업로드/드래그앤드롭), 세부 안내 텍스트,
+ *       D-day 마감일, 자격요건 등 모집 관련 전반 설정을 관리한다.
+ * 사용 위치: /admin/recruitment-settings (관리자 전용)
+ */
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { AlertCircle, CheckCircle2, ImageIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,29 +21,32 @@ import {
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
 
-type RecruitmentSettingsFormValues = {
-  posterImageUrl: string;
+type FormValues = {
   deadlineDate: string;
   nextRecruitmentYear: string;
   nextRecruitmentMonth: string;
   qualificationText: string;
+  recruitmentPeriodText: string;
+  activityPeriodText: string;
+  targetText: string;
+  scheduleText: string;
+  additionalInfoText: string;
 };
 
-type PosterInputMode = "url" | "file";
-
-const emptyFormValues: RecruitmentSettingsFormValues = {
-  posterImageUrl: "",
+const emptyFormValues: FormValues = {
   deadlineDate: "",
   nextRecruitmentYear: "",
   nextRecruitmentMonth: "",
   qualificationText: "",
+  recruitmentPeriodText: "",
+  activityPeriodText: "",
+  targetText: "",
+  scheduleText: "",
+  additionalInfoText: "",
 };
 
 function formatDateForInput(date: Date | null) {
-  if (!date) {
-    return "";
-  }
-
+  if (!date) return "";
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -44,15 +54,19 @@ function formatDateForInput(date: Date | null) {
 }
 
 export default function AdminRecruitmentSettingsPage() {
-  const [formValues, setFormValues] = useState<RecruitmentSettingsFormValues>(emptyFormValues);
-  const [posterInputMode, setPosterInputMode] = useState<PosterInputMode>("url");
+  const [formValues, setFormValues] = useState<FormValues>(emptyFormValues);
+  // 현재 DB에 저장된 포스터 URL (미리보기용)
   const [currentPosterImageUrl, setCurrentPosterImageUrl] = useState<string>("");
-  const [selectedPosterFileName, setSelectedPosterFileName] = useState<string>("");
+  // 새로 선택한 파일의 로컬 미리보기 URL
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
   const [removePoster, setRemovePoster] = useState(false);
   const [messageState, setMessageState] = useState<RecruitmentSettingsActionState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, startLoadingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     startLoadingTransition(() => {
@@ -61,24 +75,23 @@ export default function AdminRecruitmentSettingsPage() {
           if (!settings) {
             setFormValues(emptyFormValues);
             setCurrentPosterImageUrl("");
-            setPosterInputMode("url");
-            setSelectedPosterFileName("");
+            setLocalPreviewUrl("");
             setRemovePoster(false);
             return;
           }
-
-          const posterImageUrl = settings.posterImageUrl ?? "";
-
           setFormValues({
-            posterImageUrl,
             deadlineDate: formatDateForInput(settings.deadlineDate),
             nextRecruitmentYear: settings.nextRecruitmentYear?.toString() ?? "",
             nextRecruitmentMonth: settings.nextRecruitmentMonth?.toString() ?? "",
             qualificationText: settings.qualificationText ?? "",
+            recruitmentPeriodText: settings.recruitmentPeriodText ?? "",
+            activityPeriodText: settings.activityPeriodText ?? "",
+            targetText: settings.targetText ?? "",
+            scheduleText: settings.scheduleText ?? "",
+            additionalInfoText: settings.additionalInfoText ?? "",
           });
-          setCurrentPosterImageUrl(posterImageUrl);
-          setPosterInputMode("url");
-          setSelectedPosterFileName("");
+          setCurrentPosterImageUrl(settings.posterImageUrl ?? "");
+          setLocalPreviewUrl("");
           setRemovePoster(false);
         })
         .catch(() => {
@@ -87,47 +100,68 @@ export default function AdminRecruitmentSettingsPage() {
     });
   }, []);
 
-  const handleChange = (field: keyof RecruitmentSettingsFormValues, value: string) => {
-    setFormValues((current) => ({
-      ...current,
-      [field]: value,
-    }));
+  const handleChange = (field: keyof FormValues, value: string) => {
+    setFormValues((current) => ({ ...current, [field]: value }));
+  };
+
+  // 파일 선택 시 로컬 미리보기 URL 생성 + 기존 포스터 삭제 플래그 해제
+  const handleFileSelect = useCallback((file: File) => {
+    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    setLocalPreviewUrl(URL.createObjectURL(file));
+    setRemovePoster(false);
+  }, [localPreviewUrl]);
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  // 드래그앤드롭 — 파일을 숨겨진 input에 연결해 form submit 시 전달
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    if (fileInputRef.current) fileInputRef.current.files = dt.files;
+    handleFileSelect(file);
+  };
+
+  const handleRemovePoster = () => {
+    setRemovePoster(true);
+    setCurrentPosterImageUrl("");
+    setLocalPreviewUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (formData: FormData) => {
     setMessageState(null);
     setLoadError(null);
+    // 파일 업로드 모드 고정 (URL 입력 방식 제거)
+    formData.set("posterInputMode", "file");
+    formData.set("removePoster", removePoster ? "true" : "false");
 
     const result = await updateRecruitmentSettings(formData);
     setMessageState(result);
 
     if (result.success) {
       const settings = await getRecruitmentSettings();
-
-      const posterImageUrl = settings?.posterImageUrl ?? "";
-
-      setFormValues((current) => ({
-        ...current,
-        posterImageUrl,
-      }));
-      setCurrentPosterImageUrl(posterImageUrl);
-      setSelectedPosterFileName("");
+      setCurrentPosterImageUrl(settings?.posterImageUrl ?? "");
+      setLocalPreviewUrl("");
       setRemovePoster(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const posterPreviewUrl = removePoster
-    ? ""
-    : posterInputMode === "url"
-      ? formValues.posterImageUrl || currentPosterImageUrl
-      : currentPosterImageUrl;
+  const previewUrl = localPreviewUrl || (!removePoster ? currentPosterImageUrl : "");
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12 md:py-16">
       <Card className="border border-[#D9D9D9] bg-white py-0 text-[#1a1a1a] shadow-[var(--shadow-soft)]">
         <CardHeader className="space-y-2 border-b border-[#D9D9D9] py-6">
           <CardTitle className="text-2xl font-semibold text-[#1a1a1a]">모집 설정 관리</CardTitle>
-          <p className="text-sm text-[#666666]">모집 포스터와 D-day 기준 정보를 한 곳에서 관리하세요.</p>
+          <p className="text-sm text-[#666666]">모집 포스터, 세부 안내 텍스트, D-day 기준 정보를 한 곳에서 관리하세요.</p>
         </CardHeader>
         <CardContent className="py-6">
           <form
@@ -137,18 +171,15 @@ export default function AdminRecruitmentSettingsPage() {
               });
             }}
             encType="multipart/form-data"
-            className="space-y-6"
+            className="space-y-8"
           >
-            <input type="hidden" name="posterInputMode" value={posterInputMode} />
-            <input type="hidden" name="removePoster" value={removePoster ? "true" : "false"} />
-
+            {/* 에러/성공 메시지 */}
             {loadError ? (
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <AlertCircle className="mt-0.5 size-4" />
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <span>{loadError}</span>
               </div>
             ) : null}
-
             {messageState?.message ? (
               <div
                 className={messageState.success
@@ -157,201 +188,248 @@ export default function AdminRecruitmentSettingsPage() {
                 }
               >
                 {messageState.success ? (
-                  <CheckCircle2 className="mt-0.5 size-4" />
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                 ) : (
-                  <AlertCircle className="mt-0.5 size-4" />
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 )}
                 <span>{messageState.message}</span>
               </div>
             ) : null}
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="deadlineDate">마감일</Label>
-                <Input
-                  id="deadlineDate"
-                  name="deadlineDate"
-                  type="date"
-                  value={formValues.deadlineDate}
-                  onChange={(event) => handleChange("deadlineDate", event.target.value)}
-                  className="h-10"
-                  disabled={isLoading}
-                />
-                {messageState?.fieldErrors?.deadlineDate ? (
-                  <p className="text-xs text-red-600">{messageState.fieldErrors.deadlineDate}</p>
-                ) : null}
+            {/* 포스터 업로드 섹션 */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-[#1a1a1a]">모집 포스터</h3>
+                <p className="text-sm text-[#666666]">이미지 파일을 드래그하거나 클릭해서 업로드하세요. (10MB 이하)</p>
               </div>
 
-              <div className="space-y-4 md:col-span-2">
-                <div className="space-y-2">
-                  <Label>포스터 등록 방식</Label>
-                  <div className="flex flex-col gap-3 rounded-xl border border-[#D9D9D9] p-4 md:flex-row md:items-center">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#1a1a1a]">
-                      <input
-                        type="radio"
-                        name="posterInputModeSelector"
-                        value="url"
-                        checked={posterInputMode === "url"}
-                        onChange={() => {
-                          setPosterInputMode("url");
-                          setSelectedPosterFileName("");
-                        }}
-                        disabled={isLoading || isSaving}
-                        className="size-4 border-[#D9D9D9] text-[#2563EB]"
-                      />
-                      <span>URL 직접 입력</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#1a1a1a]">
-                      <input
-                        type="radio"
-                        name="posterInputModeSelector"
-                        value="file"
-                        checked={posterInputMode === "file"}
-                        onChange={() => setPosterInputMode("file")}
-                        disabled={isLoading || isSaving}
-                        className="size-4 border-[#D9D9D9] text-[#2563EB]"
-                      />
-                      <span>이미지 업로드</span>
-                    </label>
-                  </div>
+              {/* 드래그앤드롭 존 — label을 써서 파일 input 연결 (onClick 없이 접근성 확보) */}
+              <label
+                htmlFor="posterFile"
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={[
+                  "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 cursor-pointer transition-colors",
+                  isDragging
+                    ? "border-[#2563EB] bg-blue-50"
+                    : "border-[#D9D9D9] bg-gray-50 hover:border-[#2563EB] hover:bg-blue-50",
+                ].join(" ")}
+              >
+                <Upload className="size-8 text-[#666666]" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-[#1a1a1a]">이미지를 드래그하거나 클릭해서 선택</p>
+                  <p className="text-xs text-[#666666]">JPG, PNG, WEBP, GIF 지원 · 최대 10MB</p>
                 </div>
+              </label>
 
-                {posterInputMode === "url" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="posterImageUrl">포스터 URL</Label>
-                    <Input
-                      id="posterImageUrl"
-                      name="posterImageUrl"
-                      value={formValues.posterImageUrl}
-                      onChange={(event) => {
-                        handleChange("posterImageUrl", event.target.value);
-                        setRemovePoster(false);
-                      }}
-                      placeholder="https://example.com/poster.png"
-                      className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                      disabled={isLoading || isSaving}
-                    />
-                    <p className="text-xs text-[#666666]">외부 이미지 주소를 바로 등록할 수 있습니다.</p>
-                    {messageState?.fieldErrors?.posterImageUrl ? (
-                      <p className="text-xs text-red-600">{messageState.fieldErrors.posterImageUrl}</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="posterFile">포스터 이미지 업로드</Label>
-                    <Input
-                      id="posterFile"
-                      name="posterFile"
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        const selectedFile = event.target.files?.[0];
-                        setSelectedPosterFileName(selectedFile?.name ?? "");
-                        if (selectedFile) {
-                          setRemovePoster(false);
-                        }
-                      }}
-                      className="h-10 border-[#D9D9D9] text-[#1a1a1a] file:mr-4 file:border-0 file:bg-[#2563EB] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
-                      disabled={isLoading || isSaving}
-                    />
-                    <p className="text-xs text-[#666666]">이미지 파일은 10MB 이하만 업로드할 수 있습니다.</p>
-                    {selectedPosterFileName ? (
-                      <p className="text-xs text-[#1a1a1a]">선택한 파일: {selectedPosterFileName}</p>
-                    ) : null}
-                    {messageState?.fieldErrors?.posterFile ? (
-                      <p className="text-xs text-red-600">{messageState.fieldErrors.posterFile}</p>
-                    ) : null}
-                  </div>
-                )}
+              {/* 숨겨진 파일 input */}
+              <input
+                ref={fileInputRef}
+                id="posterFile"
+                name="posterFile"
+                type="file"
+                accept="image/*"
+                onChange={handleFileInputChange}
+                className="hidden"
+                disabled={isLoading || isSaving}
+              />
 
-                {posterPreviewUrl ? (
-                  <div className="space-y-3 rounded-xl border border-[#D9D9D9] p-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-[#1a1a1a]">현재 등록된 포스터</p>
+              {/* 포스터 미리보기 */}
+              {previewUrl ? (
+                <div className="space-y-3 rounded-xl border border-[#D9D9D9] p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#1a1a1a]">
+                        {localPreviewUrl ? "새로 선택한 포스터" : "현재 등록된 포스터"}
+                      </p>
                       <p className="text-xs text-[#666666]">공개 모집 페이지에 노출되는 이미지입니다.</p>
                     </div>
-                    <Image
-                      src={posterPreviewUrl}
-                      alt="현재 등록된 모집 포스터 미리보기"
-                      width={400}
-                      height={560}
-                      unoptimized
-                      className="rounded-lg border border-[#D9D9D9] object-contain"
-                    />
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setRemovePoster(true);
-                        setCurrentPosterImageUrl("");
-                        setSelectedPosterFileName("");
-                        handleChange("posterImageUrl", "");
-                      }}
+                      size="sm"
+                      onClick={handleRemovePoster}
                       className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800"
                       disabled={isLoading || isSaving}
                     >
-                      포스터 삭제
+                      <X className="size-3.5 mr-1" />
+                      삭제
                     </Button>
                   </div>
-                ) : null}
+                  <Image
+                    src={previewUrl}
+                    alt="모집 포스터 미리보기"
+                    width={400}
+                    height={560}
+                    unoptimized
+                    className="rounded-lg border border-[#D9D9D9] object-contain max-h-96"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl border border-[#D9D9D9] bg-gray-50 p-4">
+                  <ImageIcon className="size-8 text-[#D9D9D9] shrink-0" />
+                  <p className="text-sm text-[#666666]">등록된 포스터가 없습니다.</p>
+                </div>
+              )}
+            </section>
+
+            {/* 모집 세부 안내 텍스트 섹션 */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-base font-semibold text-[#1a1a1a]">모집 세부 안내</h3>
+                <p className="text-sm text-[#666666]">포스터 옆 좌측 영역에 표시되는 세부 정보를 입력하세요. 비워두면 해당 항목은 표시되지 않습니다.</p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nextRecruitmentYear">모집연도</Label>
-                <Input
-                  id="nextRecruitmentYear"
-                  name="nextRecruitmentYear"
-                  type="number"
-                  min={2000}
-                  step={1}
-                  value={formValues.nextRecruitmentYear}
-                  onChange={(event) => handleChange("nextRecruitmentYear", event.target.value)}
-                  className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                  disabled={isLoading}
-                />
-                {messageState?.fieldErrors?.nextRecruitmentYear ? (
-                  <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentYear}</p>
-                ) : null}
-              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="recruitmentPeriodText">모집 기간</Label>
+                  <Input
+                    id="recruitmentPeriodText"
+                    name="recruitmentPeriodText"
+                    value={formValues.recruitmentPeriodText}
+                    onChange={(e) => handleChange("recruitmentPeriodText", e.target.value)}
+                    placeholder="예: 2025년 3월 1일 ~ 4월 15일"
+                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nextRecruitmentMonth">모집월</Label>
-                <Input
-                  id="nextRecruitmentMonth"
-                  name="nextRecruitmentMonth"
-                  type="number"
-                  min={1}
-                  max={12}
-                  step={1}
-                  value={formValues.nextRecruitmentMonth}
-                  onChange={(event) => handleChange("nextRecruitmentMonth", event.target.value)}
-                  className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                  disabled={isLoading}
-                />
-                {messageState?.fieldErrors?.nextRecruitmentMonth ? (
-                  <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentMonth}</p>
-                ) : null}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="activityPeriodText">활동 기간</Label>
+                  <Input
+                    id="activityPeriodText"
+                    name="activityPeriodText"
+                    value={formValues.activityPeriodText}
+                    onChange={(e) => handleChange("activityPeriodText", e.target.value)}
+                    placeholder="예: 2025년 9월 ~ 2026년 6월"
+                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="qualificationText">자격요건 텍스트</Label>
-                <Textarea
-                  id="qualificationText"
-                  name="qualificationText"
-                  value={formValues.qualificationText}
-                  onChange={(event) => handleChange("qualificationText", event.target.value)}
-                  placeholder="지원 자격을 입력하세요"
-                  className="min-h-32 border-[#D9D9D9] text-[#1a1a1a]"
-                  disabled={isLoading}
-                />
-                {messageState?.fieldErrors?.qualificationText ? (
-                  <p className="text-xs text-red-600">{messageState.fieldErrors.qualificationText}</p>
-                ) : null}
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="targetText">지원 대상</Label>
+                  <Input
+                    id="targetText"
+                    name="targetText"
+                    value={formValues.targetText}
+                    onChange={(e) => handleChange("targetText", e.target.value)}
+                    placeholder="예: 4년제 대학교 재학생 또는 졸업생"
+                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="scheduleText">선발 일정</Label>
+                  <Textarea
+                    id="scheduleText"
+                    name="scheduleText"
+                    value={formValues.scheduleText}
+                    onChange={(e) => handleChange("scheduleText", e.target.value)}
+                    placeholder={"예:\n서류 접수: 3월 1일 ~ 4월 15일\n서류 발표: 4월 20일\n면접: 5월 3일 ~ 5월 10일\n최종 발표: 5월 15일"}
+                    className="min-h-24 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="additionalInfoText">기타 안내사항</Label>
+                  <Textarea
+                    id="additionalInfoText"
+                    name="additionalInfoText"
+                    value={formValues.additionalInfoText}
+                    onChange={(e) => handleChange("additionalInfoText", e.target.value)}
+                    placeholder="줄바꿈으로 여러 항목을 입력할 수 있습니다."
+                    className="min-h-28 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
-            </div>
+            </section>
+
+            {/* D-day / 자격요건 섹션 */}
+            <section className="space-y-4">
+              <h3 className="text-base font-semibold text-[#1a1a1a]">마감일 및 자격요건</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="deadlineDate">마감일</Label>
+                  <Input
+                    id="deadlineDate"
+                    name="deadlineDate"
+                    type="date"
+                    value={formValues.deadlineDate}
+                    onChange={(e) => handleChange("deadlineDate", e.target.value)}
+                    className="h-10"
+                    disabled={isLoading}
+                  />
+                  {messageState?.fieldErrors?.deadlineDate ? (
+                    <p className="text-xs text-red-600">{messageState.fieldErrors.deadlineDate}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nextRecruitmentYear">모집연도</Label>
+                  <Input
+                    id="nextRecruitmentYear"
+                    name="nextRecruitmentYear"
+                    type="number"
+                    min={2000}
+                    step={1}
+                    value={formValues.nextRecruitmentYear}
+                    onChange={(e) => handleChange("nextRecruitmentYear", e.target.value)}
+                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                  {messageState?.fieldErrors?.nextRecruitmentYear ? (
+                    <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentYear}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="nextRecruitmentMonth">모집월</Label>
+                  <Input
+                    id="nextRecruitmentMonth"
+                    name="nextRecruitmentMonth"
+                    type="number"
+                    min={1}
+                    max={12}
+                    step={1}
+                    value={formValues.nextRecruitmentMonth}
+                    onChange={(e) => handleChange("nextRecruitmentMonth", e.target.value)}
+                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                  {messageState?.fieldErrors?.nextRecruitmentMonth ? (
+                    <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentMonth}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="qualificationText">지원 자격 안내 (줄바꿈으로 항목 구분)</Label>
+                  <Textarea
+                    id="qualificationText"
+                    name="qualificationText"
+                    value={formValues.qualificationText}
+                    onChange={(e) => handleChange("qualificationText", e.target.value)}
+                    placeholder={"예:\n4년제 대학교 재학생 또는 졸업생\n학기 중 매주 토요일 수업 참여 가능한 자\n고전 읽기와 토론에 관심이 있는 자"}
+                    className="min-h-28 border-[#D9D9D9] text-[#1a1a1a]"
+                    disabled={isLoading}
+                  />
+                  {messageState?.fieldErrors?.qualificationText ? (
+                    <p className="text-xs text-red-600">{messageState.fieldErrors.qualificationText}</p>
+                  ) : null}
+                </div>
+              </div>
+            </section>
 
             <div className="flex items-center justify-end border-t border-[#D9D9D9] pt-4">
-              <Button type="submit" disabled={isLoading || isSaving} className="bg-[#1a1a1a] text-white hover:bg-[#333333]">
+              <Button
+                type="submit"
+                disabled={isLoading || isSaving}
+                className="bg-[#1a1a1a] text-white hover:bg-[#333333]"
+              >
                 {isSaving ? "저장 중..." : "저장"}
               </Button>
             </div>

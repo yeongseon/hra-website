@@ -37,6 +37,11 @@ const recruitmentSettingsSchema = z
       .min(1, "모집월은 1~12 사이여야 합니다.")
       .max(12, "모집월은 1~12 사이여야 합니다."),
     qualificationText: z.string().trim().max(5000, "자격요건 텍스트는 5000자 이하여야 합니다.").optional(),
+    recruitmentPeriodText: z.string().trim().max(500).optional(),
+    activityPeriodText: z.string().trim().max(500).optional(),
+    targetText: z.string().trim().max(500).optional(),
+    scheduleText: z.string().trim().max(2000).optional(),
+    additionalInfoText: z.string().trim().max(5000).optional(),
   })
   .superRefine((value, context) => {
     if (value.posterInputMode !== "url" || !value.posterImageUrl) {
@@ -166,6 +171,11 @@ export async function updateRecruitmentSettings(
     nextRecruitmentYear: normalizeText(formData.get("nextRecruitmentYear")),
     nextRecruitmentMonth: normalizeText(formData.get("nextRecruitmentMonth")),
     qualificationText: normalizeText(formData.get("qualificationText")) || undefined,
+    recruitmentPeriodText: normalizeText(formData.get("recruitmentPeriodText")) || undefined,
+    activityPeriodText: normalizeText(formData.get("activityPeriodText")) || undefined,
+    targetText: normalizeText(formData.get("targetText")) || undefined,
+    scheduleText: normalizeText(formData.get("scheduleText")) || undefined,
+    additionalInfoText: normalizeText(formData.get("additionalInfoText")) || undefined,
   });
 
   if (!parsed.success) {
@@ -225,6 +235,11 @@ export async function updateRecruitmentSettings(
     nextRecruitmentYear: parsed.data.nextRecruitmentYear,
     nextRecruitmentMonth: parsed.data.nextRecruitmentMonth,
     qualificationText: parsed.data.qualificationText ?? null,
+    recruitmentPeriodText: parsed.data.recruitmentPeriodText ?? null,
+    activityPeriodText: parsed.data.activityPeriodText ?? null,
+    targetText: parsed.data.targetText ?? null,
+    scheduleText: parsed.data.scheduleText ?? null,
+    additionalInfoText: parsed.data.additionalInfoText ?? null,
   };
 
   if (!existingSettings) {

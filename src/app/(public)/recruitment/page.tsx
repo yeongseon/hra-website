@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { CalendarDays, ImageIcon, Check } from "lucide-react";
+import { CalendarDays, Check } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { EnvelopeIcon } from "./_components/envelope-icon";
-
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -139,7 +138,7 @@ export default async function RecruitmentPage() {
           <h2 className="mb-4 text-lg font-semibold text-[#1a1a1a]">지원 자격</h2>
           <ul className="space-y-3">
             {qualifications.map((qualification) => (
-              <li key={qualification} className="group flex items-center gap-3 text-sm text-[#666666]">
+              <li key={qualification} className="group flex items-center gap-3 text-sm text-[#666666] transition-colors hover:text-[#2563EB]">
                 <span className="w-5 h-5 rounded-full border border-[#D9D9D9] flex items-center justify-center group-hover:bg-[#2563EB] group-hover:border-[#2563EB] transition-colors">
                   <Check className="w-3 h-3 text-transparent group-hover:text-white transition-colors" />
                 </span>
@@ -220,35 +219,80 @@ export default async function RecruitmentPage() {
       </section>
 
       <section className="mt-16 sm:mt-24">
-        {!isRecruitmentOpen && !settings?.posterImageUrl ? (
+        {/* 세부사항 또는 포스터 중 하나라도 있으면 좌우 분할 레이아웃 */}
+        {settings?.posterImageUrl || settings?.recruitmentPeriodText || settings?.activityPeriodText || settings?.targetText || settings?.scheduleText || settings?.additionalInfoText ? (
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
+            {/* 좌측: 모집 세부 안내 */}
+            <div className="space-y-6 lg:flex-1">
+              <h2 className="text-xl font-semibold text-[#1a1a1a]">모집 세부 안내</h2>
+
+              {settings?.recruitmentPeriodText && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">모집 기간</p>
+                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.recruitmentPeriodText}</p>
+                </div>
+              )}
+
+              {settings?.activityPeriodText && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">활동 기간</p>
+                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.activityPeriodText}</p>
+                </div>
+              )}
+
+              {settings?.targetText && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">지원 대상</p>
+                  <p className="text-sm text-[#1a1a1a] leading-relaxed">{settings.targetText}</p>
+                </div>
+              )}
+
+              {settings?.scheduleText && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">선발 일정</p>
+                  <div className="space-y-1">
+                    {settings.scheduleText.split("\n").filter(Boolean).map((line) => (
+                      <p key={line} className="text-sm text-[#1a1a1a] leading-relaxed">{line}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {settings?.additionalInfoText && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#2563EB]">기타 안내</p>
+                  <div className="space-y-1">
+                    {settings.additionalInfoText.split("\n").filter(Boolean).map((line) => (
+                      <p key={line} className="text-sm text-[#666666] leading-relaxed">{line}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!isRecruitmentOpen && (
+                <div className="rounded-xl border border-[#D9D9D9] bg-white p-4 shadow-[var(--shadow-soft)]">
+                  <p className="text-sm font-medium text-[#1a1a1a]">{nextRecruitmentText}</p>
+                </div>
+              )}
+            </div>
+
+            {/* 우측: 포스터 */}
+            {settings?.posterImageUrl && (
+              <div className="shrink-0 lg:w-80 xl:w-96">
+                <Image
+                  src={settings.posterImageUrl}
+                  alt="모집 포스터"
+                  width={600}
+                  height={840}
+                  className="w-full rounded-2xl shadow-[var(--shadow-soft)]"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 세부사항도 포스터도 없을 때 — 다음 모집 안내 */
           <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-12 text-center shadow-[var(--shadow-soft)]">
             <p className="text-xl font-semibold text-[#1a1a1a]">{nextRecruitmentText}</p>
-          </div>
-        ) : !isRecruitmentOpen && settings?.posterImageUrl ? (
-          <div className="space-y-8">
-            <Image
-              src={settings.posterImageUrl}
-              alt="모집 포스터"
-              width={1200}
-              height={800}
-              className="w-full rounded-2xl"
-            />
-            <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-8 text-center shadow-[var(--shadow-soft)]">
-              <p className="text-lg font-semibold text-[#1a1a1a]">{nextRecruitmentText}</p>
-            </div>
-          </div>
-        ) : settings?.posterImageUrl ? (
-          <Image
-            src={settings.posterImageUrl}
-            alt="모집 포스터"
-            width={1200}
-            height={800}
-            className="w-full rounded-2xl"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#D9D9D9] bg-gray-50 p-12 text-center">
-            <ImageIcon className="size-12 text-[#666666]" />
-            <p className="font-medium text-[#666666]">모집 포스터가 등록되면 여기에 표시됩니다.</p>
           </div>
         )}
       </section>
