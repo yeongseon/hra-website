@@ -164,3 +164,33 @@ src/app/(admin)/admin/[feature]/
 - **문서**: MkDocs GitHub Pages (`https://yeongseon.github.io/hra-website/`)
 - **DB 마이그레이션**: `npx drizzle-kit push`
 - **빌드 확인**: `npm run build` (변경 후 반드시 실행)
+
+## 11. 코드 리뷰 정책 (Oracle 필수)
+
+이 저장소의 **모든 의미 있는 작업 단위**는 커밋/푸시 전에 반드시 Oracle 에이전트의 리뷰를 거쳐야 합니다.
+
+### Oracle 리뷰 트리거 (필수)
+- 새로운 feature/페이지/서버 액션 추가
+- 스키마(`src/lib/db/schema.ts`) 변경
+- 인증·권한 로직 변경 (`src/lib/admin.ts`, `auth.ts`)
+- 시드/마이그레이션 스크립트 추가·수정
+- 2개 이상 파일에 걸친 변경
+
+### Oracle 리뷰 면제 (간단 변경)
+- 단일 파일 오타·문구 수정
+- 디자인 토큰 미세 조정 (색상값 1줄)
+- README/문서만 수정
+
+### 리뷰 호출 패턴
+```typescript
+task(subagent_type="oracle", load_skills=[], run_in_background=true,
+  description="Review {작업명}",
+  prompt="다음 변경을 리뷰하라:\n- 변경 파일: ...\n- 의도: ...\n- 검토 관점: 보안, 타입 안정성, AGENTS.md 규칙 준수, 회귀 위험\n- 출력: BLOCK / NIT / APPROVE 결정")
+```
+
+### 리뷰 결과 처리
+- **BLOCK**: 즉시 수정. 미해결 시 커밋 금지
+- **NIT**: 합리적인 지적은 반영, 거부 시 사유 명시
+- **APPROVE**: 커밋 진행
+
+> Oracle 결과를 받기 전에 커밋·푸시하는 것은 금지됩니다. 백그라운드로 호출했다면 결과 도착까지 응답을 종료하고 대기하세요.
