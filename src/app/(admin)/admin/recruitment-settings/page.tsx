@@ -10,7 +10,7 @@
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Eye, ImageIcon, Pencil, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, ImageIcon, ImagePlus, Pencil, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ type FormValues = {
   nextRecruitmentMonth: string;
   qualificationText: string;
   detailsMarkdown: string;
+  posterLayout: "right" | "left" | "none";
 };
 
 const emptyFormValues: FormValues = {
@@ -36,6 +37,7 @@ const emptyFormValues: FormValues = {
   nextRecruitmentMonth: "",
   qualificationText: "",
   detailsMarkdown: "",
+  posterLayout: "right",
 };
 
 function formatDateForInput(date: Date | null) {
@@ -57,8 +59,11 @@ export default function AdminRecruitmentSettingsPage() {
   const [isLoading, startLoadingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
   const [markdownTab, setMarkdownTab] = useState<"edit" | "preview">("edit");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mdImageInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     startLoadingTransition(() => {
@@ -77,6 +82,7 @@ export default function AdminRecruitmentSettingsPage() {
             nextRecruitmentMonth: settings.nextRecruitmentMonth?.toString() ?? "",
             qualificationText: settings.qualificationText ?? "",
             detailsMarkdown: settings.detailsMarkdown ?? "",
+            posterLayout: (settings.posterLayout as "right" | "left" | "none") ?? "right",
           });
           setCurrentPosterImageUrl(settings.posterImageUrl ?? "");
           setLocalPreviewUrl("");
@@ -101,6 +107,47 @@ export default function AdminRecruitmentSettingsPage() {
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) handleFileSelect(file);
+  };
+
+  const insertMarkdownImageUrl = (url: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      handleChange("detailsMarkdown", formValues.detailsMarkdown + `\n![이미지](${url})\n`);
+      return;
+    }
+    const start = textarea.selectionStart ?? formValues.detailsMarkdown.length;
+    const end = textarea.selectionEnd ?? start;
+    const before = formValues.detailsMarkdown.slice(0, start);
+    const after = formValues.detailsMarkdown.slice(end);
+    const insertion = `![이미지](${url})`;
+    handleChange("detailsMarkdown", before + insertion + after);
+    setTimeout(() => {
+      textarea.focus();
+      const cursor = start + insertion.length;
+      textarea.setSelectionRange(cursor, cursor);
+    }, 0);
+  };
+
+  const handleMarkdownImageUpload = async (file: File) => {
+    setIsUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload-image", { method: "POST", body: fd });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? "업로드 실패");
+      insertMarkdownImageUrl(data.url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
+    } finally {
+      setIsUploadingImage(false);
+      if (mdImageInputRef.current) mdImageInputRef.current.value = "";
+    }
+  };
+
+  const handleMarkdownImageInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) void handleMarkdownImageUpload(file);
   };
 
   const handleDrop = (event: React.DragEvent) => {
@@ -254,6 +301,29 @@ export default function AdminRecruitmentSettingsPage() {
                   <p className="text-sm text-[#666666]">등록된 포스터가 없습니다.</p>
                 </div>
               )}
+
+              {/* 포스터 위치 선택 */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#1a1a1a]">포스터 위치</p>
+                <div className="flex gap-4">
+                  {(["right", "left", "none"] as const).map((val) => {
+                    const label = val === "right" ? "우측 (기본)" : val === "left" ? "좌측" : "표시 안 함";
+                    return (
+                      <label key={val} className="flex cursor-pointer items-center gap-2 text-sm text-[#1a1a1a]">
+                        <input
+                          type="radio"
+                          name="posterLayout"
+                          value={val}
+                          checked={formValues.posterLayout === val}
+                          onChange={() => handleChange("posterLayout", val)}
+                          className="accent-[#2563EB]"
+                        />
+                        {label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </section>
 
             {/* 모집 세부 안내 — 마크다운 에디터 */}
@@ -295,8 +365,32 @@ export default function AdminRecruitmentSettingsPage() {
                 </button>
               </div>
 
+              {/* 이미지 업로드 버튼 (편집 모드에서만 표시) */}
+              {markdownTab === "edit" && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => mdImageInputRef.current?.click()}
+                    disabled={isLoading || isSaving || isUploadingImage}
+                    className="flex items-center gap-1.5 rounded-md border border-[#D9D9D9] bg-white px-3 py-1.5 text-xs font-medium text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors disabled:opacity-50"
+                  >
+                    <ImagePlus className="size-3.5" />
+                    {isUploadingImage ? "업로드 중..." : "이미지 삽입"}
+                  </button>
+                  <span className="text-xs text-[#666666]">클릭하면 이미지를 업로드하고 커서 위치에 삽입합니다.</span>
+                  <input
+                    ref={mdImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMarkdownImageInputChange}
+                    className="hidden"
+                  />
+                </div>
+              )}
+
               {markdownTab === "edit" ? (
                 <Textarea
+                  ref={textareaRef}
                   id="detailsMarkdown"
                   name="detailsMarkdown"
                   value={formValues.detailsMarkdown}

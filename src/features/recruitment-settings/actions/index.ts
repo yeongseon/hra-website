@@ -38,6 +38,7 @@ const recruitmentSettingsSchema = z
       .max(12, "모집월은 1~12 사이여야 합니다."),
     qualificationText: z.string().trim().max(5000, "자격요건 텍스트는 5000자 이하여야 합니다.").optional(),
     detailsMarkdown: z.string().trim().max(20000, "세부 안내는 20000자 이하여야 합니다.").optional(),
+    posterLayout: z.enum(["right", "left", "none"]).default("right"),
   })
   .superRefine((value, context) => {
     if (value.posterInputMode !== "url" || !value.posterImageUrl) {
@@ -168,6 +169,7 @@ export async function updateRecruitmentSettings(
     nextRecruitmentMonth: normalizeText(formData.get("nextRecruitmentMonth")),
     qualificationText: normalizeText(formData.get("qualificationText")) || undefined,
     detailsMarkdown: normalizeText(formData.get("detailsMarkdown")) || undefined,
+    posterLayout: normalizeText(formData.get("posterLayout")) || "right",
   });
 
   if (!parsed.success) {
@@ -228,6 +230,7 @@ export async function updateRecruitmentSettings(
     nextRecruitmentMonth: parsed.data.nextRecruitmentMonth,
     qualificationText: parsed.data.qualificationText ?? null,
     detailsMarkdown: parsed.data.detailsMarkdown ?? null,
+    posterLayout: parsed.data.posterLayout,
   };
 
   if (!existingSettings) {

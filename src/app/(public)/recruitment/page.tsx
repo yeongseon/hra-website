@@ -220,13 +220,25 @@ export default async function RecruitmentPage() {
       </section>
 
       <section className="mt-16 sm:mt-24">
-        {/* 세부사항 또는 포스터 중 하나라도 있으면 좌우 분할 레이아웃 */}
-        {settings?.posterImageUrl || settings?.detailsMarkdown ? (
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
-            {/* 좌측: 모집 세부 안내 (마크다운 렌더링) */}
+        {settings?.posterImageUrl || settings?.detailsMarkdown ? (() => {
+          const layout = settings?.posterLayout ?? "right";
+          const showPoster = !!settings?.posterImageUrl && layout !== "none";
+
+          const posterEl = showPoster ? (
+            <div className="shrink-0 lg:w-80 xl:w-96">
+              <Image
+                src={settings.posterImageUrl!}
+                alt="모집 포스터"
+                width={600}
+                height={840}
+                className="w-full rounded-2xl shadow-[var(--shadow-soft)]"
+              />
+            </div>
+          ) : null;
+
+          const detailsEl = (
             <div className="space-y-6 lg:flex-1">
               <h2 className="text-xl font-semibold text-[#1a1a1a]">모집 세부 안내</h2>
-
               {settings?.detailsMarkdown && (
                 <div className="markdown-preview text-sm text-[#1a1a1a]">
                   <ReactMarkdown
@@ -240,35 +252,40 @@ export default async function RecruitmentPage() {
                       li: (props) => <li className="text-sm text-[#1a1a1a]" {...props} />,
                       strong: (props) => <strong className="font-semibold text-[#1a1a1a]" {...props} />,
                       hr: (props) => <hr className="border-[#D9D9D9] my-4" {...props} />,
+                      img: ({ src, alt }) => typeof src === "string" ? (
+                        <Image
+                          src={src}
+                          alt={alt ?? ""}
+                          width={800}
+                          height={600}
+                          className="rounded-xl w-full object-cover my-4 shadow-[var(--shadow-soft)]"
+                          unoptimized
+                        />
+                      ) : null,
                     }}
                   >
                     {settings.detailsMarkdown}
                   </ReactMarkdown>
                 </div>
               )}
-
               {!isRecruitmentOpen && (
                 <div className="rounded-xl border border-[#D9D9D9] bg-white p-4 shadow-[var(--shadow-soft)]">
                   <p className="text-sm font-medium text-[#1a1a1a]">{nextRecruitmentText}</p>
                 </div>
               )}
             </div>
+          );
 
-            {/* 우측: 포스터 */}
-            {settings?.posterImageUrl && (
-              <div className="shrink-0 lg:w-80 xl:w-96">
-                <Image
-                  src={settings.posterImageUrl}
-                  alt="모집 포스터"
-                  width={600}
-                  height={840}
-                  className="w-full rounded-2xl shadow-[var(--shadow-soft)]"
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          /* 세부사항도 포스터도 없을 때 — 다음 모집 안내 */
+          return (
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
+              {layout === "left" ? (
+                <>{posterEl}{detailsEl}</>
+              ) : (
+                <>{detailsEl}{posterEl}</>
+              )}
+            </div>
+          );
+        })() : (
           <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-12 text-center shadow-[var(--shadow-soft)]">
             <p className="text-xl font-semibold text-[#1a1a1a]">{nextRecruitmentText}</p>
           </div>

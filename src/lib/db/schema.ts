@@ -397,6 +397,7 @@ export const recruitmentSettings = pgTable("recruitment_settings", {
   nextRecruitmentMonth: integer("next_recruitment_month"), // 다음 모집 예정 월
   qualificationText: text("qualification_text"), // 지원 자격 안내 문구
   detailsMarkdown: text("details_markdown"), // 모집 세부 안내 (마크다운 자유 편집)
+  posterLayout: text("poster_layout").default("right"), // 포스터 위치: right | left | none
   updatedAt: timestamp("updated_at")
     .notNull()
     .defaultNow()
