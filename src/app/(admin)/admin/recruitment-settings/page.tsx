@@ -2,40 +2,53 @@
  * 관리자 모집 설정 페이지
  *
  * 역할: 모집 포스터(드래그앤드롭), 세부 안내(마크다운 에디터 + 미리보기),
- *       D-day 마감일, 지원 자격 안내 등 모집 관련 전반 설정을 관리한다.
+ *       D-day 마감일 등 모집 관련 전반 설정을 관리한다.
  * 사용 위치: /admin/recruitment-settings (관리자 전용)
  */
 "use client";
 
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Eye, ImageIcon, ImagePlus, Pencil, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, FileText, ImageIcon, ImagePlus, Pencil, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import {
   getRecruitmentSettings,
   updateRecruitmentSettings,
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
 
+const DEFAULT_MARKDOWN_TEMPLATE = `## 지원 자격
+- 4년제 대학교 재학생 또는 졸업생
+- 학기 중 매주 토요일 수업 참여 가능한 자
+- 고전 읽기와 토론에 관심이 있는 자
+
+## 모집 일정
+- 서류 접수: 월 일 ~ 월 일
+- 서류 발표: 월 일
+- 면접: 월 일 ~ 월 일
+- 최종 발표: 월 일
+
+## 활동 기간
+년 월 ~ 년 월 (매주 토요일)
+
+## 유의사항
+- 지원서는 홈페이지 온라인 지원서로만 접수합니다.
+- 입학 후 무단 불참 시 수료가 제한될 수 있습니다.
+`;
+
 type FormValues = {
   deadlineDate: string;
-  nextRecruitmentYear: string;
-  nextRecruitmentMonth: string;
-  qualificationText: string;
   detailsMarkdown: string;
   posterLayout: "right" | "left" | "none";
 };
 
 const emptyFormValues: FormValues = {
   deadlineDate: "",
-  nextRecruitmentYear: "",
-  nextRecruitmentMonth: "",
-  qualificationText: "",
   detailsMarkdown: "",
   posterLayout: "right",
 };
@@ -78,9 +91,6 @@ export default function AdminRecruitmentSettingsPage() {
           }
           setFormValues({
             deadlineDate: formatDateForInput(settings.deadlineDate),
-            nextRecruitmentYear: settings.nextRecruitmentYear?.toString() ?? "",
-            nextRecruitmentMonth: settings.nextRecruitmentMonth?.toString() ?? "",
-            qualificationText: settings.qualificationText ?? "",
             detailsMarkdown: settings.detailsMarkdown ?? "",
             posterLayout: (settings.posterLayout as "right" | "left" | "none") ?? "right",
           });
@@ -168,6 +178,12 @@ export default function AdminRecruitmentSettingsPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleLoadTemplate = () => {
+    if (formValues.detailsMarkdown.trim() && !confirm("현재 내용을 기본 템플릿으로 덮어씌우시겠습니까?")) return;
+    handleChange("detailsMarkdown", DEFAULT_MARKDOWN_TEMPLATE);
+    setMarkdownTab("edit");
+  };
+
   const handleSubmit = async (formData: FormData) => {
     setMessageState(null);
     setLoadError(null);
@@ -193,7 +209,7 @@ export default function AdminRecruitmentSettingsPage() {
       <Card className="border border-[#D9D9D9] bg-white py-0 text-[#1a1a1a] shadow-[var(--shadow-soft)]">
         <CardHeader className="space-y-2 border-b border-[#D9D9D9] py-6">
           <CardTitle className="text-2xl font-semibold text-[#1a1a1a]">모집 설정 관리</CardTitle>
-          <p className="text-sm text-[#666666]">모집 포스터, 세부 안내 텍스트, D-day 기준 정보를 한 곳에서 관리하세요.</p>
+          <p className="text-sm text-[#666666]">모집 포스터, 세부 안내 텍스트, 마감일을 한 곳에서 관리하세요.</p>
         </CardHeader>
         <CardContent className="py-6">
           <form
@@ -205,7 +221,6 @@ export default function AdminRecruitmentSettingsPage() {
             encType="multipart/form-data"
             className="space-y-8"
           >
-            {/* 에러/성공 메시지 */}
             {loadError ? (
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -328,11 +343,21 @@ export default function AdminRecruitmentSettingsPage() {
 
             {/* 모집 세부 안내 — 마크다운 에디터 */}
             <section className="space-y-3">
-              <div>
-                <h3 className="text-base font-semibold text-[#1a1a1a]">모집 세부 안내</h3>
-                <p className="text-sm text-[#666666]">
-                  포스터 옆 좌측 영역에 표시됩니다. 마크다운 문법으로 자유롭게 작성하세요.
-                </p>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-[#1a1a1a]">모집 세부 안내</h3>
+                  <p className="text-sm text-[#666666]">
+                    지원 자격, 모집 일정, 활동 기간, 유의사항 등 모든 안내를 마크다운으로 자유롭게 작성하세요.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLoadTemplate}
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-[#D9D9D9] bg-white px-3 py-1.5 text-xs font-medium text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors"
+                >
+                  <FileText className="size-3.5" />
+                  기본 템플릿
+                </button>
               </div>
 
               {/* 편집 / 미리보기 탭 */}
@@ -395,30 +420,14 @@ export default function AdminRecruitmentSettingsPage() {
                   name="detailsMarkdown"
                   value={formValues.detailsMarkdown}
                   onChange={(e) => handleChange("detailsMarkdown", e.target.value)}
-                  placeholder={"## 모집 기간\n2026년 4월 14일 ~ 5월 19일\n\n## 활동 기간\n2026년 9월 ~ 2027년 6월\n\n## 지원 대상\n4년제 대학교 재학생 또는 졸업생\n\n## 선발 일정\n- 서류 접수: 4월 14일 ~ 5월 19일\n- 서류 발표: 5월 23일\n- 면접: 6월 7일 ~ 6월 14일\n- 최종 발표: 6월 20일"}
+                  placeholder="기본 템플릿 버튼을 눌러 시작하거나, 마크다운으로 자유롭게 작성하세요."
                   className="min-h-64 font-mono text-sm border-[#D9D9D9] text-[#1a1a1a] resize-y"
                   disabled={isLoading}
                 />
               ) : (
                 <div className="min-h-64 rounded-md border border-[#D9D9D9] bg-white p-4">
                   {formValues.detailsMarkdown.trim() ? (
-                    <div className="markdown-preview text-sm text-[#1a1a1a] prose prose-sm max-w-none">
-                      <ReactMarkdown
-                        components={{
-                          h1: (props) => <h1 className="text-lg font-bold mb-3 text-[#1a1a1a]" {...props} />,
-                          h2: (props) => <h2 className="text-base font-semibold mb-2 mt-4 text-[#2563EB]" {...props} />,
-                          h3: (props) => <h3 className="text-sm font-semibold mb-1 mt-3 text-[#1a1a1a]" {...props} />,
-                          p: (props) => <p className="mb-2 leading-relaxed text-[#1a1a1a]" {...props} />,
-                          ul: (props) => <ul className="list-disc ml-5 mb-3 space-y-1" {...props} />,
-                          ol: (props) => <ol className="list-decimal ml-5 mb-3 space-y-1" {...props} />,
-                          li: (props) => <li className="text-sm text-[#1a1a1a]" {...props} />,
-                          strong: (props) => <strong className="font-semibold text-[#1a1a1a]" {...props} />,
-                          hr: (props) => <hr className="border-[#D9D9D9] my-3" {...props} />,
-                        }}
-                      >
-                        {formValues.detailsMarkdown}
-                      </ReactMarkdown>
-                    </div>
+                    <MarkdownViewer body={formValues.detailsMarkdown} />
                   ) : (
                     <p className="text-sm text-[#666666]">작성된 내용이 없습니다. 편집 탭에서 내용을 입력하세요.</p>
                   )}
@@ -429,78 +438,23 @@ export default function AdminRecruitmentSettingsPage() {
               ) : null}
             </section>
 
-            {/* D-day / 자격요건 섹션 */}
+            {/* 마감일 섹션 */}
             <section className="space-y-4">
-              <h3 className="text-base font-semibold text-[#1a1a1a]">마감일 및 자격요건</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="deadlineDate">마감일</Label>
-                  <Input
-                    id="deadlineDate"
-                    name="deadlineDate"
-                    type="date"
-                    value={formValues.deadlineDate}
-                    onChange={(e) => handleChange("deadlineDate", e.target.value)}
-                    className="h-10"
-                    disabled={isLoading}
-                  />
-                  {messageState?.fieldErrors?.deadlineDate ? (
-                    <p className="text-xs text-red-600">{messageState.fieldErrors.deadlineDate}</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nextRecruitmentYear">모집연도</Label>
-                  <Input
-                    id="nextRecruitmentYear"
-                    name="nextRecruitmentYear"
-                    type="number"
-                    min={2000}
-                    step={1}
-                    value={formValues.nextRecruitmentYear}
-                    onChange={(e) => handleChange("nextRecruitmentYear", e.target.value)}
-                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                  {messageState?.fieldErrors?.nextRecruitmentYear ? (
-                    <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentYear}</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nextRecruitmentMonth">모집월</Label>
-                  <Input
-                    id="nextRecruitmentMonth"
-                    name="nextRecruitmentMonth"
-                    type="number"
-                    min={1}
-                    max={12}
-                    step={1}
-                    value={formValues.nextRecruitmentMonth}
-                    onChange={(e) => handleChange("nextRecruitmentMonth", e.target.value)}
-                    className="h-10 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                  {messageState?.fieldErrors?.nextRecruitmentMonth ? (
-                    <p className="text-xs text-red-600">{messageState.fieldErrors.nextRecruitmentMonth}</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="qualificationText">지원 자격 안내 (줄바꿈으로 항목 구분)</Label>
-                  <Textarea
-                    id="qualificationText"
-                    name="qualificationText"
-                    value={formValues.qualificationText}
-                    onChange={(e) => handleChange("qualificationText", e.target.value)}
-                    placeholder={"예:\n4년제 대학교 재학생 또는 졸업생\n학기 중 매주 토요일 수업 참여 가능한 자\n고전 읽기와 토론에 관심이 있는 자"}
-                    className="min-h-28 border-[#D9D9D9] text-[#1a1a1a]"
-                    disabled={isLoading}
-                  />
-                  {messageState?.fieldErrors?.qualificationText ? (
-                    <p className="text-xs text-red-600">{messageState.fieldErrors.qualificationText}</p>
-                  ) : null}
-                </div>
+              <h3 className="text-base font-semibold text-[#1a1a1a]">마감일</h3>
+              <div className="max-w-xs space-y-2">
+                <Label htmlFor="deadlineDate">마감일 (D-day 기준)</Label>
+                <Input
+                  id="deadlineDate"
+                  name="deadlineDate"
+                  type="date"
+                  value={formValues.deadlineDate}
+                  onChange={(e) => handleChange("deadlineDate", e.target.value)}
+                  className="h-10"
+                  disabled={isLoading}
+                />
+                {messageState?.fieldErrors?.deadlineDate ? (
+                  <p className="text-xs text-red-600">{messageState.fieldErrors.deadlineDate}</p>
+                ) : null}
               </div>
             </section>
 

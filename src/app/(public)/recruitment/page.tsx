@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import { CalendarDays, Check } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { EnvelopeIcon } from "./_components/envelope-icon";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -70,10 +71,7 @@ const statusMap = {
 } as const;
 
 const formatDate = (value: Date | null) => {
-  if (!value) {
-    return null;
-  }
-
+  if (!value) return null;
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -98,22 +96,8 @@ export default async function RecruitmentPage() {
 
   const [settings] = await db.select().from(recruitmentSettings).limit(1);
 
-
-
-  const qualifications = settings?.qualificationText
-    ? settings.qualificationText.split("\n").map((value) => value.trim()).filter(Boolean)
-    : [
-        "4년제 대학교 재학생 또는 졸업생",
-        "학기 중 매주 토요일 수업 참여 가능한 자",
-        "고전 읽기와 토론에 관심이 있는 자",
-      ];
-
   const openCohort = activeCohorts.find((cohort) => cohort.recruitmentStatus === "OPEN");
   const isRecruitmentOpen = Boolean(openCohort);
-  const nextRecruitmentText =
-    settings?.nextRecruitmentYear && settings?.nextRecruitmentMonth
-      ? `다음 모집은 ${settings.nextRecruitmentYear}년 ${settings.nextRecruitmentMonth}월에 시작됩니다`
-      : "다음 모집 일정은 추후 공지됩니다";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
@@ -125,29 +109,13 @@ export default async function RecruitmentPage() {
               모집안내
             </h1>
           </div>
-          
           <div className="flex items-start gap-4 shrink-0">
             <EnvelopeIcon isOpen={isRecruitmentOpen} />
           </div>
         </div>
-
         <p className="mt-4 max-w-3xl text-sm text-[#666666] md:text-base">
           HRA는 배우고 성장하고 싶은 모두를 환영합니다.
         </p>
-
-        <div className="mt-8 rounded-2xl border border-[#D9D9D9] bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-[#1a1a1a]">지원 자격</h2>
-          <ul className="space-y-3">
-            {qualifications.map((qualification) => (
-              <li key={qualification} className="group flex items-center gap-3 text-sm text-[#666666] transition-colors hover:text-[#2563EB]">
-                <span className="w-5 h-5 rounded-full border border-[#D9D9D9] flex items-center justify-center group-hover:bg-[#2563EB] group-hover:border-[#2563EB] transition-colors">
-                  <Check className="w-3 h-3 text-transparent group-hover:text-white transition-colors" />
-                </span>
-                {qualification}
-              </li>
-            ))}
-          </ul>
-        </div>
       </section>
 
       <section className="mb-10 sm:mb-16">
@@ -219,64 +187,30 @@ export default async function RecruitmentPage() {
         )}
       </section>
 
-      <section className="mt-16 sm:mt-24">
-        {settings?.posterImageUrl || settings?.detailsMarkdown ? (() => {
-          const layout = settings?.posterLayout ?? "right";
-          const showPoster = !!settings?.posterImageUrl && layout !== "none";
+      {(settings?.posterImageUrl || settings?.detailsMarkdown) && (() => {
+        const layout = settings?.posterLayout ?? "right";
+        const showPoster = !!settings?.posterImageUrl && layout !== "none";
 
-          const posterEl = showPoster ? (
-            <div className="shrink-0 lg:w-80 xl:w-96">
-              <Image
-                src={settings.posterImageUrl!}
-                alt="모집 포스터"
-                width={600}
-                height={840}
-                className="w-full rounded-2xl shadow-[var(--shadow-soft)]"
-              />
-            </div>
-          ) : null;
+        const posterEl = showPoster ? (
+          <div className="shrink-0 lg:w-80 xl:w-96">
+            <Image
+              src={settings.posterImageUrl!}
+              alt="모집 포스터"
+              width={600}
+              height={840}
+              className="w-full rounded-2xl shadow-[var(--shadow-soft)]"
+            />
+          </div>
+        ) : null;
 
-          const detailsEl = (
-            <div className="space-y-6 lg:flex-1">
-              <h2 className="text-xl font-semibold text-[#1a1a1a]">모집 세부 안내</h2>
-              {settings?.detailsMarkdown && (
-                <div className="markdown-preview text-sm text-[#1a1a1a]">
-                  <ReactMarkdown
-                    components={{
-                      h1: (props) => <h1 className="text-base font-bold mb-3 text-[#1a1a1a]" {...props} />,
-                      h2: (props) => <h2 className="text-xs font-semibold uppercase tracking-widest mb-1 mt-5 first:mt-0 text-[#2563EB]" {...props} />,
-                      h3: (props) => <h3 className="text-sm font-semibold mb-1 mt-3 text-[#1a1a1a]" {...props} />,
-                      p: (props) => <p className="leading-relaxed text-[#1a1a1a] mb-2" {...props} />,
-                      ul: (props) => <ul className="list-disc ml-5 mb-3 space-y-1" {...props} />,
-                      ol: (props) => <ol className="list-decimal ml-5 mb-3 space-y-1" {...props} />,
-                      li: (props) => <li className="text-sm text-[#1a1a1a]" {...props} />,
-                      strong: (props) => <strong className="font-semibold text-[#1a1a1a]" {...props} />,
-                      hr: (props) => <hr className="border-[#D9D9D9] my-4" {...props} />,
-                      img: ({ src, alt }) => typeof src === "string" ? (
-                        <Image
-                          src={src}
-                          alt={alt ?? ""}
-                          width={800}
-                          height={600}
-                          className="rounded-xl w-full object-cover my-4 shadow-[var(--shadow-soft)]"
-                          unoptimized
-                        />
-                      ) : null,
-                    }}
-                  >
-                    {settings.detailsMarkdown}
-                  </ReactMarkdown>
-                </div>
-              )}
-              {!isRecruitmentOpen && (
-                <div className="rounded-xl border border-[#D9D9D9] bg-white p-4 shadow-[var(--shadow-soft)]">
-                  <p className="text-sm font-medium text-[#1a1a1a]">{nextRecruitmentText}</p>
-                </div>
-              )}
-            </div>
-          );
+        const detailsEl = settings?.detailsMarkdown ? (
+          <div className="lg:flex-1">
+            <MarkdownViewer body={settings.detailsMarkdown} />
+          </div>
+        ) : null;
 
-          return (
+        return (
+          <section className="mt-16 sm:mt-24">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
               {layout === "left" ? (
                 <>{posterEl}{detailsEl}</>
@@ -284,13 +218,9 @@ export default async function RecruitmentPage() {
                 <>{detailsEl}{posterEl}</>
               )}
             </div>
-          );
-        })() : (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-12 text-center shadow-[var(--shadow-soft)]">
-            <p className="text-xl font-semibold text-[#1a1a1a]">{nextRecruitmentText}</p>
-          </div>
-        )}
-      </section>
+          </section>
+        );
+      })()}
     </div>
   );
 }

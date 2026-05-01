@@ -104,6 +104,10 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
   const showClassMaterialUploadButton =
     activeCategory === "강의 자료" && (userRole === "ADMIN" || userRole === "FACULTY");
 
+  const showClassLogUploadButton =
+    activeCategory === "주차별 수업일지" &&
+    (isAdminOrFaculty || (isMember && userCohortId !== null));
+
   // 업로드 링크에 넘길 cohortId
   const uploadCohortId =
     isMember ? userCohortId : activeCohort !== ALL_COHORT ? activeCohort : null;
@@ -227,6 +231,15 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {showClassLogUploadButton && (
+            <Link
+              href="/resources/class-logs"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-[#1a1a1a] text-white hover:bg-[#333333] transition-colors whitespace-nowrap"
+            >
+              <Upload className="size-3.5" />
+              수업일지 작성
+            </Link>
+          )}
           {showWeeklyTextUploadButton && uploadCohortId && (
             <Link
               href={`/resources/weekly-texts?cohortId=${uploadCohortId}`}

@@ -25,18 +25,7 @@ const recruitmentSettingsSchema = z
   .object({
     posterInputMode: posterInputModeSchema,
     posterImageUrl: z.string().trim().optional(),
-    deadlineDate: dateStringSchema,
-    nextRecruitmentYear: z.coerce
-      .number({ message: "모집연도는 숫자여야 합니다." })
-      .int("모집연도는 정수여야 합니다.")
-      .min(2000, "모집연도는 2000년 이후여야 합니다.")
-      .max(3000, "모집연도를 확인해주세요."),
-    nextRecruitmentMonth: z.coerce
-      .number({ message: "모집월은 숫자여야 합니다." })
-      .int("모집월은 정수여야 합니다.")
-      .min(1, "모집월은 1~12 사이여야 합니다.")
-      .max(12, "모집월은 1~12 사이여야 합니다."),
-    qualificationText: z.string().trim().max(5000, "자격요건 텍스트는 5000자 이하여야 합니다.").optional(),
+    deadlineDate: z.union([dateStringSchema, z.literal("")]).optional(),
     detailsMarkdown: z.string().trim().max(20000, "세부 안내는 20000자 이하여야 합니다.").optional(),
     posterLayout: z.enum(["right", "left", "none"]).default("right"),
   })
@@ -164,10 +153,7 @@ export async function updateRecruitmentSettings(
   const parsed = recruitmentSettingsSchema.safeParse({
     posterInputMode: normalizeText(formData.get("posterInputMode")),
     posterImageUrl: normalizeText(formData.get("posterImageUrl")) || undefined,
-    deadlineDate: normalizeText(formData.get("deadlineDate")),
-    nextRecruitmentYear: normalizeText(formData.get("nextRecruitmentYear")),
-    nextRecruitmentMonth: normalizeText(formData.get("nextRecruitmentMonth")),
-    qualificationText: normalizeText(formData.get("qualificationText")) || undefined,
+    deadlineDate: normalizeText(formData.get("deadlineDate")) || undefined,
     detailsMarkdown: normalizeText(formData.get("detailsMarkdown")) || undefined,
     posterLayout: normalizeText(formData.get("posterLayout")) || "right",
   });
@@ -225,10 +211,7 @@ export async function updateRecruitmentSettings(
 
   const values = {
     posterImageUrl: nextPosterImageUrl,
-    deadlineDate: toDate(parsed.data.deadlineDate),
-    nextRecruitmentYear: parsed.data.nextRecruitmentYear,
-    nextRecruitmentMonth: parsed.data.nextRecruitmentMonth,
-    qualificationText: parsed.data.qualificationText ?? null,
+    deadlineDate: parsed.data.deadlineDate ? toDate(parsed.data.deadlineDate) : null,
     detailsMarkdown: parsed.data.detailsMarkdown ?? null,
     posterLayout: parsed.data.posterLayout,
   };
