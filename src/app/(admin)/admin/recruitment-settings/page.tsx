@@ -9,37 +9,19 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Eye, FileText, ImageIcon, ImagePlus, Pencil, Upload, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, ImageIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
+import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import {
   getRecruitmentSettings,
   updateRecruitmentSettings,
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
 
-const DEFAULT_MARKDOWN_TEMPLATE = `## 지원 자격
-- 4년제 대학교 재학생 또는 졸업생
-- 학기 중 매주 토요일 수업 참여 가능한 자
-- 고전 읽기와 토론에 관심이 있는 자
-
-## 모집 일정
-- 서류 접수: 월 일 ~ 월 일
-- 서류 발표: 월 일
-- 면접: 월 일 ~ 월 일
-- 최종 발표: 월 일
-
-## 활동 기간
-년 월 ~ 년 월 (매주 토요일)
-
-## 유의사항
-- 지원서는 홈페이지 온라인 지원서로만 접수합니다.
-- 입학 후 무단 불참 시 수료가 제한될 수 있습니다.
-`;
+const DEFAULT_HTML_TEMPLATE = `<h2>지원 자격</h2><ul><li>4년제 대학교 재학생 또는 졸업생</li><li>학기 중 매주 토요일 수업 참여 가능한 자</li><li>고전 읽기와 토론에 관심이 있는 자</li></ul><h2>모집 일정</h2><ul><li>서류 접수: 월 일 ~ 월 일</li><li>서류 발표: 월 일</li><li>면접: 월 일 ~ 월 일</li><li>최종 발표: 월 일</li></ul><h2>활동 기간</h2><p>년 월 ~ 년 월 (매주 토요일)</p><h2>유의사항</h2><ul><li>지원서는 홈페이지 온라인 지원서로만 접수합니다.</li><li>입학 후 무단 불참 시 수료가 제한될 수 있습니다.</li></ul>`;
 
 type FormValues = {
   deadlineDate: string;
@@ -71,12 +53,8 @@ export default function AdminRecruitmentSettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, startLoadingTransition] = useTransition();
   const [isSaving, startSavingTransition] = useTransition();
-  const [markdownTab, setMarkdownTab] = useState<"edit" | "preview">("edit");
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mdImageInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     startLoadingTransition(() => {
@@ -119,47 +97,6 @@ export default function AdminRecruitmentSettingsPage() {
     if (file) handleFileSelect(file);
   };
 
-  const insertMarkdownImageUrl = (url: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      handleChange("detailsMarkdown", formValues.detailsMarkdown + `\n![이미지](${url})\n`);
-      return;
-    }
-    const start = textarea.selectionStart ?? formValues.detailsMarkdown.length;
-    const end = textarea.selectionEnd ?? start;
-    const before = formValues.detailsMarkdown.slice(0, start);
-    const after = formValues.detailsMarkdown.slice(end);
-    const insertion = `![이미지](${url})`;
-    handleChange("detailsMarkdown", before + insertion + after);
-    setTimeout(() => {
-      textarea.focus();
-      const cursor = start + insertion.length;
-      textarea.setSelectionRange(cursor, cursor);
-    }, 0);
-  };
-
-  const handleMarkdownImageUpload = async (file: File) => {
-    setIsUploadingImage(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload-image", { method: "POST", body: fd });
-      const data = await res.json() as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? "업로드 실패");
-      insertMarkdownImageUrl(data.url);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
-    } finally {
-      setIsUploadingImage(false);
-      if (mdImageInputRef.current) mdImageInputRef.current.value = "";
-    }
-  };
-
-  const handleMarkdownImageInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) void handleMarkdownImageUpload(file);
-  };
-
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
@@ -180,8 +117,7 @@ export default function AdminRecruitmentSettingsPage() {
 
   const handleLoadTemplate = () => {
     if (formValues.detailsMarkdown.trim() && !confirm("현재 내용을 기본 템플릿으로 덮어씌우시겠습니까?")) return;
-    handleChange("detailsMarkdown", DEFAULT_MARKDOWN_TEMPLATE);
-    setMarkdownTab("edit");
+    handleChange("detailsMarkdown", DEFAULT_HTML_TEMPLATE);
   };
 
   const handleSubmit = async (formData: FormData) => {
@@ -341,13 +277,13 @@ export default function AdminRecruitmentSettingsPage() {
               </div>
             </section>
 
-            {/* 모집 세부 안내 — 마크다운 에디터 */}
+            {/* 모집 세부 안내 — 리치 텍스트 에디터 */}
             <section className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-base font-semibold text-[#1a1a1a]">모집 세부 안내</h3>
                   <p className="text-sm text-[#666666]">
-                    지원 자격, 모집 일정, 활동 기간, 유의사항 등 모든 안내를 마크다운으로 자유롭게 작성하세요.
+                    지원 자격, 모집 일정, 활동 기간, 유의사항 등 모든 안내를 자유롭게 작성하세요.
                   </p>
                 </div>
                 <button
@@ -360,79 +296,14 @@ export default function AdminRecruitmentSettingsPage() {
                 </button>
               </div>
 
-              {/* 편집 / 미리보기 탭 */}
-              <div className="flex gap-1 rounded-lg border border-[#D9D9D9] bg-gray-50 p-1 w-fit">
-                <button
-                  type="button"
-                  onClick={() => setMarkdownTab("edit")}
-                  className={[
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                    markdownTab === "edit"
-                      ? "bg-white text-[#1a1a1a] shadow-sm"
-                      : "text-[#666666] hover:text-[#1a1a1a]",
-                  ].join(" ")}
-                >
-                  <Pencil className="size-3" />
-                  편집
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMarkdownTab("preview")}
-                  className={[
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                    markdownTab === "preview"
-                      ? "bg-white text-[#1a1a1a] shadow-sm"
-                      : "text-[#666666] hover:text-[#1a1a1a]",
-                  ].join(" ")}
-                >
-                  <Eye className="size-3" />
-                  미리보기
-                </button>
-              </div>
+              <RichTextEditor
+                id="detailsMarkdown"
+                name="detailsMarkdown"
+                value={formValues.detailsMarkdown}
+                onChange={(html) => handleChange("detailsMarkdown", html)}
+                placeholder="기본 템플릿 버튼을 눌러 시작하거나, 내용을 자유롭게 작성하세요."
+              />
 
-              {/* 이미지 업로드 버튼 (편집 모드에서만 표시) */}
-              {markdownTab === "edit" && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => mdImageInputRef.current?.click()}
-                    disabled={isLoading || isSaving || isUploadingImage}
-                    className="flex items-center gap-1.5 rounded-md border border-[#D9D9D9] bg-white px-3 py-1.5 text-xs font-medium text-[#666666] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors disabled:opacity-50"
-                  >
-                    <ImagePlus className="size-3.5" />
-                    {isUploadingImage ? "업로드 중..." : "이미지 삽입"}
-                  </button>
-                  <span className="text-xs text-[#666666]">클릭하면 이미지를 업로드하고 커서 위치에 삽입합니다.</span>
-                  <input
-                    ref={mdImageInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleMarkdownImageInputChange}
-                    className="hidden"
-                  />
-                </div>
-              )}
-
-              {markdownTab === "edit" ? (
-                <Textarea
-                  ref={textareaRef}
-                  id="detailsMarkdown"
-                  name="detailsMarkdown"
-                  value={formValues.detailsMarkdown}
-                  onChange={(e) => handleChange("detailsMarkdown", e.target.value)}
-                  placeholder="기본 템플릿 버튼을 눌러 시작하거나, 마크다운으로 자유롭게 작성하세요."
-                  className="min-h-64 font-mono text-sm border-[#D9D9D9] text-[#1a1a1a] resize-y"
-                  disabled={isLoading}
-                />
-              ) : (
-                <div className="min-h-64 rounded-md border border-[#D9D9D9] bg-white p-4">
-                  {formValues.detailsMarkdown.trim() ? (
-                    <MarkdownViewer body={formValues.detailsMarkdown} />
-                  ) : (
-                    <p className="text-sm text-[#666666]">작성된 내용이 없습니다. 편집 탭에서 내용을 입력하세요.</p>
-                  )}
-                </div>
-              )}
               {messageState?.fieldErrors?.detailsMarkdown ? (
                 <p className="text-xs text-red-600">{messageState.fieldErrors.detailsMarkdown}</p>
               ) : null}

@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useRef, ChangeEvent, DragEvent, ClipboardEvent } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { RichTextEditor } from "./rich-text-editor";
 
+/**
+ * 하위 호환성을 위한 마크다운 에디터 래퍼 컴포넌트
+ * 기존 마크다운 에디터를 사용하는 곳에서 코드 수정 없이 TipTap WYSIWYG 에디터를 사용할 수 있도록 합니다.
+ * (내부적으로는 HTML을 생성 및 반환합니다.)
+ */
 interface MarkdownEditorProps {
   id?: string;
   name: string;
@@ -19,279 +22,19 @@ export function MarkdownEditor({
   name,
   defaultValue = "",
   required = false,
-  placeholder = "마크다운으로 내용을 작성해주세요...",
+  placeholder = "내용을 작성해주세요...",
   value,
   onChange,
 }: MarkdownEditorProps) {
-  const isControlled = value !== undefined;
-  const [internalContent, setInternalContent] = useState(defaultValue);
-  const content = isControlled ? value : internalContent;
-
-  // 최신 content를 항상 ref로 추적한다.
-  // async 함수(uploadImage) 내부에서 await 이후 content를 읽을 때
-  // 클로저가 stale해지는 문제를 막기 위해 사용한다.
-  const contentRef = useRef(content);
-  contentRef.current = content;
-
-  const setContent = (next: string) => {
-    if (!isControlled) {
-      setInternalContent(next);
-    }
-    onChange?.(next);
-  };
-
-  const [isUploading, setIsUploading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 커서 위치에 텍스트를 삽입하는 유틸리티 함수
-  // contentRef.current로 최신 내용을 읽어 stale closure 문제를 방지한다.
-  const insertTextAtCursor = (text: string) => {
-    if (!textareaRef.current) return;
-    
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    
-    const current = contentRef.current;
-    const before = current.slice(0, start);
-    const after = current.slice(end);
-    
-    const newContent = before + text + after;
-    setContent(newContent);
-    
-    // 상태 업데이트 후 커서 위치 조정 (setTimeout으로 렌더링 후 실행 보장)
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + text.length, start + text.length);
-    }, 0);
-  };
-
-  // 기존 텍스트를 새로운 텍스트로 치환하는 유틸리티 함수 (예: 플레이스홀더를 실제 URL로 변경)
-  // contentRef.current를 사용해 async 완료 후에도 최신값을 기반으로 치환한다.
-  const replaceText = (oldText: string, newText: string) => {
-    setContent(contentRef.current.replace(oldText, newText));
-  };
-
-  // 이미지 업로드 로직 (API 호출)
-  const uploadImage = async (file: File) => {
-    if (isUploading) return;
-    
-    // 이미지 파일인지 검증
-    if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드할 수 있습니다.");
-      return;
-    }
-
-    // 10MB 크기 제한 검증
-    if (file.size > 10 * 1024 * 1024) {
-      alert("10MB 이하의 이미지만 업로드할 수 있습니다.");
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      
-      // 고유한 플레이스홀더 텍스트 생성 (업로드 중에 표시)
-      const placeholderText = `![업로드 중... ${file.name}]()`;
-      insertTextAtCursor(placeholderText);
-
-      // 폼 데이터 구성 및 API 요청
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/upload-image", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "업로드에 실패했습니다.");
-      }
-
-      // 성공 시 플레이스홀더를 실제 마크다운 이미지 문법으로 변경
-      const imageMarkdown = `![${file.name}](${data.url})`;
-      replaceText(placeholderText, imageMarkdown);
-      
-    } catch (error) {
-      console.error("이미지 업로드 에러:", error);
-      alert(error instanceof Error ? error.message : "이미지 업로드 중 오류가 발생했습니다.");
-      
-      // 실패 시 플레이스홀더 제거
-      const placeholderText = `![업로드 중... ${file.name}]()`;
-      replaceText(placeholderText, "");
-    } finally {
-      setIsUploading(false);
-      // 파일 입력 초기화 (같은 파일 다시 업로드 가능하도록)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  // 파일 선택기(버튼)를 통한 업로드 처리
-  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadImage(file);
-    }
-  };
-
-  // 드래그 앤 드롭 영역 진입 방지 (브라우저 기본 동작 방지)
-  const handleDragOver = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-  };
-
-  // 드롭 이벤트 처리 (드래그 앤 드롭으로 파일 업로드)
-  const handleDrop = (e: DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      uploadImage(file);
-    }
-  };
-
-  // 붙여넣기 이벤트 처리 (클립보드의 이미지 업로드)
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const file = e.clipboardData.files?.[0];
-    // 클립보드에 파일이 있고, 그 파일이 이미지인 경우에만 가로채서 업로드 처리
-    if (file && file.type.startsWith("image/")) {
-      e.preventDefault();
-      uploadImage(file);
-    }
-  };
-
   return (
-    <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden">
-      <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
-        <div className="flex flex-col border-b md:border-b-0 md:border-r border-slate-200 bg-white">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <span>마크다운 작성</span>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="text-xs text-slate-600 hover:text-blue-500 flex items-center gap-1 disabled:opacity-50"
-              >
-                <span>📷</span>
-                <span>{isUploading ? "업로드 중..." : "이미지 첨부"}</span>
-              </button>
-              <input
-                type="file"
-                accept="image/jpeg, image/png, image/webp, image/gif"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-              />
-            </div>
-            <a
-              href="https://www.markdownguide.org/basic-syntax/"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-blue-500 hover:underline"
-            >
-              문법 안내
-            </a>
-          </div>
-          <textarea
-            id={id}
-            name={name}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onPaste={handlePaste}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            ref={textareaRef}
-            required={required}
-            placeholder={placeholder}
-            className="flex-1 w-full p-4 resize-none focus:outline-none font-mono text-sm text-slate-900 bg-white"
-          />
-        </div>
-
-        <div className="flex flex-col bg-slate-900 text-slate-200">
-          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">
-            미리보기
-          </div>
-          <div className="flex-1 p-4 overflow-y-auto">
-            {content ? (
-              <div className="markdown-preview break-words">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    // GFM 표 스타일링
-                    table: (props) => (
-                      <div className="overflow-x-auto mb-4">
-                        <table className="w-full text-sm border-collapse" {...props} />
-                      </div>
-                    ),
-                    thead: (props) => <thead className="bg-slate-700" {...props} />,
-                    tbody: (props) => <tbody {...props} />,
-                    tr: (props) => <tr className="border-b border-slate-700 even:bg-slate-800/40" {...props} />,
-                    th: (props) => (
-                      <th className="px-3 py-2 text-left font-semibold text-slate-200 border border-slate-600" {...props} />
-                    ),
-                    td: (props) => (
-                      <td className="px-3 py-2 text-slate-300 border border-slate-600" {...props} />
-                    ),
-                    h1: (props) => <h1 className="text-2xl font-bold mb-4" {...props} />,
-                    h2: (props) => <h2 className="text-xl font-semibold mb-3" {...props} />,
-                    h3: (props) => <h3 className="text-lg font-semibold mb-2" {...props} />,
-                    p: (props) => <p className="mb-4 leading-relaxed" {...props} />,
-                    ul: (props) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
-                    ol: (props) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
-                    li: (props) => <li className="text-sm" {...props} />,
-                    code: ({ className, children, ...props }) => {
-                      const match = /language-(\w+)/.exec(className || "");
-                      if (!match) {
-                        return (
-                          <code
-                            className="bg-slate-800 px-1.5 py-0.5 rounded text-sm text-emerald-400"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        );
-                      }
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    pre: (props) => (
-                      <pre
-                        className="block bg-slate-800 p-4 rounded-lg overflow-x-auto text-sm mb-4"
-                        {...props}
-                      />
-                    ),
-                    a: (props) => (
-                      <a className="text-cyan-400 underline" {...props} />
-                    ),
-                    blockquote: (props) => (
-                      <blockquote
-                        className="border-l-4 border-slate-600 pl-4 italic text-slate-400 mb-4"
-                        {...props}
-                      />
-                    ),
-                    hr: (props) => <hr className="border-slate-700 my-6" {...props} />,
-                    strong: (props) => <strong className="font-bold text-white" {...props} />,
-                    em: (props) => <em className="italic" {...props} />,
-                  }}
-                >
-                  {content}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                내용을 입력하면 미리보기가 표시됩니다
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <RichTextEditor
+      id={id}
+      name={name}
+      defaultValue={defaultValue}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      required={required}
+    />
   );
 }
