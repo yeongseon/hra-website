@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Download } from "lucide-react";
+import { ArrowLeft, CalendarDays, Download, Printer } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
@@ -101,7 +101,7 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
       </div>
 
       <Card className="rounded-2xl border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
-        <CardHeader className="border-b border-[#D9D9D9] py-6 sm:py-8">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#D9D9D9] py-6 sm:py-8">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666] sm:text-sm">
               <Badge variant="secondary" className="border border-[#D9D9D9] bg-gray-50 text-[#666666]">
@@ -123,6 +123,13 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
               {text.title}
             </CardTitle>
           </div>
+          <Link
+            href={`/resources/weekly-texts/${text.id}/print`}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#1a1a1a] transition-colors hover:border-[#2563EB] hover:text-[#2563EB]"
+          >
+            <Printer className="size-4" />
+            PDF 저장
+          </Link>
         </CardHeader>
 
         <CardContent className="space-y-8 py-6 sm:py-10">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Eye, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, Eye, User, Printer } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq, sql } from "drizzle-orm";
 import ReactMarkdown from "react-markdown";
@@ -99,22 +99,31 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
       </div>
 
       <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-0">
-        <CardHeader className="border-b border-[#D9D9D9] py-6 sm:py-8">
-          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">{log.title}</CardTitle>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666] sm:gap-4 md:text-sm">
-            <Badge variant="secondary" className="border border-[#D9D9D9] bg-gray-50 text-[#666666]">
-              <CalendarDays className="size-3.5" />
-              {formatDate(log.classDate)}
-            </Badge>
-            <span className="inline-flex items-center gap-1.5">
-              <User className="size-3.5" />
-              {log.authorName}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Eye className="size-3.5" />
-              조회수 {log.viewCount}
-            </span>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[#D9D9D9] py-6 sm:py-8">
+          <div className="space-y-4">
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1a1a1a]">{log.title}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666] sm:gap-4 md:text-sm">
+              <Badge variant="secondary" className="border border-[#D9D9D9] bg-gray-50 text-[#666666]">
+                <CalendarDays className="size-3.5" />
+                {formatDate(log.classDate)}
+              </Badge>
+              <span className="inline-flex items-center gap-1.5">
+                <User className="size-3.5" />
+                {log.authorName}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Eye className="size-3.5" />
+                조회수 {log.viewCount}
+              </span>
+            </div>
           </div>
+          <Link
+            href={`/resources/${log.id}/print`}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#D9D9D9] px-4 py-2 text-sm font-medium text-[#1a1a1a] transition-colors hover:border-[#2563EB] hover:text-[#2563EB]"
+          >
+            <Printer className="size-4" />
+            PDF 저장
+          </Link>
         </CardHeader>
 
         <CardContent className="space-y-8 py-6 sm:py-10">
