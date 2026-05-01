@@ -223,6 +223,57 @@ const pressData = [
       "국립대학육성사업 일환. 단기 집중형·장기 합숙형(HRA 교수진 참여) 과정 구성. 도내 대학생 및 지역 청년 대상.",
     order: 21,
   },
+  // === 제주대학교 공식 공지(jejunu.ac.kr/promotion/jnunotice) 추가 발굴 5건 ===
+  // 2025년 학생 성과
+  {
+    title: "제주대학교 HRA 참여학생, '2025 스마트해운물류 공모전' 금상 수상",
+    source: "제주대학교",
+    url: "https://www.jejunu.ac.kr/promotion/jnunotice/notice.htm?act=view&seq=264882",
+    publishedAt: "2025-11-07",
+    description:
+      "제주대 진로취업과·대학일자리플러스센터 운영 HRA 참여 학생들이 2025 스마트해운물류 공모전에서 금상을 수상. 실무형 진로교육 성과 입증, 대학·기관 협력을 통한 청년 인재 성장 사례.",
+    order: 22,
+  },
+  // 2022년 협약 (제주대 공식 보도판)
+  {
+    title: "JDC-(사)위즈덤시티와 HRA사업 공동추진 업무협약",
+    source: "제주대학교",
+    url: "https://www.jejunu.ac.kr/promotion/jnunotice/notice.htm?act=view&seq=103653",
+    publishedAt: "2022-11-02",
+    description:
+      "제주대(총장 김일환)·JDC·(사)위즈덤시티가 HRA 사업 공동추진 업무협약 체결. 도내 대학생·졸업생 대상 1년간 체계적 교육훈련, 강의 운영·사업비 관리·시설물 제공 등 사업 전반 공동 추진.",
+    order: 23,
+  },
+  // 2021년 15기 운영
+  {
+    title: "취업역량강화 아카데미(HRA 15기) 정규수업 운영",
+    source: "제주대학교",
+    url: "https://www.jejunu.ac.kr/promotion/jnunotice/notice.htm?act=view&seq=101540",
+    publishedAt: "2021-12-06",
+    description:
+      "HRA 15기 12월 정규수업 진행. 매주 토요일 고전읽기·영어세션·경영서·기업실무 교육 운영. 전·현직 중견 언론인 교수진의 고전명작 콘텐츠 강의와 CEO/임원 초빙 특강.",
+    order: 24,
+  },
+  // 2019년 기고
+  {
+    title: "(기고) 'HRA라는 퍼즐판'",
+    source: "제주대학교",
+    url: "https://www.jejunu.ac.kr/promotion/jnunotice/notice.htm?act=view&seq=100987",
+    publishedAt: "2019-11-28",
+    description:
+      "HRA 13년차를 맞아 참여 학생이 쓴 기고문. 청년들에게 고전 읽기, 경영서 분석, 케이스스터디, 봉사활동 등 실력양성과 인격함양의 양 축을 쌓아주는 프로그램 경험담.",
+    order: 25,
+  },
+  // 2017년 10기 겨울캠프
+  {
+    title: "'HRA 10기' 겨울캠프 개최",
+    source: "제주대학교",
+    url: "https://www.jejunu.ac.kr/promotion/jnunotice/notice.htm?act=view&seq=97946",
+    publishedAt: "2017-02-08",
+    description:
+      "(사)위즈덤시티 공동주관 2017 HRA 10기 겨울캠프(7박8일) 베니키아호텔제주에서 개최. 제주대 학생 31명 참여, 고전읽기·기업실무 케이스스터디·한국 경제사 토론·명사 특강. 2007년 시작 이래 10년간 248명 수료, 80% 이상 취업.",
+    order: 26,
+  },
 ];
 
 async function main() {
