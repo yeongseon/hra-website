@@ -2,24 +2,15 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Color from "@tiptap/extension-color";
-import { TextStyle } from "@tiptap/extension-text-style";
-import Highlight from "@tiptap/extension-highlight";
-import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Markdown } from "@tiptap/markdown";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold,
   Italic,
-  Underline as UnderlineIcon,
   Strikethrough,
-  Highlighter,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Link as LinkIcon,
   Image as ImageIcon,
   Heading1,
@@ -27,6 +18,8 @@ import {
   Heading3,
   List,
   ListOrdered,
+  Quote,
+  Code,
   Minus,
   Undo,
   Redo,
@@ -34,8 +27,13 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * 리치 텍스트 에디터 컴포넌트
- * WYSIWYG 환경 제공 및 내부적으로 HTML 형태로 값을 반환합니다.
+ * 마크다운 리치 텍스트 에디터
+ *
+ * - 입력: 사용자 키보드/붙여넣기 모두 마크다운 문법(`## 제목`, `- 항목`, `**굵게**`,
+ *   `[링크](url)`, ```` ```코드``` ```` 등)을 인식한다.
+ * - 출력/저장: `editor.getMarkdown()`을 호출해 마크다운 문자열을 부모로 전달한다.
+ * - 툴바: 마크다운 표준에 존재하는 기능만 노출한다. 색상·하이라이트·밑줄·텍스트 정렬은
+ *   마크다운에 없으므로 의도적으로 제거했다.
  */
 interface RichTextEditorProps {
   id?: string;
@@ -62,37 +60,35 @@ export function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      TextStyle,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      Underline,
       Link.configure({ openOnClick: false }),
       Image,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
       Placeholder.configure({ placeholder: placeholder || "내용을 입력하세요..." }),
+      Markdown.configure({
+        markedOptions: { gfm: true, breaks: false },
+      }),
     ],
     content: value ?? defaultValue,
+    contentType: "markdown",
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setInternalValue(html);
-      onChange?.(html);
+      const markdown = editor.getMarkdown();
+      setInternalValue(markdown);
+      onChange?.(markdown);
     },
   });
 
   // 외부에서 controlled `value` prop이 비동기로 변경되는 경우(예: 페이지 로드 직후
   // useEffect 안에서 DB 값을 받아 setState 한 경우), Tiptap 에디터의 내부 상태는
-  // 자동으로 동기화되지 않는다. 따라서 `value`가 바뀌고 현재 에디터 HTML과 다를 때만
+  // 자동으로 동기화되지 않는다. 따라서 `value`가 바뀌고 현재 마크다운과 다를 때만
   // setContent로 강제 갱신한다. emitUpdate=false 로 호출해 onUpdate 무한 루프를 방지한다.
   useEffect(() => {
     if (!editor) return;
     if (value === undefined) return;
-    if (value === editor.getHTML()) return;
-    editor.commands.setContent(value, { emitUpdate: false });
-    setInternalValue(editor.getHTML());
+    if (value === editor.getMarkdown()) return;
+    editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
+    setInternalValue(editor.getMarkdown());
   }, [value, editor]);
 
-  // 이미지 업로드 핸들러
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -129,79 +125,82 @@ export function RichTextEditor({
 
   return (
     <div className="w-full border border-[#D9D9D9] rounded-md overflow-hidden bg-white shadow-[var(--shadow-soft)]">
-      {/* 툴바 */}
       <div className="flex flex-wrap items-center gap-1 bg-gray-50 p-2 border-b border-[#D9D9D9]">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
-          title="굵게"
+          title="굵게 (Ctrl+B 또는 **텍스트**)"
         >
           <Bold className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive("italic")}
-          title="기울임"
+          title="기울임 (Ctrl+I 또는 *텍스트*)"
         >
           <Italic className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          isActive={editor.isActive("underline")}
-          title="밑줄"
-        >
-          <UnderlineIcon className="w-4 h-4" />
-        </ToolbarButton>
-        <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive("strike")}
-          title="취소선"
+          title="취소선 (~~텍스트~~)"
         >
           <Strikethrough className="w-4 h-4" />
         </ToolbarButton>
 
         <div className="w-[1px] h-4 bg-gray-300 mx-1" />
 
-        <input
-          type="color"
-          onInput={(event) =>
-            editor.chain().focus().setColor((event.target as HTMLInputElement).value).run()
-          }
-          value={editor.getAttributes("textStyle").color || "#000000"}
-          className="w-6 h-6 p-0 border-0 cursor-pointer rounded-md bg-transparent"
-          title="글자 색상"
-        />
-
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run()}
-          isActive={editor.isActive("highlight")}
-          title="하이라이트"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          isActive={editor.isActive("heading", { level: 1 })}
+          title="제목 1 (# 텍스트)"
         >
-          <Highlighter className="w-4 h-4" />
+          <Heading1 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          isActive={editor.isActive("heading", { level: 2 })}
+          title="제목 2 (## 텍스트)"
+        >
+          <Heading2 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          isActive={editor.isActive("heading", { level: 3 })}
+          title="제목 3 (### 텍스트)"
+        >
+          <Heading3 className="w-4 h-4" />
         </ToolbarButton>
 
         <div className="w-[1px] h-4 bg-gray-300 mx-1" />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          isActive={editor.isActive({ textAlign: "left" })}
-          title="왼쪽 정렬"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive("bulletList")}
+          title="기호 목록 (- 텍스트)"
         >
-          <AlignLeft className="w-4 h-4" />
+          <List className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          isActive={editor.isActive({ textAlign: "center" })}
-          title="가운데 정렬"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive("orderedList")}
+          title="번호 목록 (1. 텍스트)"
         >
-          <AlignCenter className="w-4 h-4" />
+          <ListOrdered className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          isActive={editor.isActive({ textAlign: "right" })}
-          title="오른쪽 정렬"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive("blockquote")}
+          title="인용구 (> 텍스트)"
         >
-          <AlignRight className="w-4 h-4" />
+          <Quote className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          isActive={editor.isActive("codeBlock")}
+          title="코드 블록 (```)"
+        >
+          <Code className="w-4 h-4" />
         </ToolbarButton>
 
         <div className="w-[1px] h-4 bg-gray-300 mx-1" />
@@ -218,14 +217,14 @@ export function RichTextEditor({
             editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
           }}
           isActive={editor.isActive("link")}
-          title="링크 삽입"
+          title="링크 삽입 ([텍스트](url))"
         >
           <LinkIcon className="w-4 h-4" />
         </ToolbarButton>
 
         <ToolbarButton
           onClick={() => fileInputRef.current?.click()}
-          title="이미지 삽입"
+          title="이미지 삽입 (![대체텍스트](url))"
         >
           <ImageIcon className="w-4 h-4" />
         </ToolbarButton>
@@ -237,49 +236,9 @@ export function RichTextEditor({
           onChange={handleImageUpload}
         />
 
-        <div className="w-[1px] h-4 bg-gray-300 mx-1" />
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          isActive={editor.isActive("heading", { level: 1 })}
-          title="제목 1"
-        >
-          <Heading1 className="w-4 h-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          isActive={editor.isActive("heading", { level: 2 })}
-          title="제목 2"
-        >
-          <Heading2 className="w-4 h-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          isActive={editor.isActive("heading", { level: 3 })}
-          title="제목 3"
-        >
-          <Heading3 className="w-4 h-4" />
-        </ToolbarButton>
-
-        <div className="w-[1px] h-4 bg-gray-300 mx-1" />
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          isActive={editor.isActive("bulletList")}
-          title="기호 목록"
-        >
-          <List className="w-4 h-4" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          isActive={editor.isActive("orderedList")}
-          title="번호 목록"
-        >
-          <ListOrdered className="w-4 h-4" />
-        </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
-          title="구분선"
+          title="구분선 (---)"
         >
           <Minus className="w-4 h-4" />
         </ToolbarButton>
@@ -289,25 +248,23 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().chain().focus().undo().run()}
-          title="실행 취소"
+          title="실행 취소 (Ctrl+Z)"
         >
           <Undo className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().chain().focus().redo().run()}
-          title="다시 실행"
+          title="다시 실행 (Ctrl+Shift+Z)"
         >
           <Redo className="w-4 h-4" />
         </ToolbarButton>
       </div>
 
-      {/* 에디터 본문 */}
       <div className="p-4 text-[#1a1a1a] min-h-[300px] prose max-w-none focus:outline-none focus-within:ring-2 focus-within:ring-[#2563EB]/20">
         <EditorContent editor={editor} />
       </div>
 
-      {/* Form 전송용 hidden input */}
       <input
         type="hidden"
         id={id}

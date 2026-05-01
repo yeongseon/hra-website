@@ -3,10 +3,10 @@ import Link from "next/link";
 import { and, eq, lt, gt, asc, desc, sql } from "drizzle-orm";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
 
@@ -150,50 +150,7 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
           </div>
         </CardHeader>
         <CardContent className="py-6 sm:py-10">
-          <div className="markdown-preview break-words text-[#1a1a1a]">
-            <ReactMarkdown
-              components={{
-                h1: (props) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
-                h2: (props) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
-                h3: (props) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
-                p: (props) => <p className="mb-4 leading-relaxed" {...props} />,
-                ul: (props) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
-                ol: (props) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
-                li: (props) => <li className="text-sm" {...props} />,
-                code: ({ className, children, ...props }) => {
-                  const match = /language-(\w+)/.exec(className || "");
-                  if (!match) {
-                    return (
-                      <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-blue-600" {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-
-                  return (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-                pre: (props) => (
-                  <pre className="block bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
-                ),
-                a: (props) => <a className="text-[#2563EB] underline" {...props} />,
-                blockquote: (props) => (
-                  <blockquote
-                    className="border-l-4 border-[#D9D9D9] pl-4 italic text-[#666666] mb-4"
-                    {...props}
-                  />
-                ),
-                hr: (props) => <hr className="border-[#D9D9D9] my-6" {...props} />,
-                strong: (props) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
-                em: (props) => <em className="italic" {...props} />,
-              }}
-            >
-              {notice.content}
-            </ReactMarkdown>
-          </div>
+          <MarkdownViewer body={notice.content} />
         </CardContent>
       </Card>
 

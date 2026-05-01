@@ -4,11 +4,10 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Eye, User, Printer } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq, sql } from "drizzle-orm";
-import ReactMarkdown from "react-markdown";
-import remarkBreaks from "remark-breaks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
 
@@ -129,50 +128,7 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
         <CardContent className="space-y-8 py-6 sm:py-10">
           <section className="space-y-3">
             <h2 className="text-base font-semibold text-[#1a1a1a]">내용</h2>
-            <div className="markdown-preview break-words text-[#1a1a1a]">
-              <ReactMarkdown
-                remarkPlugins={[remarkBreaks]}
-                components={{
-                  h1: (props) => <h1 className="text-2xl font-bold mb-4 text-[#1a1a1a]" {...props} />,
-                  h2: (props) => <h2 className="text-xl font-semibold mb-3 text-[#1a1a1a]" {...props} />,
-                  h3: (props) => <h3 className="text-lg font-semibold mb-2 text-[#1a1a1a]" {...props} />,
-                  p: (props) => <p className="mb-4 leading-relaxed" {...props} />,
-                  ul: (props) => <ul className="list-disc ml-6 mb-4 space-y-1" {...props} />,
-                  ol: (props) => <ol className="list-decimal ml-6 mb-4 space-y-1" {...props} />,
-                  li: (props) => <li className="text-sm" {...props} />,
-                  code: ({ className, children, ...props }) => {
-                    const match = /language-(\w+)/.exec(className || "");
-                    if (!match) {
-                      return (
-                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-blue-600" {...props}>
-                          {children}
-                        </code>
-                      );
-                    }
-                    return (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  pre: (props) => (
-                    <pre className="block bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4" {...props} />
-                  ),
-                  a: (props) => <a className="text-[#2563EB] underline" {...props} />,
-                  blockquote: (props) => (
-                    <blockquote
-                      className="border-l-4 border-[#D9D9D9] pl-4 italic text-[#666666] mb-4"
-                      {...props}
-                    />
-                  ),
-                  hr: (props) => <hr className="border-[#D9D9D9] my-6" {...props} />,
-                  strong: (props) => <strong className="font-bold text-[#1a1a1a]" {...props} />,
-                  em: (props) => <em className="italic" {...props} />,
-                }}
-              >
-                {log.content}
-              </ReactMarkdown>
-            </div>
+            <MarkdownViewer body={log.content} />
           </section>
 
           {images.length > 0 ? (

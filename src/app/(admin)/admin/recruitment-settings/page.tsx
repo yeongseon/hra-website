@@ -21,7 +21,29 @@ import {
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
 
-const DEFAULT_HTML_TEMPLATE = `<h2>지원 자격</h2><ul><li>4년제 대학교 재학생 또는 졸업생</li><li>학기 중 매주 토요일 수업 참여 가능한 자</li><li>고전 읽기와 토론에 관심이 있는 자</li></ul><h2>모집 일정</h2><ul><li>서류 접수: 월 일 ~ 월 일</li><li>서류 발표: 월 일</li><li>면접: 월 일 ~ 월 일</li><li>최종 발표: 월 일</li></ul><h2>활동 기간</h2><p>년 월 ~ 년 월 (매주 토요일)</p><h2>유의사항</h2><ul><li>지원서는 홈페이지 온라인 지원서로만 접수합니다.</li><li>입학 후 무단 불참 시 수료가 제한될 수 있습니다.</li></ul>`;
+// 모집 안내 기본 템플릿 (마크다운). "기본 템플릿 적용" 버튼에서 사용합니다.
+const DEFAULT_MARKDOWN_TEMPLATE = `## 지원 자격
+
+- 4년제 대학교 재학생 또는 졸업생
+- 학기 중 매주 토요일 수업 참여 가능한 자
+- 고전 읽기와 토론에 관심이 있는 자
+
+## 모집 일정
+
+- 서류 접수: 월 일 ~ 월 일
+- 서류 발표: 월 일
+- 면접: 월 일 ~ 월 일
+- 최종 발표: 월 일
+
+## 활동 기간
+
+년 월 ~ 년 월 (매주 토요일)
+
+## 유의사항
+
+- 지원서는 홈페이지 온라인 지원서로만 접수합니다.
+- 입학 후 무단 불참 시 수료가 제한될 수 있습니다.
+`;
 
 type FormValues = {
   deadlineDate: string;
@@ -117,7 +139,7 @@ export default function AdminRecruitmentSettingsPage() {
 
   const handleLoadTemplate = () => {
     if (formValues.detailsMarkdown.trim() && !confirm("현재 내용을 기본 템플릿으로 덮어씌우시겠습니까?")) return;
-    handleChange("detailsMarkdown", DEFAULT_HTML_TEMPLATE);
+    handleChange("detailsMarkdown", DEFAULT_MARKDOWN_TEMPLATE);
   };
 
   const handleSubmit = async (formData: FormData) => {

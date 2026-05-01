@@ -3,9 +3,9 @@
 import { RichTextEditor } from "./rich-text-editor";
 
 /**
- * 하위 호환성을 위한 마크다운 에디터 래퍼 컴포넌트
- * 기존 마크다운 에디터를 사용하는 곳에서 코드 수정 없이 TipTap WYSIWYG 에디터를 사용할 수 있도록 합니다.
- * (내부적으로는 HTML을 생성 및 반환합니다.)
+ * 마크다운 에디터 래퍼 컴포넌트
+ * - 내부적으로 TipTap 기반 RichTextEditor 를 사용하지만, 입출력은 모두 마크다운 문자열입니다.
+ * - 기존 호출부와의 시그니처 호환을 위해 별도 컴포넌트로 유지합니다.
  */
 interface MarkdownEditorProps {
   id?: string;

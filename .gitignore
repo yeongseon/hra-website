@@ -57,3 +57,6 @@ test-results/
 update-curriculum.js
 *.png
 screenshots/
+
+# DB 백업 (마이그레이션 안전장치)
+backups/
