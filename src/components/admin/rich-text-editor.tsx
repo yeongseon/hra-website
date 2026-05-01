@@ -72,12 +72,25 @@ export function RichTextEditor({
       Placeholder.configure({ placeholder: placeholder || "내용을 입력하세요..." }),
     ],
     content: value ?? defaultValue,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       setInternalValue(html);
       onChange?.(html);
     },
   });
+
+  // 외부에서 controlled `value` prop이 비동기로 변경되는 경우(예: 페이지 로드 직후
+  // useEffect 안에서 DB 값을 받아 setState 한 경우), Tiptap 에디터의 내부 상태는
+  // 자동으로 동기화되지 않는다. 따라서 `value`가 바뀌고 현재 에디터 HTML과 다를 때만
+  // setContent로 강제 갱신한다. emitUpdate=false 로 호출해 onUpdate 무한 루프를 방지한다.
+  useEffect(() => {
+    if (!editor) return;
+    if (value === undefined) return;
+    if (value === editor.getHTML()) return;
+    editor.commands.setContent(value, { emitUpdate: false });
+    setInternalValue(editor.getHTML());
+  }, [value, editor]);
 
   // 이미지 업로드 핸들러
   const handleImageUpload = useCallback(
