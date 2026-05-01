@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, desc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,10 +36,11 @@ const formatDate = (value: Date) =>
 export default async function AdminPressPage() {
   await requireAdmin();
 
+  // 항상 최신 게시일이 위로 오도록 단일 정렬 (공개 페이지 /press 와 동일 규칙).
   const articles = await db
     .select()
     .from(pressArticles)
-    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt), asc(pressArticles.createdAt));
+    .orderBy(desc(pressArticles.publishedAt));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
