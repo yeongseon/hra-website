@@ -8,7 +8,7 @@ import { MemberClassLogUploadForm } from "@/app/(member)/resources/class-logs/_c
 import { createClassLogAsMember } from "@/features/class-logs/actions";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { classLogs, cohorts, users } from "@/lib/db/schema";
+import { classLogs, cohorts, reportTemplates, users } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
   title: "수업일지",
@@ -64,7 +64,7 @@ export default async function ClassLogsPage() {
 
   const isMemberWithoutCohort = role === "MEMBER" && userCohortId === null;
 
-  const [logs, cohortRows] = await Promise.all([
+  const [logs, cohortRows, templateRows] = await Promise.all([
     isMemberWithoutCohort
       ? Promise.resolve([])
       : db
@@ -89,6 +89,16 @@ export default async function ClassLogsPage() {
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
       .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+    // 보고서 양식 목록 — 수업일지 작성 시 템플릿으로 불러올 수 있도록 조회
+    db
+      .select({
+        id: reportTemplates.id,
+        slug: reportTemplates.slug,
+        title: reportTemplates.title,
+      })
+      .from(reportTemplates)
+      .where(eq(reportTemplates.published, true))
+      .orderBy(asc(reportTemplates.order), asc(reportTemplates.createdAt)),
   ]);
 
   return (
@@ -118,6 +128,7 @@ export default async function ClassLogsPage() {
             action={createClassLogAsMember}
             cohorts={cohortRows}
             userCohortId={userCohortId}
+            templates={templateRows}
           />
         ) : (
           <Card className="rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">

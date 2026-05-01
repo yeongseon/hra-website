@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ type MemberClassLogUploadFormProps = {
   action: (formData: FormData) => Promise<ClassLogActionState>;
   cohorts: Array<{ id: string; name: string }>;
   userCohortId?: string | null;
+  templates?: Array<{ id: string; slug: string; title: string }>;
 };
 
 const initialState: ClassLogActionState = { success: false };
@@ -30,9 +31,14 @@ export function MemberClassLogUploadForm({
   action,
   cohorts,
   userCohortId,
+  templates = [],
 }: MemberClassLogUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+
+  // 보고서 양식 불러오기 상태
+  const [templateBody, setTemplateBody] = useState<string | undefined>(undefined);
+  const [isTemplateLoading, setIsTemplateLoading] = useState(false);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
     async (_previous: ClassLogActionState, formData: FormData) => action(formData),
@@ -49,6 +55,26 @@ export function MemberClassLogUploadForm({
     { value: "__none__", label: "미선택" },
     ...cohorts.map((cohort) => ({ value: cohort.id, label: cohort.name })),
   ];
+
+  const templateSelectItems = [
+    { value: "__none__", label: "— 양식을 선택하면 내용이 채워집니다 —" },
+    ...templates.map((t) => ({ value: t.slug, label: t.title })),
+  ];
+
+  const handleTemplateSelect = async (value: string | null) => {
+    if (!value || value === "__none__") return;
+    setIsTemplateLoading(true);
+    try {
+      const res = await fetch(`/api/templates/${value}/content`, { cache: "no-store" });
+      if (!res.ok) throw new Error("load-failed");
+      const data = (await res.json()) as { body: string };
+      setTemplateBody(data.body);
+    } catch {
+      setTemplateBody(undefined);
+    } finally {
+      setIsTemplateLoading(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
@@ -162,12 +188,38 @@ export function MemberClassLogUploadForm({
           </div>
 
           <div className="space-y-2">
+            {templates.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-[#666666] shrink-0">보고서 양식 불러오기</span>
+                <Select
+                  items={templateSelectItems}
+                  defaultValue="__none__"
+                  onValueChange={handleTemplateSelect}
+                  disabled={isTemplateLoading}
+                >
+                  <SelectTrigger className="h-9 w-full max-w-sm border-[#D9D9D9] bg-white text-sm text-[#1a1a1a]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templateSelectItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isTemplateLoading && (
+                  <span className="text-xs text-[#2563EB]">불러오는 중...</span>
+                )}
+              </div>
+            )}
             <Label htmlFor="content" className="text-[#1a1a1a]">
               수업 내용
             </Label>
             <MarkdownEditor
               id="content"
               name="content"
+              value={templateBody}
               placeholder="수업에서 다룬 내용, 토론 결과, 핵심 키워드 등을 마크다운으로 작성하세요."
             />
           </div>

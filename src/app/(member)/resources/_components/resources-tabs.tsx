@@ -6,7 +6,7 @@
  * 역할: 기수 드롭다운 + 카테고리 탭 + (주차별 텍스트 전용) 서브필터로
  *       자료를 필터링해 페이지네이션 테이블로 표시한다.
  *
- * 탭 순서: 가이드북 → 주차별 텍스트 → 주차별 수업일지 ("전체" 없음)
+ * 탭 순서: 가이드북 → 강의 자료 → 주차별 텍스트 → 주차별 수업일지 → 보고서 양식 ("전체" 없음)
  * 기수 기본값: 최신 기수 (page.tsx에서 desc 정렬된 cohorts[0])
  * ALL_COHORT sentinel: "__all__" (UUID와 절대 충돌하지 않는 내부 상수)
  * 주차별 텍스트 서브필터: 전체 / 고전명작 / 경영서 / 기업실무
@@ -38,9 +38,15 @@ const CLASS_MATERIAL_AUDIENCE_FILTERS = ["전체", "학생용", "교수용"] as 
 type ClassMaterialAudienceFilter = (typeof CLASS_MATERIAL_AUDIENCE_FILTERS)[number];
 
 /** 카테고리 탭 — 표시 순서 그대로 */
-export type ResourceCategory = "가이드북" | "강의 자료" | "주차별 텍스트" | "주차별 수업일지";
+export type ResourceCategory = "가이드북" | "강의 자료" | "주차별 텍스트" | "주차별 수업일지" | "보고서 양식";
 
-const CATEGORY_TABS: ResourceCategory[] = ["가이드북", "강의 자료", "주차별 텍스트", "주차별 수업일지"];
+const CATEGORY_TABS: ResourceCategory[] = [
+  "가이드북",
+  "강의 자료",
+  "주차별 텍스트",
+  "주차별 수업일지",
+  "보고서 양식",
+];
 
 export type ResourceItem = {
   id: number | string;
@@ -75,6 +81,8 @@ const getCategoryColor = (category: ResourceCategory): string => {
     case "주차별 텍스트":
       return "bg-green-50 text-green-700 border-green-200";
     case "주차별 수업일지":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "보고서 양식":
       return "bg-blue-50 text-blue-700 border-blue-200";
   }
 };
