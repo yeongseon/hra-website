@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
 export default async function RecruitmentApplyPage(props: {
-  searchParams?: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
     [key: string]: string | string[] | undefined;
   };
 }) {
