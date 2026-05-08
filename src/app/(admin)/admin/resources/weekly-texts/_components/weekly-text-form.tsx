@@ -80,7 +80,7 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
     if (submissionState.success) {
       formRef.current?.reset();
       resetForm();
-      setSelectedImageNames([]);
+      // setSelectedImageNames([]);
       router.push("/admin/resources/weekly-texts");
       router.refresh();
     }
