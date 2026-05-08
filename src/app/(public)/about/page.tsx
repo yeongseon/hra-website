@@ -52,8 +52,10 @@ export default function AboutPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-6">주요 목적 및 비전</h2>
           <div className="w-12 h-1 bg-[#2563EB] mx-auto rounded-full mb-8" />
           <p className="text-[#666666] text-lg leading-relaxed max-w-2xl mx-auto">
-            HRA는 단순한 지식 전달을 넘어, 업무능력과 성품, 사명감을 고루 갖춘 3C 인재를 양성합니다.<br />
-            비영리 기반으로 수익이 아닌 청년의 성장을 중심에 두며, 사고력과 표현력, 실천력을 기르는 학습자 주도형 교육을 지향합니다.
+            HRA는 단순한 지식 전달을 넘어, <br />
+            업무능력과 성품, 사명감을 고루 갖춘 3C 인재를 양성합니다.<br />
+            비영리 기반으로 수익이 아닌 청년의 성장을 중심에 두며, <br />
+            사고력과 표현력, 실천력을 기르는 학습자 주도형 교육을 지향합니다.
           </p>
         </div>
 
@@ -70,8 +72,8 @@ export default function AboutPage() {
                 <span className="text-xl font-bold text-[#1a1a1a]">목적</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                AI 활용 능력과 인간 중심 가치를 겸비한<br />
-                차세대 리더를 육성한다.
+                AI 활용 능력과 인간 중심 가치를 <br />
+                겸비한 차세대 리더를 육성한다.
               </p>
             </div>
 
@@ -81,8 +83,9 @@ export default function AboutPage() {
                 <span className="text-xl font-bold text-[#1a1a1a]">미션</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                매주 고전 읽기와 케이스 스터디로 청년의<br />
-                사고력·실무력·인성을 1년간 체계적으로 성장시킨다.
+                매주 고전 읽기와 케이스 스터디로 <br />
+                청년의 사고력·실무력·인성을 <br />
+                1년간 체계적으로 성장시킨다.
               </p>
             </div>
           </div>
@@ -110,7 +113,7 @@ export default function AboutPage() {
 
           {/* Card 2 */}
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
-            <span className="absolute bottom-4 left-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">성품</h3>
@@ -122,7 +125,7 @@ export default function AboutPage() {
 
           {/* Card 3 */}
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
               <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">사명감</h3>

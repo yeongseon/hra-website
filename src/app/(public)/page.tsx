@@ -27,7 +27,7 @@ export default function Home() {
             깊이 사고하고 넓게 실천하는 교육
           </p>
           <p className="text-lg leading-8 text-[#666666] max-w-3xl mt-4 text-center">
-            HRA는 청년들이 더 깊이 사고하고, 더 넓게 실천하며, 공동체 안에서 성장하도록 돕는 교육 프로그램입니다.<br />
+            HRA는 청년들이 더 깊이 사고하고, 더 넓게 실천하며, 공동체 안에서 성장하도록 돕는 교육 프로그램입니다. <br />
             고전 읽기와 토론, 케이스 스터디를 통해 생각을 훈련하고, 배움을 삶과 사회로 연결합니다.<br />
             단순한 지식 습득을 넘어, 업무능력·성품·사명감을 함께 기르는 것을 목표로 합니다.
           </p>
@@ -107,7 +107,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
                   <Target className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 
@@ -128,8 +128,8 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
-                  <Briefcase className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
+                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Briefcase className="w-8 h-8 mt-1 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 
                 <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
@@ -149,7 +149,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
                   <Heart className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 
@@ -174,7 +174,7 @@ export default function Home() {
       </div>
 
       <div className="w-full bg-[#EFF6FF]">
-        <AlumniCarousel />
+        {/* <AlumniCarousel /> */}
       </div>
     </div>
   );
