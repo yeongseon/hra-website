@@ -7,7 +7,11 @@ import ApplyForm from "./_components/apply-form";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
-export default async function RecruitmentApplyPage(props: PageProps<"/recruitment/apply">) {
+export default async function RecruitmentApplyPage(props: {
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
+  };
+}) {
   const searchParams = await props.searchParams;
   const cohortParam = searchParams.cohort;
   const cohortId = typeof cohortParam === "string" ? cohortParam : "";
