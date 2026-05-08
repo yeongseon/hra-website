@@ -6,7 +6,6 @@ import ApplyForm from "./_components/apply-form";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
-// 타입을 분리하여 선언하면 Parsing error를 원천 차단할 수 있습니다.
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
