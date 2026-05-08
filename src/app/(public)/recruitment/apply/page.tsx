@@ -7,14 +7,14 @@ import ApplyForm from "./_components/apply-form";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
-export default async function RecruitmentApplyPage(props: {
+// 에러가 발생하는 13번 라인 근처를 안전하게 분리했습니다.
+interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-    [key: string]: string | string[] | undefined;
-  };
-}) {
-  const searchParams = (await props.searchParams) ?? {};
-  const cohortParam = searchParams.cohort;
+}
+
+export default async function RecruitmentApplyPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const cohortParam = resolvedSearchParams.cohort;
   const cohortId = typeof cohortParam === "string" ? cohortParam : "";
 
   if (!cohortId) {
