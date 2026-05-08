@@ -125,7 +125,6 @@ export default async function PressPage({
               );
             })}
           </ul>
-          </section>
 
           {totalPages > 1 && (
             <div className="mt-8 flex justify-center gap-2">
@@ -152,3 +151,4 @@ export default async function PressPage({
     </div>
   );
 }
+
