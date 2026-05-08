@@ -148,7 +148,7 @@ export default async function PressPage({
               })}
             </div>
           )}
-        )}
+        ))}
     </div>
   );
 }
