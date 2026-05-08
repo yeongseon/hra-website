@@ -12,7 +12,7 @@ export default async function RecruitmentApplyPage(props: {
     [key: string]: string | string[] | undefined;
   };
 }) {
-  const searchParams = await props.searchParams;
+  const searchParams = (await props.searchParams) ?? {};
   const cohortParam = searchParams.cohort;
   const cohortId = typeof cohortParam === "string" ? cohortParam : "";
 
