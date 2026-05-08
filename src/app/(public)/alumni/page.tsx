@@ -47,12 +47,13 @@ export default async function AlumniPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-14">
-        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          수료생 이야기
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
-          수료생 이야기
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
+  
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+            수료생 이야기
+          </h1>
+        </div>
         <p className="max-w-2xl text-sm text-[#666666] md:text-base">
           HRA를 거쳐 간 수료생들이 각자의 자리에서 어떻게 성장했는지, 그 변화의 순간을 짧은 이야기로 전합니다.
         </p>
@@ -68,7 +69,7 @@ export default async function AlumniPage() {
           {stories.map((story, index) => (
             <article
               key={story.id}
-              className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-12`}
+              className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-8`}
             >
               <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
                 {story.imageUrl ? (
@@ -77,11 +78,11 @@ export default async function AlumniPage() {
                     alt={`${story.name} 수료생 사진`}
                     width={600}
                     height={600}
-                    className="aspect-square w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
+                    className="aspect-[4/5] max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
                   />
                 ) : (
                   <div
-                    className={`flex aspect-square w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
+                    className={`flex aspect-[4/5] max-w-[420px] w-full items-center justify-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
                   >
                     <span className="text-sm font-medium text-white/40">수료생 사진</span>
                   </div>

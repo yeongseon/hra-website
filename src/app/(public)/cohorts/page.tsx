@@ -58,7 +58,7 @@ export default async function CohortsPage() {
       <section className="mb-10 sm:mb-14 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
               기수 소개
             </h1>

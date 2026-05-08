@@ -39,15 +39,13 @@ export default async function GalleryPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-14">
-        <Badge
-          variant="outline"
-          className="border-emerald-300 bg-emerald-50 text-emerald-700"
-        >
-          HRA GALLERY
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
-          갤러리
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
+  
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+            갤러리
+          </h1>
+        </div>
         <p className="max-w-2xl text-sm text-[#666666] md:text-base">
           수업, 행사, 기수별 사진 모음을 만나보세요.
         </p>

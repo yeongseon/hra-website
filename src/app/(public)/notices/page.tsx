@@ -24,10 +24,12 @@ const formatDate = (value: Date) =>
 export default async function NoticesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q ?? "").trim();
+  const currentPage = Number(params.page ?? "1");
+  const ITEMS_PER_PAGE = 10;
 
   let noticeList = await db
     .select({
@@ -45,13 +47,17 @@ export default async function NoticesPage({
     const normalizedQuery = query.toLowerCase();
     noticeList = noticeList.filter((notice) => notice.title.toLowerCase().includes(normalizedQuery));
   }
+  const totalCount = noticeList.length;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentNotices = noticeList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 sm:mb-14 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-[#1a1a1a]">
               공지사항
             </h1>
@@ -95,8 +101,8 @@ export default async function NoticesPage({
           </div>
 
           <div className="flex flex-col">
-            {noticeList.map((notice, index) => {
-              const num = noticeList.length - index;
+            {currentNotices.map((notice, index) => {
+              const num = totalCount - startIndex - index;
 
               return (
                 <Link
@@ -137,6 +143,31 @@ export default async function NoticesPage({
               );
             })}
           </div>
+        </div>
+      )}
+      {totalPages > 1 && (
+        <div className="mt-8 flex justify-center gap-2">
+          {Array.from({ length: totalPages }, (_, index) => {
+            const page = index + 1;
+
+            const href = query
+              ? `/notices?q=${encodeURIComponent(query)}&page=${page}`
+              : `/notices?page=${page}`;
+
+            return (
+              <Link
+                key={page}
+                href={href}
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                  currentPage === page
+                    ? "bg-[#2563EB] text-white"
+                    : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
+                }`}
+              >
+                {page}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

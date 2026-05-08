@@ -48,7 +48,7 @@ export default async function FacultyPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 text-center sm:mb-14 sm:text-left">
         <div className="flex items-center gap-3 justify-center sm:justify-start">
-          <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+          <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
           <h1 className="text-3xl font-semibold tracking-tight text-[#1a1a1a] sm:text-4xl md:text-5xl">
             교수진 소개
           </h1>

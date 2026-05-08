@@ -104,15 +104,12 @@ export default async function RecruitmentPage() {
       <section className="mb-10 space-y-4 sm:mb-16">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-[#2563EB] rounded-full" />
+            <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
             <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-6xl">
               모집안내
             </h1>
           </div>
-          <div className="flex items-start gap-4 shrink-0">
-            <EnvelopeIcon isOpen={isRecruitmentOpen} />
-          </div>
-        </div>
+         </div>
         <p className="mt-4 max-w-3xl text-sm text-[#666666] md:text-base">
           HRA는 배우고 성장하고 싶은 모두를 환영합니다.
         </p>

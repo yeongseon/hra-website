@@ -8,7 +8,6 @@
 
 import type { Metadata } from "next";
 import { desc } from "drizzle-orm";
-import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
 import { PressLink } from "./_components/press-link";
@@ -31,7 +30,11 @@ const formatDate = (value: Date) =>
     .replace(/\.\s?$/, "")
     .replace(/\.\s/g, ".");
 
-export default async function PressPage() {
+export default async function PressPage({
+  searchParams,
+}: {
+  searchParams?: { page?: string };
+}) {
   const articles = await db
     .select()
     .from(pressArticles)
@@ -39,16 +42,29 @@ export default async function PressPage() {
 
   // 게시판 번호는 최신순(상단)부터 큰 번호 부여
   const totalCount = articles.length;
+  const ITEMS_PER_PAGE = 10;
+
+  const currentPage = Number(searchParams?.page ?? "1");
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const currentArticles = articles.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+);
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
       <section className="mb-10 space-y-4 sm:mb-14">
-        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-          HRA PRESS
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
-          언론보도
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-12 bg-[#2563EB] rounded-full" />
+  
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl lg:text-5xl">
+            언론보도
+          </h1>
+        </div>
         <p className="max-w-2xl text-sm text-[#666666] md:text-base">
           HRA가 소개된 언론보도를 모아보았습니다. 다양한 매체에서 전한 HRA의 이야기와 주요 소식을 확인해보세요.
         </p>
@@ -73,9 +89,9 @@ export default async function PressPage() {
           </div>
 
           <ul className="divide-y divide-[#D9D9D9]">
-            {articles.map((article, index) => {
+            {currentArticles.map((article, index) => {
               // 최신 항목이 가장 큰 번호를 갖도록 (게시판 일반 규칙)
-              const number = totalCount - index;
+              const number = totalCount - startIndex - index;
               return (
                 <li key={article.id}>
                   <PressLink
@@ -109,8 +125,30 @@ export default async function PressPage() {
               );
             })}
           </ul>
-        </section>
-      )}
+          </section>
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center gap-2">
+              {Array.from({ length: totalPages }, (_, index) => {
+                const page = index + 1;
+
+                return (
+                  <a
+                    key={page}
+                    href={`/press?page=${page}`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? "bg-[#2563EB] text-white"
+                        : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
+                    }`}
+                  >
+                    {page}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        )}
     </div>
   );
 }
