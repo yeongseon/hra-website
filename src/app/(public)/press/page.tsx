@@ -33,7 +33,7 @@ const formatDate = (value: Date) =>
 export default async function PressPage({
   searchParams,
 }: {
-  searchParams?: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }) {
   const articles = await db
     .select()
@@ -43,8 +43,8 @@ export default async function PressPage({
   // 게시판 번호는 최신순(상단)부터 큰 번호 부여
   const totalCount = articles.length;
   const ITEMS_PER_PAGE = 10;
-
-  const currentPage = Number(searchParams?.page ?? "1");
+  const params = await searchParams;
+  const currentPage = Number(params.page ?? "1");
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
