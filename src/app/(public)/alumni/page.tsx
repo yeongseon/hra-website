@@ -69,7 +69,7 @@ export default async function AlumniPage() {
           {stories.map((story, index) => (
             <article
               key={story.id}
-              className={`flex flex-col gap-8 md:grid md:grid-cols-2 md:items-center md:gap-8`}
+              className={`flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-center md:gap-8`}
             >
               <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
                 {story.imageUrl ? (
@@ -78,7 +78,7 @@ export default async function AlumniPage() {
                     alt={`${story.name} 수료생 사진`}
                     width={600}
                     height={600}
-                    className="aspect-[4/5] max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
+                    className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
                   />
                 ) : (
                   <div

@@ -125,29 +125,28 @@ export default async function PressPage({
               );
             })}
           </ul>
-
-          {totalPages > 1 && (
-            <div className="mt-8 flex justify-center gap-2">
-              {Array.from({ length: totalPages }, (_, index) => {
-                const page = index + 1;
-
-                return (
-                  <a
-                    key={page}
-                    href={`/press?page=${page}`}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                      currentPage === page
-                        ? "bg-[#2563EB] text-white"
-                        : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
-                    }`}
-                  >
-                    {page}
-                  </a>
-                );
-              })}
-            </div>
-          )}
         </section>
+        {totalPages > 1 && (
+          <div className="mt-8 flex justify-center gap-2">
+            {Array.from({ length: totalPages }, (_, index) => {
+              const page = index + 1;
+
+              return (
+                <a
+                  key={page}
+                  href={`/press?page=${page}`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                    currentPage === page
+                      ? "bg-[#2563EB] text-white"
+                      : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
+                  }`}
+                >
+                  {page}
+                </a>
+              );
+            })}
+          </div>
+        )}
       )}
     </div>
   );
