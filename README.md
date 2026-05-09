@@ -4,8 +4,9 @@
 
 이 가이드는 코딩이 처음인 고등학생이나 대학생분들도 "나도 웹사이트를 만들 수 있겠는데?"라는 생각이 들 정도로 쉽고 친절하게 작성되었습니다. 우리 함께 멋진 웹사이트를 만들어봐요!
 
-- **실제 서비스 구경하기**: [https://hra-website-theta.vercel.app](https://hra-website-theta.vercel.app)
-- **코드 저장소**: [https://github.com/yeongseon/hra-website.git](https://github.com/yeongseon/hra-website.git)
+- 🌐 **실제 서비스 구경하기**: [https://hra-website-theta.vercel.app](https://hra-website-theta.vercel.app)
+- 📚 **개발 가이드 문서 (MkDocs)**: [https://yeongseon.github.io/hra-website/](https://yeongseon.github.io/hra-website/) — 처음 기여하는 분은 여기부터!
+- 💻 **코드 저장소**: [https://github.com/yeongseon/hra-website.git](https://github.com/yeongseon/hra-website.git)
 
 ---
 
@@ -157,8 +158,9 @@ import { revalidatePath } from "next/cache"; // 4. "화면 새로고침해!" 하
 
 ## 11. 🚢 배포
 - **우리 사이트**: Vercel을 통해 전 세계 어디서든 접속할 수 있게 되어 있어요.
-- **설명서**: MkDocs를 이용해 [온라인 문서](https://yeongseon.github.io/hra-website/)도 운영 중이에요.
+- **개발 가이드 문서**: [https://yeongseon.github.io/hra-website/](https://yeongseon.github.io/hra-website/) — MkDocs로 운영 중인 풀 가이드 (처음 기여하는 분 필독!)
 - **주의사항**: 코드를 고친 뒤에는 꼭 `npm run build`를 해서 문제가 없는지 확인해야 해요!
+- **자동 안전망**: `npm install` 한 번이면 `pre-commit`(타입 검사) + `pre-push`(빌드 검증) 훅이 자동으로 켜져요. 이게 있으면 깨진 코드를 push 하려고 해도 컴퓨터가 막아줍니다. 자세한 내용은 👉 **[빌드·배포 안전 가이드](https://yeongseon.github.io/hra-website/contributing/build-and-deploy-safety/)** 를 꼭 읽어주세요. (10분이면 다 읽어요!)
 
 ---
 

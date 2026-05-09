@@ -43,6 +43,7 @@ nav:
   - 🤝 기여하기:
       - 협업 워크플로우: contributing/workflow.md
       - 코드 컨벤션: contributing/conventions.md
+      - 빌드·배포 안전 가이드 ⚠️: contributing/build-and-deploy-safety.md
       - AI 도구로 기여하기: contributing/ai-tools.md
       - 난이도별 작업 가이드: contributing/tasks-by-level.md
   - 🔧 사이트 수정:

@@ -194,3 +194,45 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
 - **APPROVE**: 커밋 진행
 
 > Oracle 결과를 받기 전에 커밋·푸시하는 것은 금지됩니다. 백그라운드로 호출했다면 결과 도착까지 응답을 종료하고 대기하세요.
+
+## 12. 작업자(특히 학생) 필수 체크리스트
+
+> 배경: 2026-05-08 ~ 09 사이 한 PR 에서 `npm run build` 를 로컬에서 한 번도 돌리지 않은 채 push 하여
+> Vercel 배포가 11회 연속 실패한 사고가 있었습니다. (커밋: 5f11df9 → 5f4ac2d)
+> 원인은 (1) Next 16 의 `searchParams` Promise 화 미인지, (2) JSX 괄호 매칭 깨짐 두 가지였고,
+> 둘 다 로컬 빌드 한 번이면 즉시 발견됐을 문제였습니다.
+
+### 자동 가드 (Husky 훅 — 자동으로 동작함)
+
+- **pre-commit**: `npm run typecheck` 자동 실행 (10~20초). 타입 에러 있으면 커밋 차단
+- **pre-push**: `npm run build` 자동 실행 (1~3분). 빌드 실패하면 push 차단
+
+> 훅이 귀찮다고 `--no-verify` 로 우회하지 마세요. 그게 11회 push-fail 사고의 원인입니다.
+> 1~3분 기다리는 게 Vercel 배포 실패하고 11번 다시 push 하는 것보다 백배 빠릅니다.
+
+### 수동 체크리스트 (push 전에 한 번 확인)
+
+- [ ] `npm run build` 가 로컬에서 통과하는가? (pre-push 훅이 자동 실행하지만 직접 한 번 더 확인 권장)
+- [ ] 페이지 컴포넌트의 `params` / `searchParams` 가 `Promise<...>` 타입인가? (Next 16 필수)
+  - ✅ `searchParams: Promise<{ q?: string }>` + `const params = await searchParams`
+  - ❌ `searchParams: { q?: string }` (옛 Next 14 패턴, Next 16 빌드 실패)
+- [ ] `import { z } from "zod/v4"` 인가? (`"zod"` 단독은 금지)
+- [ ] 새 JSX 블록 `{조건 && (...)}` 추가 시 닫는 `)}` 짝이 맞는가?
+- [ ] 다중 파일 변경이라면 §11 의 Oracle 리뷰를 호출했는가?
+
+### 빌드 실패 시 자주 보는 에러와 해결법
+
+| 에러 메시지 (일부) | 원인 | 해결 |
+|---|---|---|
+| `Type '{ page?: string }' is missing ... 'then'` | `searchParams` 동기 타입 사용 | `Promise<{ ... }>` 로 변경 + `await` |
+| `searchParams.page` 가 undefined | `await` 누락 | `const params = await searchParams` 후 `params.page` |
+| `Unexpected token` / `Expression expected` | JSX 괄호 매칭 깨짐 | 새로 추가한 `{...&&(...)}` 의 `)}` 위치 점검 |
+| `Module '"zod"' has no exported member ...` | zod v4 import 경로 누락 | `from "zod/v4"` 로 수정 |
+
+### 처음 클론한 후 한 번만
+
+```bash
+npm install   # husky 가 자동으로 .husky/ 훅을 활성화함 (prepare 스크립트)
+```
+
+훅이 동작하지 않는다면 `npx husky` 를 한 번 더 실행하세요.

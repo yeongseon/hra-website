@@ -1,0 +1,37 @@
+# =====================================================================
+# pre-push 훅: git push 직전에 실행되는 최종 안전망
+#
+# 역할: Vercel 에서 실패할 빌드를 미리 잡아냄 (1~3분 걸림)
+# - npm run build: Next.js 프로덕션 빌드 (Vercel 과 동일한 검증)
+#
+# ⚠️  학생 작업자에게: 이 훅이 실패하면 push 가 차단됩니다.
+#    이건 Vercel 배포 실패를 미리 막아주는 마지막 안전벨트입니다.
+#    push-fail-fix 사이클을 11번 반복했던 사고를 다시는 만들지 맙시다.
+#
+#    빌드가 1~3분 걸리니 잠깐 차 한 잔 마시고 오세요 ☕
+#    절대로 `--no-verify` 로 우회하지 마세요.
+# =====================================================================
+
+echo "🏗️  [pre-push] Next.js 프로덕션 빌드 검증 중... (1~3분)"
+echo "    Vercel 배포 전 마지막 안전망입니다. 잠시만 기다려주세요."
+echo ""
+
+npm run build || {
+  echo ""
+  echo "❌ ❌ ❌  빌드 실패! push 가 중단되었습니다.  ❌ ❌ ❌"
+  echo ""
+  echo "   위 에러 메시지를 끝까지 읽고 해당 파일을 수정하세요."
+  echo "   가장 흔한 실수:"
+  echo "     1) Next 16 에서는 searchParams/params 가 Promise 입니다."
+  echo "        ✅ searchParams: Promise<{ q?: string }>"
+  echo "        ❌ searchParams: { q?: string }"
+  echo "        그리고 반드시 await 해야 합니다."
+  echo "     2) JSX 괄호 매칭 (특히 {조건 && (...)} 블록 추가 시 )} 짝)"
+  echo "     3) zod 는 'zod/v4' 에서 import (절대 'zod' 아님)"
+  echo ""
+  echo "   수정 후 다시 push 하세요. (절대 --no-verify 로 우회하지 말 것!)"
+  exit 1
+}
+
+echo ""
+echo "✅ [pre-push] 빌드 통과! 안전하게 push 합니다."
