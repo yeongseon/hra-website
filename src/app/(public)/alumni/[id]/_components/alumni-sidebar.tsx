@@ -35,7 +35,7 @@ export function AlumniSidebar({ stories, currentStoryId }: AlumniSidebarProps) {
     <div className="sticky top-24">
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold text-[#1a1a1a] mb-2">수료생 이야기</h2>
-        <div className="w-10 h-1 bg-[#3B82F6] mx-auto mb-6 rounded-full" />
+        <div className="w-10 h-1 bg-[#2563EB] mx-auto mb-6 rounded-full" />
       </div>
 
       <div className="flex flex-col gap-6 mb-8">

@@ -266,7 +266,7 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
       <Button
         type="submit"
         disabled={isPending || selectedFiles.length === 0}
-        className="w-full bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+        className="w-full bg-[#2563EB] text-white hover:bg-[#2563EB]"
       >
         <Plus className="mr-1 size-4" />
         {submitLabel}

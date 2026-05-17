@@ -59,35 +59,53 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto bg-[#f9fafb] rounded-2xl p-8 md:p-12 relative">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-24 relative">
-            {/* Connecting Line (Desktop) */}
-            <div className="hidden md:block absolute top-12 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-[#D9D9D9]" />
-            {/* Connecting Line (Mobile) */}
-            <div className="md:hidden absolute left-1/2 top-12 -translate-x-1/2 w-[1px] h-32 bg-[#D9D9D9]" />
+        <div className="max-w-4xl mx-auto bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-8 md:p-12">
+          {/*
+            mobile  : flex-col + items-center  → 수직 스택, 각 항목을 수평 중앙 정렬
+            desktop : md:flex-row + md:items-start → 수평 배치, 모든 항목을 상단 기준 정렬
 
-            {/* Left Circle: 목적 */}
-            <div className="relative flex flex-col items-center text-center z-10 w-full max-w-[280px]">
+            핵심: md:items-start 사용 이유
+              items-center 는 각 flex 항목의 수직 중앙을 맞춤.
+              wrapper(원+텍스트) 높이가 서로 다르면(텍스트 줄수 차이) 중앙이 어긋나
+              결과적으로 원(circle) 위치가 달라진다.
+              items-start 는 wrapper 상단을 동일 y=0 기준에 맞추므로
+              두 원의 center y 가 모두 y=48px(원 높이 96px의 절반)으로 정확히 일치한다.
+          */}
+          <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-0 md:justify-center">
+
+            {/* 목적 원형 + 설명 */}
+            <div className="flex flex-col items-center text-center w-full max-w-[280px] md:w-64">
               <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6">
                 <span className="text-xl font-bold text-[#1a1a1a]">목적</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                AI 활용 능력과 인간 중심 가치를 <br />
+                AI 활용 능력과 인간 중심 가치를<br />
                 겸비한 차세대 리더를 육성한다.
               </p>
             </div>
 
-            {/* Right Circle: 미션 */}
-            <div className="relative flex flex-col items-center text-center z-10 w-full max-w-[280px]">
+            {/*
+              연결선 — flex item 으로 배치 (absolute 위치 제거)
+              mobile : 세로선 (w-[1px] h-12)
+              desktop: 가로선 (w-16 lg:w-24 h-[1px])
+                self-start : items-start 와 동일, 상단 기준
+                mt-12(48px): 원 높이 h-24(96px) ÷ 2 = 원 center y 와 정확히 일치
+            */}
+            <div aria-hidden="true" className="w-[1px] h-12 bg-blue-200 flex-none md:hidden" />
+            <div aria-hidden="true" className="hidden md:block w-16 lg:w-24 flex-none h-[1px] bg-blue-200 self-start mt-12" />
+
+            {/* 미션 원형 + 설명 */}
+            <div className="flex flex-col items-center text-center w-full max-w-[280px] md:w-64">
               <div className="w-24 h-24 rounded-full bg-white border border-[#D9D9D9] flex items-center justify-center shadow-[var(--shadow-soft)] mb-6">
                 <span className="text-xl font-bold text-[#1a1a1a]">미션</span>
               </div>
               <p className="text-[#666666] leading-relaxed">
-                매주 고전 읽기와 케이스 스터디로 <br />
-                청년의 사고력·실무력·인성을 <br />
+                매주 고전 읽기와 케이스 스터디로<br />
+                청년의 사고력·실무력·인성을<br />
                 1년간 체계적으로 성장시킨다.
               </p>
             </div>
+
           </div>
         </div>
       </section>

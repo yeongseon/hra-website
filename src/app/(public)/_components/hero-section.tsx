@@ -42,7 +42,10 @@ export function HeroSection() {
               <Fragment key={`chunk-${index}-${chunk}`}>
                 {chunk}
                 {index < array.length - 1 && (
-                  <span className="text-blue-600 underline decoration-blue-600/30 underline-offset-4">본질</span>
+                  // 다크 오버레이 위에서 색상만으로 강조.
+                  // blue-400(#60a5fa): 대비비 ≈5.5:1(WCAG AA ✓), 채도 충분해 흰색과 hue 차이로 시선 분리.
+                  // blue-300은 너무 밝아 흰 텍스트와 묻히고, blue-500 이하는 다크 배경에서 흡수됨.
+                  <span className="text-[#2563EB]">본질</span>
                 )}
               </Fragment>
             ))}
@@ -63,7 +66,7 @@ export function HeroSection() {
         </h2>
 
         <h1
-          className={`font-extrabold tracking-tight text-white transition-all duration-1000 whitespace-pre-line leading-[1.1]
+          className={`font-extrabold tracking-tight text-[#C7C7C7] transition-all duration-1000 whitespace-pre-line leading-[1.1]
             ${isTypingComplete ? "text-[42px] md:text-[56px] lg:text-[66px]" : "text-[50px] md:text-[66px] lg:text-[80px]"}
           `}
         >

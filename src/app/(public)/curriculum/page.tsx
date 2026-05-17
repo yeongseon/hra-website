@@ -266,10 +266,8 @@ export default function CurriculumPage() {
           </p>
         </section>
 
-        {/* 52주 여정 타임라인 섹션 */}
+        {/* 타임라인 섹션 */}
         <section className="mb-24 sm:mb-32">
-          <h2 className="text-xl font-bold text-[#1a1a1a] mb-8 sm:mb-12">52주 여정</h2>
-
           <div>
             {/*
               파란색 타임라인 띠지
