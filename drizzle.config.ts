@@ -1,3 +1,6 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+
 /**
  * ======================================================
  * Drizzle ORM 설정 파일

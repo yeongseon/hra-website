@@ -42,7 +42,13 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <Image src="/images/faculty-classics.jpeg" alt="고전 읽기 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
+            <Image
+              src="/images/faculty-classics.jpeg"
+              alt="고전 읽기 수업"
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover transition-all duration-700 group-hover:scale-105"
+            />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
 
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
@@ -58,7 +64,13 @@ export default function Home() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <Image src="/images/faculty-casestudy.jpeg" alt="케이스 스터디 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
+            <Image
+              src="/images/faculty-casestudy.jpeg"
+              alt="케이스 스터디 수업"
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover transition-all duration-700 group-hover:scale-105"
+            />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
 
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
@@ -74,7 +86,13 @@ export default function Home() {
           </div>
 
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] shadow-[var(--shadow-soft)] aspect-square">
-            <Image src="/images/faculty-lecture.jpeg" alt="특강 수업" fill className="object-cover transition-all duration-700 group-hover:scale-105" />
+            <Image
+              src="/images/faculty-lecture.jpeg"
+              alt="특강 수업"
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover transition-all duration-700 group-hover:scale-105"
+            />
             <div className="absolute inset-0 bg-black/20 transition-colors duration-500 group-hover:bg-black/60" />
 
             <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-500">
