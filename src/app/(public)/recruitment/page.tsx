@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
-import { Fragment } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
-import { EnvelopeIcon } from "./_components/envelope-icon";
+import { ProcessSteps } from "./_components/process-steps";
 
 export const dynamic = "force-dynamic";
 
@@ -16,44 +15,6 @@ export const metadata: Metadata = {
   title: "모집안내",
   description: "HRA 신규 기수 모집 일정과 지원 절차를 안내합니다. 인간 르네상스를 함께 꿈꿀 청년들을 기다립니다.",
 };
-
-const processSteps = [
-  {
-    step: "1단계",
-    title: "지원서 접수",
-    description:
-      "홈페이지 내 온라인 지원서를 작성하여 제출합니다. 자기소개, 지원 동기, 향후 계획 등의 항목을 성실하게 작성해 주세요.",
-  },
-  {
-    step: "2단계",
-    title: "서류 심사",
-    description:
-      "제출된 지원서를 바탕으로 기본 소양, 성장 가능성, 지원 동기의 진정성을 중심으로 평가합니다. 합격자에게는 개별 연락으로 면접 일정을 안내드립니다.",
-  },
-  {
-    step: "3단계",
-    title: "면접 진행",
-    description:
-      "3:1로 진행됩니다. 면접은 매년 5~6월 중 실시되며, 구체적인 일정은 서류 합격자에게 별도 안내됩니다.",
-  },
-  {
-    step: "4단계",
-    title: "최종 합격",
-    description:
-      "서류 및 면접 결과를 종합하여 최종 합격자를 선발합니다. 합격자 발표는 홈페이지 공지 및 개별 연락으로 진행됩니다.",
-  },
-  {
-    step: "5단계",
-    title: "사전 학습",
-    description:
-      "합격자를 대상으로 입학 전 사전 학습 과정이 진행됩니다. 본 교육에 앞서 기본적인 소양을 쌓는 시간입니다.",
-  },
-  {
-    step: "6단계",
-    title: "입학식",
-    description: "매년 9월, 수료식과 동시에 신입 기수 입학식이 개최됩니다.",
-  },
-] as const;
 
 const statusMap = {
   UPCOMING: {
@@ -116,20 +77,7 @@ export default async function RecruitmentPage() {
       </section>
 
       <section className="mb-10 sm:mb-16">
-        <div className="flex flex-col gap-3 md:flex-row md:items-stretch md:justify-center md:gap-2">
-          {processSteps.map((item, index) => (
-            <Fragment key={item.step}>
-              <article className="rounded-2xl border border-[#D9D9D9] bg-white p-5 shadow-[var(--shadow-soft)] md:flex md:w-44 md:flex-1 md:flex-col">
-                <p className="text-sm font-semibold text-[#2563EB]">{item.step}</p>
-                <h2 className="mt-2 text-base font-semibold text-[#1a1a1a]">{item.title}</h2>
-                <p className="mt-3 text-sm leading-6 text-[#666666]">{item.description}</p>
-              </article>
-              {index < processSteps.length - 1 && (
-                <span className="hidden self-center text-lg text-[#D9D9D9] md:inline-flex">&gt;</span>
-              )}
-            </Fragment>
-          ))}
-        </div>
+        <ProcessSteps />
       </section>
 
       <section className="space-y-4">

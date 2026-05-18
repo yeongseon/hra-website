@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Target, Briefcase, Heart } from "lucide-react";
-import { AlumniCarousel } from "./_components/alumni-carousel";
 import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
 
@@ -126,7 +125,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
                   <Target className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 
@@ -147,8 +146,8 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
-                  <Briefcase className="w-8 h-8 mt-1 text-blue-600 group-hover:text-white transition-colors duration-500" />
+                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                  <Briefcase className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 
                 <h3 className="text-[24px] font-bold text-[#1a1a1a] group-hover:text-white transition-colors duration-500 mb-1">
@@ -168,7 +167,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-600 to-blue-800 -translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-in-out z-0" />
 
               <div className="relative z-10 flex flex-col h-full">
-                <div className="w-14 h-30 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
+                <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-8 group-hover:bg-white/20 transition-colors duration-500">
                   <Heart className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-500" />
                 </div>
 

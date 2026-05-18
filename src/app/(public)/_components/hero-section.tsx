@@ -43,9 +43,11 @@ export function HeroSection() {
                 {chunk}
                 {index < array.length - 1 && (
                   // 다크 오버레이 위에서 색상만으로 강조.
-                  // blue-400(#60a5fa): 대비비 ≈5.5:1(WCAG AA ✓), 채도 충분해 흰색과 hue 차이로 시선 분리.
-                  // blue-300은 너무 밝아 흰 텍스트와 묻히고, blue-500 이하는 다크 배경에서 흡수됨.
-                  <span className="text-[#2563EB]">본질</span>
+                  // 주변 텍스트가 흰색이 되므로 blue-400(#60a5fa)으로 상향.
+                  // blue-600(#2563EB)은 흰색 대비 밝기 차이가 작아 hue 포인트가 약해짐.
+                  // blue-400은 채도가 충분해 흰 텍스트 사이에서 hue 차이로 시선을 분리하면서
+                  // 다크 오버레이 위에서도 선명하게 유지됨 (WCAG AA ✓).
+                  <span className="text-blue-400">본질</span>
                 )}
               </Fragment>
             ))}
@@ -58,7 +60,7 @@ export function HeroSection() {
   return (
     <section className="relative flex flex-col items-center justify-center min-h-[90vh] px-4 overflow-hidden text-center bg-gray-900">
       <Image src="/images/hero-bg.jpeg" alt="HRA 수업 현장" fill className="object-cover z-0" priority />
-      <div className="absolute inset-0 z-0 bg-black/50" />
+      <div className="absolute inset-0 z-0 bg-black/60" />
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-5xl gap-6 w-full mx-auto">
         <h2 className="text-sm font-semibold tracking-widest text-white/80 uppercase">
@@ -66,14 +68,14 @@ export function HeroSection() {
         </h2>
 
         <h1
-          className={`font-extrabold tracking-tight text-[#C7C7C7] transition-all duration-1000 whitespace-pre-line leading-[1.1]
+          className={`font-extrabold tracking-tight text-white transition-all duration-1000 whitespace-pre-line leading-[1.1]
             ${isTypingComplete ? "text-[42px] md:text-[56px] lg:text-[66px]" : "text-[50px] md:text-[66px] lg:text-[80px]"}
           `}
         >
           {renderHeading()}
         </h1>
 
-        <p className="max-w-4xl text-[18px] text-white/90 font-light tracking-wide leading-relaxed mt-4 sm:whitespace-nowrap">
+        <p className="max-w-4xl text-[18px] text-white/75 font-light tracking-wide leading-relaxed mt-4 sm:whitespace-nowrap">
           고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
         </p>
 
