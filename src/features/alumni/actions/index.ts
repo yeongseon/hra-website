@@ -126,33 +126,41 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     };
   }
 
-  const uploadedUrls: string[] = [];
-  for (const file of validatedImages.files) {
-    const url = await uploadAlumniImage(file);
-    uploadedUrls.push(url);
-  }
+  try {
+    const uploadedUrls: string[] = [];
+    for (const file of validatedImages.files) {
+      const url = await uploadAlumniImage(file);
+      uploadedUrls.push(url);
+    }
 
-  // 대표 이미지 결정
-  const representativeUrl = parsed.data.imageUrl || (uploadedUrls.length > 0 ? uploadedUrls[0] : null);
+    // 대표 이미지 결정
+    const representativeUrl = parsed.data.imageUrl || (uploadedUrls.length > 0 ? uploadedUrls[0] : null);
 
-  const [newStory] = await db.insert(alumniStories).values({
-    name: parsed.data.name,
-    title: parsed.data.title ?? null,
-    quote: parsed.data.quote,
-    content: parsed.data.content,
-    imageUrl: representativeUrl,
-    isFeatured: parsed.data.isFeatured,
-    order: parsed.data.order,
-  }).returning({ id: alumniStories.id });
+    const [newStory] = await db.insert(alumniStories).values({
+      name: parsed.data.name,
+      title: parsed.data.title ?? null,
+      quote: parsed.data.quote,
+      content: parsed.data.content,
+      imageUrl: representativeUrl,
+      isFeatured: parsed.data.isFeatured,
+      order: parsed.data.order,
+    }).returning({ id: alumniStories.id });
 
-  if (uploadedUrls.length > 0) {
-    await db.insert(alumniStoryImages).values(
-      uploadedUrls.map((url, index) => ({
-        alumniStoryId: newStory.id,
-        url,
-        order: index,
-      }))
-    );
+    if (uploadedUrls.length > 0) {
+      await db.insert(alumniStoryImages).values(
+        uploadedUrls.map((url, index) => ({
+          alumniStoryId: newStory.id,
+          url,
+          order: index,
+        }))
+      );
+    }
+  } catch (error) {
+    console.error("Failed to create alumni story:", error);
+    return {
+      success: false,
+      message: "데이터베이스 저장 중 오류가 발생했습니다. DB 마이그레이션 상태를 확인해주세요.",
+    };
   }
 
   revalidateAlumniPaths();
@@ -189,38 +197,46 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     };
   }
 
-  const uploadedUrls: string[] = [];
-  for (const file of validatedImages.files) {
-    const url = await uploadAlumniImage(file);
-    uploadedUrls.push(url);
-  }
+  try {
+    const uploadedUrls: string[] = [];
+    for (const file of validatedImages.files) {
+      const url = await uploadAlumniImage(file);
+      uploadedUrls.push(url);
+    }
 
-  const [existing] = await db
-    .select({ imageUrl: alumniStories.imageUrl })
-    .from(alumniStories)
-    .where(eq(alumniStories.id, parsedId.data));
+    const [existing] = await db
+      .select({ imageUrl: alumniStories.imageUrl })
+      .from(alumniStories)
+      .where(eq(alumniStories.id, parsedId.data));
 
-  await db
-    .update(alumniStories)
-    .set({
-      name: parsed.data.name,
-      title: parsed.data.title ?? null,
-      quote: parsed.data.quote,
-      content: parsed.data.content,
-      imageUrl: parsed.data.imageUrl || existing?.imageUrl,
-      isFeatured: parsed.data.isFeatured,
-      order: parsed.data.order,
-    })
-    .where(eq(alumniStories.id, parsedId.data));
+    await db
+      .update(alumniStories)
+      .set({
+        name: parsed.data.name,
+        title: parsed.data.title ?? null,
+        quote: parsed.data.quote,
+        content: parsed.data.content,
+        imageUrl: parsed.data.imageUrl || existing?.imageUrl,
+        isFeatured: parsed.data.isFeatured,
+        order: parsed.data.order,
+      })
+      .where(eq(alumniStories.id, parsedId.data));
 
-  if (uploadedUrls.length > 0) {
-    await db.insert(alumniStoryImages).values(
-      uploadedUrls.map((url, index) => ({
-        alumniStoryId: parsedId.data,
-        url,
-        order: index,
-      }))
-    );
+    if (uploadedUrls.length > 0) {
+      await db.insert(alumniStoryImages).values(
+        uploadedUrls.map((url, index) => ({
+          alumniStoryId: parsedId.data,
+          url,
+          order: index,
+        }))
+      );
+    }
+  } catch (error) {
+    console.error("Failed to update alumni story:", error);
+    return {
+      success: false,
+      message: "수정 중 오류가 발생했습니다. DB 마이그레이션 상태를 확인해주세요.",
+    };
   }
 
   revalidateAlumniPaths();
@@ -235,17 +251,24 @@ export async function deleteAlumniStory(id: string): Promise<void> {
     return;
   }
 
-  const images = await db
-    .select({ url: alumniStoryImages.url })
-    .from(alumniStoryImages)
-    .where(eq(alumniStoryImages.alumniStoryId, parsedId.data));
+  try {
+    const images = await db
+      .select({ url: alumniStoryImages.url })
+      .from(alumniStoryImages)
+      .where(eq(alumniStoryImages.alumniStoryId, parsedId.data));
 
-  for (const img of images) {
-    if (isBlobUrl(img.url)) {
-      await deleteBlobIfExists(img.url);
+    for (const img of images) {
+      if (isBlobUrl(img.url)) {
+        await deleteBlobIfExists(img.url);
+      }
     }
-  }
 
-  await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));
+    await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));
+  } catch (error) {
+    console.error("Failed to delete alumni story:", error);
+    // 서버 액션 void 반환형이라 에러 발생 시 redirect 등으로 처리하거나 에러를 던질 수 있음
+    throw new Error("삭제 중 오류가 발생했습니다.");
+  }
+  
   revalidateAlumniPaths();
 }
