@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { asc } from "drizzle-orm";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
@@ -69,37 +71,50 @@ export default async function AlumniPage() {
           {stories.map((story, index) => (
             <article
               key={story.id}
-              className={`flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-center md:gap-8`}
+              className={`flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-center md:gap-16`}
             >
               <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
-                {story.imageUrl ? (
-                  <Image
-                    src={story.imageUrl}
-                    alt={`${story.name} 수료생 사진`}
-                    width={600}
-                    height={600}
-                    className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)]"
-                  />
-                ) : (
-                  <div
-                    className={`flex aspect-[4/5] max-w-[420px] w-full items-center justify-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)]`}
-                  >
-                    <span className="text-sm font-medium text-white/40">수료생 사진</span>
-                  </div>
-                )}
+                <Link href={`/alumni/${story.id}`} className="group block">
+                  {story.imageUrl ? (
+                    <Image
+                      src={story.imageUrl}
+                      alt={`${story.name} 수료생 사진`}
+                      width={600}
+                      height={600}
+                      className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div
+                      className={`flex aspect-[4/5] max-w-[420px] w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]`}
+                    >
+                      <span className="text-sm font-medium text-white/40">수료생 사진</span>
+                    </div>
+                  )}
+                </Link>
               </div>
 
               <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
-                <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl">
-                  &quot;{story.quote}&quot;
-                </h2>
-                <p className="mt-6 text-lg leading-relaxed text-[#666666]">
+                <Link href={`/alumni/${story.id}`} className="group">
+                  <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl group-hover:text-[#2563EB] transition-colors">
+                    &quot;{story.quote}&quot;
+                  </h2>
+                </Link>
+                <p className="mt-6 text-lg leading-relaxed text-[#666666] line-clamp-4">
                   {story.story}
                 </p>
-                <div className="mt-8">
-                  <p className="font-bold text-blue-600">{story.name}</p>
-                  {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+                
+                <div className="mt-6">
+                  <Link 
+                    href={`/alumni/${story.id}`} 
+                    className="inline-flex items-center gap-1 text-[#2563EB] font-semibold hover:underline"
+                  >
+                    이야기 더 보기 <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
 
+                <div className="mt-8 border-t border-gray-100 pt-6">
+                  <p className="font-bold text-[#1a1a1a]">{story.name}</p>
+                  {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
                 </div>
               </div>
             </article>

@@ -78,6 +78,9 @@ export default async function AdminAlumniPage() {
                       <TableCell className="text-[#666666]">{story.order}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" render={<Link href={`/alumni/${story.id}`} target="_blank" />}>
+                            보기
+                          </Button>
                           <Button variant="outline" size="sm" render={<Link href={`/admin/alumni/${story.id}`} />}>
                             편집
                           </Button>

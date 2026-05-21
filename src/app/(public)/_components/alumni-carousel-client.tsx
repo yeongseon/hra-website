@@ -59,7 +59,7 @@ export function AlumniCarouselClient({ slides }: AlumniCarouselClientProps) {
                   &quot;{alumni.quote}&quot;
                 </h3>
 
-                <Link href="/alumni" className="text-[var(--brand)] font-semibold flex items-center hover:underline transition-colors mt-auto md:mt-0 w-max text-lg">
+                <Link href={`/alumni/${alumni.id}`} className="text-[var(--brand)] font-semibold flex items-center hover:underline transition-colors mt-auto md:mt-0 w-max text-lg">
                   자세히 읽어보기 <ChevronRight className="w-5 h-5 ml-1" />
                 </Link>
               </div>
