@@ -16,7 +16,15 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
   await requireAdmin();
 
   const { id } = await params;
-  const [story] = await db.select().from(alumniStories).where(eq(alumniStories.id, id)).limit(1);
+  
+  const story = await db.query.alumniStories.findFirst({
+    where: eq(alumniStories.id, id),
+    with: {
+      images: {
+        orderBy: (images, { asc }) => [asc(images.order)],
+      },
+    },
+  });
 
   if (!story) {
     notFound();
@@ -38,6 +46,7 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
         imageUrl: story.imageUrl,
         isFeatured: story.isFeatured,
         order: story.order,
+        images: story.images,
       }}
     />
   );

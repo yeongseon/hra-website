@@ -8,7 +8,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
-import { alumniStories } from "@/lib/db/schema";
+import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
 
 const maxImageSize = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -16,12 +16,9 @@ const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
 const alumniStoryFormSchema = z.object({
   name: z.string().trim().min(1, "이름을 입력해주세요.").max(100, "이름은 100자 이하여야 합니다."),
   title: z.string().trim().max(100, "소속/직함은 100자 이하여야 합니다.").optional(),
-  quote: z.string().trim().min(1, "인용구를 입력해주세요.").max(500, "인용구는 500자 이하여야 합니다."),
+  quote: z.string().trim().min(1, "대표 문구를 입력해주세요.").max(500, "대표 문구는 500자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요.").max(5000, "내용은 5000자 이하여야 합니다."),
-  imageUrl: z
-    .union([z.literal(""), z.url("올바른 이미지 URL을 입력해주세요.")])
-    .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+  imageUrl: z.string().optional(), // 대표 이미지 URL
   isFeatured: z
     .union([z.literal("true"), z.literal("on"), z.null(), z.undefined()])
     .transform((value) => value === "true" || value === "on"),
@@ -66,32 +63,37 @@ function parseAlumniStoryFormData(formData: FormData) {
   });
 }
 
-function validateImageFile(fileEntry: FormDataEntryValue | null) {
-  if (!(fileEntry instanceof File) || fileEntry.size === 0) {
-    return { success: true as const, file: undefined };
+function validateImageFiles(formData: FormData) {
+  const files = formData.getAll("images") as File[];
+  const validFiles: File[] = [];
+
+  for (const file of files) {
+    if (file.size === 0) continue;
+
+    if (!allowedImageTypes.includes(file.type as (typeof allowedImageTypes)[number])) {
+      return {
+        success: false as const,
+        message: "이미지는 JPG, PNG, WEBP 파일만 업로드할 수 있습니다.",
+        fieldErrors: { images: "이미지는 JPG, PNG, WEBP 파일만 업로드할 수 있습니다." },
+      };
+    }
+
+    if (file.size > maxImageSize) {
+      return {
+        success: false as const,
+        message: "이미지는 5MB 이하만 업로드할 수 있습니다.",
+        fieldErrors: { images: "이미지는 5MB 이하만 업로드할 수 있습니다." },
+      };
+    }
+    validFiles.push(file);
   }
 
-  if (!allowedImageTypes.includes(fileEntry.type as (typeof allowedImageTypes)[number])) {
-    return {
-      success: false as const,
-      message: "이미지는 JPG, PNG, WEBP 파일만 업로드할 수 있습니다.",
-      fieldErrors: { image: "이미지는 JPG, PNG, WEBP 파일만 업로드할 수 있습니다." },
-    };
-  }
-
-  if (fileEntry.size > maxImageSize) {
-    return {
-      success: false as const,
-      message: "이미지는 5MB 이하만 업로드할 수 있습니다.",
-      fieldErrors: { image: "이미지는 5MB 이하만 업로드할 수 있습니다." },
-    };
-  }
-
-  return { success: true as const, file: fileEntry };
+  return { success: true as const, files: validFiles };
 }
 
 async function uploadAlumniImage(file: File) {
-  const safeFileName = file.name.replace(/\s+/g, "-");
+  const timestamp = Date.now();
+  const safeFileName = `${timestamp}-${file.name.replace(/\s+/g, "-")}`;
   const blob = await put(`alumni/${safeFileName}`, file, { access: "public" });
   return blob.url;
 }
@@ -115,29 +117,43 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     };
   }
 
-  const validatedImage = validateImageFile(formData.get("image"));
-  if (!validatedImage.success) {
+  const validatedImages = validateImageFiles(formData);
+  if (!validatedImages.success) {
     return {
       success: false,
-      message: validatedImage.message,
-      fieldErrors: validatedImage.fieldErrors,
+      message: validatedImages.message,
+      fieldErrors: validatedImages.fieldErrors,
     };
   }
 
-  // 파일 업로드가 있으면 Blob URL 사용, 없으면 직접 입력한 URL 사용
-  const imageUrl = validatedImage.file
-    ? await uploadAlumniImage(validatedImage.file)
-    : (parsed.data.imageUrl ?? null);
+  const uploadedUrls: string[] = [];
+  for (const file of validatedImages.files) {
+    const url = await uploadAlumniImage(file);
+    uploadedUrls.push(url);
+  }
 
-  await db.insert(alumniStories).values({
+  // 대표 이미지 결정
+  const representativeUrl = parsed.data.imageUrl || (uploadedUrls.length > 0 ? uploadedUrls[0] : null);
+
+  const [newStory] = await db.insert(alumniStories).values({
     name: parsed.data.name,
     title: parsed.data.title ?? null,
     quote: parsed.data.quote,
     content: parsed.data.content,
-    imageUrl,
+    imageUrl: representativeUrl,
     isFeatured: parsed.data.isFeatured,
     order: parsed.data.order,
-  });
+  }).returning({ id: alumniStories.id });
+
+  if (uploadedUrls.length > 0) {
+    await db.insert(alumniStoryImages).values(
+      uploadedUrls.map((url, index) => ({
+        alumniStoryId: newStory.id,
+        url,
+        order: index,
+      }))
+    );
+  }
 
   revalidateAlumniPaths();
   redirect("/admin/alumni");
@@ -164,30 +180,25 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     };
   }
 
-  const validatedImage = validateImageFile(formData.get("image"));
-  if (!validatedImage.success) {
+  const validatedImages = validateImageFiles(formData);
+  if (!validatedImages.success) {
     return {
       success: false,
-      message: validatedImage.message,
-      fieldErrors: validatedImage.fieldErrors,
+      message: validatedImages.message,
+      fieldErrors: validatedImages.fieldErrors,
     };
+  }
+
+  const uploadedUrls: string[] = [];
+  for (const file of validatedImages.files) {
+    const url = await uploadAlumniImage(file);
+    uploadedUrls.push(url);
   }
 
   const [existing] = await db
     .select({ imageUrl: alumniStories.imageUrl })
     .from(alumniStories)
     .where(eq(alumniStories.id, parsedId.data));
-
-  const oldImageUrl = existing?.imageUrl ?? null;
-
-  let imageUrl: string | null;
-
-  if (validatedImage.file) {
-    imageUrl = await uploadAlumniImage(validatedImage.file);
-  } else {
-    // 파일 업로드 없음 → URL 입력값 사용
-    imageUrl = parsed.data.imageUrl ?? null;
-  }
 
   await db
     .update(alumniStories)
@@ -196,14 +207,20 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
       title: parsed.data.title ?? null,
       quote: parsed.data.quote,
       content: parsed.data.content,
-      imageUrl,
+      imageUrl: parsed.data.imageUrl || existing?.imageUrl,
       isFeatured: parsed.data.isFeatured,
       order: parsed.data.order,
     })
     .where(eq(alumniStories.id, parsedId.data));
 
-  if (validatedImage.file && oldImageUrl && isBlobUrl(oldImageUrl)) {
-    await deleteBlobIfExists(oldImageUrl);
+  if (uploadedUrls.length > 0) {
+    await db.insert(alumniStoryImages).values(
+      uploadedUrls.map((url, index) => ({
+        alumniStoryId: parsedId.data,
+        url,
+        order: index,
+      }))
+    );
   }
 
   revalidateAlumniPaths();
@@ -218,13 +235,15 @@ export async function deleteAlumniStory(id: string): Promise<void> {
     return;
   }
 
-  const [existing] = await db
-    .select({ imageUrl: alumniStories.imageUrl })
-    .from(alumniStories)
-    .where(eq(alumniStories.id, parsedId.data));
+  const images = await db
+    .select({ url: alumniStoryImages.url })
+    .from(alumniStoryImages)
+    .where(eq(alumniStoryImages.alumniStoryId, parsedId.data));
 
-  if (existing?.imageUrl && isBlobUrl(existing.imageUrl)) {
-    await deleteBlobIfExists(existing.imageUrl);
+  for (const img of images) {
+    if (isBlobUrl(img.url)) {
+      await deleteBlobIfExists(img.url);
+    }
   }
 
   await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));

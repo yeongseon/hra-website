@@ -32,44 +32,46 @@ export function AlumniSidebar({ stories, currentStoryId }: AlumniSidebarProps) {
   );
 
   return (
-    <div className="sticky top-24">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-[#1a1a1a] mb-2">수료생 이야기</h2>
-        <div className="w-10 h-1 bg-[#2563EB] mx-auto mb-6 rounded-full" />
+    <div className="w-full">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-[#1a1a1a] mb-2">다른 수료생 이야기</h2>
+        <div className="w-10 h-1 bg-[#2563EB] mb-6 rounded-full" />
       </div>
 
-      <div className="flex flex-col gap-6 mb-8">
+      <div className="flex flex-col gap-4 mb-8">
         {currentStories.map((story) => (
           <Link
             key={story.id}
             href={`/alumni/${story.id}`}
-            className="group block bg-white rounded-lg border border-[#D9D9D9] overflow-hidden hover:shadow-[var(--shadow-soft)] transition-shadow"
+            className="group block bg-white rounded-xl border border-[#D9D9D9] overflow-hidden hover:shadow-[var(--shadow-soft)] transition-shadow"
           >
-            <div className="relative h-[120px] w-full bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0 border-b border-[#D9D9D9]">
-              {story.imageUrl ? (
-                <Image
-                  src={story.imageUrl}
-                  alt={story.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 350px"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-gray-400 font-medium text-sm">No Image</span>
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              <h3 className="text-[16px] font-bold text-[#1a1a1a] line-clamp-1 mb-1 group-hover:underline">
-                {story.title || `${story.name}의 이야기`}
-              </h3>
-              <p className="text-[14px] text-[#666666] line-clamp-2 mb-2">
-                {story.content}
-              </p>
-              <p className="text-sm font-medium text-[#2563EB]">
-                {story.name}
-              </p>
+            <div className="flex flex-col sm:flex-row">
+              <div className="relative h-48 sm:h-auto sm:w-48 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
+                {story.imageUrl ? (
+                  <Image
+                    src={story.imageUrl}
+                    alt={story.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, 200px"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-gray-400 font-medium text-sm">No Image</span>
+                  </div>
+                )}
+              </div>
+              <div className="p-5 flex-1 flex flex-col justify-center">
+                <h3 className="text-lg font-bold text-[#1a1a1a] line-clamp-1 mb-2 group-hover:text-[#2563EB] transition-colors">
+                  {story.title || `${story.name}의 이야기`}
+                </h3>
+                <p className="text-sm text-[#666666] line-clamp-2 mb-3">
+                  {story.content}
+                </p>
+                <p className="text-sm font-semibold text-[#2563EB]">
+                  {story.name}
+                </p>
+              </div>
             </div>
           </Link>
         ))}

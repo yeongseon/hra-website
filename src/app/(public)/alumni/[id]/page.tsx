@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { z } from "zod/v4";
 import { AlumniSidebar } from "./_components/alumni-sidebar";
+import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -91,40 +92,38 @@ export default async function AlumniDetailPage({ params }: PageProps) {
       <p className="text-center text-[#666666] mb-2">{story.name}의 이야기</p>
       <div className="mb-12" />
 
-      <div className="md:grid md:grid-cols-[65fr_35fr] gap-12">
-        <div className="order-2 md:order-1">
-          {story.imageUrl && (
-            <div className="relative w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden mb-8 border border-[#D9D9D9]">
-              <Image
-                src={story.imageUrl}
-                alt={story.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 65vw"
-              />
-            </div>
-          )}
-
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-[#1a1a1a] mb-2">{story.name}</h2>
-            {story.title && (
-              <p className="text-[#666666] font-medium">{story.title}</p>
-            )}
+      <div className="max-w-3xl mx-auto">
+        {story.imageUrl && (
+          <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-8 border border-[#D9D9D9]">
+            <Image
+              src={story.imageUrl}
+              alt={story.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 800px"
+            />
           </div>
+        )}
 
-          {story.quote && (
-            <div className="mb-8 p-6 bg-gray-50 rounded-2xl border border-[#D9D9D9]">
-              <p className="text-xl font-bold text-[#1a1a1a] italic leading-relaxed">
-                &quot;{story.quote}&quot;
-              </p>
-            </div>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-[#1a1a1a] mb-2">{story.name}</h2>
+          {story.title && (
+            <p className="text-[#666666] font-medium">{story.title}</p>
           )}
-          <div className="prose prose-lg max-w-none text-[#1a1a1a] leading-loose whitespace-pre-wrap">
-            {story.content}
-          </div>
         </div>
 
-        <div className="order-1 md:order-2 mb-8 md:mb-0">
+        {story.quote && (
+          <div className="mb-8 p-6 bg-gray-50 rounded-2xl border border-[#D9D9D9]">
+            <p className="text-xl font-bold text-[#1a1a1a] italic leading-relaxed">
+              &quot;{story.quote}&quot;
+            </p>
+          </div>
+        )}
+        <div className="mb-24">
+          <MarkdownViewer body={story.content} />
+        </div>
+
+        <div className="pt-16 border-t border-[#D9D9D9]">
           <AlumniSidebar stories={allStories} currentStoryId={story.id} />
         </div>
       </div>

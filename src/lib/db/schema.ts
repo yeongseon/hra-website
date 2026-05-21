@@ -355,7 +355,7 @@ export const alumniStories = pgTable("alumni_stories", {
   title: varchar("title", { length: 100 }), // 소속/직함
   quote: varchar("quote", { length: 500 }).notNull(), // 인용 문구 (제목)
   content: text("content").notNull(), // 본문 내용
-  imageUrl: text("image_url"), // 수료생 사진 URL
+  imageUrl: text("image_url"), // 수료생 사진 URL (대표 이미지)
   isFeatured: boolean("is_featured").notNull().default(false), // 메인 페이지 배너 노출 여부
   viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   order: integer("order").notNull().default(0),
@@ -365,6 +365,29 @@ export const alumniStories = pgTable("alumni_stories", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const alumniStoryImages = pgTable("alumni_story_images", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  alumniStoryId: uuid("alumni_story_id")
+    .notNull()
+    .references(() => alumniStories.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  alt: varchar("alt", { length: 255 }),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Alumni Stories 관계 정의
+export const alumniStoriesRelations = relations(alumniStories, ({ many }) => ({
+  images: many(alumniStoryImages),
+}));
+
+export const alumniStoryImagesRelations = relations(alumniStoryImages, ({ one }) => ({
+  alumniStory: one(alumniStories, {
+    fields: [alumniStoryImages.alumniStoryId],
+    references: [alumniStories.id],
+  }),
+}));
 
 // ============================================================
 // FAQ Contact (FAQ 담당자 연락처 테이블)

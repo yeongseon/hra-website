@@ -30,20 +30,36 @@ const gradients = [
   "from-emerald-700 via-emerald-800 to-slate-900",
 ] as const;
 
-export default async function AlumniPage() {
-  const dbStories = await db
+export default async function AlumniPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const allDbStories = await db
     .select()
     .from(alumniStoriesTable)
     .orderBy(asc(alumniStoriesTable.order), asc(alumniStoriesTable.createdAt));
 
-  const stories: AlumniStoryViewModel[] = dbStories.map((story, index) => ({
+  const totalCount = allDbStories.length;
+  const ITEMS_PER_PAGE = 3;
+  const params = await searchParams;
+  const currentPage = Number(params.page ?? "1");
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const currentDbStories = allDbStories.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+
+  const stories: AlumniStoryViewModel[] = currentDbStories.map((story, index) => ({
     id: story.id,
     name: story.name,
     quote: story.quote,
     story: story.content,
     title: story.title,
     imageUrl: story.imageUrl,
-    gradient: gradients[index % gradients.length],
+    gradient: gradients[(startIndex + index) % gradients.length],
   }));
 
   return (
@@ -67,59 +83,79 @@ export default async function AlumniPage() {
           <p className="text-sm text-[#666666]">수료생 이야기가 등록되면 이곳에 표시됩니다.</p>
         </section>
       ) : (
-        <section className="flex flex-col gap-16 md:gap-24">
-          {stories.map((story, index) => (
-            <article
-              key={story.id}
-              className={`flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-center md:gap-16`}
-            >
-              <div className={`w-full ${index % 2 === 1 ? "md:order-2" : "md:order-1"}`}>
-                <Link href={`/alumni/${story.id}`} className="group block">
-                  {story.imageUrl ? (
-                    <Image
-                      src={story.imageUrl}
-                      alt={`${story.name} 수료생 사진`}
-                      width={600}
-                      height={600}
-                      className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]"
-                    />
-                  ) : (
-                    <div
-                      className={`flex aspect-[4/5] max-w-[420px] w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]`}
-                    >
-                      <span className="text-sm font-medium text-white/40">수료생 사진</span>
-                    </div>
-                  )}
-                </Link>
-              </div>
-
-              <div className={`flex flex-col ${index % 2 === 1 ? "md:order-1" : "md:order-2"}`}>
-                <Link href={`/alumni/${story.id}`} className="group">
-                  <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl group-hover:text-[#2563EB] transition-colors">
-                    &quot;{story.quote}&quot;
-                  </h2>
-                </Link>
-                <p className="mt-6 text-lg leading-relaxed text-[#666666] line-clamp-4">
-                  {story.story}
-                </p>
-                
-                <div className="mt-6">
-                  <Link 
-                    href={`/alumni/${story.id}`} 
-                    className="inline-flex items-center gap-1 text-[#2563EB] font-semibold hover:underline"
-                  >
-                    이야기 더 보기 <ChevronRight className="w-4 h-4" />
+        <>
+          <section className="flex flex-col gap-16 md:gap-24">
+            {stories.map((story) => (
+              <article
+                key={story.id}
+                className="flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-start md:gap-16"
+              >
+                <div className="w-full">
+                  <Link href={`/alumni/${story.id}`} className="group block">
+                    {story.imageUrl ? (
+                      <Image
+                        src={story.imageUrl}
+                        alt={`${story.name} 수료생 사진`}
+                        width={600}
+                        height={600}
+                        className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div
+                        className={`flex aspect-square max-w-[420px] w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]`}
+                      >
+                        <span className="text-sm font-medium text-white/40">수료생 사진</span>
+                      </div>
+                    )}
                   </Link>
                 </div>
 
-                <div className="mt-8 border-t border-gray-100 pt-6">
-                  <p className="font-bold text-[#1a1a1a]">{story.name}</p>
-                  {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+                <div className="flex flex-col h-full">
+                  <Link href={`/alumni/${story.id}`} className="group">
+                    <h2 className="text-2xl font-bold leading-snug text-[#1a1a1a] md:text-3xl group-hover:text-[#2563EB] transition-colors">
+                      &quot;{story.quote}&quot;
+                    </h2>
+                  </Link>
+                  
+                  <div className="mt-8">
+                    <Link 
+                      href={`/alumni/${story.id}`} 
+                      className="inline-flex items-center gap-1 text-[#2563EB] font-semibold hover:underline"
+                    >
+                      이야기 더 보기 <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+
+                  <div className="mt-auto border-t border-gray-100 pt-6">
+                    <p className="font-bold text-[#1a1a1a]">{story.name}</p>
+                    {story.title ? <p className="mt-1 text-sm text-[#666666]">{story.title}</p> : null}
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </section>
+              </article>
+            ))}
+          </section>
+
+          {totalPages > 1 && (
+            <div className="mt-20 flex justify-center gap-2">
+              {Array.from({ length: totalPages }, (_, index) => {
+                const page = index + 1;
+                return (
+                  <Link
+                    key={page}
+                    href={`/alumni?page=${page}`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? "bg-[#2563EB] text-white shadow-md"
+                        : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
