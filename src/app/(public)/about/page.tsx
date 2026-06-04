@@ -48,9 +48,7 @@ export default function AboutPage() {
       {/* 3. 주요 목적 및 비전 섹션 */}
       <section className="mb-32">
         <div className="text-center mb-12">
-          <p className="text-[#999999] tracking-[0.15em] text-sm font-semibold uppercase mb-4">PURPOSE & VISION</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-6">주요 목적 및 비전</h2>
-          <div className="w-12 h-1 bg-[#2563EB] mx-auto rounded-full mb-8" />
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-8">주요 목적 및 비전</h2>
           <p className="text-[#666666] text-lg leading-relaxed max-w-2xl mx-auto">
             HRA는 단순한 지식 전달을 넘어, <br />
             업무능력과 성품, 사명감을 고루 갖춘 3C 인재를 양성합니다.<br />
@@ -117,38 +115,47 @@ export default function AboutPage() {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Card 1 */}
+          {/* Card 1: 사명감 */}
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
-            <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <span className="absolute bottom-0 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">업무능력</h3>
+              <div className="flex items-baseline gap-3 mb-6">
+                <h3 className="text-2xl font-bold text-[#1a1a1a]">사명감</h3>
+                <p className="text-xl font-medium text-[#2563EB]">Commitment</p>
+              </div>
+              <p className="text-[#666666] leading-relaxed">
+                사명감은 맡은 일을 끝까지 해내는 책임감에서 시작해, 나아가 공동체와 사회를 향한 의식으로 확장됩니다. HRA는 배움을 삶 속에서 실천하는 사람을 길러 내고자 합니다.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: 업무능력 */}
+          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
+            <span className="absolute bottom-0 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="relative h-full p-8 md:p-10 rounded-2xl">
+              <div className="flex items-baseline gap-3 mb-6">
+                <h3 className="text-2xl font-bold text-[#1a1a1a]">업무능력</h3>
+                <p className="text-xl font-medium text-[#2563EB]">Competence</p>
+              </div>
               <p className="text-[#666666] leading-relaxed">
                 단순히 지식을 많이 아는 것이 아니라, 배운 내용을 실제 문제 해결과 실행으로 연결할 수 있는 힘입니다. 스스로 생각하고 판단하며 끝까지 해내는 능력을 기릅니다.
               </p>
             </div>
           </div>
 
-          {/* Card 2 */}
+          {/* Card 3: 성품 */}
           <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
-            <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
+            <span className="absolute bottom-0 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">성품</h3>
+              <div className="flex items-baseline gap-3 mb-6">
+                <h3 className="text-2xl font-bold text-[#1a1a1a]">성품</h3>
+                <p className="text-xl font-medium text-[#2563EB]">Character</p>
+              </div>
               <p className="text-[#666666] leading-relaxed">
                 성품은 지식이나 성과만으로 드러나지 않습니다. HRA는 사람을 이해하는 마음, 함께 배우고 협력하는 자세, 그리고 바른 가치관 위에 서는 태도를 중요하게 여깁니다.
-              </p>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="group relative rounded-2xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400">
-            <span className="absolute top-4 right-4 text-[180px] font-serif leading-none opacity-[0.06] select-none pointer-events-none text-blue-600">C</span>
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-full p-8 md:p-10 rounded-2xl">
-              <h3 className="text-2xl font-bold text-[#1a1a1a] mb-6">사명감</h3>
-              <p className="text-[#666666] leading-relaxed">
-                사명감은 맡은 일을 끝까지 해내는 책임감에서 시작해, 나아가 공동체와 사회를 향한 의식으로 확장됩니다. HRA는 배움을 삶 속에서 실천하는 사람을 길러 내고자 합니다.
               </p>
             </div>
           </div>

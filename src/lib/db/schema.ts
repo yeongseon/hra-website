@@ -390,6 +390,23 @@ export const alumniStoryImagesRelations = relations(alumniStoryImages, ({ one })
 }));
 
 // ============================================================
+// FAQ Items (FAQ 질문·답변 테이블)
+// ============================================================
+
+// FAQ 페이지에 표시할 질문과 답변 목록
+export const faqItems = pgTable("faq_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  question: text("question").notNull(),          // 질문
+  answer: text("answer").notNull(),               // 답변 (줄바꿈 포함 자유 텍스트)
+  order: integer("order").notNull().default(0),   // 표시 순서 (오름차순)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// ============================================================
 // FAQ Contact (FAQ 담당자 연락처 테이블)
 // ============================================================
 
@@ -619,6 +636,7 @@ export type Application = typeof applications.$inferSelect;
 export type Faculty = typeof faculty.$inferSelect;
 export type AlumniStory = typeof alumniStories.$inferSelect;
 export type FaqContactInfo = typeof faqContact.$inferSelect;
+export type FaqItem = typeof faqItems.$inferSelect;
 export type RecruitmentSetting = typeof recruitmentSettings.$inferSelect;
 export type NoticeAttachment = typeof noticeAttachments.$inferSelect;
 export type WeeklyText = typeof weeklyTexts.$inferSelect;

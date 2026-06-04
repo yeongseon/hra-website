@@ -19,6 +19,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  CircleHelp,
+  ExternalLink,
   FileText,
   FolderOpen,
   GalleryHorizontal,
@@ -28,7 +30,6 @@ import {
   MessageSquare,
   Newspaper,
   Phone,
-   Presentation,
   Settings,
   Users,
   UserCog,
@@ -62,9 +63,9 @@ const navItems = [
   { href: "/admin/press", label: "언론보도", icon: Newspaper },
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
+  { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
   { href: "/admin/faq-contact", label: "FAQ 연락처", icon: Phone },
   { href: "/admin/resources", label: "자료실", icon: FolderOpen },
-  { href: "/admin/resources/class-materials", label: "강의 자료", icon: Presentation },
   { href: "/admin/applications", label: "지원서", icon: FileText },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
 ];
@@ -128,6 +129,16 @@ export function AdminShell({ userName, children }: AdminShellProps) {
           <Separator className="bg-slate-200" />
           <div className="flex-1 p-4">
             <AdminNav />
+          </div>
+          <div className="border-t border-slate-200 p-4">
+            <Link
+              href="/"
+              target="_blank"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              <ExternalLink className="size-4" />
+              <span>홈페이지로 이동</span>
+            </Link>
           </div>
         </aside>
 

@@ -13,7 +13,6 @@ import { asc, eq, sql } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 import { z } from "zod/v4";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { galleries, galleryImages } from "@/lib/db/schema";
@@ -96,13 +95,7 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
           <ArrowLeft className="size-4" />
           갤러리 목록으로
         </Link>
-        <Badge
-          variant="outline"
-          className="border-emerald-300 bg-emerald-50 text-emerald-700"
-        >
-          HRA GALLERY
-        </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl">
+<h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a] sm:text-3xl md:text-4xl">
           {gallery.title}
         </h1>
         <p className="text-xs text-[#666666]">조회수 {gallery.viewCount}</p>

@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
 
@@ -41,7 +40,7 @@ export default async function AlumniPage({
     .orderBy(asc(alumniStoriesTable.order), asc(alumniStoriesTable.createdAt));
 
   const totalCount = allDbStories.length;
-  const ITEMS_PER_PAGE = 3;
+  const ITEMS_PER_PAGE = 15;
   const params = await searchParams;
   const currentPage = Number(params.page ?? "1");
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -88,7 +87,7 @@ export default async function AlumniPage({
             {stories.map((story) => (
               <article
                 key={story.id}
-                className="flex flex-col gap-8 md:grid md:grid-cols-[420px_1fr] md:items-start md:gap-16"
+                className="flex flex-col gap-8 md:grid md:grid-cols-[280px_1fr] md:items-start md:gap-12"
               >
                 <div className="w-full">
                   <Link href={`/alumni/${story.id}`} className="group block">
@@ -98,11 +97,11 @@ export default async function AlumniPage({
                         alt={`${story.name} 수료생 사진`}
                         width={600}
                         height={600}
-                        className="aspect-square max-w-[420px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]"
+                        className="aspect-square max-w-[280px] w-full rounded-2xl object-cover shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                     ) : (
                       <div
-                        className={`flex aspect-square max-w-[420px] w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]`}
+                        className={`flex aspect-square max-w-[280px] w-full items-center justify-center rounded-2xl bg-gradient-to-br ${story.gradient} shadow-[var(--shadow-soft)] transition-transform duration-300 group-hover:scale-[1.02]`}
                       >
                         <span className="text-sm font-medium text-white/40">수료생 사진</span>
                       </div>
@@ -117,9 +116,15 @@ export default async function AlumniPage({
                     </h2>
                   </Link>
                   
-                  <div className="mt-8">
-                    <Link 
-                      href={`/alumni/${story.id}`} 
+                  {story.story && (
+                    <p className="mt-6 text-sm leading-relaxed text-[#666666] line-clamp-5">
+                      {story.story}
+                    </p>
+                  )}
+
+                  <div className="mt-6">
+                    <Link
+                      href={`/alumni/${story.id}`}
                       className="inline-flex items-center gap-1 text-[#2563EB] font-semibold hover:underline"
                     >
                       이야기 더 보기 <ChevronRight className="w-4 h-4" />

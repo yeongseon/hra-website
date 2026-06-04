@@ -42,7 +42,7 @@ export default async function PressPage({
 
   // 게시판 번호는 최신순(상단)부터 큰 번호 부여
   const totalCount = articles.length;
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 15;
   const params = await searchParams;
   const currentPage = Number(params.page ?? "1");
 
@@ -80,12 +80,12 @@ export default async function PressPage({
           className="overflow-hidden rounded-lg border border-[#D9D9D9] bg-white"
         >
           {/* 데스크톱용 헤더 행 (모바일에서는 숨김) */}
-          <div className="hidden border-b border-[#D9D9D9] bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_100px_140px] md:items-center md:px-6 md:py-3">
-            <span className="text-sm font-semibold text-[#666666]">번호</span>
-            <span className="text-sm font-semibold text-[#666666]">제목</span>
-            <span className="text-sm font-semibold text-[#666666]">매체</span>
+          <div className="hidden border-b border-[#D9D9D9] bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_100px_140px] md:items-center md:gap-4 md:px-6 md:py-3">
+            <span className="text-center text-sm font-semibold text-[#666666]">번호</span>
+            <span className="text-center text-sm font-semibold text-[#666666]">제목</span>
+            <span className="text-center text-sm font-semibold text-[#666666]">매체</span>
             <span className="text-center text-sm font-semibold text-[#666666]">조회</span>
-            <span className="text-right text-sm font-semibold text-[#666666]">날짜</span>
+            <span className="text-center text-sm font-semibold text-[#666666]">날짜</span>
           </div>
 
           <ul className="divide-y divide-[#D9D9D9]">
@@ -100,10 +100,10 @@ export default async function PressPage({
                     className="block px-4 py-4 transition-colors hover:bg-[#F5F5F5] md:grid md:grid-cols-[80px_1fr_180px_100px_140px] md:items-center md:gap-4 md:px-6 md:py-4"
                   >
                     {/* 번호 (모바일 숨김) */}
-                    <span className="hidden text-sm text-[#666666] md:block">{number}</span>
+                    <span className="hidden text-center text-sm text-[#666666] md:block">{number}</span>
 
                     {/* 제목 */}
-                    <span className="block text-base font-medium text-[#1a1a1a] hover:text-[#2563EB] md:truncate">
+                    <span className="block text-left text-base font-medium text-[#1a1a1a] hover:text-[#2563EB] md:truncate">
                       {article.title}
                     </span>
 
@@ -111,13 +111,13 @@ export default async function PressPage({
                     <span className="mt-1 block text-sm text-[#666666] md:mt-0 md:hidden">
                       {article.source} · {formatDate(article.publishedAt)}
                     </span>
-                    <span className="hidden text-sm text-[#666666] md:block md:truncate">
+                    <span className="hidden text-center text-sm text-[#666666] md:block md:truncate">
                       {article.source}
                     </span>
                     <span className="hidden text-center text-sm text-[#666666] md:block">
                       {article.viewCount}
                     </span>
-                    <span className="hidden text-right text-sm text-[#666666] md:block">
+                    <span className="hidden text-center text-sm text-[#666666] md:block">
                       {formatDate(article.publishedAt)}
                     </span>
                   </PressLink>
@@ -126,28 +126,28 @@ export default async function PressPage({
             })}
           </ul>
 
-          {totalPages > 1 && (
-            <div className="mt-8 flex justify-center gap-2 px-4 py-6">
-              {Array.from({ length: totalPages }, (_, index) => {
-                const page = index + 1;
-
-                return (
-                  <a
-                    key={page}
-                    href={`/press?page=${page}`}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                      currentPage === page
-                        ? "bg-[#2563EB] text-white"
-                        : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
-                    }`}
-                  >
-                    {page}
-                  </a>
-                );
-              })}
-            </div>
-          )}
         </section>
+      )}
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex justify-center gap-2">
+          {Array.from({ length: totalPages }, (_, index) => {
+            const page = index + 1;
+            return (
+              <a
+                key={page}
+                href={`/press?page=${page}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                  currentPage === page
+                    ? "bg-[#2563EB] text-white"
+                    : "border border-[#D9D9D9] bg-white text-[#666666] hover:bg-[#F5F5F5]"
+                }`}
+              >
+                {page}
+              </a>
+            );
+          })}
+        </div>
       )}
     </div>
   );

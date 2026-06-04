@@ -58,7 +58,7 @@ const curriculumItems = [
   },
 ];
 
-// 타임라인 월 목록 (Sep.~Aug. + 수료식 Sep.)
+// 타임라인 월 목록 (Sep.~Aug. + 수료식 Sep.) — buttonRefs 인덱스 순서와 일치
 const timelineMonths = [
   { label: "Sep.", value: "sep" },
   { label: "Oct.", value: "oct" },
@@ -73,6 +73,46 @@ const timelineMonths = [
   { label: "Jul.", value: "jul" },
   { label: "Aug.", value: "aug" },
   { label: "Sep.", value: "sep-end" },
+];
+
+// 같은 설명을 공유하는 월들을 pill 로 묶기 위한 그룹 정의
+const timelineGroups = [
+  {
+    category: "전반기",
+    months: [
+      { label: "Sep.", value: "sep" },
+      { label: "Oct.", value: "oct" },
+      { label: "Nov.", value: "nov" },
+      { label: "Dec.", value: "dec" },
+    ],
+  },
+  {
+    category: "겨울캠프",
+    months: [
+      { label: "Jan.", value: "jan" },
+      { label: "Feb.", value: "feb" },
+    ],
+  },
+  {
+    category: "후반기",
+    months: [
+      { label: "Mar.", value: "mar" },
+      { label: "Apr.", value: "apr" },
+      { label: "May.", value: "may" },
+      { label: "Jun.", value: "jun" },
+    ],
+  },
+  {
+    category: "인턴",
+    months: [
+      { label: "Jul.", value: "jul" },
+      { label: "Aug.", value: "aug" },
+    ],
+  },
+  {
+    category: "수료식/입학식",
+    months: [{ label: "Sep.", value: "sep-end" }],
+  },
 ];
 
 // 월 값 → 카테고리 매핑
@@ -267,7 +307,7 @@ export default function CurriculumPage() {
         </section>
 
         {/* 타임라인 섹션 */}
-        <section className="mb-24 sm:mb-32">
+        <section className="mb-56 sm:mb-64">
           <div>
             {/*
               파란색 타임라인 띠지
@@ -287,168 +327,129 @@ export default function CurriculumPage() {
                 ref={containerRef}
                 className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8"
               >
-                <div className="flex flex-col gap-3">
-
-                  {/* 월 레이블 행 */}
-                  <div className="flex w-full justify-between">
-                    {timelineMonths.map((month, idx) => {
-                      const isHighlighted = displayMonth === month.value;
-                      return (
-                        <div
-                          key={month.value}
-                          className="flex-1 flex justify-center"
-                          // 데스크톱: 마우스 진입 시 hover 상태 + anchorX 갱신
-                          onMouseEnter={() => {
-                            setHoveredMonth(month.value);
-                            updateAnchor(idx);
-                          }}
-                          onMouseLeave={() => setHoveredMonth(null)}
-                        >
-                          <button
-                            // buttonRefs 에 idx 순서로 저장
-                            ref={(el) => { buttonRefs.current[idx] = el; }}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMonthClick(month.value, idx);
-                            }}
-                            // 접근성: 키보드 포커스도 hover와 동일하게 처리
-                            onFocus={() => {
+                {/* 그룹별 pill 로 묶인 타임라인 — pill 사이 선 없음, pill 내부 달끼리 선 연결 */}
+                <div className="flex w-full items-center gap-1 sm:gap-2">
+                  {timelineGroups.map((group) => (
+                    <div
+                      key={group.category}
+                      className="flex items-center rounded-full border border-white/40 bg-[#2563EB] py-5 px-3"
+                      style={{ flex: group.months.length }}
+                    >
+                      {group.months.flatMap((month, monthIdx) => {
+                        const idx = timelineMonths.findIndex((m) => m.value === month.value);
+                        const isHighlighted = displayMonth === month.value;
+                        const items = [];
+                        if (monthIdx > 0) {
+                          items.push(
+                            <div key={`line-${month.value}`} className="w-6 sm:w-10 h-px bg-white/30 shrink-0" />
+                          );
+                        }
+                        items.push(
+                          <div
+                            key={month.value}
+                            className="flex-1 flex justify-center"
+                            onMouseEnter={() => {
                               setHoveredMonth(month.value);
                               updateAnchor(idx);
                             }}
-                            onBlur={() => setHoveredMonth(null)}
-                            aria-pressed={isHighlighted}
-                            aria-label={`${month.label} 커리큘럼 상세 보기`}
-                            className={`transition-all duration-200 text-xs sm:text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded select-none leading-none ${
-                              isHighlighted
-                                ? "font-bold text-white scale-125"
-                                : "font-medium text-white/60 hover:text-white/80"
-                            }`}
+                            onMouseLeave={() => setHoveredMonth(null)}
                           >
-                            {month.label}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* 연결선 + 인디케이터 행 */}
-                  <div className="relative flex w-full justify-between items-center h-2">
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/30" />
-                    {timelineMonths.map((month) => (
-                      <div key={month.value} className="flex-1 flex justify-center relative z-10">
-                        {displayMonth === month.value && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
+                            <button
+                              ref={(el) => { buttonRefs.current[idx] = el; }}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMonthClick(month.value, idx);
+                              }}
+                              onFocus={() => {
+                                setHoveredMonth(month.value);
+                                updateAnchor(idx);
+                              }}
+                              onBlur={() => setHoveredMonth(null)}
+                              aria-pressed={isHighlighted}
+                              aria-label={`${month.label} 커리큘럼 상세 보기`}
+                              className={`transition-all duration-200 text-xs sm:text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded select-none leading-none ${
+                                isHighlighted
+                                  ? "font-bold text-white scale-125"
+                                  : "font-medium text-white/60 hover:text-white/80"
+                              }`}
+                            >
+                              {month.label}
+                            </button>
+                          </div>
+                        );
+                        return items;
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
 
-            {/*
-              팝업 카드 애니메이션 컨테이너
-              - grid-template-rows 0fr → 1fr: 높이를 부드럽게 펼침/접음 (레이아웃 공간 유지)
-              - opacity 0 → 1: 페이드 처리
-              - aria-live="polite": 스크린 리더에 내용 변경 알림
-              - onClick stopPropagation: 카드 클릭이 외부 닫기 핸들러로 전파되는 것을 차단
-            */}
-            <div
-              aria-live="polite"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                display: "grid",
-                gridTemplateRows: isVisible ? "1fr" : "0fr",
-                opacity: isVisible ? 1 : 0,
-                transition: "grid-template-rows 300ms ease-out, opacity 250ms ease-out",
-              }}
-            >
               {/*
-                overflow-hidden: grid 0fr 애니메이션에 필수 — 없으면 접었을 때 카드가 삐져나옴.
-                그러나 overflow:hidden 은 box-shadow 도 clipping 한다.
-
-                해결: negative margin + compensating padding 기법
-                  marginLeft/Right: -16px → overflow clipping 경계를 좌우 16px 확장
-                  paddingLeft/Right: +16px → 콘텐츠 기준점을 원래대로 복원 (cardLeft 계산 불변)
-                  paddingBottom:  20px  → shadow-lg 하단 blur(~15px offset+blur) 공간 확보
-
-                결과:
-                  - 카드 position 계산(cardLeft, anchorX)은 전혀 변경 없음
-                  - clipping 경계만 16px 넓어져 shadow-lg 가 완전히 보임
-                  - grid 0fr 애니메이션도 정상 동작
+                팝업 카드 — absolute 로 띠지 바로 아래에 오버레이.
+                document flow 에서 분리되므로 아래 7개 카드가 밀리지 않는다.
               */}
               <div
-                className="overflow-hidden"
+                aria-live="polite"
+                onClick={(e) => e.stopPropagation()}
                 style={{
-                  marginLeft: "-16px",
-                  marginRight: "-16px",
-                  paddingLeft: "16px",
-                  paddingRight: "16px",
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  zIndex: 50,
+                  opacity: isVisible ? 1 : 0,
+                  pointerEvents: isVisible ? "auto" : "none",
+                  transition: "opacity 250ms ease-out",
                 }}
               >
-                <div className="pt-8 pb-5">
-                  {/*
-                    카드 본체
-                    - width: cardW px — JS로 너비를 명시적으로 지정.
-                        max-w-2xl(Tailwind CSS rem 단위)과 CARD_MAX_W(JS px 상수)가 불일치하면
-                        clamp 계산이 실제 렌더 너비와 달라져 우측 overflow 가 발생한다.
-                        CSS 클래스에 의존하지 않고 JS 값 하나로 너비와 clamp 를 동기화.
-                    - marginLeft: cardLeft — hover 버튼 기준으로 계산된 카드 왼쪽 좌표
-                    - 두 값 모두 containerWidth 기반으로 계산되므로 항상 일치함
-                  */}
-                  <div
-                    className="relative rounded-2xl bg-white border border-[#D9D9D9] p-6 sm:p-8 shadow-lg"
-                    style={{
-                      width: cardW > 0 ? `${cardW}px` : "100%",
-                      marginLeft: `${cardLeft}px`,
-                      transition: "margin-left 150ms ease-out",
-                    }}
-                  >
-                    {/*
-                      삼각형 — anchorX 기준 위치로 이동
-                      left: triangleLeft — 카드 왼쪽 끝에서의 픽셀 거리
-                      translateX(-50%): 삼각형 중앙을 left 좌표에 정렬
-                      transition left 150ms: 카드와 동일 속도로 화살표도 이동
-                    */}
-                    {/* 회색 테두리 삼각형 (1px 뒤) */}
+                <div className="mx-auto max-w-7xl px-4 sm:px-6">
+                  <div className="pt-8 pb-5">
                     <div
-                      className="absolute -translate-x-1/2"
+                      className="relative rounded-2xl bg-white border border-[#D9D9D9] p-6 sm:p-8 shadow-lg"
                       style={{
-                        left: triangleLeft,
-                        top: -9,
-                        width: 0,
-                        height: 0,
-                        borderLeft: "9px solid transparent",
-                        borderRight: "9px solid transparent",
-                        borderBottom: "9px solid #D9D9D9",
-                        transition: "left 150ms ease-out",
+                        width: cardW > 0 ? `${cardW}px` : "100%",
+                        marginLeft: `${cardLeft}px`,
+                        transition: "margin-left 150ms ease-out",
                       }}
-                    />
-                    {/* 흰색 채움 삼각형 (앞) */}
-                    <div
-                      className="absolute -translate-x-1/2"
-                      style={{
-                        left: triangleLeft,
-                        top: -8,
-                        width: 0,
-                        height: 0,
-                        borderLeft: "8px solid transparent",
-                        borderRight: "8px solid transparent",
-                        borderBottom: "8px solid white",
-                        transition: "left 150ms ease-out",
-                      }}
-                    />
+                    >
+                      {/* 회색 테두리 삼각형 (1px 뒤) */}
+                      <div
+                        className="absolute -translate-x-1/2"
+                        style={{
+                          left: triangleLeft,
+                          top: -9,
+                          width: 0,
+                          height: 0,
+                          borderLeft: "9px solid transparent",
+                          borderRight: "9px solid transparent",
+                          borderBottom: "9px solid #D9D9D9",
+                          transition: "left 150ms ease-out",
+                        }}
+                      />
+                      {/* 흰색 채움 삼각형 (앞) */}
+                      <div
+                        className="absolute -translate-x-1/2"
+                        style={{
+                          left: triangleLeft,
+                          top: -8,
+                          width: 0,
+                          height: 0,
+                          borderLeft: "8px solid transparent",
+                          borderRight: "8px solid transparent",
+                          borderBottom: "8px solid white",
+                          transition: "left 150ms ease-out",
+                        }}
+                      />
 
-                    {/* lastGroupInfoRef: fade-out 중에도 이전 텍스트 유지 */}
-                    <h3 className="mb-3 text-xl sm:text-2xl font-bold text-[#1a1a1a]">
-                      {lastGroupInfoRef.current?.title}
-                    </h3>
-                    <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-                      {lastGroupInfoRef.current?.description}
-                    </p>
+                      {/* lastGroupInfoRef: fade-out 중에도 이전 텍스트 유지 */}
+                      <h3 className="mb-3 text-xl sm:text-2xl font-bold text-[#1a1a1a]">
+                        {lastGroupInfoRef.current?.title}
+                      </h3>
+                      <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
+                        {lastGroupInfoRef.current?.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

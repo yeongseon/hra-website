@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
-import { Pin, Search } from "lucide-react";
+import { Pin } from "lucide-react";
+import { NoticeSearch } from "./_components/notice-search";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -29,7 +30,7 @@ export default async function NoticesPage({
   const params = await searchParams;
   const query = (params.q ?? "").trim();
   const currentPage = Number(params.page ?? "1");
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 15;
 
   let noticeList = await db
     .select({
@@ -67,21 +68,7 @@ export default async function NoticesPage({
           </p>
         </div>
 
-        <form action="/notices" method="GET" className="relative w-full sm:w-72">
-          <input
-            type="text"
-            name="q"
-            defaultValue={query}
-            placeholder="공지사항 검색..."
-            className="w-full rounded-full border border-[#D9D9D9] bg-white px-4 py-2.5 pr-11 text-sm outline-none transition-colors hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-[#1a1a1a] placeholder:text-[#666666]"
-          />
-          <button
-            type="submit"
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#666666] hover:text-[#1a1a1a] transition-colors"
-          >
-            <Search className="size-4" />
-          </button>
-        </form>
+        <NoticeSearch defaultValue={query} />
       </section>
 
       {noticeList.length === 0 ? (
