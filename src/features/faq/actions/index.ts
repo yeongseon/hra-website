@@ -9,7 +9,6 @@ import { db } from "@/lib/db";
 import { faqContact, faqItems } from "@/lib/db/schema";
 
 const faqContactSchema = z.object({
-  cohortName: z.string().trim().min(1, "기수명을 입력해주세요.").max(50, "기수명은 50자 이하여야 합니다."),
   contactName: z.string().trim().min(1, "담당자명을 입력해주세요.").max(100, "담당자명은 100자 이하여야 합니다."),
   contactPhone: z.string().trim().min(1, "연락처를 입력해주세요.").max(20, "연락처는 20자 이하여야 합니다."),
   contactRole: z.string().trim().min(1, "역할을 입력해주세요.").max(100, "역할은 100자 이하여야 합니다."),
@@ -58,7 +57,6 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
   await requireAdmin();
 
   const parsed = faqContactSchema.safeParse({
-    cohortName: normalizeText(formData.get("cohortName")),
     contactName: normalizeText(formData.get("contactName")),
     contactPhone: normalizeText(formData.get("contactPhone")),
     contactRole: normalizeText(formData.get("contactRole")),
@@ -82,7 +80,7 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
 
   if (!existingContact) {
     await db.insert(faqContact).values({
-      cohortName: parsed.data.cohortName,
+      cohortName: "",
       contactName: parsed.data.contactName,
       contactPhone: parsed.data.contactPhone,
       contactRole: parsed.data.contactRole,
@@ -92,7 +90,6 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
     await db
       .update(faqContact)
       .set({
-        cohortName: parsed.data.cohortName,
         contactName: parsed.data.contactName,
         contactPhone: parsed.data.contactPhone,
         contactRole: parsed.data.contactRole,
@@ -102,7 +99,7 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
   }
 
   revalidatePath("/faq");
-  revalidatePath("/admin/faq-contact");
+  revalidatePath("/admin/faq");
 
   return {
     success: true,

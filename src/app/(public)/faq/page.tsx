@@ -13,8 +13,8 @@ export default async function FaqPage() {
     .limit(1);
 
   const contactText = contact
-    ? `${contact.cohortName} ${contact.contactRole} ${contact.contactName} ${contact.contactPhone}`
-    : "20기 모집위원장 홍길동 010-0000-0000";
+    ? `${contact.contactRole} ${contact.contactName} ${contact.contactPhone}`
+    : "모집위원장 홍길동 010-0000-0000";
 
   // DB에서 FAQ 항목 조회 (순서 오름차순)
   const items = await db

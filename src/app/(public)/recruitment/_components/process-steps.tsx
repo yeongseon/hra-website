@@ -58,7 +58,7 @@ const chevronCls = "size-6 shrink-0 text-[#2563EB]";
 
 function ProcessCard({ step }: { step: ProcessStep }) {
   return (
-    <div className="group w-full rounded-xl border border-[#D9D9D9] bg-white p-5 text-left shadow-sm transition-all duration-300 hover:border-blue-300 hover:bg-blue-50/40 hover:shadow-[0_4px_16px_rgba(37,99,235,0.10)]">
+    <div className="group flex h-full w-full flex-col rounded-xl border border-[#D9D9D9] bg-white p-5 text-left shadow-sm transition-all duration-300 hover:border-blue-300 hover:bg-blue-50/40 hover:shadow-[0_4px_16px_rgba(37,99,235,0.10)]">
       <p className="text-xs font-bold tracking-widest text-[#2563EB]">
         {step.label}
       </p>
@@ -83,7 +83,7 @@ export function ProcessSteps() {
   return (
     <>
       {/* ── 데스크톱: 3×2 지그재그 그리드 ── */}
-      <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-start md:gap-x-3">
+      <div className="hidden md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-x-3">
 
         {/* 1행: STEP 01 → STEP 02 → STEP 03 */}
         <ProcessCard step={steps[0]} />

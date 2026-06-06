@@ -1,4 +1,5 @@
 // FAQ 질문·답변 관리 목록 페이지 (관리자 전용)
+// FAQ 항목 CRUD 목록과 연락처 설정을 한 페이지에서 관리합니다.
 
 import Link from "next/link";
 import { asc } from "drizzle-orm";
@@ -17,6 +18,7 @@ import { deleteFaqItem } from "@/features/faq/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { faqItems } from "@/lib/db/schema";
+import { FaqContactForm } from "./_components/faq-contact-form";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +35,11 @@ export default async function AdminFaqPage() {
     .orderBy(asc(faqItems.order), asc(faqItems.createdAt));
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <section className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
+      {/* 연락처 설정 — 페이지 최상단 */}
+      <FaqContactForm />
+
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a]">FAQ 관리</h1>
         <Button className="bg-[#1a1a1a] text-white hover:bg-[#333333]" render={<Link href="/admin/faq/new" />}>
           <Plus className="mr-1 size-4" />
@@ -42,6 +47,7 @@ export default async function AdminFaqPage() {
         </Button>
       </div>
 
+      {/* FAQ 항목 목록 */}
       <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
         <CardHeader className="border-b border-[#D9D9D9] py-4">
           <CardTitle className="text-base text-[#1a1a1a]">전체 FAQ {items.length}건</CardTitle>
@@ -52,9 +58,9 @@ export default async function AdminFaqPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16 text-center">순서</TableHead>
-                  <TableHead>질문</TableHead>
+                  <TableHead className="w-[30%]">질문</TableHead>
                   <TableHead>답변 (미리보기)</TableHead>
-                  <TableHead className="w-32">액션</TableHead>
+                  <TableHead className="w-32 shrink-0">액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -68,13 +74,13 @@ export default async function AdminFaqPage() {
                   items.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="text-center text-[#666666]">{item.order}</TableCell>
-                      <TableCell className="max-w-xs font-medium text-[#1a1a1a]">
+                      <TableCell className="w-[30%] font-medium text-[#1a1a1a]">
                         {truncate(item.question, 60)}
                       </TableCell>
-                      <TableCell className="max-w-sm text-sm text-[#666666]">
+                      <TableCell className="max-w-0 truncate text-sm text-[#666666]">
                         {truncate(item.answer, 80)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-32">
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
