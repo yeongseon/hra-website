@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { asc } from "drizzle-orm";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,10 +32,11 @@ const categoryOrder = ["CLASSICS", "BUSINESS", "LECTURE"] as const;
 export default async function AdminFacultyPage() {
   await requireAdmin();
 
+  // 카테고리 내에서 이름 가나다라순 정렬
   const facultyMembers = await db
     .select()
     .from(faculty)
-    .orderBy(asc(faculty.order), asc(faculty.createdAt));
+    .orderBy(asc(faculty.name));
 
   const categorizedFacultyMembers = categoryOrder.map((category) => ({
     category,
@@ -73,8 +75,8 @@ export default async function AdminFacultyPage() {
                         <TableHead>이름</TableHead>
                         <TableHead>카테고리</TableHead>
                         <TableHead>현직</TableHead>
-                        <TableHead>순서</TableHead>
-                        <TableHead>액션</TableHead>
+                        <TableHead>전직</TableHead>
+                        <TableHead>관리</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -89,15 +91,15 @@ export default async function AdminFacultyPage() {
                           <TableRow key={member.id}>
                             <TableCell className="font-medium text-[#1a1a1a]">{member.name}</TableCell>
                             <TableCell className="text-[#666666]">{categoryLabels[member.category]}</TableCell>
-                            <TableCell className="max-w-xs text-[#666666]">{member.currentPosition || "-"}</TableCell>
-                            <TableCell className="text-[#666666]">{member.order}</TableCell>
+                            <TableCell className="w-[28%] max-w-0 text-[#666666]"><span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">{member.currentPosition || "-"}</span></TableCell>
+                            <TableCell className="w-[28%] max-w-0 text-[#666666]"><span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">{member.formerPosition || "-"}</span></TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Link
                                   href={`/admin/faculty/${member.id}`}
-                                  className={buttonVariants({ variant: "outline", className: "border-[#D9D9D9] text-[#1a1a1a]" })}
+                                  className={buttonVariants({ variant: "outline" })}
                                 >
-                                  편집
+                                  수정
                                 </Link>
                                 <form
                                   action={async (formData) => {
@@ -108,7 +110,8 @@ export default async function AdminFacultyPage() {
                                   }}
                                 >
                                   <input type="hidden" name="id" value={member.id} />
-                                  <Button type="submit" variant="outline" className="border-[#D9D9D9] text-[#1a1a1a]">
+                                  <Button type="submit" variant="destructive">
+                                    <Trash2 className="size-3.5" />
                                     삭제
                                   </Button>
                                 </form>

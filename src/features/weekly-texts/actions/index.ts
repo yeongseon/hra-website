@@ -314,6 +314,91 @@ export async function createWeeklyTextAsMember(
   return createWeeklyTextRecord(formData);
 }
 
+export async function updateWeeklyText(id: string, formData: FormData): Promise<WeeklyTextActionState> {
+  await requireAdmin();
+
+  const parsedId = weeklyTextIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, error: "유효하지 않은 주차별 텍스트 ID입니다." };
+  }
+
+  const rawTextType = formData.get("textType");
+  const parsedTextType =
+    typeof rawTextType === "string" && rawTextType !== "__none__" && rawTextType !== ""
+      ? rawTextType
+      : null;
+
+  const parsed = weeklyTextFormSchema.safeParse({
+    title: formData.get("title"),
+    cohortId: parseCohortId(formData.get("cohortId")),
+    textType: parsedTextType,
+    classDate: formData.get("classDate"),
+    body: formData.get("body"),
+  });
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요." };
+  }
+
+  try {
+    const existing = await db.query.weeklyTexts.findFirst({
+      where: eq(weeklyTexts.id, parsedId.data),
+    });
+
+    if (!existing) {
+      return { success: false, error: "주차별 텍스트를 찾을 수 없습니다." };
+    }
+
+    // 새 파일이 첨부된 경우에만 기존 파일을 교체
+    const validatedFile = getValidatedFile(formData.get("file"));
+    if ("error" in validatedFile) {
+      return { success: false, error: validatedFile.error };
+    }
+
+    let fileUrl = existing.fileUrl;
+    let fileName = existing.fileName;
+
+    if (validatedFile.file) {
+      await deleteBlobIfExists(existing.fileUrl);
+      const blob = await put(
+        `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
+        validatedFile.file,
+        { access: "public" },
+      );
+      fileUrl = blob.url;
+      fileName = validatedFile.file.name;
+    }
+
+    const classDateObj = parsed.data.classDate
+      ? new Date(`${parsed.data.classDate}T00:00:00`)
+      : null;
+
+    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    }
+
+    await db
+      .update(weeklyTexts)
+      .set({
+        title: parsed.data.title,
+        cohortId: parsed.data.cohortId || null,
+        textType: parsed.data.textType ?? null,
+        classDate: classDateObj,
+        body: parsed.data.body ?? existing.body,
+        fileUrl,
+        fileName,
+      })
+      .where(eq(weeklyTexts.id, parsedId.data));
+
+    revalidateWeeklyTextPaths();
+
+    return { success: true };
+  } catch (error) {
+    console.error("[weekly-texts/update] 수정 오류:", error);
+    return { success: false, error: "주차별 텍스트 수정에 실패했습니다." };
+  }
+}
+
 export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionState> {
   await requireAdmin();
 

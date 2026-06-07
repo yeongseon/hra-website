@@ -93,7 +93,6 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
         startDate: formatDateForInput(cohort.startDate),
         endDate: formatDateForInput(cohort.endDate),
         isActive: cohort.isActive,
-        order: cohort.order,
       }}
     />
   );

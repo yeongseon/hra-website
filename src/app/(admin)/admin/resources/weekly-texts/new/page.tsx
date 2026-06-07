@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resources-tab-nav";
 import { WeeklyTextForm } from "@/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-form";
@@ -19,7 +19,7 @@ export default async function NewWeeklyTextPage() {
     cohortRows = await db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(asc(cohorts.order), asc(cohorts.name));
+      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
   } catch (error) {
     console.error("[admin/resources/weekly-texts/new] DB 조회 오류:", error);
   }

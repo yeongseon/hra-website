@@ -6,6 +6,31 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
+
+// @tiptap/extension-image 는 TipTap 렌더링만 처리하고 @tiptap/markdown 직렬화 훅이 없다.
+// 그 결과 editor.getMarkdown() 호출 시 이미지가 조용히 누락되어 DB에 저장되지 않는다.
+// Image.extend()로 renderMarkdown / parseMarkdown 을 추가해 직렬화를 활성화한다.
+// (tokenName 은 extension.name === "image" 이 marked 토큰 "image" 와 일치하므로 별도 설정 불필요)
+const MarkdownImage = Image.extend({
+  // TipTap 이미지 노드 → 마크다운 `![alt](src)` 문자열
+  renderMarkdown(node) {
+    const src = node.attrs?.src ?? "";
+    const alt = node.attrs?.alt ?? "";
+    const title = node.attrs?.title ?? null;
+    return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`;
+  },
+  // 마크다운 이미지 토큰 → TipTap 이미지 노드
+  parseMarkdown(token) {
+    return {
+      type: "image",
+      attrs: {
+        src: token.href ?? "",
+        alt: token.text ?? null,
+        title: token.title ?? null,
+      },
+    };
+  },
+});
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold,
@@ -67,12 +92,14 @@ export function RichTextEditor({
   //   4) 소스 모드에서는 토글 외 모든 툴바 버튼 비활성화 (hidden editor 조작으로 인한 textarea 덮어쓰기 방지)
   const [isSourceMode, setIsSourceMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 이미지 업로드 중 여부 (드래그·붙여넣기 포함)
+  const [isUploading, setIsUploading] = useState(false);
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false }),
-      Image,
+      MarkdownImage,
       Placeholder.configure({ placeholder: placeholder || "내용을 입력하세요..." }),
       Markdown.configure({
         markedOptions: { gfm: true, breaks: false },
@@ -104,34 +131,64 @@ export function RichTextEditor({
     setInternalValue(editor.getMarkdown());
   }, [value, editor, isSourceMode]);
 
-  const handleImageUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !editor) return;
-
+  // 파일을 Vercel Blob에 업로드하고 에디터 커서 위치에 이미지를 삽입한다.
+  const uploadAndInsert = useCallback(
+    async (file: File) => {
+      if (!editor) return;
+      setIsUploading(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
-
-        const res = await fetch("/api/upload-image", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-
+        const res = await fetch("/api/upload-image", { method: "POST", body: formData });
+        const data: { url?: string; error?: string } = await res.json();
         if (data.url) {
           editor.chain().focus().setImage({ src: data.url }).run();
+        } else {
+          alert(data.error ?? "이미지 업로드에 실패했습니다.");
         }
       } catch (error) {
         console.error("이미지 업로드 실패:", error);
         alert("이미지 업로드에 실패했습니다.");
       } finally {
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
     [editor]
+  );
+
+  // 파일 input 변경 → 업로드
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) void uploadAndInsert(file);
+    },
+    [uploadAndInsert]
+  );
+
+  // 에디터 영역에 이미지 파일을 드래그앤드롭했을 때 업로드
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const file = e.dataTransfer.files?.[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      e.preventDefault();
+      void uploadAndInsert(file);
+    },
+    [uploadAndInsert]
+  );
+
+  // 클립보드에서 이미지를 붙여넣었을 때 업로드
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const imageItem = Array.from(e.clipboardData.items).find(
+        (item) => item.kind === "file" && item.type.startsWith("image/")
+      );
+      const file = imageItem?.getAsFile();
+      if (!file) return;
+      e.preventDefault();
+      void uploadAndInsert(file);
+    },
+    [uploadAndInsert]
   );
 
   if (!editor) {
@@ -316,7 +373,18 @@ export function RichTextEditor({
           spellCheck={false}
         />
       ) : (
-        <div className="p-4 text-[#1a1a1a] min-h-[300px] prose max-w-none focus:outline-none focus-within:ring-2 focus-within:ring-[#2563EB]/20">
+        <div
+          className="relative p-4 text-[#1a1a1a] min-h-[300px] prose max-w-none focus:outline-none focus-within:ring-2 focus-within:ring-[#2563EB]/20"
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          onPaste={handlePaste}
+        >
+          {/* 이미지 업로드 중 오버레이 */}
+          {isUploading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-md bg-white/80 backdrop-blur-sm">
+              <span className="text-sm font-medium text-[#2563EB]">이미지 업로드 중...</span>
+            </div>
+          )}
           <EditorContent editor={editor} />
         </div>
       )}

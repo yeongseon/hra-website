@@ -1,4 +1,4 @@
-import { asc, eq, isNotNull } from "drizzle-orm";
+import { desc, eq, isNotNull, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -56,7 +56,7 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
     db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
   ]);
 
   if (!user) {

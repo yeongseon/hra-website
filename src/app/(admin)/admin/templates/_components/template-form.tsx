@@ -156,8 +156,8 @@ export function TemplateForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="template">{templateCategoryLabels.template}</SelectItem>
-                  <SelectItem value="guide">{templateCategoryLabels.guide}</SelectItem>
+                  <SelectItem value="template" label={templateCategoryLabels.template}>{templateCategoryLabels.template}</SelectItem>
+                  <SelectItem value="guide" label={templateCategoryLabels.guide}>{templateCategoryLabels.guide}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -178,9 +178,9 @@ export function TemplateForm({
                   <SelectValue placeholder="분야를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="management-book">경영서</SelectItem>
-                  <SelectItem value="classic-book">고전명작</SelectItem>
-                  <SelectItem value="business-practice">기업실무·한국경제사</SelectItem>
+                  <SelectItem value="management-book" label="경영서">경영서</SelectItem>
+                  <SelectItem value="classic-book" label="고전명작">고전명작</SelectItem>
+                  <SelectItem value="business-practice" label="기업실무·한국경제사">기업실무·한국경제사</SelectItem>
                 </SelectContent>
               </Select>
               {state.fieldErrors?.reportCategory ? (

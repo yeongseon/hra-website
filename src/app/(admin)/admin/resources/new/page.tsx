@@ -8,7 +8,7 @@
  */
 
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { ClassLogForm } from "@/app/(admin)/admin/resources/_components/class-log-form";
 import { createClassLog } from "@/features/class-logs/actions";
@@ -29,7 +29,7 @@ export default async function NewClassLogPage() {
     cohortRows = await db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(asc(cohorts.order), asc(cohorts.name));
+      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
   } catch (error) {
     console.error("[admin/resources/new] DB 조회 오류:", error);
   }

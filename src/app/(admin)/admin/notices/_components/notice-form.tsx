@@ -128,8 +128,8 @@ export function NoticeForm({
                     <SelectValue placeholder="상태를 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="DRAFT">{noticeStatusLabels.DRAFT}</SelectItem>
-                    <SelectItem value="PUBLISHED">{noticeStatusLabels.PUBLISHED}</SelectItem>
+                    <SelectItem value="DRAFT" label={noticeStatusLabels.DRAFT}>{noticeStatusLabels.DRAFT}</SelectItem>
+                    <SelectItem value="PUBLISHED" label={noticeStatusLabels.PUBLISHED}>{noticeStatusLabels.PUBLISHED}</SelectItem>
                   </SelectContent>
                 </Select>
               {submissionState.fieldErrors?.status ? (

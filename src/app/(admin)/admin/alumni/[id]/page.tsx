@@ -19,11 +19,6 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
   
   const story = await db.query.alumniStories.findFirst({
     where: eq(alumniStories.id, id),
-    with: {
-      images: {
-        orderBy: (images, { asc }) => [asc(images.order)],
-      },
-    },
   });
 
   if (!story) {
@@ -43,10 +38,7 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
         title: story.title,
         quote: story.quote,
         content: story.content,
-        imageUrl: story.imageUrl,
         isFeatured: story.isFeatured,
-        order: story.order,
-        images: story.images,
       }}
     />
   );

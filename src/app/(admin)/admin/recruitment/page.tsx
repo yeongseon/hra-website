@@ -11,7 +11,7 @@
  */
 
 import Link from "next/link";
-import { desc, eq, count } from "drizzle-orm";
+import { desc, eq, count, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,16 +54,17 @@ export default async function AdminRecruitmentPage() {
         .select({
           id: cohorts.id,
           name: cohorts.name,
+          description: cohorts.description,
           isActive: cohorts.isActive,
           startDate: cohorts.startDate,
           endDate: cohorts.endDate,
-          order: cohorts.order,
           applicationCount: count(applications.id),
         })
         .from(cohorts)
         .leftJoin(applications, eq(applications.cohortId, cohorts.id))
         .groupBy(cohorts.id)
-        .orderBy(desc(cohorts.order), desc(cohorts.createdAt));
+        // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
+        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
 
       return { rows, hasDbError: false };
     } catch (error) {
@@ -101,7 +102,7 @@ export default async function AdminRecruitmentPage() {
                  <TableHead>기수명</TableHead>
                  <TableHead>활성</TableHead>
                  <TableHead>기간</TableHead>
-                 <TableHead>지원자 수</TableHead>
+                 <TableHead>설명</TableHead>
                  <TableHead>관리</TableHead>
                </TableRow>
             </TableHeader>
@@ -127,8 +128,10 @@ export default async function AdminRecruitmentPage() {
                       <TableCell className="text-slate-600">
                         {formatDate(cohort.startDate)} ~ {formatDate(cohort.endDate)}
                       </TableCell>
-                      <TableCell className="text-slate-700">
-                        {Number(cohort.applicationCount)}명
+                      <TableCell className="w-[30%] max-w-0 text-slate-500">
+                        <span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">
+                          {cohort.description || "-"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <RecruitmentRowActions id={cohort.id} />

@@ -101,6 +101,10 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     };
   }
 
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
+  }
+
   try {
     const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
@@ -117,11 +121,12 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
 
     return { success: true };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[guidebooks/create] 생성 오류:", error);
 
     return {
       success: false,
-      error: "가이드북 저장에 실패했습니다.",
+      error: `가이드북 저장에 실패했습니다: ${message}`,
     };
   }
 }

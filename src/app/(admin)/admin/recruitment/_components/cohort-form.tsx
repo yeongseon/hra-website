@@ -28,7 +28,6 @@ type CohortFormValues = {
   startDate?: string;
   endDate?: string;
   isActive?: boolean;
-  order?: number;
 };
 
 type CohortFormProps = {
@@ -300,22 +299,6 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                 />
                 {state.fieldErrors?.endDate ? (
                   <p className="text-xs text-red-600">{state.fieldErrors.endDate}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="order">정렬 순서</Label>
-                <Input
-                  id="order"
-                  name="order"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={defaultValues?.order ?? 0}
-                  className="h-10"
-                />
-                {state.fieldErrors?.order ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.order}</p>
                 ) : null}
               </div>
 

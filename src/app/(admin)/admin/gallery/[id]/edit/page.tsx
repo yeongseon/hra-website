@@ -7,19 +7,17 @@
  * - 삭제 시 현재 커버 이미지 상태를 함께 보여줍니다.
  */
 
-import Image from "next/image";
 import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeft, ImageIcon, Star, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { z } from "zod/v4";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GalleryForm } from "@/app/(admin)/admin/gallery/_components/gallery-form";
 import { GalleryImageForm } from "@/app/(admin)/admin/gallery/_components/gallery-image-form";
+import { GalleryImageSortableGrid } from "@/app/(admin)/admin/gallery/_components/gallery-image-sortable-grid";
 import {
   addGalleryImages,
-  deleteGalleryImage,
   updateGallery,
 } from "@/features/gallery/actions";
 import { requireAdmin } from "@/lib/admin";
@@ -127,60 +125,12 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
         <CardContent className="space-y-6 py-6">
           <GalleryImageForm action={addImageAction} />
 
-          {gallery.images.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              아직 등록된 이미지가 없습니다.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {gallery.images.map((image) => {
-                const deleteAction = async () => {
-                  "use server";
-                  await deleteGalleryImage(gallery.id, image.id);
-                };
-
-                return (
-                  <div
-                    key={image.id}
-                    className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                  >
-                    <div className="relative h-44 w-full bg-slate-100">
-                      {image.url ? (
-                        <Image
-                          src={image.url}
-                          alt={image.alt ?? "갤러리 이미지"}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate-400">
-                          <ImageIcon className="size-8" />
-                        </div>
-                      )}
-
-                      {gallery.coverImageUrl === image.url ? (
-                        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-xs font-medium text-white">
-                          <Star className="size-3" />
-                          커버
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-3 p-4 text-sm text-slate-600">
-                      <p className="line-clamp-2 min-h-10 break-all">{image.alt || "(대체 텍스트 없음)"}</p>
-                      <p>정렬 순서: {image.order}</p>
-                      <form action={deleteAction}>
-                        <Button type="submit" variant="destructive" className="w-full">
-                          <Trash2 className="mr-1 size-4" />이미지 삭제
-                        </Button>
-                      </form>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* 드래그앤드롭으로 이미지 순서 변경 가능 */}
+          <GalleryImageSortableGrid
+            galleryId={gallery.id}
+            coverImageUrl={gallery.coverImageUrl}
+            initialImages={gallery.images}
+          />
         </CardContent>
       </Card>
     </div>

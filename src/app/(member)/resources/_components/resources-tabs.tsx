@@ -88,8 +88,8 @@ const getCategoryColor = (category: ResourceCategory): string => {
 };
 
 export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: ResourcesTabsProps) {
-  // 기수 기본값: 최신 기수(desc 정렬된 cohorts[0]). 기수 없으면 "전체"
-  const defaultCohort = cohorts[0]?.id ?? ALL_COHORT;
+  // 기수 기본값: 전체
+  const defaultCohort = ALL_COHORT;
 
   const [activeCohort, setActiveCohort] = useState<string>(defaultCohort);
   const [activeCategory, setActiveCategory] = useState<ResourceCategory>("가이드북");
@@ -196,30 +196,7 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
 
   return (
     <div className="space-y-6">
-      {/* 기수 드롭다운 — items prop으로 value→label 매핑 제공 (UUID 표시 버그 방지) */}
-      {cohorts.length > 0 && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-[#1a1a1a] shrink-0">기수</span>
-          <Select
-            items={cohortSelectItems}
-            value={activeCohort}
-            onValueChange={handleCohortChange}
-          >
-            <SelectTrigger className="w-36 h-9 border-[#D9D9D9] bg-white text-[#1a1a1a] text-sm">
-              <SelectValue placeholder="전체" />
-            </SelectTrigger>
-            <SelectContent>
-              {cohortSelectItems.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* 카테고리 탭 + 검색 + 업로드 버튼 */}
+      {/* 카테고리 탭 + 기수 필터 + 검색 + 업로드 버튼 */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="flex overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto gap-4 sm:gap-6 border-b border-[#D9D9D9]">
           {CATEGORY_TABS.map((tab) => (
@@ -239,6 +216,25 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* 기수 필터 드롭다운 — 검색창 왼쪽에 위치 */}
+          {cohorts.length > 0 && (
+            <Select
+              items={cohortSelectItems}
+              value={activeCohort}
+              onValueChange={handleCohortChange}
+            >
+              <SelectTrigger className="w-32 border-[#D9D9D9] bg-white text-[#1a1a1a] text-sm">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent>
+                {cohortSelectItems.map((option) => (
+                  <SelectItem key={option.value} value={option.value} label={option.label}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {showClassLogUploadButton && (
             <Link
               href="/resources/class-logs"
@@ -271,7 +267,7 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
             <input
               type="text"
               placeholder="자료 검색..."
-              className="w-full pl-10 pr-4 py-2.5 border border-[#D9D9D9] rounded-lg text-sm focus:outline-none focus:border-[#2563EB] transition-colors"
+              className="w-full pl-10 pr-4 py-1.5 border border-[#D9D9D9] rounded-lg text-sm focus:outline-none focus:border-[#2563EB] transition-colors"
               value={searchQuery}
               onChange={handleSearchChange}
             />

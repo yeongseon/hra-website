@@ -37,7 +37,8 @@ export default async function AlumniPage({
   const allDbStories = await db
     .select()
     .from(alumniStoriesTable)
-    .orderBy(desc(alumniStoriesTable.createdAt));
+    // 고정된 항목 먼저, 그 다음 작성일 최신순
+    .orderBy(desc(alumniStoriesTable.pinned), desc(alumniStoriesTable.createdAt));
 
   const totalCount = allDbStories.length;
   const ITEMS_PER_PAGE = 15;

@@ -188,7 +188,7 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
               </SelectTrigger>
               <SelectContent>
                 {textTypeSelectItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
+                  <SelectItem key={item.value} value={item.value} label={item.label}>
                     {item.label}
                   </SelectItem>
                 ))}
@@ -211,7 +211,7 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
               </SelectTrigger>
               <SelectContent>
                 {cohortSelectItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
+                  <SelectItem key={item.value} value={item.value} label={item.label}>
                     {item.label}
                   </SelectItem>
                 ))}

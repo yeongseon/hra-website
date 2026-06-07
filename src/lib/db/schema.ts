@@ -357,6 +357,7 @@ export const alumniStories = pgTable("alumni_stories", {
   content: text("content").notNull(), // 본문 내용
   imageUrl: text("image_url"), // 수료생 사진 URL (대표 이미지)
   isFeatured: boolean("is_featured").notNull().default(false), // 메인 페이지 배너 노출 여부
+  pinned: boolean("pinned").notNull().default(false), // 목록 상단 고정 여부
   viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

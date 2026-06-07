@@ -1,46 +1,25 @@
+// 언론보도 관리 목록 페이지 (관리자 전용)
+// 드래그앤드롭으로 공개 페이지 표시 순서를 변경할 수 있습니다.
+
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { deletePressArticle } from "@/features/press/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
+import { PressSortableList } from "./_components/press-sortable-list";
 
 export const dynamic = "force-dynamic";
-
-function truncateText(value: string | null, maxLength = 50) {
-  if (!value) {
-    return "-";
-  }
-
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
-}
-
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function AdminPressPage() {
   await requireAdmin();
 
-  // 항상 최신 게시일이 위로 오도록 단일 정렬 (공개 페이지 /press 와 동일 규칙).
+  // order 오름차순, 동일 order는 게시일 내림차순으로 초기 정렬
   const articles = await db
     .select()
     .from(pressArticles)
-    .orderBy(desc(pressArticles.publishedAt));
+    .orderBy(asc(pressArticles.order), asc(pressArticles.createdAt));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -52,54 +31,8 @@ export default async function AdminPressPage() {
         </Button>
       </div>
 
-      <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
-        <CardHeader className="border-b border-[#D9D9D9] py-4">
-          <CardTitle className="text-base text-[#1a1a1a]">전체 언론보도 {articles.length}건</CardTitle>
-        </CardHeader>
-        <CardContent className="py-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>제목</TableHead>
-                  <TableHead>언론사</TableHead>
-                  <TableHead>게시일</TableHead>
-                  <TableHead>액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {articles.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-[#666666]">
-                      등록된 언론보도가 없습니다.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  articles.map((article) => (
-                    <TableRow key={article.id}>
-                      <TableCell className="max-w-sm font-medium text-[#1a1a1a]">{truncateText(article.title, 70)}</TableCell>
-                      <TableCell className="text-[#1a1a1a]">{truncateText(article.source, 30)}</TableCell>
-                      <TableCell className="text-[#666666]">{formatDate(article.publishedAt)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" render={<Link href={`/admin/press/${article.id}`} />}>
-                            편집
-                          </Button>
-                          <form action={deletePressArticle.bind(null, article.id)}>
-                            <Button type="submit" variant="destructive" size="sm">
-                              삭제
-                            </Button>
-                          </form>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* key를 items.length에 연결해 항목 추가 후 서버 재렌더 시 상태 초기화 */}
+      <PressSortableList key={articles.length} initialItems={articles} />
     </section>
   );
 }

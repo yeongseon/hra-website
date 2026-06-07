@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { desc, lte, or, isNull } from "drizzle-orm";
+import { desc, lte, or, isNull, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import type { Metadata } from "next";
@@ -43,7 +43,8 @@ export default async function CohortsPage() {
       .from(cohortsTable)
       // 기수 시작일이 오늘 이전이거나, 시작일이 없는 기수만 표시
       .where(or(isNull(cohortsTable.startDate), lte(cohortsTable.startDate, new Date())))
-      .orderBy(desc(cohortsTable.order));
+      // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
+      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohortsTable.name}, '[^0-9]', '', 'g') AS INTEGER)`));
 
     cohortData = dbCohorts;
   } catch (error) {

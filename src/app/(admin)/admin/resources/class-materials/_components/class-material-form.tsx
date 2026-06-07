@@ -108,8 +108,8 @@ export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
                   <SelectValue placeholder="대상을 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="STUDENT">학생용</SelectItem>
-                  <SelectItem value="FACULTY">교수용</SelectItem>
+                  <SelectItem value="STUDENT" label="학생용">학생용</SelectItem>
+                  <SelectItem value="FACULTY" label="교수용">교수용</SelectItem>
                 </SelectContent>
               </Select>
             </div>

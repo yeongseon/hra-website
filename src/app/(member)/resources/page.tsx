@@ -54,7 +54,8 @@ export default async function ResourcesPage() {
       db
         .select({ id: cohorts.id, name: cohorts.name })
         .from(cohorts)
-        .orderBy(desc(cohorts.order), desc(cohorts.createdAt)),
+        // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
+        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
 
       // 로그인 사용자의 cohortId 조회 (MEMBER일 때 업로드 권한 제한에 사용)
       session?.user?.id
@@ -136,6 +137,7 @@ export default async function ResourcesPage() {
           id: reportTemplates.id,
           slug: reportTemplates.slug,
           title: reportTemplates.title,
+          category: reportTemplates.category,
           createdAt: reportTemplates.createdAt,
         })
         .from(reportTemplates)
@@ -190,14 +192,16 @@ export default async function ResourcesPage() {
       cohortId: null,
       href: `/resources/guidebooks/${book.id}`,
     })),
-    // 보고서 양식 — 자료실 보고서 양식 탭에서 상세 뷰어로 이동
+    // 보고서 양식/가이드 — category에 따라 상세 경로 분기
     ...allTemplates.map((tmpl) => ({
       id: `tmpl-${tmpl.id}`,
       title: tmpl.title,
       category: "보고서 양식" as const,
       date: tmpl.createdAt,
       cohortId: null,
-      href: `/member/templates/${tmpl.slug}`,
+      href: tmpl.category === "guide"
+        ? `/member/guides/${tmpl.slug}`
+        : `/member/templates/${tmpl.slug}`,
     })),
   ];
 

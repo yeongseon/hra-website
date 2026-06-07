@@ -120,7 +120,7 @@ export function AdminShell({ userName, children }: AdminShellProps) {
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-screen-2xl">
         {/* 좌측 사이드바 — 태블릿/데스크톱에서만 표시 (md: breakpoint) */}
-        <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col">
+        <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-y-auto">
           <div className="px-6 py-5">
             <p className="text-sm font-semibold tracking-wide text-slate-900">HRA 관리자</p>
           </div>

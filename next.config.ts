@@ -19,6 +19,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // 가이드북·주차별텍스트 파일 업로드 최대 30MB + 멀티파트 헤더 여유분 포함해 32MB로 설정.
+    // 기본값(1MB)에서는 대부분의 파일이 413 에러로 차단된다.
+    serverActions: {
+      bodySizeLimit: "32mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

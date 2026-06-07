@@ -10,7 +10,7 @@
  */
 
 import { put } from "@vercel/blob";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -52,11 +52,19 @@ const allowedImageTypes = [
 const maxImageSize = 10 * 1024 * 1024;
 
 // 파일명 정규화: 공백 -> 하이픈, 영숫자/._- 외 제거
-// Blob URL 가독성 + 비-ASCII 우회 업로드 방어
+// Blob URL 가독성 + 비-ASCII(한글 등) 우회 업로드 방어
+// 주의: ".jpg" 처럼 영숫자가 없는 결과는 falsy가 아니므로
+//       /[a-zA-Z0-9]/ 포함 여부로 별도 검사한다.
 function normalizeFileName(fileName: string) {
-  const trimmed = fileName.trim();
-  const sanitized = trimmed.replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "");
-  return sanitized || "gallery-image";
+  const ext = fileName.includes(".")
+    ? `.${fileName.split(".").pop()?.toLowerCase() ?? ""}`
+    : "";
+  const baseName = ext ? fileName.slice(0, -ext.length) : fileName;
+  const sanitizedBase = baseName.trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9_-]/g, "");
+  const finalBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "gallery-image";
+  return `${finalBase}${ext}`;
 }
 
 // 업로드된 이미지 파일 검증
@@ -323,8 +331,9 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
 
   try {
     const blobs = await Promise.all(
-      files.map(async (file) => {
-        const safeFileName = `gallery/${Date.now()}-${normalizeFileName(file.name)}`;
+      files.map(async (file, index) => {
+        // index 포함: Promise.all 병렬 실행 시 Date.now()가 동일 ms여도 충돌 방지
+        const safeFileName = `gallery/${Date.now()}-${index}-${normalizeFileName(file.name)}`;
         const blob = await put(safeFileName, file, {
           access: "public",
         });
@@ -363,6 +372,61 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
 
   revalidateGalleryPaths(galleryResult.gallery.id);
   return successState(`${files.length}장의 이미지가 추가되었습니다.`);
+}
+
+// 갤러리 이미지 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
+// galleryId: 해당 앨범 ID (이미지가 실제로 속한 앨범인지 검증에 사용)
+// orderedIds: 새 순서대로 정렬된 이미지 ID 배열
+export async function reorderGalleryImages(
+  galleryId: string,
+  orderedIds: string[]
+): Promise<GalleryActionState> {
+  await requireAdmin();
+
+  const parsedGalleryId = idSchema.safeParse(galleryId);
+  if (!parsedGalleryId.success) {
+    return initialError(parsedGalleryId.error.issues[0]?.message ?? "잘못된 앨범 ID입니다.");
+  }
+
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return initialError("유효하지 않은 요청입니다.");
+  }
+
+  // 전달된 ID가 모두 해당 갤러리에 속한 이미지인지 검증
+  const existingImages = await db
+    .select({ id: galleryImages.id })
+    .from(galleryImages)
+    .where(
+      and(
+        eq(galleryImages.galleryId, parsedGalleryId.data),
+        inArray(galleryImages.id, orderedIds)
+      )
+    );
+
+  if (existingImages.length !== orderedIds.length) {
+    return initialError("일부 이미지를 찾을 수 없습니다.");
+  }
+
+  try {
+    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
+    for (const [index, id] of orderedIds.entries()) {
+      await db
+        .update(galleryImages)
+        .set({ order: index })
+        .where(
+          and(
+            eq(galleryImages.id, id),
+            eq(galleryImages.galleryId, parsedGalleryId.data)
+          )
+        );
+    }
+  } catch (err) {
+    console.error("[gallery/reorder-images] 순서 변경 실패:", err);
+    return initialError("순서를 저장하지 못했습니다. 다시 시도해주세요.");
+  }
+
+  revalidateGalleryPaths(parsedGalleryId.data);
+  return successState("이미지 순서를 저장했습니다.");
 }
 
 export async function deleteGalleryImage(id: string, imageId: string): Promise<GalleryActionState> {

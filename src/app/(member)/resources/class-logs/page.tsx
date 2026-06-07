@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Eye, Lock } from "lucide-react";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberClassLogUploadForm } from "@/app/(member)/resources/class-logs/_components/member-class-log-upload-form";
@@ -88,7 +88,7 @@ export default async function ClassLogsPage() {
     db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(asc(cohorts.order), asc(cohorts.createdAt)),
+      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
     // 보고서 양식 목록 — 수업일지 작성 시 템플릿으로 불러올 수 있도록 조회
     db
       .select({

@@ -7,7 +7,7 @@
  */
 
 import type { Metadata } from "next";
-import { desc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
 import { PressLink } from "./_components/press-link";
@@ -38,7 +38,8 @@ export default async function PressPage({
   const articles = await db
     .select()
     .from(pressArticles)
-    .orderBy(desc(pressArticles.publishedAt));
+    // 관리자가 드래그앤드롭으로 설정한 order 순서대로 표시, 동일 order는 게시일 최신순
+    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt));
 
   // 게시판 번호는 최신순(상단)부터 큰 번호 부여
   const totalCount = articles.length;

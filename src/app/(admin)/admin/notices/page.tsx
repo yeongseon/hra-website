@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { Pin } from "lucide-react";
+import { NoticePinButton } from "@/app/(admin)/admin/notices/_components/notice-pin-button";
 import { NoticeRowActions } from "@/app/(admin)/admin/notices/_components/notice-row-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,17 +16,25 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
 
-const noticeStatusLabels = {
-  DRAFT: "임시저장",
-  PUBLISHED: "게시됨",
-} as const;
-
 const formatDate = (value: Date) =>
   new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(value);
+
+// 마크다운 기호를 제거해 본문 미리보기용 평문으로 변환
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/#{1,6}\s/g, "")
+    .replace(/[*_~>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export default async function AdminNoticesPage() {
   await requireAdmin();
@@ -36,7 +43,7 @@ export default async function AdminNoticesPage() {
     .select({
       id: notices.id,
       title: notices.title,
-      status: notices.status,
+      content: notices.content,
       pinned: notices.pinned,
       createdAt: notices.createdAt,
     })
@@ -59,11 +66,11 @@ export default async function AdminNoticesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">고정</TableHead>
                   <TableHead>제목</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>고정</TableHead>
-                  <TableHead>날짜</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead>내용</TableHead>
+                  <TableHead className="w-28">날짜</TableHead>
+                  <TableHead className="w-28">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -76,33 +83,22 @@ export default async function AdminNoticesPage() {
                 ) : (
                   noticeList.map((notice) => (
                     <TableRow key={notice.id}>
-                      <TableCell className="max-w-[280px] truncate font-medium text-slate-900">
-                        {notice.title}
-                      </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={notice.status === "PUBLISHED" ? "default" : "secondary"}
-                          className={
-                            notice.status === "PUBLISHED"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-slate-100 text-slate-700"
-                          }
-                        >
-                          {noticeStatusLabels[notice.status]}
-                        </Badge>
+                        <NoticePinButton id={notice.id} pinned={notice.pinned} />
                       </TableCell>
-                      <TableCell>
-                        {notice.pinned ? (
-                          <span className="inline-flex items-center text-amber-600">
-                            <Pin className="size-4" />
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
+                      <TableCell className="w-[20%] max-w-0 font-medium text-slate-900">
+                        <span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">
+                          {notice.title}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-slate-700">{formatDate(notice.createdAt)}</TableCell>
+                      <TableCell className="w-[40%] max-w-0 text-slate-500">
+                        <span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_75%,transparent_100%)]">
+                          {stripMarkdown(notice.content)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-slate-600">{formatDate(notice.createdAt)}</TableCell>
                       <TableCell>
-                        <NoticeRowActions id={notice.id} pinned={notice.pinned} status={notice.status} />
+                        <NoticeRowActions id={notice.id} />
                       </TableCell>
                     </TableRow>
                   ))

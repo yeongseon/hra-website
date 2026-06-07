@@ -1,7 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -132,6 +132,10 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     // 대표 이미지 결정
     const representativeUrl = parsed.data.imageUrl || (uploadedUrls.length > 0 ? uploadedUrls[0] : null);
 
+    // 새 항목은 목록 맨 아래에 추가: 기존 최대 order + 1
+    const [{ maxOrder }] = await db.select({ maxOrder: max(alumniStories.order) }).from(alumniStories);
+    const nextOrder = (maxOrder ?? 0) + 1;
+
     const [newStory] = await db.insert(alumniStories).values({
       name: parsed.data.name,
       title: parsed.data.title ?? null,
@@ -139,6 +143,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
       content: parsed.data.content,
       imageUrl: representativeUrl,
       isFeatured: parsed.data.isFeatured,
+      order: nextOrder,
     }).returning({ id: alumniStories.id });
 
     if (uploadedUrls.length > 0) {
@@ -235,6 +240,61 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
 
   revalidateAlumniPaths();
   redirect("/admin/alumni");
+}
+
+// 수료생 이야기 상단 고정 토글
+export async function toggleAlumniPin(id: string): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
+
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, message: "잘못된 ID입니다." };
+  }
+
+  const current = await db.query.alumniStories.findFirst({
+    where: eq(alumniStories.id, parsedId.data),
+    columns: { pinned: true },
+  });
+
+  if (!current) {
+    return { success: false, message: "수료생 이야기를 찾을 수 없습니다." };
+  }
+
+  await db
+    .update(alumniStories)
+    .set({ pinned: !current.pinned })
+    .where(eq(alumniStories.id, parsedId.data));
+
+  revalidateAlumniPaths();
+  return { success: true, message: current.pinned ? "고정을 해제했습니다." : "상단에 고정했습니다." };
+}
+
+// 수료생 이야기 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
+// orderedIds: 새 순서대로 정렬된 수료생 이야기 ID 배열
+export async function reorderAlumniStories(
+  orderedIds: string[]
+): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
+
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return { success: false, message: "유효하지 않은 요청입니다." };
+  }
+
+  try {
+    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
+    for (const [index, id] of orderedIds.entries()) {
+      await db
+        .update(alumniStories)
+        .set({ order: index + 1 })
+        .where(eq(alumniStories.id, id));
+    }
+  } catch (err) {
+    console.error("[alumni/reorder] 순서 변경 실패:", err);
+    return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
+  }
+
+  revalidateAlumniPaths();
+  return { success: true, message: "순서를 저장했습니다." };
 }
 
 export async function deleteAlumniStory(id: string): Promise<void> {

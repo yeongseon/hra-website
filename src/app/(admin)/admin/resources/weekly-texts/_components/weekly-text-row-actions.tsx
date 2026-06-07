@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,11 @@ export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
   const [isPending, startTransition] = useTransition();
 
   return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" render={<Link href={`/admin/resources/weekly-texts/${id}/edit`} />}>
+        수정
+      </Button>
+
     <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
       <DialogTrigger render={<Button variant="destructive" size="sm" />}>
         <Trash2 className="size-3.5" />
@@ -59,5 +65,6 @@ export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </div>
   );
 }

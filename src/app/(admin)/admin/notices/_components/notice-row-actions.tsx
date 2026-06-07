@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pin, PinOff, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,51 +14,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteNotice, togglePin, toggleStatus } from "@/features/notices/actions";
+import { deleteNotice } from "@/features/notices/actions";
 
 type NoticeRowActionsProps = {
   id: string;
-  pinned: boolean;
-  status: "DRAFT" | "PUBLISHED";
 };
 
-export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) {
+export function NoticeRowActions({ id }: NoticeRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-
-  const runAction = (action: () => Promise<{ success: boolean }>) => {
-    startTransition(async () => {
-      const result = await action();
-      if (result.success) {
-        router.refresh();
-      }
-    });
-  };
 
   return (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" render={<Link href={`/admin/notices/${id}/edit`} />}>
         수정
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={isPending}
-        onClick={() => runAction(() => togglePin(id))}
-      >
-        {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-        {pinned ? "고정 해제" : "고정"}
-      </Button>
-
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={isPending}
-        onClick={() => runAction(() => toggleStatus(id))}
-      >
-        {status === "DRAFT" ? "게시" : "임시저장"}
       </Button>
 
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
@@ -82,12 +52,12 @@ export function NoticeRowActions({ id, pinned, status }: NoticeRowActionsProps) 
               variant="destructive"
               disabled={isPending}
               onClick={() => {
-                runAction(async () => {
+                startTransition(async () => {
                   const result = await deleteNotice(id);
                   if (result.success) {
                     setIsDeleteOpen(false);
+                    router.refresh();
                   }
-                  return result;
                 });
               }}
             >

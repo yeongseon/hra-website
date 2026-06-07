@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ type ClassLogFormProps = {
     content?: string;
     classDate?: string;
     cohortId?: string | null;
-    existingImageCount?: number;
   };
   submitLabel?: string;
   successMessage?: string;
@@ -61,7 +60,6 @@ export function ClassLogForm({
   successMessage = "저장되었습니다.",
 }: ClassLogFormProps) {
   const router = useRouter();
-  const [selectedImageNames, setSelectedImageNames] = useState<string[]>([]);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
     // ⚙️ 서버 액션 호출 - 폼 데이터를 서버로 전송
@@ -137,9 +135,9 @@ export function ClassLogForm({
                   <SelectValue placeholder="기수를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">기수 선택</SelectItem>
+                  <SelectItem value="__none__" label="기수 선택">기수 선택</SelectItem>
                   {cohorts.map((cohort) => (
-                    <SelectItem key={cohort.id} value={cohort.id}>
+                    <SelectItem key={cohort.id} value={cohort.id} label={cohort.name}>
                       {cohort.name}
                     </SelectItem>
                   ))}
@@ -159,41 +157,6 @@ export function ClassLogForm({
               required
               placeholder="마크다운으로 수업 내용을 작성해주세요..."
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="images" className="text-slate-700">
-              사진 첨부
-            </Label>
-            <Input
-              id="images"
-              name="images"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="border-slate-300 bg-white file:mr-4 file:rounded-full file:border-0 file:bg-[#2563EB]/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-[#2563EB] hover:file:bg-[#2563EB]/15"
-              onChange={(event) => {
-                setSelectedImageNames(Array.from(event.target.files ?? []).map((file) => file.name));
-              }}
-            />
-            <p className="text-sm text-[#666666]">
-              JPG, PNG, WEBP, GIF 사진을 여러 장 첨부할 수 있으며, 각 파일은 10MB 이하여야 합니다.
-            </p>
-            {defaultValues?.existingImageCount ? (
-              <p className="text-sm text-[#666666]">
-                현재 등록된 사진 {defaultValues.existingImageCount}장이 있습니다. 새 사진을 선택하면 기존 사진이
-                모두 교체됩니다.
-              </p>
-            ) : null}
-            {selectedImageNames.length > 0 ? (
-              <ul className="space-y-1 rounded-lg border border-[#D9D9D9] bg-gray-50 px-3 py-3 text-sm text-[#666666]">
-                {selectedImageNames.map((name) => (
-                  <li key={name} className="truncate">
-                    {name}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
 
           <div className="flex items-center gap-2">

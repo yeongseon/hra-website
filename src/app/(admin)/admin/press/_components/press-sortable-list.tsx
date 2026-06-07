@@ -1,8 +1,8 @@
 "use client";
 
-// FAQ 항목 드래그앤드롭 목록 컴포넌트 (관리자 전용)
-// HTML5 Drag and Drop API를 사용하여 FAQ 항목 순서를 변경합니다.
-// 드롭 시 reorderFaqItems 서버 액션을 호출해 DB에 순서를 저장합니다.
+// 언론보도 드래그앤드롭 목록 컴포넌트 (관리자 전용)
+// HTML5 Drag and Drop API를 사용하여 언론보도 표시 순서를 변경합니다.
+// 드롭 시 reorderPressArticles 서버 액션을 호출해 DB에 순서를 저장합니다.
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
@@ -17,25 +17,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteFaqItem, reorderFaqItems } from "@/features/faq/actions";
+import { deletePressArticle, reorderPressArticles } from "@/features/press/actions";
 import { cn } from "@/lib/utils";
 
-type FaqItemRow = {
+type PressArticleRow = {
   id: string;
-  question: string;
-  answer: string;
-  order: number;
+  title: string;
+  source: string;
+  publishedAt: Date;
 };
 
 type Props = {
-  initialItems: FaqItemRow[];
+  initialItems: PressArticleRow[];
 };
 
 function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
-export function FaqSortableList({ initialItems }: Props) {
+const formatDate = (value: Date) =>
+  new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
+
+export function PressSortableList({ initialItems }: Props) {
   const [items, setItems] = useState(initialItems);
   // ref: 드롭 핸들러에서 동기적으로 읽기 위한 드래그 인덱스
   const draggingIdxRef = useRef<number | null>(null);
@@ -91,7 +98,7 @@ export function FaqSortableList({ initialItems }: Props) {
 
     setSaveError(null);
     startTransition(async () => {
-      const result = await reorderFaqItems(next.map((i) => i.id));
+      const result = await reorderPressArticles(next.map((i) => i.id));
       if (!result.success) {
         // 저장 실패 시 이전 상태로 복원
         setSaveError(result.message);
@@ -104,14 +111,14 @@ export function FaqSortableList({ initialItems }: Props) {
   const handleDelete = async (id: string) => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await deleteFaqItem(id);
+    await deletePressArticle(id);
   };
 
   return (
     <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
       <CardHeader className="border-b border-[#D9D9D9] py-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base text-[#1a1a1a]">전체 FAQ {items.length}건</CardTitle>
+          <CardTitle className="text-base text-[#1a1a1a]">전체 언론보도 {items.length}건</CardTitle>
           {isPending && (
             <span className="text-xs text-[#666666]">순서 저장 중...</span>
           )}
@@ -131,16 +138,17 @@ export function FaqSortableList({ initialItems }: Props) {
                 {/* 드래그 핸들 열 */}
                 <TableHead className="w-10" />
                 <TableHead className="w-10 text-center">순서</TableHead>
-                <TableHead className="w-[30%]">질문</TableHead>
-                <TableHead>답변 (미리보기)</TableHead>
+                <TableHead>제목</TableHead>
+                <TableHead>언론사</TableHead>
+                <TableHead>게시일</TableHead>
                 <TableHead className="w-32 shrink-0">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
-                    등록된 FAQ가 없습니다.
+                  <TableCell colSpan={6} className="py-8 text-center text-[#666666]">
+                    등록된 언론보도가 없습니다.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -166,18 +174,17 @@ export function FaqSortableList({ initialItems }: Props) {
                     </TableCell>
                     {/* 현재 배열 위치 기반 순서 번호 */}
                     <TableCell className="text-center text-[#666666]">{idx + 1}</TableCell>
-                    <TableCell className="w-[30%] font-medium text-[#1a1a1a]">
-                      {truncate(item.question, 60)}
+                    <TableCell className="max-w-sm font-medium text-[#1a1a1a]">
+                      {truncate(item.title, 70)}
                     </TableCell>
-                    <TableCell className="max-w-0 truncate text-sm text-[#666666]">
-                      {truncate(item.answer, 80)}
-                    </TableCell>
+                    <TableCell className="text-[#1a1a1a]">{truncate(item.source, 30)}</TableCell>
+                    <TableCell className="text-[#666666]">{formatDate(item.publishedAt)}</TableCell>
                     <TableCell className="w-32">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          render={<Link href={`/admin/faq/${item.id}`} />}
+                          render={<Link href={`/admin/press/${item.id}`} />}
                         >
                           수정
                         </Button>

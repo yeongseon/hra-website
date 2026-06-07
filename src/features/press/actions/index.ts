@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { eq, max, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -76,6 +76,10 @@ export async function createPressArticle(formData: FormData): Promise<PressArtic
     };
   }
 
+  // 새 항목은 목록 맨 아래에 추가: 기존 최대 order + 1
+  const [{ maxOrder }] = await db.select({ maxOrder: max(pressArticles.order) }).from(pressArticles);
+  const nextOrder = (maxOrder ?? 0) + 1;
+
   await db.insert(pressArticles).values({
     title: parsed.data.title,
     source: parsed.data.source,
@@ -83,6 +87,7 @@ export async function createPressArticle(formData: FormData): Promise<PressArtic
     publishedAt: new Date(parsed.data.publishedAt),
     description: parsed.data.description ?? null,
     imageUrl: parsed.data.imageUrl ?? null,
+    order: nextOrder,
   });
 
   revalidatePressPaths();
@@ -145,6 +150,34 @@ export async function deletePressArticle(id: string): Promise<void> {
 
   await db.delete(pressArticles).where(eq(pressArticles.id, parsedId.data));
   revalidatePressPaths();
+}
+
+// 언론보도 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
+// orderedIds: 새 순서대로 정렬된 언론보도 ID 배열
+export async function reorderPressArticles(
+  orderedIds: string[]
+): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
+
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return { success: false, message: "유효하지 않은 요청입니다." };
+  }
+
+  try {
+    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
+    for (const [index, id] of orderedIds.entries()) {
+      await db
+        .update(pressArticles)
+        .set({ order: index + 1 })
+        .where(eq(pressArticles.id, id));
+    }
+  } catch (err) {
+    console.error("[press/reorder] 순서 변경 실패:", err);
+    return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
+  }
+
+  revalidatePressPaths();
+  return { success: true, message: "순서를 저장했습니다." };
 }
 
 export async function trackPressView(id: string) {
