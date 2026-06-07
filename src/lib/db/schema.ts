@@ -428,11 +428,17 @@ export const faqContact = pgTable("faq_contact", {
 // Recruitment Settings (모집 설정 테이블)
 // ============================================================
 
-// 모집 안내 페이지의 설정 정보 (포스터, D-day 등)
+// 모집 안내 페이지의 설정 정보 (포스터, D-day, 현재 모집 기수 등)
 export const recruitmentSettings = pgTable("recruitment_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // 현재 모집 기수 정보 (모집 설정 관리자 페이지 상단 섹션)
+  activeCohortId: uuid("active_cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 현재 모집 중인 기수 (null이면 모집 없음)
+  recruitmentStatus: recruitmentStatusEnum("recruitment_status").default("UPCOMING"), // 모집 상태: 예정/모집중/마감
+  googleFormUrl: text("google_form_url"), // 지원 구글폼 URL (지원하기 버튼에 사용)
+  recruitmentStartDate: timestamp("recruitment_start_date"), // 모집 시작일
+  // 기존 모집 안내 콘텐츠
   posterImageUrl: text("poster_image_url"), // 모집 포스터 이미지 URL
-  deadlineDate: timestamp("deadline_date"), // D-day 기준 마감일
+  deadlineDate: timestamp("deadline_date"), // 모집 종료일 / D-day 기준
   nextRecruitmentYear: integer("next_recruitment_year"), // 다음 모집 예정 연도
   nextRecruitmentMonth: integer("next_recruitment_month"), // 다음 모집 예정 월
   qualificationText: text("qualification_text"), // 지원 자격 안내 문구

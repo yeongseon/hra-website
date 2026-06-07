@@ -18,17 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { CohortActionState } from "@/features/recruitment/actions";
-
-type RecruitmentStatus = "UPCOMING" | "OPEN" | "CLOSED";
 
 type CohortFormValues = {
   name?: string;
@@ -36,11 +27,6 @@ type CohortFormValues = {
   imageUrl?: string | null;
   startDate?: string;
   endDate?: string;
-  recruitmentStartDate?: string;
-  recruitmentEndDate?: string;
-  googleFormUrl?: string | null;
-  googleSheetId?: string | null;
-  recruitmentStatus?: RecruitmentStatus;
   isActive?: boolean;
   order?: number;
 };
@@ -58,12 +44,6 @@ const initialState: CohortActionState = {
   message: "",
 };
 
-const statusOptions: Array<{ value: RecruitmentStatus; label: string }> = [
-  { value: "UPCOMING", label: "예정" },
-  { value: "OPEN", label: "모집중" },
-  { value: "CLOSED", label: "마감" },
-];
-
 export function CohortForm({ title, description, submitLabel, action, defaultValues }: CohortFormProps) {
   // ⚙️ 서버 액션 호출 - 기수 정보를 서버로 전송하여 DB 저장/수정
   const [state, formAction, isPending] = useActionState(async (_prevState: CohortActionState, formData: FormData) => {
@@ -71,7 +51,6 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
     return result ?? initialState;
   }, initialState);
 
-  const statusValue = defaultValues?.recruitmentStatus ?? "UPCOMING";
   const isActive = defaultValues?.isActive ?? true;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(defaultValues?.imageUrl ?? null);
@@ -325,53 +304,6 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="recruitmentStartDate">모집 시작일</Label>
-                <Input
-                  id="recruitmentStartDate"
-                  name="recruitmentStartDate"
-                  type="date"
-                  defaultValue={defaultValues?.recruitmentStartDate ?? ""}
-                  className="h-10"
-                />
-                {state.fieldErrors?.recruitmentStartDate ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.recruitmentStartDate}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="recruitmentEndDate">모집 종료일</Label>
-                <Input
-                  id="recruitmentEndDate"
-                  name="recruitmentEndDate"
-                  type="date"
-                  defaultValue={defaultValues?.recruitmentEndDate ?? ""}
-                  className="h-10"
-                />
-                {state.fieldErrors?.recruitmentEndDate ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.recruitmentEndDate}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="recruitmentStatus">모집 상태</Label>
-                <Select name="recruitmentStatus" defaultValue={statusValue}>
-                  <SelectTrigger id="recruitmentStatus" className="h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {state.fieldErrors?.recruitmentStatus ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.recruitmentStatus}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="order">정렬 순서</Label>
                 <Input
                   id="order"
@@ -396,42 +328,6 @@ export function CohortForm({ title, description, submitLabel, action, defaultVal
                 />
                 활성 기수로 표시
               </label>
-            </div>
-
-            <div className="space-y-5 border-t border-slate-200 pt-5">
-              <div className="space-y-2">
-                <Label htmlFor="googleFormUrl">구글폼 URL</Label>
-                <Input
-                  id="googleFormUrl"
-                  name="googleFormUrl"
-                  placeholder="https://forms.google.com/..."
-                  defaultValue={defaultValues?.googleFormUrl ?? ""}
-                  className="h-10"
-                />
-                <p className="text-xs text-slate-500">
-                  모집 상태가 &quot;모집중&quot;일 때 공개 모집 페이지의 &quot;지원하기&quot; 버튼이 이 링크로 연결됩니다.
-                </p>
-                {state.fieldErrors?.googleFormUrl ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.googleFormUrl}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="googleSheetId">구글 시트 ID</Label>
-                <Input
-                  id="googleSheetId"
-                  name="googleSheetId"
-                  placeholder="스프레드시트 URL에서 /d/ 뒤의 문자열"
-                  defaultValue={defaultValues?.googleSheetId ?? ""}
-                  className="h-10"
-                />
-                <p className="text-xs text-slate-500">
-                  구글폼 응답이 저장되는 시트를 연동할 때 사용하는 값입니다. 비워둬도 저장할 수 있습니다.
-                </p>
-                {state.fieldErrors?.googleSheetId ? (
-                  <p className="text-xs text-red-600">{state.fieldErrors.googleSheetId}</p>
-                ) : null}
-              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4">

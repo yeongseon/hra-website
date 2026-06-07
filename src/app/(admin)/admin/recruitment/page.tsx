@@ -2,18 +2,17 @@
  * 기수 관리 페이지 (목록)
  *
  * 역할: 관리자가 등록된 모든 기수를 테이블 형태로 볼 수 있는 페이지
- * - 기수 목록 조회 (기수명, 모집 상태, 활성 여부, 기간, 지원자 수)
- * - 각 기수의 모집 상태 변경 (예정 → 모집중 → 마감)
+ * - 기수 목록 조회 (기수명, 활성 여부, 기간, 지원자 수)
  * - 각 기수별 수정/삭제 액션
  * - "새 기수 추가" 버튼으로 새 항목 생성 가능
  *
  * 데이터 흐름: DB에서 모든 기수 + 각 기수의 지원서 개수 조회
+ * 모집 관련 설정(모집 기수, 상태, 구글폼)은 모집 설정 페이지에서 관리
  */
 
 import Link from "next/link";
 import { desc, eq, count } from "drizzle-orm";
 import { Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -40,11 +39,6 @@ const formatDate = (value: Date | null) => {
   }).format(value);
 };
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  UPCOMING: { label: "예정", className: "bg-amber-100 text-amber-800" },
-  OPEN: { label: "모집중", className: "bg-emerald-100 text-emerald-800" },
-  CLOSED: { label: "마감", className: "bg-slate-100 text-slate-600" },
-};
 
 export default async function AdminRecruitmentPage() {
   // 🔒 관리자 권한 확인
@@ -60,7 +54,6 @@ export default async function AdminRecruitmentPage() {
         .select({
           id: cohorts.id,
           name: cohorts.name,
-          recruitmentStatus: cohorts.recruitmentStatus,
           isActive: cohorts.isActive,
           startDate: cohorts.startDate,
           endDate: cohorts.endDate,
@@ -106,7 +99,6 @@ export default async function AdminRecruitmentPage() {
             <TableHeader>
                <TableRow>
                  <TableHead>기수명</TableHead>
-                 <TableHead>모집 상태</TableHead>
                  <TableHead>활성</TableHead>
                  <TableHead>기간</TableHead>
                  <TableHead>지원자 수</TableHead>
@@ -122,16 +114,9 @@ export default async function AdminRecruitmentPage() {
                 </TableRow>
               ) : (
                 rows.map((cohort) => {
-                  const config = statusConfig[cohort.recruitmentStatus] ?? statusConfig.CLOSED;
-
                   return (
                     <TableRow key={cohort.id}>
                       <TableCell className="font-medium text-slate-900">{cohort.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={config.className}>
-                          {config.label}
-                        </Badge>
-                      </TableCell>
                       <TableCell>
                         {cohort.isActive ? (
                           <span className="text-emerald-600">활성</span>
@@ -146,10 +131,7 @@ export default async function AdminRecruitmentPage() {
                         {Number(cohort.applicationCount)}명
                       </TableCell>
                       <TableCell>
-                        <RecruitmentRowActions
-                          id={cohort.id}
-                          currentStatus={cohort.recruitmentStatus}
-                        />
+                        <RecruitmentRowActions id={cohort.id} />
                       </TableCell>
                     </TableRow>
                   );

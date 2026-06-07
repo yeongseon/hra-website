@@ -128,16 +128,6 @@ export function AdminShell({ userName, children }: AdminShellProps) {
           <div className="flex-1 p-4">
             <AdminNav />
           </div>
-          <div className="border-t border-slate-200 p-4">
-            <Link
-              href="/"
-              target="_blank"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-            >
-              <ExternalLink className="size-4" />
-              <span>홈페이지로 이동</span>
-            </Link>
-          </div>
         </aside>
 
         {/* 메인 콘텐츠 영역 */}
@@ -172,9 +162,19 @@ export function AdminShell({ userName, children }: AdminShellProps) {
               {/* 데스크톱에서 표시되는 제목 */}
               <div className="hidden text-sm font-semibold tracking-wide md:block">HRA 관리자</div>
 
-              {/* 관리자 이름 표시 */}
-              <div className="text-sm text-slate-600">
-                관리자 <span className="font-semibold text-slate-900">{userName}</span>
+              {/* 홈페이지 이동 버튼 + 관리자 이름 */}
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/"
+                  target="_blank"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <ExternalLink className="size-3.5" />
+                  <span>홈페이지로 이동</span>
+                </Link>
+                <div className="text-sm text-slate-600">
+                  관리자 <span className="font-semibold text-slate-900">{userName}</span>
+                </div>
               </div>
             </div>
           </header>

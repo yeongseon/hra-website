@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { desc } from "drizzle-orm";
+import { desc, lte, or, isNull } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import type { Metadata } from "next";
@@ -41,6 +41,8 @@ export default async function CohortsPage() {
         order: cohortsTable.order,
       })
       .from(cohortsTable)
+      // 기수 시작일이 오늘 이전이거나, 시작일이 없는 기수만 표시
+      .where(or(isNull(cohortsTable.startDate), lte(cohortsTable.startDate, new Date())))
       .orderBy(desc(cohortsTable.order));
 
     cohortData = dbCohorts;

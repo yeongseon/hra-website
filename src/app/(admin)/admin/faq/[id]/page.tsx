@@ -32,7 +32,6 @@ export default async function AdminFaqEditPage({
       defaultValues={{
         question: item.question,
         answer: item.answer,
-        order: item.order,
       }}
     />
   );

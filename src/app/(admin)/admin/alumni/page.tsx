@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ export default async function AdminAlumniPage() {
   const stories = await db
     .select()
     .from(alumniStories)
-    .orderBy(asc(alumniStories.order), asc(alumniStories.createdAt));
+    .orderBy(desc(alumniStories.createdAt));
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
@@ -57,14 +57,13 @@ export default async function AdminAlumniPage() {
                   <TableHead>제목</TableHead>
                   <TableHead>메인노출</TableHead>
                   <TableHead>인용구</TableHead>
-                  <TableHead>순서</TableHead>
                   <TableHead>액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {stories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-[#666666]">
+                    <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
                       등록된 수료생 이야기가 없습니다.
                     </TableCell>
                   </TableRow>
@@ -75,7 +74,6 @@ export default async function AdminAlumniPage() {
                       <TableCell className="text-[#1a1a1a]">{story.title ?? "-"}</TableCell>
                       <TableCell className="text-[#666666]">{story.isFeatured ? "노출" : "숨김"}</TableCell>
                       <TableCell className="max-w-xs text-[#666666]">{truncateText(story.quote, 60)}</TableCell>
-                      <TableCell className="text-[#666666]">{story.order}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" render={<Link href={`/alumni/${story.id}`} target="_blank" />}>

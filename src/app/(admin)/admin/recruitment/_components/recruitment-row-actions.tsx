@@ -25,53 +25,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { deleteCohort, updateRecruitmentStatus } from "@/features/recruitment/actions";
+import { deleteCohort } from "@/features/recruitment/actions";
 
 type RecruitmentRowActionsProps = {
   id: string;
-  currentStatus: "UPCOMING" | "OPEN" | "CLOSED";
 };
 
-const recruitmentStatusLabels = {
-  UPCOMING: "예정",
-  OPEN: "모집중",
-  CLOSED: "마감",
-} as const;
-
-export function RecruitmentRowActions({ id, currentStatus }: RecruitmentRowActionsProps) {
+export function RecruitmentRowActions({ id }: RecruitmentRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const handleStatusChange = (status: string | null) => {
-    if (!status) return;
-    // ⚙️ 서버 액션 호출 - 기수의 모집 상태 변경
-    startTransition(async () => {
-      await updateRecruitmentStatus(id, status as "UPCOMING" | "OPEN" | "CLOSED");
-      router.refresh(); // 페이지 새로고침 (상태 업데이트)
-    });
-  };
-
   return (
     <div className="flex items-center gap-2">
-      <Select defaultValue={currentStatus} onValueChange={handleStatusChange} disabled={isPending}>
-        <SelectTrigger className="h-8 w-[130px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="UPCOMING">{recruitmentStatusLabels.UPCOMING}</SelectItem>
-          <SelectItem value="OPEN">{recruitmentStatusLabels.OPEN}</SelectItem>
-          <SelectItem value="CLOSED">{recruitmentStatusLabels.CLOSED}</SelectItem>
-        </SelectContent>
-      </Select>
-
       <Button variant="outline" size="sm" render={<Link href={`/admin/recruitment/${id}/edit`} />}>
         수정
       </Button>

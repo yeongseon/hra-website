@@ -64,14 +64,13 @@ export default async function AdminPressPage() {
                   <TableHead>제목</TableHead>
                   <TableHead>언론사</TableHead>
                   <TableHead>게시일</TableHead>
-                  <TableHead>순서</TableHead>
                   <TableHead>액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {articles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-[#666666]">
+                    <TableCell colSpan={4} className="py-8 text-center text-[#666666]">
                       등록된 언론보도가 없습니다.
                     </TableCell>
                   </TableRow>
@@ -81,7 +80,6 @@ export default async function AdminPressPage() {
                       <TableCell className="max-w-sm font-medium text-[#1a1a1a]">{truncateText(article.title, 70)}</TableCell>
                       <TableCell className="text-[#1a1a1a]">{truncateText(article.source, 30)}</TableCell>
                       <TableCell className="text-[#666666]">{formatDate(article.publishedAt)}</TableCell>
-                      <TableCell className="text-[#666666]">{article.order}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" render={<Link href={`/admin/press/${article.id}`} />}>

@@ -18,22 +18,12 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 
-/**
- * 모집 상태를 정의하는 스키마
- * - UPCOMING: 아직 모집하지 않음 (예정 중)
- * - OPEN: 현재 모집 중
- * - CLOSED: 모집 마감
- */
-const statusSchema = z.enum(["UPCOMING", "OPEN", "CLOSED"]);
 
 /**
  * 기수 정보 유효성 검사 스키마
- * 
- * Zod는 입력된 데이터가 정확한 형식인지 확인하는 도구입니다.
- * 예: "name"이 정말 텍스트인지? 길이가 100자 이하인지? 이런 것들을 체크합니다.
- * 
- * superRefine 부분: 단순 타입 체크를 넘어 "시작일이 종료일보다 늦으면 안 된다"는 
- * 논리적 규칙까지 확인합니다. (날짜 교차 검증)
+ *
+ * 기수 소개 페이지(/cohorts)에 표시되는 정보만 검증합니다.
+ * 모집 관련 정보(모집 상태, 날짜, 구글폼)는 모집 설정에서 관리합니다.
  */
 const cohortSchema = z
   .object({
@@ -45,17 +35,6 @@ const cohortSchema = z
       .optional(),
     startDate: z.string().trim().optional(),
     endDate: z.string().trim().optional(),
-    recruitmentStartDate: z.string().trim().optional(),
-    recruitmentEndDate: z.string().trim().optional(),
-    googleFormUrl: z
-      .string()
-      .trim()
-      .optional()
-      .refine((value) => !value || value.startsWith("https://"), {
-        message: "구글폼 URL은 https://로 시작해야 합니다.",
-      }),
-    googleSheetId: z.string().trim().optional(),
-    recruitmentStatus: statusSchema,
     isActive: z.boolean(),
     order: z.coerce
       .number({ message: "정렬 순서는 숫자여야 합니다." })
@@ -63,27 +42,17 @@ const cohortSchema = z
   })
   .superRefine((data, ctx) => {
     const parseDateString = (value: string | undefined, path: string) => {
-      if (!value) {
-        return null;
-      }
+      if (!value) return null;
 
       const isDateInputFormat = /^\d{4}-\d{2}-\d{2}$/.test(value);
       if (!isDateInputFormat) {
-        ctx.addIssue({
-          code: "custom",
-          message: "날짜 형식이 올바르지 않습니다.",
-          path: [path],
-        });
+        ctx.addIssue({ code: "custom", message: "날짜 형식이 올바르지 않습니다.", path: [path] });
         return null;
       }
 
       const parsed = new Date(`${value}T00:00:00`);
       if (Number.isNaN(parsed.getTime())) {
-        ctx.addIssue({
-          code: "custom",
-          message: "유효한 날짜를 입력해주세요.",
-          path: [path],
-        });
+        ctx.addIssue({ code: "custom", message: "유효한 날짜를 입력해주세요.", path: [path] });
         return null;
       }
 
@@ -92,22 +61,12 @@ const cohortSchema = z
 
     const startDate = parseDateString(data.startDate, "startDate");
     const endDate = parseDateString(data.endDate, "endDate");
-    const recruitmentStartDate = parseDateString(data.recruitmentStartDate, "recruitmentStartDate");
-    const recruitmentEndDate = parseDateString(data.recruitmentEndDate, "recruitmentEndDate");
 
     if (startDate && endDate && startDate > endDate) {
       ctx.addIssue({
         code: "custom",
         message: "기수 시작일은 종료일보다 늦을 수 없습니다.",
         path: ["endDate"],
-      });
-    }
-
-    if (recruitmentStartDate && recruitmentEndDate && recruitmentStartDate > recruitmentEndDate) {
-      ctx.addIssue({
-        code: "custom",
-        message: "모집 시작일은 모집 종료일보다 늦을 수 없습니다.",
-        path: ["recruitmentEndDate"],
       });
     }
   });
@@ -171,11 +130,6 @@ function parseCohortFormData(formData: FormData) {
     description: normalizeText(formData.get("description")) || undefined,
     startDate: normalizeText(formData.get("startDate")) || undefined,
     endDate: normalizeText(formData.get("endDate")) || undefined,
-    recruitmentStartDate: normalizeText(formData.get("recruitmentStartDate")) || undefined,
-    recruitmentEndDate: normalizeText(formData.get("recruitmentEndDate")) || undefined,
-    googleFormUrl: normalizeText(formData.get("googleFormUrl")) || undefined,
-    googleSheetId: normalizeText(formData.get("googleSheetId")) || undefined,
-    recruitmentStatus: normalizeText(formData.get("recruitmentStatus")),
     isActive: formData.get("isActive") === "on",
     order: normalizeText(formData.get("order")) || "0",
   });
@@ -251,11 +205,6 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
     description: parsed.data.description ?? null,
     startDate: toDateOrNull(parsed.data.startDate),
     endDate: toDateOrNull(parsed.data.endDate),
-    recruitmentStartDate: toDateOrNull(parsed.data.recruitmentStartDate),
-    recruitmentEndDate: toDateOrNull(parsed.data.recruitmentEndDate),
-    googleFormUrl: parsed.data.googleFormUrl ?? null,
-    googleSheetId: parsed.data.googleSheetId ?? null,
-    recruitmentStatus: parsed.data.recruitmentStatus,
     isActive: parsed.data.isActive,
     order: parsed.data.order,
     imageUrl: uploadedImage.imageUrl,
@@ -346,11 +295,6 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
       description: parsed.data.description ?? null,
       startDate: toDateOrNull(parsed.data.startDate),
       endDate: toDateOrNull(parsed.data.endDate),
-      recruitmentStartDate: toDateOrNull(parsed.data.recruitmentStartDate),
-      recruitmentEndDate: toDateOrNull(parsed.data.recruitmentEndDate),
-      googleFormUrl: parsed.data.googleFormUrl ?? null,
-      googleSheetId: parsed.data.googleSheetId ?? null,
-      recruitmentStatus: parsed.data.recruitmentStatus,
       isActive: parsed.data.isActive,
       order: parsed.data.order,
       imageUrl: nextImageUrl,
@@ -393,35 +337,3 @@ export async function deleteCohort(id: string) {
   revalidatePath("/recruitment");
 }
 
-/**
- * 모집 상태 변경 서버 액션
- * 역할: 관리자가 모집 상태를 "예정" → "모집중" → "마감"으로 변경할 때 호출
- * 
- * 상태 종류:
- * - UPCOMING: 아직 시작 전 (프로그램 소개만 보임)
- * - OPEN: 모집 중 (지원서 접수 가능)
- * - CLOSED: 모집 마감 (지원 불가)
- * 
- * 매개변수: id (기수의 고유 ID), status (변경할 모집 상태)
- */
-export async function updateRecruitmentStatus(
-  id: string,
-  status: "UPCOMING" | "OPEN" | "CLOSED"
-) {
-  await requireAdmin();
-
-  const parsedId = z.uuid().safeParse(id);
-  const parsedStatus = statusSchema.safeParse(status);
-  if (!parsedId.success || !parsedStatus.success) {
-    return;
-  }
-
-  await db
-    .update(cohorts)
-    .set({ recruitmentStatus: parsedStatus.data })
-    .where(eq(cohorts.id, parsedId.data));
-
-  revalidatePath("/admin/recruitment");
-  revalidatePath("/cohorts");
-  revalidatePath("/recruitment");
-}

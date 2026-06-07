@@ -41,7 +41,6 @@ export default async function EditPressArticlePage({ params }: EditPressArticleP
         publishedAt: toDateInputValue(article.publishedAt),
         description: article.description,
         imageUrl: article.imageUrl,
-        order: article.order,
       }}
     />
   );

@@ -92,9 +92,6 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
         imageUrl: cohort.imageUrl,
         startDate: formatDateForInput(cohort.startDate),
         endDate: formatDateForInput(cohort.endDate),
-        recruitmentStartDate: formatDateForInput(cohort.recruitmentStartDate),
-        recruitmentEndDate: formatDateForInput(cohort.recruitmentEndDate),
-        recruitmentStatus: cohort.recruitmentStatus,
         isActive: cohort.isActive,
         order: cohort.order,
       }}

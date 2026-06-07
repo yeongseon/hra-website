@@ -22,9 +22,6 @@ const alumniStoryFormSchema = z.object({
   isFeatured: z
     .union([z.literal("true"), z.literal("on"), z.null(), z.undefined()])
     .transform((value) => value === "true" || value === "on"),
-  order: z.coerce
-    .number({ message: "순서는 숫자여야 합니다." })
-    .int("순서는 정수여야 합니다."),
 });
 
 export type AlumniStoryActionState = {
@@ -59,7 +56,6 @@ function parseAlumniStoryFormData(formData: FormData) {
     content: normalizeText(formData.get("content")),
     imageUrl: normalizeText(formData.get("imageUrl")) || undefined,
     isFeatured: formData.get("isFeatured"),
-    order: normalizeText(formData.get("order")) || "0",
   });
 }
 
@@ -143,7 +139,6 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
       content: parsed.data.content,
       imageUrl: representativeUrl,
       isFeatured: parsed.data.isFeatured,
-      order: parsed.data.order,
     }).returning({ id: alumniStories.id });
 
     if (uploadedUrls.length > 0) {
@@ -218,7 +213,6 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
         content: parsed.data.content,
         imageUrl: parsed.data.imageUrl || existing?.imageUrl,
         isFeatured: parsed.data.isFeatured,
-        order: parsed.data.order,
       })
       .where(eq(alumniStories.id, parsedId.data));
 

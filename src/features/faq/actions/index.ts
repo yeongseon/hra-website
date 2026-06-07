@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -111,10 +111,10 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
 // FAQ 질문·답변 CRUD
 // ============================================================
 
+// order 필드는 폼에서 제거 — 드래그앤드롭으로 순서 관리
 const faqItemSchema = z.object({
   question: z.string().trim().min(1, "질문을 입력해주세요.").max(500, "질문은 500자 이하여야 합니다."),
   answer: z.string().trim().min(1, "답변을 입력해주세요."),
-  order: z.coerce.number().int().min(0).default(0),
 });
 
 export type FaqItemActionState = {
@@ -139,14 +139,13 @@ export async function getFaqItem(id: string) {
   return item ?? null;
 }
 
-// FAQ 항목 생성
+// FAQ 항목 생성 — 순서는 기존 최댓값 + 1로 자동 지정 (새 항목은 목록 맨 아래로)
 export async function createFaqItem(formData: FormData): Promise<FaqItemActionState> {
   await requireAdmin();
 
   const parsed = faqItemSchema.safeParse({
     question: formData.get("question"),
     answer: formData.get("answer"),
-    order: formData.get("order"),
   });
 
   if (!parsed.success) {
@@ -161,20 +160,23 @@ export async function createFaqItem(formData: FormData): Promise<FaqItemActionSt
     };
   }
 
-  await db.insert(faqItems).values(parsed.data);
+  // 기존 항목 중 가장 큰 order 값을 조회하여 그보다 1 큰 값으로 설정
+  const [{ maxOrder }] = await db.select({ maxOrder: max(faqItems.order) }).from(faqItems);
+  const nextOrder = (maxOrder ?? 0) + 1;
+
+  await db.insert(faqItems).values({ ...parsed.data, order: nextOrder });
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
   redirect("/admin/faq");
 }
 
-// FAQ 항목 수정
+// FAQ 항목 수정 — 순서(order)는 드래그앤드롭으로 관리하므로 수정하지 않음
 export async function updateFaqItem(id: string, formData: FormData): Promise<FaqItemActionState> {
   await requireAdmin();
 
   const parsed = faqItemSchema.safeParse({
     question: formData.get("question"),
     answer: formData.get("answer"),
-    order: formData.get("order"),
   });
 
   if (!parsed.success) {
@@ -202,4 +204,33 @@ export async function deleteFaqItem(id: string): Promise<void> {
   await db.delete(faqItems).where(eq(faqItems.id, id));
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
+}
+
+// FAQ 항목 순서 일괄 변경 — 드래그앤드롭 결과를 저장
+// orderedIds: 새 순서대로 정렬된 FAQ 항목 ID 배열
+export async function reorderFaqItems(
+  orderedIds: string[]
+): Promise<{ success: boolean; message: string }> {
+  await requireAdmin();
+
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return { success: false, message: "유효하지 않은 요청입니다." };
+  }
+
+  try {
+    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
+    for (const [index, id] of orderedIds.entries()) {
+      await db
+        .update(faqItems)
+        .set({ order: index + 1 })
+        .where(eq(faqItems.id, id));
+    }
+  } catch (err) {
+    console.error("[faq/reorder] 순서 변경 실패:", err);
+    return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
+  }
+
+  revalidatePath("/faq");
+  revalidatePath("/admin/faq");
+  return { success: true, message: "순서를 저장했습니다." };
 }

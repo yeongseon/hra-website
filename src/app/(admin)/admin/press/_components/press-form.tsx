@@ -17,7 +17,6 @@ type PressFormValues = {
   publishedAt?: string;
   description?: string | null;
   imageUrl?: string | null;
-  order?: number;
 };
 
 type PressFormProps = {
@@ -156,21 +155,6 @@ export function PressForm({ title, description, submitLabel, action, defaultValu
                 {state.fieldErrors?.imageUrl ? <p className="text-xs text-red-600">{state.fieldErrors.imageUrl}</p> : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="order" className="text-[#1a1a1a]">
-                  순서
-                </Label>
-                <Input
-                  id="order"
-                  name="order"
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={defaultValues?.order ?? 0}
-                  className="border-[#D9D9D9] text-[#1a1a1a]"
-                />
-                {state.fieldErrors?.order ? <p className="text-xs text-red-600">{state.fieldErrors.order}</p> : null}
-              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-[#D9D9D9] pt-4">

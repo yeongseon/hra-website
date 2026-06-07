@@ -1,34 +1,22 @@
 // FAQ 질문·답변 관리 목록 페이지 (관리자 전용)
-// FAQ 항목 CRUD 목록과 연락처 설정을 한 페이지에서 관리합니다.
+// FAQ 항목 목록(드래그앤드롭 순서 변경)과 연락처 설정을 한 페이지에서 관리합니다.
 
 import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { deleteFaqItem } from "@/features/faq/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { faqItems } from "@/lib/db/schema";
 import { FaqContactForm } from "./_components/faq-contact-form";
+import { FaqSortableList } from "./_components/faq-sortable-list";
 
 export const dynamic = "force-dynamic";
-
-function truncate(text: string, max = 60) {
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-}
 
 export default async function AdminFaqPage() {
   await requireAdmin();
 
+  // order 오름차순, 동일 order는 생성일 오름차순으로 초기 정렬
   const items = await db
     .select()
     .from(faqItems)
@@ -47,63 +35,8 @@ export default async function AdminFaqPage() {
         </Button>
       </div>
 
-      {/* FAQ 항목 목록 */}
-      <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
-        <CardHeader className="border-b border-[#D9D9D9] py-4">
-          <CardTitle className="text-base text-[#1a1a1a]">전체 FAQ {items.length}건</CardTitle>
-        </CardHeader>
-        <CardContent className="py-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-16 text-center">순서</TableHead>
-                  <TableHead className="w-[30%]">질문</TableHead>
-                  <TableHead>답변 (미리보기)</TableHead>
-                  <TableHead className="w-32 shrink-0">액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-[#666666]">
-                      등록된 FAQ가 없습니다.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-center text-[#666666]">{item.order}</TableCell>
-                      <TableCell className="w-[30%] font-medium text-[#1a1a1a]">
-                        {truncate(item.question, 60)}
-                      </TableCell>
-                      <TableCell className="max-w-0 truncate text-sm text-[#666666]">
-                        {truncate(item.answer, 80)}
-                      </TableCell>
-                      <TableCell className="w-32">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            render={<Link href={`/admin/faq/${item.id}`} />}
-                          >
-                            편집
-                          </Button>
-                          <form action={deleteFaqItem.bind(null, item.id)}>
-                            <Button type="submit" variant="destructive" size="sm">
-                              삭제
-                            </Button>
-                          </form>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* FAQ 항목 목록 — key를 items.length에 연결해 항목 추가 후 서버 재렌더 시 상태 초기화 */}
+      <FaqSortableList key={items.length} initialItems={items} />
     </section>
   );
 }

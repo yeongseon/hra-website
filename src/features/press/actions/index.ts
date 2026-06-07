@@ -18,9 +18,6 @@ const pressArticleFormSchema = z.object({
   imageUrl: z
     .union([z.literal(""), z.url("올바른 썸네일 URL을 입력해주세요.")])
     .optional(),
-  order: z.coerce
-    .number({ message: "순서는 숫자여야 합니다." })
-    .int("순서는 정수여야 합니다."),
 });
 
 export type PressArticleActionState = {
@@ -58,7 +55,6 @@ function parsePressArticleFormData(formData: FormData) {
     publishedAt: normalizeText(formData.get("publishedAt")),
     description: normalizeText(formData.get("description")) || undefined,
     imageUrl: normalizeText(formData.get("imageUrl")) || undefined,
-    order: normalizeText(formData.get("order")) || "0",
   });
 }
 
@@ -87,7 +83,6 @@ export async function createPressArticle(formData: FormData): Promise<PressArtic
     publishedAt: new Date(parsed.data.publishedAt),
     description: parsed.data.description ?? null,
     imageUrl: parsed.data.imageUrl ?? null,
-    order: parsed.data.order,
   });
 
   revalidatePressPaths();
@@ -124,7 +119,6 @@ export async function updatePressArticle(id: string, formData: FormData): Promis
       publishedAt: new Date(parsed.data.publishedAt),
       description: parsed.data.description ?? null,
       imageUrl: parsed.data.imageUrl ?? null,
-      order: parsed.data.order,
     })
     .where(eq(pressArticles.id, parsedId.data));
 

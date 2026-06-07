@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
@@ -37,7 +37,7 @@ export default async function AlumniPage({
   const allDbStories = await db
     .select()
     .from(alumniStoriesTable)
-    .orderBy(asc(alumniStoriesTable.order), asc(alumniStoriesTable.createdAt));
+    .orderBy(desc(alumniStoriesTable.createdAt));
 
   const totalCount = allDbStories.length;
   const ITEMS_PER_PAGE = 15;

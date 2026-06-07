@@ -19,7 +19,6 @@ type FaqItemFormProps = {
   defaultValues?: {
     question?: string;
     answer?: string;
-    order?: number;
   };
 };
 
@@ -47,24 +46,6 @@ export function FaqItemForm({ title, submitLabel, action, defaultValues }: FaqIt
                 <span>{state.message}</span>
               </div>
             ) : null}
-
-            <div className="w-40 space-y-2">
-              <Label htmlFor="order" className="text-[#1a1a1a]">
-                표시 순서
-              </Label>
-              <Input
-                id="order"
-                name="order"
-                type="number"
-                min={0}
-                step={1}
-                defaultValue={defaultValues?.order ?? 0}
-                className="border-[#D9D9D9] text-[#1a1a1a]"
-              />
-              {state.fieldErrors?.order ? (
-                <p className="text-xs text-red-600">{state.fieldErrors.order}</p>
-              ) : null}
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="question" className="text-[#1a1a1a]">
