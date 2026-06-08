@@ -42,37 +42,27 @@ const curriculumItems = [
     description: "HRA에서는 다양한 분야의 전문가를 초청해 특강을 진행합니다. 스피치와 영어 세션, 취업 특강 등을 통해 표현력과 커뮤니케이션 능력, 진로 및 취업 역량을 균형 있게 키워나갈 수 있습니다.",
   },
   {
-    title: "하계 인턴",
-    icon: Building,
-    description: "하계 인턴 과정은 학습한 내용을 실제 현장에서 경험해볼 수 있는 과정입니다. 참가자들은 기업 및 기관에서의 실무 경험을 통해 업무 환경을 이해하고, 이론과 실무를 연결하며 진로 방향을 구체화할 수 있습니다.",
-  },
-  {
     title: "봉사활동",
     icon: HeartHandshake,
     description: "HRA는 일정 시간 이상의 봉사활동을 통해 사회적 책임과 공동체 의식을 함양하는 것을 중요하게 생각합니다. 참가자들은 다양한 봉사활동에 참여하며 타인과 사회에 대한 이해를 넓히고, 성숙한 시민으로서의 태도를 기르게 됩니다.",
-  },
-  {
-    title: "겨울캠프",
-    icon: Tent,
-    description: "겨울캠프는 일정 기간 합숙하며 집중적으로 학습과 토론을 진행하는 프로그램입니다. 참가자들은 교육에 몰입하며 사고력과 문제 해결 능력을 키우고, 한 단계 더 성장하는 경험을 하게 됩니다.",
   },
 ];
 
 // 타임라인 월 목록 (Sep.~Aug. + 수료식 Sep.) — buttonRefs 인덱스 순서와 일치
 const timelineMonths = [
-  { label: "Sep.", value: "sep" },
-  { label: "Oct.", value: "oct" },
-  { label: "Nov.", value: "nov" },
-  { label: "Dec.", value: "dec" },
-  { label: "Jan.", value: "jan" },
-  { label: "Feb.", value: "feb" },
-  { label: "Mar.", value: "mar" },
-  { label: "Apr.", value: "apr" },
-  { label: "May.", value: "may" },
-  { label: "Jun.", value: "jun" },
-  { label: "Jul.", value: "jul" },
-  { label: "Aug.", value: "aug" },
-  { label: "Sep.", value: "sep-end" },
+  { label: "9월", value: "9월" },
+  { label: "10월", value: "10월" },
+  { label: "11월", value: "11월" },
+  { label: "12월", value: "12월" },
+  { label: "1월", value: "1월" },
+  { label: "2월", value: "2월" },
+  { label: "3월", value: "3월" },
+  { label: "4월", value: "4월" },
+  { label: "5월", value: "5월" },
+  { label: "6월", value: "6월" },
+  { label: "7월", value: "7월" },
+  { label: "8월", value: "8월" },
+  { label: "9월", value: "9월-end" },
 ];
 
 // 같은 설명을 공유하는 월들을 pill 로 묶기 위한 그룹 정의
@@ -80,47 +70,47 @@ const timelineGroups = [
   {
     category: "전반기",
     months: [
-      { label: "Sep.", value: "sep" },
-      { label: "Oct.", value: "oct" },
-      { label: "Nov.", value: "nov" },
-      { label: "Dec.", value: "dec" },
+      { label: "9월", value: "9월" },
+      { label: "10월", value: "10월" },
+      { label: "11월", value: "11월" },
+      { label: "12월", value: "12월" },
     ],
   },
   {
     category: "겨울캠프",
     months: [
-      { label: "Jan.", value: "jan" },
-      { label: "Feb.", value: "feb" },
+      { label: "1월", value: "1월" },
+      { label: "2월", value: "2월" },
     ],
   },
   {
     category: "후반기",
     months: [
-      { label: "Mar.", value: "mar" },
-      { label: "Apr.", value: "apr" },
-      { label: "May.", value: "may" },
-      { label: "Jun.", value: "jun" },
+      { label: "3월", value: "3월" },
+      { label: "4월", value: "4월" },
+      { label: "5월", value: "5월" },
+      { label: "6월", value: "6월" },
     ],
   },
   {
     category: "인턴",
     months: [
-      { label: "Jul.", value: "jul" },
-      { label: "Aug.", value: "aug" },
+      { label: "7월", value: "7월" },
+      { label: "8월", value: "8월" },
     ],
   },
   {
     category: "수료식/입학식",
-    months: [{ label: "Sep.", value: "sep-end" }],
+    months: [{ label: "9월", value: "9월-end" }],
   },
 ];
 
 // 월 값 → 카테고리 매핑
 const getTimelineCategory = (monthValue: string) => {
-  if (["sep", "oct", "nov", "dec"].includes(monthValue)) return "전반기";
-  if (["jan", "feb"].includes(monthValue)) return "겨울캠프";
-  if (["mar", "apr", "may", "jun"].includes(monthValue)) return "후반기";
-  if (["jul", "aug"].includes(monthValue)) return "인턴";
+  if (["9월", "10월", "11월", "12월"].includes(monthValue)) return "전반기";
+  if (["1월", "2월"].includes(monthValue)) return "겨울캠프";
+  if (["3월", "4월", "5월", "6월"].includes(monthValue)) return "후반기";
+  if (["7월", "8월"].includes(monthValue)) return "인턴";
   return "수료식/입학식";
 };
 
@@ -132,7 +122,7 @@ const timelineGroupInfo: Record<string, { title: string; description: string }> 
   },
   "겨울캠프": {
     title: "겨울캠프 (1월~2월)",
-    description: "1월 7박 8일의 집중 캠프에서 깊이 있는 토론과 협업을 통해 사고력, 자기 주도성, 공동체성을 강화합니다. 2월에는 캠프 경험을 회고하며 하반기를 준비합니다.",
+    description: "1월 7박 8일간 진행되는 겨울캠프에서는 합숙과 집중 학습, 토론, 협업을 통해 사고력과 문제 해결 능력, 자기주도성을 강화합니다. 2월에는 캠프 경험을 회고하며 배움을 정리하고 하반기 활동을 준비합니다.",
   },
   "후반기": {
     title: "후반기 (3월~6월)",
@@ -140,7 +130,7 @@ const timelineGroupInfo: Record<string, { title: string; description: string }> 
   },
   "인턴": {
     title: "인턴 (7월~8월)",
-    description: "7월 인턴 준비와 8월 현장 실습을 통해 배운 내용을 실제 업무 환경에서 경험합니다. 이론과 실무를 연결하며 진로 방향을 구체화합니다.",
+    description: "7월 인턴 준비 과정을 거쳐 8월에는 기업 및 기관에서 현장 실습을 진행하며 배운 내용을 실제 업무 환경에서 경험합니다. 이를 통해 이론과 실무를 연결하고, 자신의 진로 방향을 보다 구체적으로 설계할 수 있습니다.",
   },
   "수료식/입학식": {
     title: "수료식 및 입학식 (9월)",
@@ -169,8 +159,8 @@ export default function CurriculumPage() {
    * 여기서 측정한 anchorX 를 카드의 margin-left 에 바로 적용할 수 있다.
    */
   const containerRef = useRef<HTMLDivElement>(null);
-  // 각 월 버튼 ref 배열 — index 는 timelineMonths 순서와 일치
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // 각 그룹 컨테이너 ref 배열 — index 는 timelineGroups 순서와 일치
+  const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
   // ResizeObserver 콜백 안에서 최신 displayMonth 를 읽기 위한 ref (stale closure 방지)
   const displayMonthRef = useRef<string | null>(null);
   // fade-out 중에도 이전 groupInfo 텍스트가 사라지지 않도록 유지하는 ref
@@ -187,7 +177,7 @@ export default function CurriculumPage() {
   const isVisible = displayMonth !== null;
 
   /**
-   * updateAnchor: 버튼 index 를 받아 anchorX / containerWidth 를 갱신.
+   * updateAnchor: 그룹 index 를 받아 anchorX / containerWidth 를 갱신.
    *
    * 핵심: containerRef(band inner div)의 getBoundingClientRect() 는 padding 을 포함한 outer 너비를 반환한다.
    * 반면 카드의 margin-left 는 페이지 outer 컨테이너의 content area(padding 제외) 기준이다.
@@ -195,22 +185,20 @@ export default function CurriculumPage() {
    *
    * - contentLeft  = cRect.left + paddingLeft  → content area 왼쪽 끝의 screen 좌표
    * - contentWidth = cRect.width - padL - padR → 실제 사용 가능 너비 (카드 margin-left 의 기준)
-   * - anchorX      = 버튼 중앙 X - contentLeft  → content area 기준 버튼 위치
-   *
-   * useCallback + 빈 deps: 마운트 이후 참조가 바뀌지 않아 ResizeObserver 에서 안전하게 사용 가능.
+   * - anchorX      = 그룹 중앙 X - contentLeft  → content area 기준 버튼 위치
    */
   const updateAnchor = useCallback((idx: number) => {
-    const btn = buttonRefs.current[idx];
+    const groupEl = groupRefs.current[idx];
     const container = containerRef.current;
-    if (!btn || !container) return;
-    const btnRect = btn.getBoundingClientRect();
+    if (!groupEl || !container) return;
+    const gRect = groupEl.getBoundingClientRect();
     const cRect = container.getBoundingClientRect();
     // 반응형 padding 실측 (px-4=16px / sm:px-6=24px)
     const style = getComputedStyle(container);
     const padL = parseFloat(style.paddingLeft);
     const padR = parseFloat(style.paddingRight);
-    // content area 왼쪽 끝 기준으로 버튼 중앙 X 계산
-    setAnchorX(btnRect.left - (cRect.left + padL) + btnRect.width / 2);
+    // content area 왼쪽 끝 기준으로 그룹 중앙 X 계산
+    setAnchorX(gRect.left - (cRect.left + padL) + gRect.width / 2);
     // content area 너비 = 카드 margin-left 의 기준 너비
     setContainerWidth(cRect.width - padL - padR);
   }, []);
@@ -218,7 +206,6 @@ export default function CurriculumPage() {
   /**
    * ResizeObserver: 창 크기가 바뀔 때마다 content area 너비를 재측정하고
    * 현재 displayMonth 가 있으면 anchorX 도 재계산한다.
-   * getComputedStyle 로 padding 을 실측해 containerWidth 를 content 기준으로 유지한다.
    */
   useEffect(() => {
     const container = containerRef.current;
@@ -231,8 +218,8 @@ export default function CurriculumPage() {
       setContainerWidth(cRect.width - padL - padR);
       const dm = displayMonthRef.current;
       if (dm) {
-        const idx = timelineMonths.findIndex((m) => m.value === dm);
-        if (idx >= 0) updateAnchor(idx);
+        const groupIdx = timelineGroups.findIndex((g) => g.months.some((m) => m.value === dm));
+        if (groupIdx >= 0) updateAnchor(groupIdx);
       }
     });
     observer.observe(container);
@@ -279,12 +266,6 @@ export default function CurriculumPage() {
    */
   const triangleLeft = Math.max(18, Math.min(anchorX - cardLeft, cardW - 18));
 
-  // 모바일 tap 토글: 같은 월 탭 → 닫기, 다른 월 탭 → 전환
-  const handleMonthClick = (value: string, idx: number) => {
-    updateAnchor(idx);
-    setTappedMonth((prev) => (prev === value ? null : value));
-  };
-
   return (
     // 최상위 div onClick: 타임라인·카드 외부 클릭 시 tap 상태 초기화 (모바일 닫기)
     <div
@@ -329,59 +310,70 @@ export default function CurriculumPage() {
               >
                 {/* 그룹별 pill 로 묶인 타임라인 — pill 사이 선 없음, pill 내부 달끼리 선 연결 */}
                 <div className="flex w-full items-center gap-1 sm:gap-2">
-                  {timelineGroups.map((group) => (
-                    <div
-                      key={group.category}
-                      className="flex items-center rounded-full border border-white/40 bg-[#2563EB] py-5 px-3"
-                      style={{ flex: group.months.length }}
-                    >
-                      {group.months.flatMap((month, monthIdx) => {
-                        const idx = timelineMonths.findIndex((m) => m.value === month.value);
-                        const isHighlighted = displayMonth === month.value;
-                        const items = [];
-                        if (monthIdx > 0) {
-                          items.push(
-                            <div key={`line-${month.value}`} className="w-6 sm:w-10 h-px bg-white/30 shrink-0" />
+                  {timelineGroups.map((group, groupIdx) => {
+                    const isGroupActive = monthCategory === group.category;
+                    return (
+                      <div
+                        key={group.category}
+                        ref={(el) => {
+                          groupRefs.current[groupIdx] = el;
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredMonth(group.months[0].value);
+                          updateAnchor(groupIdx);
+                        }}
+                        onMouseLeave={() => setHoveredMonth(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateAnchor(groupIdx);
+                          setTappedMonth((prev) =>
+                            prev === group.months[0].value ? null : group.months[0].value
                           );
-                        }
-                        items.push(
-                          <div
-                            key={month.value}
-                            className="flex-1 flex justify-center"
-                            onMouseEnter={() => {
-                              setHoveredMonth(month.value);
-                              updateAnchor(idx);
-                            }}
-                            onMouseLeave={() => setHoveredMonth(null)}
-                          >
-                            <button
-                              ref={(el) => { buttonRefs.current[idx] = el; }}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMonthClick(month.value, idx);
-                              }}
-                              onFocus={() => {
-                                setHoveredMonth(month.value);
-                                updateAnchor(idx);
-                              }}
-                              onBlur={() => setHoveredMonth(null)}
-                              aria-pressed={isHighlighted}
-                              aria-label={`${month.label} 커리큘럼 상세 보기`}
-                              className={`transition-all duration-200 text-xs sm:text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded select-none leading-none ${
-                                isHighlighted
-                                  ? "font-bold text-white scale-125"
-                                  : "font-medium text-white/60 hover:text-white/80"
-                              }`}
+                        }}
+                        className={`flex items-center rounded-full border transition-all duration-300 py-5 px-3 cursor-pointer ${
+                          isGroupActive
+                            ? "bg-white border-white shadow-md scale-[1.02]"
+                            : "bg-[#2563EB] border-white/40 hover:bg-[#1D4ED8]"
+                        }`}
+                        style={{ flex: group.months.length }}
+                      >
+                        {group.months.flatMap((month, monthIdx) => {
+                          const items = [];
+                          if (monthIdx > 0) {
+                            items.push(
+                              <div
+                                key={`line-${month.value}`}
+                                className={`w-6 sm:w-10 h-px shrink-0 transition-colors duration-300 ${
+                                  isGroupActive ? "bg-[#2563EB]/30" : "bg-white/30"
+                                }`}
+                              />
+                            );
+                          }
+                          items.push(
+                            <div
+                              key={month.value}
+                              className="flex-1 flex justify-center"
                             >
-                              {month.label}
-                            </button>
-                          </div>
-                        );
-                        return items;
-                      })}
-                    </div>
-                  ))}
+                              <button
+                                type="button"
+                                tabIndex={-1}
+                                aria-pressed={isGroupActive}
+                                aria-label={`${month.label} 커리큘럼 상세 보기`}
+                                className={`transition-all duration-300 text-xs sm:text-sm focus:outline-none select-none leading-none pointer-events-none ${
+                                  isGroupActive
+                                    ? "font-bold text-[#2563EB] scale-125"
+                                    : "font-medium text-white/60"
+                                }`}
+                              >
+                                {month.label}
+                              </button>
+                            </div>
+                          );
+                          return items;
+                        })}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

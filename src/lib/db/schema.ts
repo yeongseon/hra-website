@@ -611,6 +611,130 @@ export const reportTemplates = pgTable("report_templates", {
     .$onUpdate(() => new Date()),
 });
 
+// ============================================================
+// Application Form Management (지원서 양식 관리 테이블)
+// ============================================================
+
+// 질문 타입 정의
+export const applicationQuestionTypeEnum = pgEnum("application_question_type", [
+  "SHORT_ANSWER",    // 단답형
+  "LONG_ANSWER",     // 장문형
+  "MULTIPLE_CHOICE",  // 객관식 (택 1)
+  "CHECKBOX",        // 체크박스 (다중 선택)
+  "DROPDOWN",        // 드롭다운
+]);
+
+// 지원서 양식 마스터 정보
+export const applicationForms = pgTable("application_forms", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 255 }).notNull(), // 양식 제목
+  description: text("description"), // 양식 설명
+  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }), // 대상 기수
+  isPublished: boolean("is_published").notNull().default(false), // 공개 여부
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// 지원서 양식 관계 정의
+export const applicationFormsRelations = relations(applicationForms, ({ one, many }) => ({
+  cohort: one(cohorts, {
+    fields: [applicationForms.cohortId],
+    references: [cohorts.id],
+  }),
+  questions: many(applicationQuestions),
+  submissions: many(applicationSubmissions),
+}));
+
+// 양식별 질문 항목
+export const applicationQuestions = pgTable("application_questions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  formId: uuid("form_id")
+    .notNull()
+    .references(() => applicationForms.id, { onDelete: "cascade" }),
+  title: text("title").notNull(), // 질문 제목
+  description: text("description"), // 질문 설명 (힌트 등)
+  type: applicationQuestionTypeEnum("type").notNull(), // 질문 유형
+  isRequired: boolean("is_required").notNull().default(false), // 필수 여부
+  order: integer("order").notNull().default(0), // 표시 순서
+});
+
+// 질문 관계 정의
+export const applicationQuestionsRelations = relations(applicationQuestions, ({ one, many }) => ({
+  form: one(applicationForms, {
+    fields: [applicationQuestions.formId],
+    references: [applicationForms.id],
+  }),
+  options: many(applicationQuestionOptions),
+  answers: many(applicationAnswers),
+}));
+
+// 객관식/체크박스/드롭다운용 선택지
+export const applicationQuestionOptions = pgTable("application_question_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => applicationQuestions.id, { onDelete: "cascade" }),
+  value: text("value").notNull(), // 선택지 텍스트
+  order: integer("order").notNull().default(0), // 표시 순서
+});
+
+// 선택지 관계 정의
+export const applicationQuestionOptionsRelations = relations(applicationQuestionOptions, ({ one }) => ({
+  question: one(applicationQuestions, {
+    fields: [applicationQuestionOptions.questionId],
+    references: [applicationQuestions.id],
+  }),
+}));
+
+// 지원서 제출 기본 정보
+export const applicationSubmissions = pgTable("application_submissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  formId: uuid("form_id")
+    .notNull()
+    .references(() => applicationForms.id, { onDelete: "cascade" }),
+  applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름
+  applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일
+  applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 연락처
+  status: applicationStatusEnum("status").notNull().default("PENDING"), // 처리 상태
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(), // 제출 시간
+});
+
+// 제출 내역 관계 정의
+export const applicationSubmissionsRelations = relations(applicationSubmissions, ({ one, many }) => ({
+  form: one(applicationForms, {
+    fields: [applicationSubmissions.formId],
+    references: [applicationForms.id],
+  }),
+  answers: many(applicationAnswers),
+}));
+
+// 질문별 답변 상세
+export const applicationAnswers = pgTable("application_answers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  submissionId: uuid("submission_id")
+    .notNull()
+    .references(() => applicationSubmissions.id, { onDelete: "cascade" }),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => applicationQuestions.id, { onDelete: "cascade" }),
+  value: text("value").notNull(), // 답변 내용 (다중 선택은 구분자나 JSON 등으로 저장 가능)
+});
+
+// 답변 관계 정의
+export const applicationAnswersRelations = relations(applicationAnswers, ({ one }) => ({
+  submission: one(applicationSubmissions, {
+    fields: [applicationAnswers.submissionId],
+    references: [applicationSubmissions.id],
+  }),
+  question: one(applicationQuestions, {
+    fields: [applicationAnswers.questionId],
+    references: [applicationQuestions.id],
+  }),
+}));
+
 export const applicationSubmissionsLog = pgTable(
   "application_submissions_log",
   {

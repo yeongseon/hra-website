@@ -57,6 +57,7 @@ const navItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/faculty", label: "교수진", icon: GraduationCap },
   { href: "/admin/recruitment", label: "기수 관리", icon: Users },
+  { href: "/admin/application-forms", label: "지원서 관리", icon: FileText },
   { href: "/admin/recruitment-settings", label: "모집 설정", icon: Settings },
   { href: "/admin/notices", label: "공지사항", icon: Bell },
   { href: "/admin/press", label: "언론보도", icon: Newspaper },
@@ -64,7 +65,6 @@ const navItems = [
   { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
   { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
   { href: "/admin/resources", label: "자료실", icon: FolderOpen },
-  { href: "/admin/applications", label: "지원서", icon: FileText },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
 ];
 

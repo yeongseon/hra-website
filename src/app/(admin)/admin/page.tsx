@@ -40,6 +40,7 @@ export const dynamic = "force-dynamic";
 const quickLinks = [
   { href: "/admin/faculty",              label: "교수진",        icon: GraduationCap },
   { href: "/admin/recruitment",          label: "기수 관리",     icon: Users },
+  { href: "/admin/application-forms",    label: "지원서 관리",   icon: FileText },
   { href: "/admin/recruitment-settings", label: "모집 설정",     icon: Settings },
   { href: "/admin/notices",              label: "공지사항",      icon: Bell },
   { href: "/admin/press",               label: "언론보도",      icon: Newspaper },
@@ -47,7 +48,6 @@ const quickLinks = [
   { href: "/admin/alumni",              label: "수료생 이야기",  icon: MessageSquare },
   { href: "/admin/faq",                 label: "FAQ",           icon: CircleHelp },
   { href: "/admin/resources",           label: "자료실",        icon: FolderOpen },
-  { href: "/admin/applications",        label: "지원서",        icon: FileText },
   { href: "/admin/users",               label: "회원 관리",     icon: UserCog },
 ];
 
@@ -120,7 +120,7 @@ export default async function AdminDashboardPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">확인 필요</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {pendingApplications > 0 && (
-              <Link href="/admin/applications">
+              <Link href="/admin/application-forms">
                 <Card className="border-blue-200 bg-blue-50 py-0 transition-colors hover:bg-blue-100">
                   <CardContent className="flex items-center justify-between px-5 py-4">
                     <div>

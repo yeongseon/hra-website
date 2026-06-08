@@ -43,12 +43,12 @@ export function FaqContent({ contactText, items }: FaqContentProps) {
           <button
             type="button"
             className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-blue-600 transition-colors hover:bg-blue-700"
-            aria-label="담당자에게 연락하기"
+            aria-label="담당자 연락처"
           >
             <Phone className="h-6 w-6 text-white" />
           </button>
         </div>
-        <span className="mt-2 text-sm text-[#666666]">담당자에게 연락하기</span>
+        <span className="mt-2 text-sm text-[#666666]">담당자 연락처</span>
       </div>
 
       <section className="space-y-4">
