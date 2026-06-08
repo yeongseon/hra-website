@@ -7,6 +7,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 const fullHeadingText = "정답보다 중요한 것,\nHRA는 본질을 묻는 법을 배웁니다.";
 
@@ -79,9 +80,9 @@ export function HeroSection() {
           고전 읽기와 토론, 케이스 스터디를 통해 사고력과 실천력을 기르는 1년 과정입니다.
         </p>
 
-        <a href="/recruitment" className="inline-flex items-center rounded-full bg-[#2563EB] px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 mt-6">
+        <Link href="/recruitment" className="inline-flex items-center rounded-full bg-[#2563EB] px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 mt-6">
           모집안내 보기
-        </a>
+        </Link>
       </div>
     </section>
   );
