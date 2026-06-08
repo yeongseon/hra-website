@@ -3,6 +3,7 @@
  */
 
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { eq, asc } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,12 +47,12 @@ export default async function PublicApplicationApplyPage({ params }: Props) {
           </CardHeader>
           <CardContent className="py-10 text-center sm:text-left">
             <p className="text-lg text-[#475569] mb-8">새로운 모집 소식은 홈페이지 공지사항을 확인해주세요.</p>
-            <a 
+            <Link 
               href="/" 
               className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-700 shadow-lg shadow-slate-900/20"
             >
               메인으로 돌아가기
-            </a>
+            </Link>
           </CardContent>
         </Card>
       </div>

@@ -353,7 +353,7 @@ export default function AdminRecruitmentSettingsPage() {
                 className="h-10"
                 disabled={isLoading || isSavingInfo}
               />
-              <p className="text-xs text-[#666666]">모집안내 페이지의 "지원하기" 버튼에 연결됩니다.</p>
+              <p className="text-xs text-[#666666]">모집안내 페이지의 &quot;지원하기&quot; 버튼에 연결됩니다.</p>
             </div>
           </div>
 

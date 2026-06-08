@@ -51,7 +51,7 @@ export type QuestionActionState = {
  */
 export async function saveFormQuestions(
   formId: string,
-  questions: any[]
+  questions: z.infer<typeof questionSchema>[]
 ): Promise<QuestionActionState> {
   console.log("--- saveFormQuestions 시작 ---");
   try {

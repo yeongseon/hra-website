@@ -163,16 +163,24 @@ export default function CurriculumPage() {
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
   // ResizeObserver 콜백 안에서 최신 displayMonth 를 읽기 위한 ref (stale closure 방지)
   const displayMonthRef = useRef<string | null>(null);
-  // fade-out 중에도 이전 groupInfo 텍스트가 사라지지 않도록 유지하는 ref
-  const lastGroupInfoRef = useRef<{ title: string; description: string } | null>(null);
+  // fade-out 중에도 이전 groupInfo 텍스트가 사라지지 않도록 유지하는 state
+  const [lastGroupInfo, setLastGroupInfo] = useState<{ title: string; description: string } | null>(null);
 
   // 표시 우선순위: hover > tap > null(숨김)
   const displayMonth = hoveredMonth ?? tappedMonth;
-  displayMonthRef.current = displayMonth; // 매 렌더마다 ref 동기화
+
+  useEffect(() => {
+    displayMonthRef.current = displayMonth;
+  }, [displayMonth]);
 
   const monthCategory = displayMonth ? getTimelineCategory(displayMonth) : null;
   const groupInfo = monthCategory ? timelineGroupInfo[monthCategory] : null;
-  if (groupInfo) lastGroupInfoRef.current = groupInfo;
+
+  // 필요할 때만 업데이트하도록 state 사용
+  const [lastGroupInfo, setLastGroupInfo] = useState(groupInfo);
+  useEffect(() => {
+    if (groupInfo) setLastGroupInfo(groupInfo);
+  }, [groupInfo]);
 
   const isVisible = displayMonth !== null;
 
@@ -434,12 +442,12 @@ export default function CurriculumPage() {
                         }}
                       />
 
-                      {/* lastGroupInfoRef: fade-out 중에도 이전 텍스트 유지 */}
+                      {/* lastGroupInfo: fade-out 중에도 이전 텍스트 유지 */}
                       <h3 className="mb-3 text-xl sm:text-2xl font-bold text-[#1a1a1a]">
-                        {lastGroupInfoRef.current?.title}
+                        {lastGroupInfo?.title}
                       </h3>
                       <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-                        {lastGroupInfoRef.current?.description}
+                        {lastGroupInfo?.description}
                       </p>
                     </div>
                   </div>
