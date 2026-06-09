@@ -35,6 +35,7 @@ export async function submitApplicationForm(
   if (!applicantEmail || !z.string().email().safeParse(applicantEmail).success) {
     return { success: false, message: "올바른 이메일 주소를 입력해주세요." };
   }
+  if (!applicantPhone) return { success: false, message: "연락처를 입력해주세요." };
 
   try {
     // 1. 양식 및 질문 정보 조회

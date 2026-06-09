@@ -75,12 +75,13 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
         </div>
 
         {/* 질문 빌더 섹션 */}
-        <FormBuilder 
-          formId={id} 
+        <FormBuilder
+          formId={id}
+          formTitle={form.title}
           initialQuestions={questionsData.map(q => ({
             ...q,
             options: q.options || [],
-          }))} 
+          }))}
         />
       </div>
     </section>

@@ -111,12 +111,13 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
             </div>
             <div className="space-y-2">
               <Label htmlFor="applicantPhone" className="text-sm font-semibold">
-                연락처
+                연락처 <span className="text-red-500">*</span>
               </Label>
-              <Input 
-                id="applicantPhone" 
-                name="applicantPhone" 
-                placeholder="010-0000-0000" 
+              <Input
+                id="applicantPhone"
+                name="applicantPhone"
+                placeholder="010-0000-0000"
+                required
                 className="h-11"
               />
             </div>

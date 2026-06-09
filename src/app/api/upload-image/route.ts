@@ -8,10 +8,10 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
     }
-    // 마크다운 이미지 업로드는 ADMIN/FACULTY만 허용 (MEMBER/PENDING 불가)
-    if (session.user.role !== "ADMIN" && session.user.role !== "FACULTY") {
+    // PENDING(승인 대기) 계정은 이미지 업로드 불가 — 승인 완료(MEMBER 이상)만 허용
+    if (session.user.role === "PENDING") {
       return NextResponse.json(
-        { error: "관리자 또는 교수진만 이미지를 업로드할 수 있습니다." },
+        { error: "승인된 회원만 이미지를 업로드할 수 있습니다." },
         { status: 403 }
       );
     }

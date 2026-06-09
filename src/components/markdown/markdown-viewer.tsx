@@ -39,6 +39,8 @@ export function MarkdownViewer({ body, className }: MarkdownViewerProps) {
         "prose-ol:list-decimal prose-ol:pl-6 prose-ol:marker:text-[#666666]",
         "prose-li:my-1.5",
         "prose-table:w-full prose-table:border-collapse",
+        // colgroup 있는 표는 prose-table:w-full(100%)을 해제하고 col 픽셀값으로 원본 너비 복원
+        "[&_table:has(colgroup)]:w-auto [&_table:has(colgroup)]:table-fixed",
         "prose-th:border prose-th:border-[#D9D9D9] prose-th:bg-gray-50 prose-th:px-4 prose-th:py-2.5 prose-th:text-left prose-th:font-semibold prose-th:text-[#1a1a1a]",
         "prose-td:border prose-td:border-[#D9D9D9] prose-td:px-4 prose-td:py-2.5 prose-td:text-[#1a1a1a]",
         "prose-img:my-6 prose-img:rounded-xl prose-img:border prose-img:border-[#D9D9D9] prose-img:shadow-sm",

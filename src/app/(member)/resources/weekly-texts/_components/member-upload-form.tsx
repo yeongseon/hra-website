@@ -304,6 +304,7 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
                   value={body}
                   onChange={setBody}
                   placeholder="분류를 선택하면 최신 템플릿이 자동으로 채워집니다. 직접 작성도 가능합니다."
+                  previewTitle={title || "주차별 텍스트 미리보기"}
                 />
               </div>
               <p className="text-sm leading-6 text-[#666666]">

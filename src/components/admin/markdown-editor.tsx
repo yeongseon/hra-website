@@ -15,6 +15,7 @@ interface MarkdownEditorProps {
   placeholder?: string;
   value?: string;
   onChange?: (value: string) => void;
+  previewTitle?: string;
 }
 
 export function MarkdownEditor({
@@ -25,6 +26,7 @@ export function MarkdownEditor({
   placeholder = "내용을 작성해주세요...",
   value,
   onChange,
+  previewTitle,
 }: MarkdownEditorProps) {
   return (
     <RichTextEditor
@@ -35,6 +37,7 @@ export function MarkdownEditor({
       onChange={onChange}
       placeholder={placeholder}
       required={required}
+      previewTitle={previewTitle}
     />
   );
 }

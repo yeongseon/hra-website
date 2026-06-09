@@ -48,6 +48,9 @@ export const sanitizeSchema: Options = {
     "code",
     // 표 셀 안 줄바꿈 — 양식의 조원 명단 등에서 사용
     "br",
+    // 열 너비 지정용 — colwidth 있는 표를 HTML로 직렬화할 때 생성
+    "colgroup",
+    "col",
   ].filter(
     // 명시적 차단 태그 제거 (이중 안전장치)
     (tag) =>
@@ -69,6 +72,9 @@ export const sanitizeSchema: Options = {
       ["target", "_blank", "_self"],
       ["rel", "noopener", "noreferrer", "nofollow"],
     ],
+    // <col width="N"> 또는 <col width="N%"> — colwidth 있는 표의 열 너비 지정
+    // 절대 픽셀 정수 또는 1~3자리 퍼센트만 허용
+    col: [["width", /^\d+$|^\d{1,3}%$/]],
     // 이미지 src/alt만 허용 — onload 등 차단
     // style 은 "width: X%" 패턴만 허용 (이미지 크기 조정용, 다른 CSS는 차단)
     img: [
