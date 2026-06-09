@@ -218,7 +218,7 @@ export function FormBuilder({ formId, initialQuestions }: FormBuilderProps) {
                   <Label className="text-xs text-slate-500">질문 유형</Label>
                   <Select 
                     value={q.type} 
-                    onValueChange={(v: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "CHECKBOX" | "DROPDOWN") => updateQuestion(qIndex, { type: v })}
+                    onValueChange={(v: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "CHECKBOX" | "DROPDOWN" | null) => v && updateQuestion(qIndex, { type: v })}
                   >
                     <SelectTrigger className="h-10 border-slate-200">
                       <SelectValue />

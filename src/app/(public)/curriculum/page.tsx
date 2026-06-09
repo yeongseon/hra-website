@@ -176,11 +176,13 @@ export default function CurriculumPage() {
   const monthCategory = displayMonth ? getTimelineCategory(displayMonth) : null;
   const groupInfo = monthCategory ? timelineGroupInfo[monthCategory] : null;
 
-  // 필요할 때만 업데이트하도록 state 사용
+  // 렌더링 도중 lastGroupInfo 업데이트 (파생 상태 활용)
   const [lastGroupInfo, setLastGroupInfo] = useState(groupInfo);
-  useEffect(() => {
-    if (groupInfo) setLastGroupInfo(groupInfo);
-  }, [groupInfo]);
+  const [prevGroupInfo, setPrevGroupInfo] = useState(groupInfo);
+  if (groupInfo !== prevGroupInfo) {
+    setPrevGroupInfo(groupInfo);
+    setLastGroupInfo(groupInfo);
+  }
 
   const isVisible = displayMonth !== null;
 

@@ -63,8 +63,8 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
           <h2 className="text-2xl font-bold text-slate-900">{state.message}</h2>
           <p className="text-slate-500">제출해주신 내용은 운영진이 검토 후 연락드리겠습니다.</p>
         </div>
-        <Button variant="outline" asChild className="mt-8">
-          <a href="/">홈으로 돌아가기</a>
+        <Button variant="outline" className="mt-8" onClick={() => window.location.href = '/'}>
+          홈으로 돌아가기
         </Button>
       </div>
     );

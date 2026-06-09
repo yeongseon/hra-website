@@ -147,13 +147,11 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          asChild
+                          onClick={() => window.location.href = `/admin/application-forms/${id}/submissions/${sub.id}`}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
-                          <Link href={`/admin/application-forms/${id}/submissions/${sub.id}`}>
-                            내용 보기
-                            <ChevronRight className="ml-1 size-3.5" />
-                          </Link>
+                          내용 보기
+                          <ChevronRight className="ml-1 size-3.5" />
                         </Button>
                       </TableCell>
                     </TableRow>

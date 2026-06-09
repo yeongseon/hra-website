@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { 
   applicationForms, 
@@ -194,10 +195,8 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
           </Card>
           
           <div className="flex justify-center pt-4">
-            <Button variant="outline" asChild className="gap-2 text-slate-600">
-              <Link href={`/admin/application-forms/${id}/submissions`}>
-                목록으로 돌아가기
-              </Link>
+            <Button variant="outline" className="gap-2 text-slate-600" onClick={() => window.location.href = `/admin/application-forms/${id}/submissions`}>
+              목록으로 돌아가기
             </Button>
           </div>
         </div>

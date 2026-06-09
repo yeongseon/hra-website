@@ -50,11 +50,9 @@ export default async function RecruitmentApplyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-slate-600 mb-6">{form.description}</p>
-                <Button asChild className="w-full sm:w-auto bg-slate-900 hover:bg-slate-700">
-                  <Link href={`/recruitment/apply/${form.id}`}>
-                    지원서 작성하기
-                    <ChevronRight className="ml-2 size-4" />
-                  </Link>
+                <Button className="w-full sm:w-auto bg-slate-900 hover:bg-slate-700" onClick={() => window.location.href = `/recruitment/apply/${form.id}`}>
+                  지원서 작성하기
+                  <ChevronRight className="ml-2 size-4" />
                 </Button>
               </CardContent>
             </Card>
