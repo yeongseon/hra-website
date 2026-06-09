@@ -103,7 +103,7 @@ export default async function AdminRecruitmentPage() {
                  <TableHead>활성</TableHead>
                  <TableHead>기간</TableHead>
                  <TableHead>설명</TableHead>
-                 <TableHead>관리</TableHead>
+                 <TableHead className="text-right">관리</TableHead>
                </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,7 +133,7 @@ export default async function AdminRecruitmentPage() {
                           {cohort.description || "-"}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <RecruitmentRowActions id={cohort.id} />
                       </TableCell>
                     </TableRow>

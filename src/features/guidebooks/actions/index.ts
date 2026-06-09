@@ -131,6 +131,73 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
   }
 }
 
+/**
+ * 기존 가이드북 수정 — 제목 변경, 파일 교체(선택)
+ * 새 파일이 없으면 기존 파일을 그대로 유지한다.
+ */
+export async function updateGuidebook(id: string, formData: FormData): Promise<GuidebookActionState> {
+  await requireAdmin();
+
+  const parsedId = guidebookIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, error: parsedId.error.issues[0]?.message ?? "유효하지 않은 ID입니다." };
+  }
+
+  const parsed = guidebookFormSchema.safeParse({
+    title: formData.get("title"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요." };
+  }
+
+  try {
+    const target = await db.query.guidebooks.findFirst({
+      where: eq(guidebooks.id, parsedId.data),
+    });
+    if (!target) {
+      return { success: false, error: "가이드북을 찾을 수 없습니다." };
+    }
+
+    const fileEntry = formData.get("file");
+    const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
+
+    if (hasNewFile) {
+      // 새 파일 검증 및 업로드 후 기존 파일 제거
+      const validatedFile = getValidatedFile(fileEntry);
+      if ("error" in validatedFile) {
+        return { success: false, error: validatedFile.error };
+      }
+
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
+      }
+
+      const safeFileName = normalizeFileName(validatedFile.file.name);
+      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, { access: "public" });
+
+      await db
+        .update(guidebooks)
+        .set({ title: parsed.data.title, fileUrl: blob.url, fileName: validatedFile.file.name })
+        .where(eq(guidebooks.id, parsedId.data));
+
+      await deleteBlobIfExists(target.fileUrl);
+    } else {
+      // 파일 교체 없이 제목만 수정
+      await db
+        .update(guidebooks)
+        .set({ title: parsed.data.title })
+        .where(eq(guidebooks.id, parsedId.data));
+    }
+
+    revalidateGuidebookPaths();
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[guidebooks/update] 수정 오류:", error);
+    return { success: false, error: `가이드북 수정에 실패했습니다: ${message}` };
+  }
+}
+
 export async function deleteGuidebook(id: string): Promise<GuidebookActionState> {
   await requireAdmin();
 

@@ -76,7 +76,7 @@ export default async function AdminGuidebooksPage() {
                   <TableHead>파일명</TableHead>
                   <TableHead>다운로드</TableHead>
                   <TableHead>작성일</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -103,7 +103,7 @@ export default async function AdminGuidebooksPage() {
                         </a>
                       </TableCell>
                       <TableCell className="text-slate-700">{formatDate(row.createdAt)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <GuidebookRowActions id={row.id} />
                       </TableCell>
                     </TableRow>

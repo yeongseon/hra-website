@@ -70,7 +70,7 @@ export default async function AdminNoticesPage() {
                   <TableHead>제목</TableHead>
                   <TableHead>내용</TableHead>
                   <TableHead className="w-28">날짜</TableHead>
-                  <TableHead className="w-28">관리</TableHead>
+                  <TableHead className="w-28 text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -97,7 +97,7 @@ export default async function AdminNoticesPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-slate-600">{formatDate(notice.createdAt)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <NoticeRowActions id={notice.id} />
                       </TableCell>
                     </TableRow>

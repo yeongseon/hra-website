@@ -94,7 +94,7 @@ export default async function AdminResourceTemplatesPage() {
                   <TableHead>슬러그</TableHead>
                   <TableHead>공개</TableHead>
                   <TableHead>수정일</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -141,7 +141,7 @@ export default async function AdminResourceTemplatesPage() {
                       <TableCell className="text-[#666666]">
                         {formatDate(row.updatedAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <TemplateRowActions id={row.id} />
                       </TableCell>
                     </TableRow>

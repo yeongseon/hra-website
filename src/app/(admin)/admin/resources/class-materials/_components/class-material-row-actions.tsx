@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +26,11 @@ export function ClassMaterialRowActions({ id }: ClassMaterialRowActionsProps) {
   const [isPending, startTransition] = useTransition();
 
   return (
+    <div className="flex items-center justify-end gap-2">
+      <Button size="sm" variant="outline" render={<Link href={`/admin/resources/class-materials/${id}`} />}>
+        <Pencil className="size-3.5" />
+        수정
+      </Button>
     <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
       <DialogTrigger render={<Button variant="destructive" size="sm" />}>
         <Trash2 className="size-3.5" />
@@ -59,5 +65,6 @@ export function ClassMaterialRowActions({ id }: ClassMaterialRowActionsProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </div>
   );
 }

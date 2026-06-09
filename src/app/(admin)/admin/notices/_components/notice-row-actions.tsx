@@ -26,7 +26,7 @@ export function NoticeRowActions({ id }: NoticeRowActionsProps) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-end gap-2">
       <Button variant="outline" size="sm" render={<Link href={`/admin/notices/${id}/edit`} />}>
         수정
       </Button>

@@ -2,7 +2,6 @@ import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ChevronRight, FileText } from "lucide-react";
 import { db } from "@/lib/db";
 import { applicationForms } from "@/lib/db/schema";
@@ -50,10 +49,13 @@ export default async function RecruitmentApplyPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-slate-600 mb-6">{form.description}</p>
-                <Button className="w-full sm:w-auto bg-slate-900 hover:bg-slate-700" onClick={() => window.location.href = `/recruitment/apply/${form.id}`}>
+                <Link
+                  href={`/recruitment/apply/${form.id}`}
+                  className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 transition-colors w-full sm:w-auto"
+                >
                   지원서 작성하기
                   <ChevronRight className="ml-2 size-4" />
-                </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

@@ -75,7 +75,7 @@ export default async function AdminWeeklyTextsPage() {
                   <TableHead>등록 방식</TableHead>
                   <TableHead>열기</TableHead>
                   <TableHead>작성일</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -115,7 +115,7 @@ export default async function AdminWeeklyTextsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-slate-700">{formatDate(row.createdAt)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <WeeklyTextRowActions id={row.id} />
                       </TableCell>
                     </TableRow>

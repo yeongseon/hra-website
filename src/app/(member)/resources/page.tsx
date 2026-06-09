@@ -100,7 +100,6 @@ export default async function ResourcesPage() {
             .select({
               id: classMaterials.id,
               title: classMaterials.title,
-              fileUrl: classMaterials.fileUrl,
               classDate: classMaterials.classDate,
               createdAt: classMaterials.createdAt,
               audience: classMaterials.audience,
@@ -115,7 +114,6 @@ export default async function ResourcesPage() {
             .select({
               id: classMaterials.id,
               title: classMaterials.title,
-              fileUrl: classMaterials.fileUrl,
               classDate: classMaterials.classDate,
               createdAt: classMaterials.createdAt,
               audience: classMaterials.audience,
@@ -181,7 +179,7 @@ export default async function ResourcesPage() {
       weekNumber: material.weekNumber,
       lectureTitle: material.lectureTitle,
       author: material.uploaderName,
-      downloadUrl: material.fileUrl,
+      href: `/resources/class-materials/${material.id}`,
     })),
     // 가이드북 파일 — 클릭 시 뷰어 페이지(/resources/guidebooks/[id])로 이동
     ...allGuidebooks.map((book) => ({

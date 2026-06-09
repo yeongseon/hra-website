@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { 
@@ -195,9 +194,12 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
           </Card>
           
           <div className="flex justify-center pt-4">
-            <Button variant="outline" className="gap-2 text-slate-600" onClick={() => window.location.href = `/admin/application-forms/${id}/submissions`}>
+            <Link
+              href={`/admin/application-forms/${id}/submissions`}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
               목록으로 돌아가기
-            </Button>
+            </Link>
           </div>
         </div>
       </div>

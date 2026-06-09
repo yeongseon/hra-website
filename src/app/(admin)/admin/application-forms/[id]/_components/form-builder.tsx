@@ -140,7 +140,6 @@ export function FormBuilder({ formId, initialQuestions }: FormBuilderProps) {
 
   // 최종 저장
   const handleSave = () => {
-    console.log("handleSave 호출 - questions:", questions);
     if (questions.length === 0) {
       toast.error("최소 하나 이상의 질문을 추가해주세요.");
       return;
@@ -154,7 +153,6 @@ export function FormBuilder({ formId, initialQuestions }: FormBuilderProps) {
 
     startTransition(async () => {
       const result = await saveFormQuestions(formId, questions);
-      console.log("saveFormQuestions 결과:", result);
       if (result.success) {
         toast.success(result.message);
         router.refresh();

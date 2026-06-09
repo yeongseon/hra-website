@@ -115,7 +115,7 @@ export default async function AdminUsersPage() {
                   <TableHead>역할</TableHead>
                   <TableHead>소속 기수</TableHead>
                   <TableHead>가입일</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -146,7 +146,7 @@ export default async function AdminUsersPage() {
                         {row.cohortId ? (cohortMap.get(row.cohortId) ?? "-") : "-"}
                       </TableCell>
                       <TableCell className="text-slate-600">{formatDate(row.createdAt)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         {row.id === session.user?.id ? (
                           <span className="text-xs text-slate-400">본인</span>
                         ) : (

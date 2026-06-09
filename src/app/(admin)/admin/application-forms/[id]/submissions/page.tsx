@@ -16,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { 
@@ -144,15 +143,13 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => window.location.href = `/admin/application-forms/${id}/submissions/${sub.id}`}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        <Link
+                          href={`/admin/application-forms/${id}/submissions/${sub.id}`}
+                          className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                         >
                           내용 보기
-                          <ChevronRight className="ml-1 size-3.5" />
-                        </Button>
+                          <ChevronRight className="size-3.5" />
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))

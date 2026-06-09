@@ -18,6 +18,14 @@ import type { ClassMaterialActionState } from "@/features/class-materials/action
 
 type ClassMaterialFormProps = {
   action: (formData: FormData) => Promise<ClassMaterialActionState>;
+  /** 수정 모드일 때 기존 값으로 폼 초기화 */
+  defaultValues?: {
+    title: string;
+    weekNumber?: number | null;
+    lectureTitle?: string | null;
+    audience: "FACULTY" | "STUDENT";
+    fileName: string;
+  };
 };
 
 const initialState: ClassMaterialActionState = {
@@ -40,7 +48,8 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ].join(",");
 
-export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
+export function ClassMaterialForm({ action, defaultValues }: ClassMaterialFormProps) {
+  const isEdit = Boolean(defaultValues);
   const router = useRouter();
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
@@ -80,7 +89,13 @@ export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
             <Label htmlFor="title" className="text-slate-700">
               제목
             </Label>
-            <Input id="title" name="title" required className="h-10 border-slate-300" />
+            <Input
+              id="title"
+              name="title"
+              required
+              defaultValue={defaultValues?.title ?? ""}
+              className="h-10 border-slate-300"
+            />
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -96,6 +111,7 @@ export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
                 inputMode="numeric"
                 className="h-10 border-slate-300"
                 placeholder="예: 3"
+                defaultValue={defaultValues?.weekNumber ?? ""}
               />
             </div>
 
@@ -103,7 +119,7 @@ export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
               <Label htmlFor="audience" className="text-slate-700">
                 대상
               </Label>
-              <Select name="audience" defaultValue="STUDENT">
+              <Select name="audience" defaultValue={defaultValues?.audience ?? "STUDENT"}>
                 <SelectTrigger id="audience" className="h-10 w-full border-slate-300 bg-white">
                   <SelectValue placeholder="대상을 선택하세요" />
                 </SelectTrigger>
@@ -124,29 +140,36 @@ export function ClassMaterialForm({ action }: ClassMaterialFormProps) {
               name="lectureTitle"
               className="h-10 border-slate-300"
               placeholder="예: 현대 기업과 리더십"
+              defaultValue={defaultValues?.lectureTitle ?? ""}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="file" className="text-slate-700">
-              파일
+              파일{isEdit ? " (변경 시에만 선택)" : ""}
             </Label>
+            {isEdit && defaultValues?.fileName ? (
+              <p className="text-sm text-slate-600">
+                현재 파일: <span className="font-medium">{defaultValues.fileName}</span>
+              </p>
+            ) : null}
             <Input
               id="file"
               name="file"
               type="file"
-              required
+              required={!isEdit}
               accept={acceptValue}
               className="border-slate-300 bg-white"
             />
             <p className="text-sm text-slate-500">
               PDF, HWP, DOC, DOCX, PPT, PPTX 파일을 업로드할 수 있으며 최대 용량은 50MB입니다.
+              {isEdit ? " 새 파일을 선택하지 않으면 기존 파일이 유지됩니다." : ""}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <Button type="submit" disabled={isSubmitting} className="h-10 bg-slate-900 text-white">
-              {isSubmitting ? "저장 중..." : "강의 자료 저장"}
+              {isSubmitting ? "저장 중..." : isEdit ? "강의 자료 수정" : "강의 자료 저장"}
             </Button>
             <Button
               variant="outline"

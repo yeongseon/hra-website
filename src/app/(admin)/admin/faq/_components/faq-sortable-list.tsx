@@ -133,7 +133,7 @@ export function FaqSortableList({ initialItems }: Props) {
                 <TableHead className="w-10 text-center">순서</TableHead>
                 <TableHead className="w-[30%]">질문</TableHead>
                 <TableHead>답변 (미리보기)</TableHead>
-                <TableHead className="w-32 shrink-0">관리</TableHead>
+                <TableHead className="w-32 shrink-0 text-right">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -172,8 +172,8 @@ export function FaqSortableList({ initialItems }: Props) {
                     <TableCell className="max-w-0 truncate text-sm text-[#666666]">
                       {truncate(item.answer, 80)}
                     </TableCell>
-                    <TableCell className="w-32">
-                      <div className="flex items-center gap-2">
+                    <TableCell className="w-32 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"

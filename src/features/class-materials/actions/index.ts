@@ -186,6 +186,88 @@ export async function createClassMaterial(
   }
 }
 
+/**
+ * 기존 강의 자료 수정 — 텍스트 필드 변경, 파일 교체(선택)
+ * 새 파일이 없으면 기존 파일을 그대로 유지한다.
+ */
+export async function updateClassMaterial(id: string, formData: FormData): Promise<ClassMaterialActionState> {
+  await requireAdmin();
+
+  const parsedId = classMaterialIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, error: parsedId.error.issues[0]?.message ?? "유효하지 않은 ID입니다." };
+  }
+
+  const parsed = classMaterialFormSchema.safeParse({
+    title: formData.get("title"),
+    weekNumber: formData.get("weekNumber"),
+    lectureTitle: formData.get("lectureTitle"),
+    audience: formData.get("audience"),
+    classDate: formData.get("classDate"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "입력값을 확인해주세요." };
+  }
+
+  try {
+    const target = await db.query.classMaterials.findFirst({
+      where: eq(classMaterials.id, parsedId.data),
+    });
+    if (!target) {
+      return { success: false, error: "강의 자료를 찾을 수 없습니다." };
+    }
+
+    const classDateObj = parsed.data.classDate
+      ? new Date(`${parsed.data.classDate}T00:00:00`)
+      : null;
+
+    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    }
+
+    const textFields = {
+      title: parsed.data.title,
+      weekNumber: parsed.data.weekNumber === "" || parsed.data.weekNumber === undefined ? null : parsed.data.weekNumber,
+      lectureTitle: parsed.data.lectureTitle === "" || parsed.data.lectureTitle === undefined ? null : parsed.data.lectureTitle,
+      audience: parsed.data.audience,
+      classDate: classDateObj,
+    };
+
+    const fileEntry = formData.get("file");
+    const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
+
+    if (hasNewFile) {
+      // 새 파일 검증 및 업로드 후 기존 파일 제거
+      const validatedFile = getValidatedFile(fileEntry);
+      if ("error" in validatedFile) {
+        return { success: false, error: validatedFile.error };
+      }
+
+      const safeFileName = normalizeFileName(validatedFile.file.name);
+      const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, { access: "public" });
+
+      await db
+        .update(classMaterials)
+        .set({ ...textFields, fileUrl: blob.url, fileName: validatedFile.file.name })
+        .where(eq(classMaterials.id, parsedId.data));
+
+      await deleteBlobIfExists(target.fileUrl);
+    } else {
+      // 파일 교체 없이 텍스트 필드만 수정
+      await db
+        .update(classMaterials)
+        .set(textFields)
+        .where(eq(classMaterials.id, parsedId.data));
+    }
+
+    revalidateClassMaterialPaths();
+    return { success: true };
+  } catch (error) {
+    console.error("[class-materials/update] 수정 오류:", error);
+    return { success: false, error: "강의 자료 수정에 실패했습니다." };
+  }
+}
+
 export async function deleteClassMaterial(id: string): Promise<ClassMaterialActionState> {
   await requireAdmin();
 

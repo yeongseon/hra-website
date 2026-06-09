@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 /**
  * 사이트 전역 메타데이터.
@@ -56,6 +57,7 @@ export default function RootLayout({
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
         {children}
+        <Toaster />
       </body>
     </html>
   );

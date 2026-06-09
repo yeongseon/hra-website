@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import { cn } from "@/lib/utils";
 import { isAllowedImageUrl, sanitizeSchema } from "@/lib/markdown/sanitize";
@@ -50,7 +51,7 @@ export function MarkdownViewer({ body, className }: MarkdownViewerProps) {
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
           img: ({ src, alt, ...rest }) => {
             const url = typeof src === "string" ? src : "";

@@ -70,6 +70,7 @@ export const sanitizeSchema: Options = {
       ["rel", "noopener", "noreferrer", "nofollow"],
     ],
     // 이미지 src/alt만 허용 — onload 등 차단
+    // style 은 "width: X%" 패턴만 허용 (이미지 크기 조정용, 다른 CSS는 차단)
     img: [
       ["src"],
       ["alt"],
@@ -77,6 +78,7 @@ export const sanitizeSchema: Options = {
       ["width"],
       ["height"],
       ["loading", "lazy", "eager"],
+      ["style", /^width:\s*\d+(\.\d+)?%\s*;?\s*$/],
     ],
   },
   // protocols 화이트리스트 — javascript: 등 차단

@@ -93,7 +93,7 @@ export function UserGroupButton({ userId, currentRole, currentCohortId, cohorts 
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <Select value={groupValue} onValueChange={handleGroupChange} disabled={isPending}>
           <SelectTrigger className="h-8 w-[148px] text-slate-900">
             <span className="truncate">{toDisplayLabel(groupValue, cohorts)}</span>

@@ -76,7 +76,7 @@ export default async function AdminFacultyPage() {
                         <TableHead>카테고리</TableHead>
                         <TableHead>현직</TableHead>
                         <TableHead>전직</TableHead>
-                        <TableHead>관리</TableHead>
+                        <TableHead className="text-right">관리</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -93,8 +93,8 @@ export default async function AdminFacultyPage() {
                             <TableCell className="text-[#666666]">{categoryLabels[member.category]}</TableCell>
                             <TableCell className="w-[28%] max-w-0 text-[#666666]"><span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">{member.currentPosition || "-"}</span></TableCell>
                             <TableCell className="w-[28%] max-w-0 text-[#666666]"><span className="block overflow-hidden whitespace-nowrap [mask-image:linear-gradient(to_right,black_80%,transparent_100%)]">{member.formerPosition || "-"}</span></TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
                                 <Link
                                   href={`/admin/faculty/${member.id}`}
                                   className={buttonVariants({ variant: "outline" })}

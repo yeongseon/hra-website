@@ -70,32 +70,29 @@ export async function submitApplicationForm(
       }
     }
 
-    // 3. DB 저장 (트랜잭션)
-    await db.transaction(async (tx) => {
-      // 제출 마스터 정보 생성
-      const [submission] = await tx
-        .insert(applicationSubmissions)
-        .values({
-          formId,
-          applicantName,
-          applicantEmail,
-          applicantPhone,
-        })
-        .returning({ id: applicationSubmissions.id });
+    // 3. DB 저장: 제출 마스터 먼저 생성 후 답변 저장
+    const [submission] = await db
+      .insert(applicationSubmissions)
+      .values({
+        formId,
+        applicantName,
+        applicantEmail,
+        applicantPhone,
+      })
+      .returning({ id: applicationSubmissions.id });
 
-      // 질문별 답변 저장
-      if (answers.length > 0) {
-        await tx
-          .insert(applicationAnswers)
-          .values(
-            answers.map(ans => ({
-              submissionId: submission.id,
-              questionId: ans.questionId,
-              value: ans.value,
-            }))
-          );
-      }
-    });
+    // 질문별 답변 저장
+    if (answers.length > 0) {
+      await db
+        .insert(applicationAnswers)
+        .values(
+          answers.map(ans => ({
+            submissionId: submission.id,
+            questionId: ans.questionId,
+            value: ans.value,
+          }))
+        );
+    }
 
     revalidatePath(`/admin/recruitment/forms/${formId}/submissions`);
     return {

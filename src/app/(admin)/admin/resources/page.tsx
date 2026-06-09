@@ -96,7 +96,7 @@ export default async function AdminClassLogsPage() {
                   <TableHead>기수</TableHead>
                   <TableHead>작성자</TableHead>
                   <TableHead>작성일</TableHead>
-                  <TableHead>관리</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,7 +116,7 @@ export default async function AdminClassLogsPage() {
                       <TableCell className="text-slate-700">{log.cohortName ?? "-"}</TableCell>
                       <TableCell className="text-slate-700">{log.authorName}</TableCell>
                       <TableCell className="text-slate-700">{formatDate(log.createdAt)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <ClassLogRowActions id={log.id} />
                       </TableCell>
                     </TableRow>

@@ -11,6 +11,11 @@ import type { GuidebookActionState } from "@/features/guidebooks/actions";
 
 type GuidebookFormProps = {
   action: (formData: FormData) => Promise<GuidebookActionState>;
+  /** 수정 모드일 때 기존 값으로 폼 초기화 */
+  defaultValues?: {
+    title: string;
+    fileName: string;
+  };
 };
 
 const initialState: GuidebookActionState = {
@@ -29,7 +34,8 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function GuidebookForm({ action }: GuidebookFormProps) {
+export function GuidebookForm({ action, defaultValues }: GuidebookFormProps) {
+  const isEdit = Boolean(defaultValues);
   const router = useRouter();
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
@@ -69,29 +75,41 @@ export function GuidebookForm({ action }: GuidebookFormProps) {
             <Label htmlFor="title" className="text-slate-700">
               제목
             </Label>
-            <Input id="title" name="title" required className="h-10 border-slate-300" />
+            <Input
+              id="title"
+              name="title"
+              required
+              defaultValue={defaultValues?.title ?? ""}
+              className="h-10 border-slate-300"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="file" className="text-slate-700">
-              파일
+              파일{isEdit ? " (변경 시에만 선택)" : ""}
             </Label>
+            {isEdit && defaultValues?.fileName ? (
+              <p className="text-sm text-slate-600">
+                현재 파일: <span className="font-medium">{defaultValues.fileName}</span>
+              </p>
+            ) : null}
             <Input
               id="file"
               name="file"
               type="file"
-              required
+              required={!isEdit}
               accept={acceptValue}
               className="border-slate-300 bg-white"
             />
             <p className="text-sm text-slate-500">
               PDF, HWP, DOC, DOCX 파일만 업로드할 수 있으며 최대 용량은 30MB입니다.
+              {isEdit ? " 새 파일을 선택하지 않으면 기존 파일이 유지됩니다." : ""}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <Button type="submit" disabled={isSubmitting} className="h-10 bg-slate-900 text-white">
-              {isSubmitting ? "저장 중..." : "가이드북 저장"}
+              {isSubmitting ? "저장 중..." : isEdit ? "가이드북 수정" : "가이드북 저장"}
             </Button>
             <Button
               variant="outline"

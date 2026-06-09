@@ -141,7 +141,7 @@ export function PressSortableList({ initialItems }: Props) {
                 <TableHead>제목</TableHead>
                 <TableHead>언론사</TableHead>
                 <TableHead>게시일</TableHead>
-                <TableHead className="w-32 shrink-0">관리</TableHead>
+                <TableHead className="w-32 shrink-0 text-right">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -179,8 +179,8 @@ export function PressSortableList({ initialItems }: Props) {
                     </TableCell>
                     <TableCell className="text-[#1a1a1a]">{truncate(item.source, 30)}</TableCell>
                     <TableCell className="text-[#666666]">{formatDate(item.publishedAt)}</TableCell>
-                    <TableCell className="w-32">
-                      <div className="flex items-center gap-2">
+                    <TableCell className="w-32 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
