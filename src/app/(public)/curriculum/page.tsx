@@ -163,9 +163,7 @@ export default function CurriculumPage() {
   const groupRefs = useRef<(HTMLDivElement | null)[]>([]);
   // ResizeObserver 콜백 안에서 최신 displayMonth 를 읽기 위한 ref (stale closure 방지)
   const displayMonthRef = useRef<string | null>(null);
-  // fade-out 중에도 이전 groupInfo 텍스트가 사라지지 않도록 유지하는 state
-  const [lastGroupInfo, setLastGroupInfo] = useState<{ title: string; description: string } | null>(null);
-
+  
   // 표시 우선순위: hover > tap > null(숨김)
   const displayMonth = hoveredMonth ?? tappedMonth;
 
