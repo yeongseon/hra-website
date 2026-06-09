@@ -4,19 +4,17 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, asc } from "drizzle-orm";
-import { ChevronLeft, User, Mail, Phone, Calendar, FileText, CheckCircle2 } from "lucide-react";
+import { eq } from "drizzle-orm";
+import { ChevronLeft, User, Mail, Phone, Calendar, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { 
-  applicationForms, 
-  applicationSubmissions, 
+import {
+  applicationSubmissions,
   applicationAnswers,
-  applicationQuestions
 } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -176,7 +174,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                                 </ul>
                               );
                             }
-                          } catch (e) {}
+                          } catch {}
                           return ans.value;
                         })()}
                       </div>

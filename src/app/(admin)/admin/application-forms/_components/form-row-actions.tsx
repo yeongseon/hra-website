@@ -6,7 +6,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, Edit, ListChecks, Eye, EyeOff } from "lucide-react";
+import { Trash2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

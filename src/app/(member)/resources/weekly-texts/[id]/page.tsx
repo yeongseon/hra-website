@@ -160,6 +160,7 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {text.images.map((image) => (
                   <div key={image.id} className="overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={image.url}
                       alt={image.alt?.trim() || `${text.title} 사진`}

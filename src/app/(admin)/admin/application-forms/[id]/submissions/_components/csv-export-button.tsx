@@ -3,8 +3,8 @@
  */
 "use client";
 
-import { useState, useTransition } from "react";
-import { Download, FileDown } from "lucide-react";
+import { useTransition } from "react";
+import { FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { exportSubmissionsToCsv } from "@/features/applications/actions/submissions";

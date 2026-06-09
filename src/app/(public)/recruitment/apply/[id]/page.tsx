@@ -2,7 +2,6 @@
  * 사용자용 동적 지원서 작성 페이지
  */
 
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { eq, asc } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";

@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpen, Briefcase, FileSearch, Mic, Building, HeartHandshake, Tent } from "lucide-react";
+import { BookOpen, Briefcase, FileSearch, Mic, HeartHandshake } from "lucide-react";
 
 /**
  * CSS max-w-2xl(672px)과 동기화된 카드 최대 너비.
@@ -46,23 +46,6 @@ const curriculumItems = [
     icon: HeartHandshake,
     description: "HRA는 일정 시간 이상의 봉사활동을 통해 사회적 책임과 공동체 의식을 함양하는 것을 중요하게 생각합니다. 참가자들은 다양한 봉사활동에 참여하며 타인과 사회에 대한 이해를 넓히고, 성숙한 시민으로서의 태도를 기르게 됩니다.",
   },
-];
-
-// 타임라인 월 목록 (Sep.~Aug. + 수료식 Sep.) — buttonRefs 인덱스 순서와 일치
-const timelineMonths = [
-  { label: "9월", value: "9월" },
-  { label: "10월", value: "10월" },
-  { label: "11월", value: "11월" },
-  { label: "12월", value: "12월" },
-  { label: "1월", value: "1월" },
-  { label: "2월", value: "2월" },
-  { label: "3월", value: "3월" },
-  { label: "4월", value: "4월" },
-  { label: "5월", value: "5월" },
-  { label: "6월", value: "6월" },
-  { label: "7월", value: "7월" },
-  { label: "8월", value: "8월" },
-  { label: "9월", value: "9월-end" },
 ];
 
 // 같은 설명을 공유하는 월들을 pill 로 묶기 위한 그룹 정의

@@ -4,9 +4,9 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { desc, eq, count } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { ChevronLeft, FileText, User, Mail, Phone, Calendar, ChevronRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,

@@ -151,6 +151,7 @@ function ImageResizeView({ node, selected, updateAttributes }: ReactNodeViewProp
         className="relative inline-block"
         style={displayWidth ? { width: displayWidth } : undefined}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={attrs.src ?? ""}
           alt={attrs.alt ?? ""}

@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { desc, eq, count } from "drizzle-orm";
-import { Plus, FileText, ChevronRight } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ImageIcon } from "lucide-react";
-import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,7 +14,6 @@ import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resou
 import { WeeklyTextRowActions } from "@/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { cohorts } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 

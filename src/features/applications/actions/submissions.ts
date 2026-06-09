@@ -9,7 +9,6 @@ import { z } from "zod/v4";
 import { db } from "@/lib/db";
 import {
   applicationForms,
-  applicationQuestions,
   applicationSubmissions,
   applicationAnswers,
 } from "@/lib/db/schema";
@@ -154,7 +153,7 @@ export async function exportSubmissionsToCsv(formId: string) {
         try {
           const parsed = JSON.parse(answer.value);
           return Array.isArray(parsed) ? parsed.join(", ") : answer.value;
-        } catch (e) {
+        } catch {
           return answer.value;
         }
       });
