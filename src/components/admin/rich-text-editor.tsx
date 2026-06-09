@@ -42,11 +42,6 @@ function ImageResizeView({ node, selected, updateAttributes }: ReactNodeViewProp
   const startXRef = useRef(0);     // 드래그 시작 마우스 X 좌표
   const startWidthRef = useRef(0); // 드래그 시작 시 컨테이너 픽셀 너비
 
-  // 프리셋/드래그로 attrs.width가 확정되면 숫자 입력 필드도 동기화
-  useEffect(() => {
-    setCustomInput(attrs.width ? attrs.width.replace("%", "") : "");
-  }, [attrs.width]);
-
   // 입력값을 파싱해 width 속성 적용 (1~100 클램프, 빈값·0이면 원본)
   function applyCustomWidth(raw: string) {
     const num = parseInt(raw, 10);
@@ -58,6 +53,13 @@ function ImageResizeView({ node, selected, updateAttributes }: ReactNodeViewProp
       updateAttributes({ width: `${clamped}%` });
       setCustomInput(String(clamped));
     }
+  }
+
+  // 프리셋 버튼 클릭 — TipTap 속성과 입력 필드를 동시에 업데이트
+  // (useEffect로 attrs.width 변화를 감지하는 대신 직접 동기화해 cascading render 방지)
+  function applyPreset(value: string | null) {
+    updateAttributes({ width: value });
+    setCustomInput(value ? value.replace("%", "") : "");
   }
 
   // 드래그 핸들 mousedown: document에 mousemove/mouseup을 달아 드래그 추적
@@ -83,7 +85,9 @@ function ImageResizeView({ node, selected, updateAttributes }: ReactNodeViewProp
     function onMouseUp(ev: MouseEvent) {
       const delta = ev.clientX - startXRef.current;
       const newPct = Math.min(100, Math.max(10, Math.round(((startWidthRef.current + delta) / parentWidth) * 100)));
+      // 드래그 확정 시 TipTap 속성과 입력 필드 동시 업데이트
       updateAttributes({ width: `${newPct}%` });
+      setCustomInput(String(newPct));
       setLiveWidth(null);
       setIsDragging(false);
       document.removeEventListener("mousemove", onMouseMove);
@@ -106,7 +110,7 @@ function ImageResizeView({ node, selected, updateAttributes }: ReactNodeViewProp
             <button
               key={label}
               type="button"
-              onClick={() => updateAttributes({ width: value })}
+              onClick={() => applyPreset(value)}
               className={cn(
                 "rounded px-2 py-1 text-xs font-medium transition-colors",
                 (value === null && !attrs.width) || value === attrs.width
