@@ -27,6 +27,7 @@ import {
   index,
   pgEnum, // PostgreSQL의 enum 타입 (정해진 선택지만 가능)
   uuid, // 고유 ID 저장 (128비트 무작위 값)
+  unique, // 복합 컬럼에 대한 UNIQUE 제약(중복 차단)을 선언할 때 사용
 } from "drizzle-orm/pg-core";
 
 // Drizzle ORM의 관계 설정 함수
@@ -690,17 +691,29 @@ export const applicationQuestionOptionsRelations = relations(applicationQuestion
 }));
 
 // 지원서 제출 기본 정보
-export const applicationSubmissions = pgTable("application_submissions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  formId: uuid("form_id")
-    .notNull()
-    .references(() => applicationForms.id, { onDelete: "cascade" }),
-  applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름
-  applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일
-  applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 연락처
-  status: applicationStatusEnum("status").notNull().default("PENDING"), // 처리 상태
-  submittedAt: timestamp("submitted_at").notNull().defaultNow(), // 제출 시간
-});
+export const applicationSubmissions = pgTable(
+  "application_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => applicationForms.id, { onDelete: "cascade" }),
+    applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름
+    applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일
+    applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 연락처
+    status: applicationStatusEnum("status").notNull().default("PENDING"), // 처리 상태
+    submittedAt: timestamp("submitted_at").notNull().defaultNow(), // 제출 시간
+  },
+  table => ({
+    // 동일 이메일이 같은 양식에 두 번 제출하지 못하도록 보장하는 UNIQUE 제약.
+    // Postgres 레벨에서 원자적으로 dedup이 보장되므로, 애플리케이션 코드의
+    // count-check + insert 패턴이 가지는 TOCTOU race를 방지합니다.
+    formApplicantUnique: unique("application_submissions_form_applicant_unique").on(
+      table.formId,
+      table.applicantEmail
+    ),
+  })
+);
 
 // 제출 내역 관계 정의
 export const applicationSubmissionsRelations = relations(applicationSubmissions, ({ one, many }) => ({

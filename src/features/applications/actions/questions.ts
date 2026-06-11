@@ -9,6 +9,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import {
+  applicationAnswers,
   applicationQuestions,
   applicationQuestionOptions,
 } from "@/lib/db/schema";
@@ -52,11 +53,8 @@ export async function saveFormQuestions(
   formId: string,
   questions: z.infer<typeof questionSchema>[]
 ): Promise<QuestionActionState> {
-  try {
-    await requireAdmin();
-  } catch {
-    return { success: false, message: "인증되지 않았습니다." };
-  }
+  // requireAdmin은 미인증 시 /login으로 redirect (NEXT_REDIRECT throw)되므로 catch 금지
+  await requireAdmin();
 
   // 1. 데이터 검증 (description이 빈 문자열일 경우 null로 변환)
   const sanitizedQuestions = questions.map(q => ({
@@ -90,7 +88,28 @@ export async function saveFormQuestions(
     const questionIdsToDelete = existingQuestionIds.filter(
       id => !incomingQuestionIds.includes(id)
     );
+
+    // 답변이 cascade 로 영구 삭제되는 것을 방지 — 운영자는 먼저 제출 내역을 별도 처리해야 함
     if (questionIdsToDelete.length > 0) {
+      const answeredRows = await db
+        .select({ questionId: applicationAnswers.questionId })
+        .from(applicationAnswers)
+        .where(inArray(applicationAnswers.questionId, questionIdsToDelete));
+
+      const answeredQuestionIds = [...new Set(answeredRows.map(row => row.questionId))];
+
+      if (answeredQuestionIds.length > 0) {
+        const blockedQuestions = await db
+          .select({ title: applicationQuestions.title })
+          .from(applicationQuestions)
+          .where(inArray(applicationQuestions.id, answeredQuestionIds));
+
+        return {
+          success: false,
+          message: `다음 질문은 이미 답변이 제출되어 삭제할 수 없습니다: ${blockedQuestions.map(question => question.title).join(", ")}`,
+        };
+      }
+
       await db
         .delete(applicationQuestions)
         .where(inArray(applicationQuestions.id, questionIdsToDelete));

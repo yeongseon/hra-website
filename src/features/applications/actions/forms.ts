@@ -31,13 +31,16 @@ export async function createForm(formData: FormData): Promise<FormActionState> {
 
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
-  const cohortId = formData.get("cohortId") as string;
+  // UI Select 컴포넌트는 "기수 지정 안 함" 선택 시 "none" 문자열을 전송합니다.
+  // 서버 측에서는 빈 값과 "none"을 모두 null로 정규화하여 Zod UUID 검증을 통과시킵니다.
+  const cohortIdRaw = formData.get("cohortId") as string | null;
+  const cohortId = !cohortIdRaw || cohortIdRaw === "none" ? null : cohortIdRaw;
   const isPublished = formData.get("isPublished") === "true";
 
   const parsed = formSchema.safeParse({
     title,
     description,
-    cohortId: cohortId || null,
+    cohortId,
     isPublished,
   });
 
@@ -82,13 +85,15 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
 
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
-  const cohortId = formData.get("cohortId") as string;
+  // createForm 과 동일한 사유로 "none" 도 null 로 정규화합니다.
+  const cohortIdRaw = formData.get("cohortId") as string | null;
+  const cohortId = !cohortIdRaw || cohortIdRaw === "none" ? null : cohortIdRaw;
   const isPublished = formData.get("isPublished") === "true";
 
   const parsed = formSchema.safeParse({
     title,
     description,
-    cohortId: cohortId || null,
+    cohortId,
     isPublished,
   });
 

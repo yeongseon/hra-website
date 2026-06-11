@@ -73,6 +73,24 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
     <form action={action} className="space-y-12">
       <input type="hidden" name="formId" value={form.id} />
 
+      {/* honeypot: 봇 방어용 숨김 필드.
+          일반 사용자에게는 보이지 않지만, 자동화 봇은 모든 input을 채우는 경향이 있으므로
+          이 필드에 값이 들어오면 서버가 봇으로 판정하여 무시합니다.
+          sr-only로 화면에서 숨기고 aria-hidden + tabIndex={-1} 로 보조 기술/키보드에서도 제외합니다.
+          필드명은 'website'/'email' 같은 일반 이름 대신 의미 없는 프로젝트 prefix 이름을 사용해
+          브라우저/패스워드매니저 자동완성이 정상 사용자를 silent fail 시키는 것을 방지합니다. */}
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor="hra-honeypot-referral">추가 정보 (작성하지 마세요)</label>
+        <input
+          type="text"
+          id="hra-honeypot-referral"
+          name="hra_referral_source"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
+
       {/* 기본 정보 섹션 */}
       <section className="space-y-6">
         <div className="flex items-center gap-3">
