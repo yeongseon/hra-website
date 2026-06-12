@@ -493,6 +493,7 @@ export function RichTextEditor({
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
   // createPortal은 브라우저 전용이므로 클라이언트 마운트 후에만 사용
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration 후 클라이언트 마운트 감지를 위한 패턴
   useEffect(() => { setMounted(true); }, []);
 
   // 에디터 표시 모드
@@ -562,6 +563,7 @@ export function RichTextEditor({
     if (mode !== "edit") return;
     if (value === editor.getMarkdown()) return;
     editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- emitUpdate:false로 onUpdate를 막았으므로 수동으로 동기화
     setInternalValue(editor.getMarkdown());
   }, [value, editor, mode]);
 
