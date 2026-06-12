@@ -13,6 +13,8 @@ import { NoticeForm } from "@/app/(admin)/admin/notices/_components/notice-form"
 import { createNotice } from "@/features/notices/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewNoticePage() {
   // 관리자 권한 확인 — 비관리자는 자동으로 로그인 페이지로 이동
   await requireAdmin();

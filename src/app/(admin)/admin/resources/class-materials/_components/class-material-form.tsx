@@ -119,7 +119,7 @@ export function ClassMaterialForm({ action, defaultValues }: ClassMaterialFormPr
               <Label htmlFor="audience" className="text-slate-700">
                 대상
               </Label>
-              <Select name="audience" defaultValue={defaultValues?.audience ?? "STUDENT"}>
+              <Select name="audience" defaultValue={defaultValues?.audience ?? "STUDENT"} items={{ STUDENT: "학생용", FACULTY: "교수용" }}>
                 <SelectTrigger id="audience" className="h-10 w-full border-slate-300 bg-white">
                   <SelectValue placeholder="대상을 선택하세요" />
                 </SelectTrigger>

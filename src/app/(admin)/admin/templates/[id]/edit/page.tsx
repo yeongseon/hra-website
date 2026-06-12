@@ -19,6 +19,8 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function EditTemplatePage({ params }: Props) {
   await requireAdmin();
   const { id } = await params;

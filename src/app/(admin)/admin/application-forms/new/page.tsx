@@ -10,6 +10,8 @@ import { cohorts } from "@/lib/db/schema";
 import { asc } from "drizzle-orm";
 import { FormSettings } from "../_components/form-settings";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminNewApplicationFormPage() {
   await requireAdmin();
 

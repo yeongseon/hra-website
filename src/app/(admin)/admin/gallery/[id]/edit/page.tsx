@@ -30,6 +30,8 @@ type EditGalleryPageProps = {
   }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function EditGalleryPage({ params }: EditGalleryPageProps) {
   await requireAdmin();
 

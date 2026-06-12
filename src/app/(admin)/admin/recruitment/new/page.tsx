@@ -10,6 +10,8 @@ import { CohortForm } from "@/app/(admin)/admin/recruitment/_components/cohort-f
 import { createCohort } from "@/features/recruitment/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewCohortPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();

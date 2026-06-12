@@ -151,6 +151,7 @@ export function TemplateForm({
                 name="category"
                 defaultValue={defaultValues?.category ?? "template"}
                 onValueChange={(value) => setCategory(value as "template" | "guide")}
+                items={templateCategoryLabels}
               >
                 <SelectTrigger id="category" className="h-10 w-full border-[#D9D9D9] bg-white">
                   <SelectValue />
@@ -170,6 +171,7 @@ export function TemplateForm({
                 name="reportCategory"
                 defaultValue={defaultValues?.reportCategory ?? ""}
                 disabled={category !== "template"}
+                items={{ "management-book": "경영서", "classic-book": "고전명작", "business-practice": "기업실무·한국경제사" }}
               >
                 <SelectTrigger
                   id="reportCategory"

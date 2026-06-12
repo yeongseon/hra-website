@@ -108,7 +108,7 @@ export function FacultyForm({ title, description, submitLabel, action, defaultVa
                 <Label htmlFor="category" className="text-[#1a1a1a]">
                   카테고리
                 </Label>
-                <Select name="category" defaultValue={defaultValues?.category ?? "CLASSICS"}>
+                <Select name="category" defaultValue={defaultValues?.category ?? "CLASSICS"} items={categoryOptions}>
                   <SelectTrigger id="category" className="h-10 w-full border-[#D9D9D9] bg-white">
                     <SelectValue placeholder="카테고리를 선택하세요" />
                   </SelectTrigger>

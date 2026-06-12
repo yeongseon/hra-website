@@ -19,6 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  CalendarDays,
   CircleHelp,
   ExternalLink,
   FileText,
@@ -64,6 +65,7 @@ const navItems = [
   { href: "/admin/gallery", label: "갤러리", icon: GalleryHorizontal },
   { href: "/admin/alumni", label: "수료생 이야기", icon: MessageSquare },
   { href: "/admin/faq", label: "FAQ", icon: CircleHelp },
+  { href: "/admin/schedule", label: "일정 관리", icon: CalendarDays },
   { href: "/admin/resources", label: "자료실", icon: FolderOpen },
   { href: "/admin/users", label: "회원 관리", icon: UserCog },
 ];

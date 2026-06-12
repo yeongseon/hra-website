@@ -118,6 +118,8 @@ function SectionMessage({ state }: { state: RecruitmentSettingsActionState | nul
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export default function AdminRecruitmentSettingsPage() {
   const [formValues, setFormValues] = useState<FormValues>(emptyFormValues);
   const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);

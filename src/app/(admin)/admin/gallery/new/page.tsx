@@ -13,6 +13,8 @@ import { GalleryForm } from "@/app/(admin)/admin/gallery/_components/gallery-for
 import { createGallery } from "@/features/gallery/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewGalleryPage() {
   // 🔒 관리자 권한 확인
   await requireAdmin();

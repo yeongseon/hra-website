@@ -236,9 +236,10 @@ export function FormBuilder({ formId, formTitle, initialQuestions }: FormBuilder
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-500">질문 유형</Label>
-                  <Select 
-                    value={q.type} 
+                  <Select
+                    value={q.type}
                     onValueChange={(v: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "CHECKBOX" | "DROPDOWN" | null) => v && updateQuestion(qIndex, { type: v })}
+                    items={{ SHORT_ANSWER: "단답형", LONG_ANSWER: "장문형", MULTIPLE_CHOICE: "객관식 (택 1)", CHECKBOX: "체크박스 (다중 선택)", DROPDOWN: "드롭다운" }}
                   >
                     <SelectTrigger className="h-10 border-slate-200">
                       <SelectValue />

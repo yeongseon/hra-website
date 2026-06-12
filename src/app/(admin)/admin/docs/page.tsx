@@ -15,6 +15,8 @@ function readDocFile(fileName: string) {
   return fs.readFileSync(filePath, "utf8");
 }
 
+export const dynamic = "force-dynamic";
+
 export default function AdminDocsPage() {
   const docs = DOCS_CONFIG.map(({ fileName, ...item }) => ({
     ...item,

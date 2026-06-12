@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { createReportTemplate } from "@/features/report-templates/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewResourceTemplatePage() {
   await requireAdmin();
 

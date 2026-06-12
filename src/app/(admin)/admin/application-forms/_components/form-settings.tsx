@@ -90,7 +90,11 @@ export function FormSettings({ form, cohorts }: FormSettingsProps) {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="cohortId">모집 기수 선택</Label>
-              <Select name="cohortId" defaultValue={form?.cohortId || "none"}>
+              <Select
+                name="cohortId"
+                defaultValue={form?.cohortId || "none"}
+                items={[{ value: "none", label: "기수 지정 안 함" }, ...cohorts.map((c) => ({ value: c.id, label: c.name }))]}
+              >
                 <SelectTrigger id="cohortId">
                   <SelectValue placeholder="기수를 선택하세요" />
                 </SelectTrigger>

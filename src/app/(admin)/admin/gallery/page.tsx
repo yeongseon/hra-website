@@ -45,6 +45,8 @@ const excerptDescription = (value: string | null, maxLength = 90) => {
   return `${value.slice(0, maxLength).trim()}...`;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminGalleryPage() {
   await requireAdmin();
 

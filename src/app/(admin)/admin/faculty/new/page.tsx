@@ -3,6 +3,7 @@ import { createFaculty } from "@/features/faculty/actions";
 import { requireAdmin } from "@/lib/admin";
 
 export const metadata = { title: "교수진 추가" };
+export const dynamic = "force-dynamic";
 
 export default async function NewFacultyPage() {
   await requireAdmin();

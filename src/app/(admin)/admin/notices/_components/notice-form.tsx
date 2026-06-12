@@ -123,7 +123,7 @@ export function NoticeForm({
               <Label htmlFor="status" className="text-slate-700">
                 상태
               </Label>
-                <Select name="status" defaultValue={defaultValues?.status ?? "DRAFT"}>
+                <Select name="status" defaultValue={defaultValues?.status ?? "DRAFT"} items={noticeStatusLabels}>
                   <SelectTrigger id="status" className="h-10 w-full border-slate-300 bg-white">
                     <SelectValue placeholder="상태를 선택하세요" />
                   </SelectTrigger>

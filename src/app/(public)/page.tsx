@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Target, Briefcase, Heart } from "lucide-react";
 import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
+import { CalendarSection } from "./_components/calendar-section";
 
 export const metadata: Metadata = {
   title: "HRA - Human Renaissance Academy",
@@ -11,7 +12,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+type HomeProps = {
+  searchParams: Promise<{ year?: string; month?: string }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+  const now = new Date();
+  // URL에 year/month가 있으면 해당 월, 없으면 현재 월
+  const year = params.year ? parseInt(params.year, 10) : now.getFullYear();
+  const month = params.month ? parseInt(params.month, 10) : now.getMonth() + 1;
   return (
     <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
       <HeroSection />
@@ -191,8 +201,8 @@ export default function Home() {
         <StatsSection />
       </div>
 
-      <div className="w-full bg-[#EFF6FF]">
-        {/* <AlumniCarousel /> */}
+      <div className="w-full bg-[#FFFFFF]">
+        <CalendarSection year={year} month={month} />
       </div>
     </div>
   );

@@ -2,6 +2,8 @@ import { AlumniStoryForm } from "@/app/(admin)/admin/alumni/_components/alumni-s
 import { createAlumniStory } from "@/features/alumni/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewAlumniStoryPage() {
   await requireAdmin();
 

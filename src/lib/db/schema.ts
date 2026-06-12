@@ -763,6 +763,98 @@ export const applicationSubmissionsLog = pgTable(
 );
 
 // ============================================================
+// Schedule Events (일정 관리 테이블)
+// ============================================================
+
+/**
+ * 일정 이벤트 유형
+ * - CLASS: 토요일 정기수업 (세션 슬롯 여러 개)
+ * - EVENT: 행사 (수료식, 송년회 등, 세션 없음)
+ */
+export const scheduleEventTypeEnum = pgEnum("schedule_event_type", [
+  "CLASS",
+  "EVENT",
+]);
+
+/**
+ * 수업 세션 카테고리
+ * - CLASSICS: 고전명작
+ * - ENGLISH: 영어
+ * - SPEECH: 스피치 특강 (한 달에 한 번, 3~4시간)
+ * - SPECIAL_LECTURE: 특강 (진로 특강 등)
+ * - CASE_STUDY: 케이스스터디
+ */
+export const sessionCategoryEnum = pgEnum("session_category", [
+  "CLASSICS",
+  "ENGLISH",
+  "SPEECH",
+  "SPECIAL_LECTURE",
+  "CASE_STUDY",
+]);
+
+/**
+ * 하루 단위 일정 이벤트 (부모 테이블)
+ * - CLASS 유형: scheduleSessions 자식 레코드들을 가짐
+ * - EVENT 유형: 단독으로 사용 (세션 없음)
+ */
+export const scheduleEvents = pgTable("schedule_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventDate: timestamp("event_date").notNull(), // 수업/행사 시작 날짜+시간 (UTC 저장)
+  endTime: varchar("end_time", { length: 5 }), // 종료 시간 "HH:MM" 형식 (선택)
+  eventType: scheduleEventTypeEnum("event_type").notNull(), // CLASS | EVENT
+  title: varchar("title", { length: 200 }).notNull(), // 예: "5기 3주차 수업", "수료식"
+  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 관련 기수 (CLASS 필수, EVENT 선택)
+  weekNumber: integer("week_number"), // 몇 주차인지 (CLASS일 때만 사용)
+  description: text("description"), // 비고/설명 (선택)
+  isPublic: boolean("is_public").notNull().default(true), // 메인 페이지 공개 여부
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// scheduleEvents 관계 정의
+export const scheduleEventsRelations = relations(scheduleEvents, ({ one, many }) => ({
+  cohort: one(cohorts, {
+    fields: [scheduleEvents.cohortId],
+    references: [cohorts.id],
+  }),
+  sessions: many(scheduleSessions), // 이 이벤트에 속한 세션 슬롯들
+}));
+
+/**
+ * 수업 세션 슬롯 (자식 테이블, CLASS 이벤트 전용)
+ * - 한 CLASS 이벤트에 여러 세션이 속함 (고전명작, 영어, 케이스스터디 등)
+ * - EVENT 유형 이벤트에는 세션 없음
+ */
+export const scheduleSessions = pgTable("schedule_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scheduleEventId: uuid("schedule_event_id")
+    .notNull()
+    .references(() => scheduleEvents.id, { onDelete: "cascade" }), // 이벤트 삭제 시 세션도 함께 삭제
+  category: sessionCategoryEnum("category").notNull(), // 세션 카테고리
+  facultyId: uuid("faculty_id").references(() => faculty.id, { onDelete: "set null" }), // 담당 교수/강사 (선택)
+  content: text("content"), // 주요 내용 (책 제목, 수업 주제, 케이스스터디의 책 제목)
+  reportCategory: varchar("report_category", { length: 50 }), // 케이스스터디 분야 (management-book/classic-book/business-practice)
+  subTitle: text("sub_title"), // 케이스스터디 전용: 케이스스터디 제목
+  subDescription: text("sub_description"), // 케이스스터디 전용: 케이스스터디 설명
+  order: integer("order").notNull().default(0), // 세션 표시 순서
+});
+
+// scheduleSessions 관계 정의
+export const scheduleSessionsRelations = relations(scheduleSessions, ({ one }) => ({
+  scheduleEvent: one(scheduleEvents, {
+    fields: [scheduleSessions.scheduleEventId],
+    references: [scheduleEvents.id],
+  }),
+  faculty: one(faculty, {
+    fields: [scheduleSessions.facultyId],
+    references: [faculty.id],
+  }),
+}));
+
+// ============================================================
 // Type exports (타입 내보내기)
 // ============================================================
 
@@ -790,3 +882,7 @@ export type Guidebook = typeof guidebooks.$inferSelect;
 export type PressArticle = typeof pressArticles.$inferSelect;
 export type ReportTemplate = typeof reportTemplates.$inferSelect;
 export type NewReportTemplate = typeof reportTemplates.$inferInsert;
+export type ScheduleEvent = typeof scheduleEvents.$inferSelect;
+export type NewScheduleEvent = typeof scheduleEvents.$inferInsert;
+export type ScheduleSession = typeof scheduleSessions.$inferSelect;
+export type NewScheduleSession = typeof scheduleSessions.$inferInsert;

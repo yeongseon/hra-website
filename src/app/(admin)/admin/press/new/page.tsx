@@ -2,6 +2,8 @@ import { PressForm } from "@/app/(admin)/admin/press/_components/press-form";
 import { createPressArticle } from "@/features/press/actions";
 import { requireAdmin } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewPressArticlePage() {
   await requireAdmin();
 

@@ -21,6 +21,8 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminApplicationFormDetailPage({ params }: Props) {
   await requireAdmin();
   const { id } = await params;

@@ -130,7 +130,11 @@ export function ClassLogForm({
               <Label htmlFor="cohortId" className="text-slate-700">
                 기수
               </Label>
-              <Select name="cohortId" defaultValue={defaultValues?.cohortId ?? "__none__"}>
+              <Select
+                name="cohortId"
+                defaultValue={defaultValues?.cohortId ?? "__none__"}
+                items={[{ value: "__none__", label: "기수 선택" }, ...cohorts.map((c) => ({ value: c.id, label: c.name }))]}
+              >
                 <SelectTrigger id="cohortId" className="h-10 w-full border-slate-300 bg-white">
                   <SelectValue placeholder="기수를 선택하세요" />
                 </SelectTrigger>
