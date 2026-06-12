@@ -134,6 +134,32 @@ export async function getScheduleEvents(year: number, month: number) {
   return events;
 }
 
+/**
+ * 클라이언트 컴포넌트용 월별 공개 일정 조회
+ * Date 객체를 ISO 문자열로 직렬화해서 반환 (CalendarClient에서 router.push 없이 호출)
+ */
+export async function getSerializedScheduleEvents(year: number, month: number) {
+  const events = await getScheduleEvents(year, month);
+  return events.map((e) => ({
+    id: e.id,
+    eventDate: e.eventDate.toISOString(),
+    eventType: e.eventType,
+    title: e.title,
+    weekNumber: e.weekNumber ?? null,
+    description: e.description ?? null,
+    cohort: e.cohort ? { id: e.cohort.id, name: e.cohort.name } : null,
+    sessions: e.sessions.map((s) => ({
+      category: s.category,
+      content: s.content ?? null,
+      reportCategory: s.reportCategory ?? null,
+      subTitle: s.subTitle ?? null,
+      subDescription: s.subDescription ?? null,
+      faculty: s.faculty ? { id: s.faculty.id, name: s.faculty.name } : null,
+      order: s.order,
+    })),
+  }));
+}
+
 // ============================================================
 // 관리자 전용 액션 (requireAdmin 필수)
 // ============================================================

@@ -37,7 +37,7 @@ import type { Faculty, Cohort } from "@/lib/db/schema";
 
 // 세션 카테고리 선택지
 const categoryOptions = [
-  { value: "CLASSICS", label: "고전명작" },
+  { value: "CLASSICS", label: "고전 읽기" },
   { value: "ENGLISH", label: "영어" },
   { value: "SPEECH", label: "스피치 특강" },
   { value: "SPECIAL_LECTURE", label: "특강" },
@@ -46,13 +46,15 @@ const categoryOptions = [
 
 type SessionCategory = (typeof categoryOptions)[number]["value"];
 
-// 케이스스터디 분야 선택지
-const reportCategoryOptions = [
-  { value: "", label: "분야 선택 안 함" },
-  { value: "management-book", label: "경영서" },
-  { value: "classic-book", label: "고전명작" },
-  { value: "business-practice", label: "기업실무·한국경제사" },
-] as const;
+// 세션 카테고리 → 교수 카테고리 매핑
+// (faculty 테이블의 category: CLASSICS | BUSINESS | LECTURE)
+const sessionToFacultyCategory: Record<SessionCategory, "CLASSICS" | "BUSINESS" | "LECTURE"> = {
+  CLASSICS: "CLASSICS",
+  CASE_STUDY: "BUSINESS",
+  ENGLISH: "LECTURE",
+  SPEECH: "LECTURE",
+  SPECIAL_LECTURE: "LECTURE",
+};
 
 // 세션 슬롯 데이터 타입
 type SessionSlot = {
@@ -404,10 +406,28 @@ export function ScheduleForm({
                             {index + 1}
                           </span>
 
-                          {/* 카테고리 선택 */}
+                          {/* 카테고리 선택 — 변경 시 교수 카테고리가 달라지면 교수 선택 초기화 */}
                           <Select
                             value={session.category}
-                            onValueChange={(v) => updateSession(session.id, "category", v as SessionCategory)}
+                            onValueChange={(v) => {
+                              const newCat = v as SessionCategory;
+                              const newFacultyCat = sessionToFacultyCategory[newCat];
+                              const currentFaculty = faculties.find((f) => f.id === session.facultyId);
+                              setSessions((prev) =>
+                                prev.map((s) =>
+                                  s.id === session.id
+                                    ? {
+                                        ...s,
+                                        category: newCat,
+                                        facultyId:
+                                          currentFaculty && currentFaculty.category !== newFacultyCat
+                                            ? null
+                                            : s.facultyId,
+                                      }
+                                    : s
+                                )
+                              );
+                            }}
                             items={categoryOptions}
                           >
                             <SelectTrigger className="h-9 w-[160px] border-[#D9D9D9] bg-white text-sm">
@@ -422,26 +442,33 @@ export function ScheduleForm({
                             </SelectContent>
                           </Select>
 
-                          {/* 담당 교수/강사 선택 */}
-                          <Select
-                            value={session.facultyId ?? ""}
-                            onValueChange={(v) =>
-                              updateSession(session.id, "facultyId", v === "" ? null : v)
-                            }
-                            items={[{ value: "", label: "선택 안 함" }, ...faculties.map((f) => ({ value: f.id, label: f.name }))]}
-                          >
-                            <SelectTrigger className="h-9 flex-1 border-[#D9D9D9] bg-white text-sm">
-                              <SelectValue placeholder="교수/강사 선택" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="">선택 안 함</SelectItem>
-                              {faculties.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>
-                                  {f.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {/* 담당 교수/강사 선택 — 세션 카테고리에 맞는 교수진만 표시 */}
+                          {(() => {
+                            const filteredFaculties = faculties.filter(
+                              (f) => f.category === sessionToFacultyCategory[session.category]
+                            );
+                            return (
+                              <Select
+                                value={session.facultyId ?? ""}
+                                onValueChange={(v) =>
+                                  updateSession(session.id, "facultyId", v === "" ? null : v)
+                                }
+                                items={[{ value: "", label: "선택 안 함" }, ...filteredFaculties.map((f) => ({ value: f.id, label: f.name }))]}
+                              >
+                                <SelectTrigger className="h-9 flex-1 border-[#D9D9D9] bg-white text-sm">
+                                  <SelectValue placeholder="교수/강사 선택" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">선택 안 함</SelectItem>
+                                  {filteredFaculties.map((f) => (
+                                    <SelectItem key={f.id} value={f.id}>
+                                      {f.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            );
+                          })()}
 
                           {/* 순서 이동 버튼 */}
                           <div className="flex gap-1">
@@ -507,23 +534,6 @@ export function ScheduleForm({
                           {/* 케이스스터디 전용 추가 필드 */}
                           {session.category === "CASE_STUDY" ? (
                             <>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs text-[#666666]">케이스스터디 분야</Label>
-                                <Select
-                                  value={session.reportCategory}
-                                  onValueChange={(v) => updateSession(session.id, "reportCategory", v)}
-                                  items={Object.fromEntries(reportCategoryOptions.filter(o => o.value).map(o => [o.value, o.label]))}
-                                >
-                                  <SelectTrigger className="h-9 w-[200px] border-[#D9D9D9] bg-white text-sm">
-                                    <SelectValue placeholder="분야를 선택하세요" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {reportCategoryOptions.map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
                               <div className="space-y-1.5">
                                 <Label className="text-xs text-[#666666]">케이스스터디 제목</Label>
                                 <Input

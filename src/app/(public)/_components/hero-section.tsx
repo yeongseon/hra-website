@@ -70,7 +70,7 @@ export function HeroSection() {
 
         <h1
           className={`font-extrabold tracking-tight text-white transition-all duration-1000 whitespace-pre-line leading-[1.1]
-            ${isTypingComplete ? "text-[42px] md:text-[56px] lg:text-[66px]" : "text-[50px] md:text-[66px] lg:text-[80px]"}
+            ${isTypingComplete ? "text-[42px] md:text-[56px] lg:text-[66px]" : "text-[42px] md:text-[66px] lg:text-[80px]"}
           `}
         >
           {renderHeading()}

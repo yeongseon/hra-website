@@ -33,7 +33,7 @@ const eventTypeLabels = {
 
 // 세션 카테고리 한국어 레이블
 const categoryLabels = {
-  CLASSICS: "고전명작",
+  CLASSICS: "고전 읽기",
   ENGLISH: "영어",
   SPEECH: "스피치 특강",
   SPECIAL_LECTURE: "특강",
