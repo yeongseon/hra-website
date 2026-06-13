@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { User, Mail, Shield, LogOut } from "lucide-react";
+import { LogoutButton } from "./_components/logout-button";
 
 export const metadata: Metadata = {
   title: "마이페이지",
@@ -104,11 +105,10 @@ export default async function MyPage() {
             <CardContent>
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-[#666666]">
-                  현재 기기에서 로그아웃하시려면 상단 메뉴의 로그아웃 버튼을 이용해 주세요.
+                  현재 기기에서 로그아웃하시려면 아래 버튼을 눌러 주세요.
                 </p>
-                <Badge variant="outline" className="border-[#D9D9D9] text-[#666666] px-4 py-1.5 font-normal">
-                  상단 내비게이션 참조
-                </Badge>
+                {/* 마이페이지 내 로그아웃 버튼 — 모바일에서 상단 메뉴를 열지 않아도 바로 로그아웃 */}
+                <LogoutButton />
               </div>
             </CardContent>
           </Card>

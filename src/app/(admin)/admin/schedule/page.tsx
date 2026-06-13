@@ -79,18 +79,16 @@ export default async function AdminSchedulePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* 일정은 최신 날짜순(desc)으로 정렬되어 내려온다 (getAllScheduleEvents 참고) */}
                   {events.map((event) => {
-                    // 현재 날짜 기준으로 지난 일정은 흐리게 표시
-                    const isPast = event.eventDate < new Date();
-
                     return (
-                      <TableRow
-                        key={event.id}
-                        className={isPast ? "opacity-50" : undefined}
-                      >
+                      <TableRow key={event.id}>
                         {/* 날짜 */}
                         <TableCell className="whitespace-nowrap font-medium text-[#1a1a1a]">
                           {event.eventDate.toLocaleDateString("ko-KR", {
+                            // eventDate 의 UTC 파트가 곧 한국 날짜이므로 UTC 로 포맷한다
+                            // (서버 타임존에 따라 날짜가 하루 밀리는 것을 방지)
+                            timeZone: "UTC",
                             year: "numeric",
                             month: "2-digit",
                             day: "2-digit",

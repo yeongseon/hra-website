@@ -76,11 +76,46 @@ const reportCategoryLabels: Record<string, string> = {
 // 유틸리티
 // ============================================================
 
-/** 특정 날짜(year, month, day)에 해당하는 이벤트 목록 반환 */
+/**
+ * 저장된 일정 날짜(eventDate)의 날짜 파트(연/월/일) 추출
+ *
+ * 일정은 관리자가 입력한 한국시간(KST) 시계 값을 그대로 UTC 칸에 저장한다
+ * (src/features/schedule/actions/index.ts 의 buildEventDate 참고).
+ * 따라서 +9 보정 없이 UTC 파트를 그대로 읽으면 입력한 한국 날짜가 그대로 나온다.
+ * (여기에 +9를 더하면 저녁 일정이 하루 밀리는 버그가 생긴다)
+ */
+function getEventDateParts(isoString: string): { year: number; month: number; day: number } {
+  const d = new Date(isoString);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+/**
+ * 현재 시각을 한국(KST) 기준으로 담은 Date 반환
+ *
+ * "오늘"은 저장값과 달리 실제 현재 순간이므로, 진짜 UTC→KST 변환(+9시간)이 필요하다.
+ * 반환된 Date 는 UTC 파트(getUTCFullYear 등)가 한국 날짜를 가리키므로,
+ * 호출부에서는 반드시 getUTC* 로 읽는다. (브라우저/서버 타임존과 무관하게 KST 고정)
+ */
+function getKSTNow(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000);
+}
+
+/**
+ * 초기 자동 선택 날짜 계산 (KST 기준)
+ * - 현재 달: 오늘 날짜를 선택
+ * - 다른 달: 선택 없음
+ */
+function getInitialSelectedDay(year: number, month: number): number | null {
+  const now = getKSTNow();
+  if (year === now.getUTCFullYear() && month === now.getUTCMonth() + 1) return now.getUTCDate();
+  return null;
+}
+
+/** 특정 날짜(year, month, day)에 해당하는 이벤트 목록 반환 (KST 기준) */
 function getEventsForDay(events: SerializedEvent[], year: number, month: number, day: number) {
   return events.filter((e) => {
-    const d = new Date(e.eventDate);
-    return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
+    const d = getEventDateParts(e.eventDate);
+    return d.year === year && d.month === month && d.day === day;
   });
 }
 
@@ -96,12 +131,8 @@ function formatDateKo(year: number, month: number, day: number) {
 // ============================================================
 
 function EventDetail({ event }: { event: SerializedEvent }) {
-  const date = new Date(event.eventDate);
-  const dateStr = formatDateKo(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    date.getDate()
-  );
+  const { year, month, day } = getEventDateParts(event.eventDate);
+  const dateStr = formatDateKo(year, month, day);
 
   return (
     <div className="space-y-4">
@@ -193,15 +224,18 @@ function EventDetail({ event }: { event: SerializedEvent }) {
 // ============================================================
 
 export function CalendarClient({ events: initialEvents, year: initialYear, month: initialMonth }: CalendarClientProps) {
-  const today = new Date();
+  // "오늘"은 KST 기준으로 고정 — UTC 파트(getUTC*)로 읽어야 한국 날짜가 나온다
+  const today = getKSTNow();
 
   // 현재 표시 중인 연/월과 이벤트 — 서버에서 받은 초기값으로 시작
   const [currentYear, setCurrentYear] = useState(initialYear);
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [events, setEvents] = useState(initialEvents);
 
-  // 선택된 날짜 (클릭 시 오른쪽 패널에 표시)
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // 선택된 날짜 — 초기 진입 시 오늘 날짜 자동 선택 (현재 달일 때만)
+  const [selectedDay, setSelectedDay] = useState<number | null>(() =>
+    getInitialSelectedDay(initialYear, initialMonth)
+  );
 
   // 월 이동 중 로딩 상태 (버튼 비활성화용)
   const [isPending, startTransition] = useTransition();
@@ -238,24 +272,24 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
 
   // 오늘 날짜로 이동 — 다른 달이면 데이터 재조회 후 오늘 선택
   function goToday() {
-    const todayYear = today.getFullYear();
-    const todayMonth = today.getMonth() + 1;
+    const todayYear = today.getUTCFullYear();
+    const todayMonth = today.getUTCMonth() + 1;
     if (currentYear === todayYear && currentMonth === todayMonth) {
-      setSelectedDay(today.getDate());
+      setSelectedDay(today.getUTCDate());
     } else {
       startTransition(async () => {
         const next = await getSerializedScheduleEvents(todayYear, todayMonth);
         setCurrentYear(todayYear);
         setCurrentMonth(todayMonth);
         setEvents(next);
-        setSelectedDay(today.getDate());
+        setSelectedDay(today.getUTCDate());
       });
     }
   }
 
   // 현재 보고 있는 달이 오늘 달인지 여부
   const isCurrentMonth =
-    currentYear === today.getFullYear() && currentMonth === today.getMonth() + 1;
+    currentYear === today.getUTCFullYear() && currentMonth === today.getUTCMonth() + 1;
 
   // ── 달력 그리드 계산 ──────────────────────────────────
   // 해당 월 1일의 요일(0=일요일)과 해당 월의 마지막 날
@@ -304,7 +338,7 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
             variant="outline"
             size="sm"
             onClick={goToday}
-            disabled={isPending || (isCurrentMonth && selectedDay === today.getDate())}
+            disabled={isPending || (isCurrentMonth && selectedDay === today.getUTCDate())}
             className="h-8 px-3 text-xs border-[#D9D9D9] text-[#1a1a1a] hover:bg-[#EFF6FF] disabled:opacity-40"
           >
             오늘
@@ -338,9 +372,9 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
             const hasEvent = dayEvents.some((e) => e.eventType === "EVENT");
             const isSelected = selectedDay === day;
             const isToday =
-              today.getFullYear() === currentYear &&
-              today.getMonth() + 1 === currentMonth &&
-              today.getDate() === day;
+              today.getUTCFullYear() === currentYear &&
+              today.getUTCMonth() + 1 === currentMonth &&
+              today.getUTCDate() === day;
             // 요일 계산 (0=일, 6=토)
             const weekday = (firstDayOfWeek + day - 1) % 7;
             const isSunday = weekday === 0;

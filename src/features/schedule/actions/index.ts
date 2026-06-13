@@ -65,6 +65,18 @@ function normalizeText(value: FormDataEntryValue | null): string {
   return value.trim();
 }
 
+/**
+ * "YYYY-MM-DD" + "HH:MM" → UTC Date 변환
+ * Date.UTC() 사용으로 서버 타임존(dev=KST, prod=UTC) 차이를 없애고
+ * 항상 동일한 UTC 값을 저장한다.
+ * 관리자가 입력한 날짜/시간은 한국 달력 기준이므로 날짜 단위로만 UTC에 고정한다.
+ */
+function buildEventDate(dateStr: string, timeStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+}
+
 function parseBoolean(value: FormDataEntryValue | null): boolean {
   return value === "on" || value === "true";
 }
@@ -111,8 +123,10 @@ function parseFormData(formData: FormData) {
  */
 export async function getScheduleEvents(year: number, month: number) {
   // 해당 월의 시작일(1일 00:00)과 마지막날(말일 23:59) 계산
-  const startDate = new Date(year, month - 1, 1, 0, 0, 0);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+  // 일정은 buildEventDate 로 UTC 칸에 한국시간 숫자를 그대로 저장하므로,
+  // 조회 범위도 Date.UTC 로 만들어 서버 타임존(dev=KST, prod=UTC)에 영향받지 않게 한다.
+  const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
   const events = await db.query.scheduleEvents.findMany({
     where: and(
@@ -231,7 +245,7 @@ export async function createScheduleEvent(
       cohortId: eventData.cohortId ?? null,
       weekNumber: eventData.weekNumber ?? null,
       description: eventData.description ?? null,
-      eventDate: new Date(`${eventData.eventDate}T${startTime}`),
+      eventDate: buildEventDate(eventData.eventDate, startTime),
       endTime: endTime ?? null,
     })
     .returning({ id: scheduleEvents.id });
@@ -289,7 +303,7 @@ export async function updateScheduleEvent(
       cohortId: eventData.cohortId ?? null,
       weekNumber: eventData.weekNumber ?? null,
       description: eventData.description ?? null,
-      eventDate: new Date(`${eventData.eventDate}T${startTime}`),
+      eventDate: buildEventDate(eventData.eventDate, startTime),
       endTime: endTime ?? null,
     })
     .where(eq(scheduleEvents.id, id));
