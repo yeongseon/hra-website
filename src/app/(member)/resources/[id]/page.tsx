@@ -35,7 +35,7 @@ const getClassLogDetail = async (id: string) => {
       authorName: users.name,
     })
     .from(classLogs)
-    .innerJoin(users, eq(classLogs.authorId, users.id))
+    .leftJoin(users, eq(classLogs.authorId, users.id))
     .where(eq(classLogs.id, id))
     .limit(1);
 
@@ -108,7 +108,7 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
               </Badge>
               <span className="inline-flex items-center gap-1.5">
                 <User className="size-3.5" />
-                {log.authorName}
+                {log.authorName ?? "삭제된 사용자"}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Eye className="size-3.5" />

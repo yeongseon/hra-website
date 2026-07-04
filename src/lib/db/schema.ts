@@ -153,9 +153,7 @@ export const notices = pgTable("notices", {
   content: text("content").notNull(), // 공지사항 본문 (길이 제한 없음)
   status: noticeStatusEnum("status").notNull().default("DRAFT"), // 공지사항 상태 (기본값: 작성 중)
   pinned: boolean("pinned").notNull().default(false), // 고정 공지사항인지 여부 (기본값: 고정 아님)
-  authorId: uuid("author_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }), // 작성자 ID (사용자가 삭제되면 공지사항도 삭제됨)
+  authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }), // 작성자 ID (사용자가 삭제되면 null 로 설정 — 공지사항은 조직 자산이므로 보존)
   viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 공지사항 작성 시간
   updatedAt: timestamp("updated_at")
@@ -165,9 +163,9 @@ export const notices = pgTable("notices", {
 });
 
 // Notices 테이블과 다른 테이블의 관계 정의
-// 각 공지사항은 정확히 한 명의 작성자를 가짐
+// 공지사항은 작성자와 optional 관계를 가짐 (authorId 가 nullable 이므로 작성자 없는 공지사항 가능)
 export const noticesRelations = relations(notices, ({ one }) => ({
-  author: one(users, { // 이 공지사항을 작성한 사용자 정보
+  author: one(users, { // 작성자 사용자 정보 (nullable)
     fields: [notices.authorId],
     references: [users.id],
   }),
@@ -187,9 +185,7 @@ export const classLogs = pgTable("class_logs", {
   cohortId: uuid("cohort_id").references(() => cohorts.id, { // 어느 기수의 수업인지 (선택사항, 기수 삭제되면 null로 설정됨)
     onDelete: "set null",
   }),
-  authorId: uuid("author_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }), // 작성자 ID (사용자가 삭제되면 수업일지도 삭제됨)
+  authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }), // 작성자 ID (사용자가 삭제되면 null 로 설정 — 수업일지는 조직 자산이므로 보존)
   viewCount: integer("view_count").notNull().default(0), // 조회수 (기본값: 0)
   createdAt: timestamp("created_at").notNull().defaultNow(), // 수업일지 작성 시간
   updatedAt: timestamp("updated_at")
@@ -199,13 +195,13 @@ export const classLogs = pgTable("class_logs", {
 });
 
 // Class Logs 테이블과 다른 테이블의 관계 정의
-// 한 수업일지는 한 명의 작성자, 한 기수에 속하며, 여러 사진을 가질 수 있음
+// 수업일지는 작성자 (nullable) 와 기수 (nullable) 에 optional 로 속하며, 여러 사진을 가질 수 있음
 export const classLogsRelations = relations(classLogs, ({ one, many }) => ({
-  author: one(users, { // 이 수업일지를 작성한 사용자
+  author: one(users, { // 작성자 사용자 정보 (nullable)
     fields: [classLogs.authorId],
     references: [users.id],
   }),
-  cohort: one(cohorts, { // 이 수업이 진행된 기수
+  cohort: one(cohorts, { // 소속 기수 (nullable — 기수가 삭제되면 null)
     fields: [classLogs.cohortId],
     references: [cohorts.id],
   }),

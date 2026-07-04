@@ -78,7 +78,7 @@ export default async function ClassLogsPage() {
             authorName: users.name,
           })
           .from(classLogs)
-          .innerJoin(users, eq(classLogs.authorId, users.id))
+          .leftJoin(users, eq(classLogs.authorId, users.id))
           .where(
             !isAdminOrFaculty && userCohortId !== null
               ? eq(classLogs.cohortId, userCohortId)
@@ -185,7 +185,7 @@ export default async function ClassLogsPage() {
                       >
                         {formatDate(log.classDate)}
                       </Badge>
-                      <span>{log.authorName}</span>
+                      <span>{log.authorName ?? "삭제된 사용자"}</span>
                       <span className="inline-flex items-center gap-1">
                         <Eye className="size-3.5" />
                         조회 {log.viewCount}

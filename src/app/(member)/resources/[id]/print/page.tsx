@@ -36,7 +36,7 @@ export default async function ClassLogPrintPage({ params }: Props) {
       authorName: users.name,
     })
     .from(classLogs)
-    .innerJoin(users, eq(classLogs.authorId, users.id))
+    .leftJoin(users, eq(classLogs.authorId, users.id))
     .where(eq(classLogs.id, id))
     .limit(1);
 

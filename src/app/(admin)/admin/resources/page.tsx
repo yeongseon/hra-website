@@ -42,7 +42,7 @@ export default async function AdminClassLogsPage() {
 
   // 📊 DB에서 수업일지 데이터 조회
   // - classLogs: 수업일지 테이블
-  // - users: 작성자 정보 가져오기 (innerJoin 사용 → 필수)
+  // - users: 작성자 정보 (leftJoin — authorId 가 nullable, 작성자 삭제 시에도 목록에서 사라지지 않도록)
   // - cohorts: 기수 정보 (leftJoin 사용 → 선택사항, 없어도 됨)
   // - 최신 수업일을 먼저 보여줌 (orderBy desc)
   const { rows, hasDbError } = await (async () => {
@@ -57,7 +57,7 @@ export default async function AdminClassLogsPage() {
           cohortName: cohorts.name,
         })
         .from(classLogs)
-        .innerJoin(users, eq(classLogs.authorId, users.id))
+        .leftJoin(users, eq(classLogs.authorId, users.id))
         .leftJoin(cohorts, eq(classLogs.cohortId, cohorts.id))
         .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt));
 
@@ -114,7 +114,7 @@ export default async function AdminClassLogsPage() {
                       </TableCell>
                       <TableCell className="text-slate-700">{formatDate(log.classDate)}</TableCell>
                       <TableCell className="text-slate-700">{log.cohortName ?? "-"}</TableCell>
-                      <TableCell className="text-slate-700">{log.authorName}</TableCell>
+                      <TableCell className="text-slate-700">{log.authorName ?? "삭제된 사용자"}</TableCell>
                       <TableCell className="text-slate-700">{formatDate(log.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <ClassLogRowActions id={log.id} />

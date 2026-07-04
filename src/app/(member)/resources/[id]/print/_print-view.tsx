@@ -74,7 +74,7 @@ export function PrintView({ title, fileTitle, classDate, authorName, body }: Pro
           <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666] mb-1">
             <span>{formatDate(classDate)}</span>
             <span>·</span>
-            <span>{authorName}</span>
+            <span>{authorName ?? "삭제된 사용자"}</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-[#1a1a1a]">
             {title}

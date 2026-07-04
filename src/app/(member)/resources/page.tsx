@@ -77,7 +77,7 @@ export default async function ResourcesPage() {
           cohortId: classLogs.cohortId,
         })
         .from(classLogs)
-        .innerJoin(users, eq(classLogs.authorId, users.id))
+        .leftJoin(users, eq(classLogs.authorId, users.id))
         .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt)),
 
       // 주차별 텍스트 (textType 포함) — classDate 기준 최신순, null은 맨 뒤로
