@@ -492,17 +492,33 @@ export const noticeAttachmentsRelations = relations(noticeAttachments, ({ one })
 // ============================================================
 
 // 자료실의 주차별 텍스트를 저장합니다.
-export const weeklyTexts = pgTable("weekly_texts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: varchar("title", { length: 300 }).notNull(),
-  fileUrl: text("file_url").notNull().default(""),
-  fileName: varchar("file_name", { length: 500 }),
-  body: text("body"),
-  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
-  textType: varchar("text_type", { length: 20 }), // 텍스트 분류: "고전명작" | "경영서" | "기업실무" | null(미분류)
-  classDate: timestamp("class_date"), // 수업 날짜 (정렬 기준, 선택사항)
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const weeklyTexts = pgTable(
+  "weekly_texts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: varchar("title", { length: 300 }).notNull(),
+    fileUrl: text("file_url").notNull().default(""),
+    fileName: varchar("file_name", { length: 500 }),
+    body: text("body"),
+    cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+    textType: varchar("text_type", { length: 20 }), // 텍스트 분류: "고전명작" | "경영서" | "기업실무" | null(미분류)
+    classDate: timestamp("class_date"), // 수업 날짜 (정렬 기준, 선택사항)
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // MEMBER 의 기수별 주간 텍스트 목록 조회를 위한 복합 인덱스.
+    // - 쿼리 사이트: src/app/(member)/resources/weekly-texts/page.tsx
+    //   WHERE cohortId = X ORDER BY classDate DESC NULLS LAST, createdAt DESC
+    // - 실제 정렬식과 컬럼 순서/방향/NULL 처리를 정확히 일치시켜야 인덱스가 정렬용으로 활용됩니다.
+    // - classDate 는 nullable 이므로 NULLS LAST 를 명시해야 Postgres 기본(DESC=NULLS FIRST) 과의 mismatch 를 피할 수 있습니다.
+    // - ADMIN/FACULTY 경로는 cohortId 필터 없이 전체 조회하므로 이 인덱스의 혜택을 받지 않습니다.
+    index("idx_weekly_texts_cohort_class_created_at").on(
+      table.cohortId,
+      table.classDate.desc().nullsLast(),
+      table.createdAt.desc()
+    ),
+  ]
+);
 
 export const weeklyTextImages = pgTable("weekly_text_images", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -720,6 +736,15 @@ export const applicationSubmissions = pgTable(
       table.formId,
       table.applicantEmail
     ),
+    // 관리자 지원서 목록 조회를 위한 복합 인덱스.
+    // - 쿼리 사이트: src/app/(admin)/admin/application-forms/[id]/submissions/page.tsx
+    //   WHERE formId = X ORDER BY submittedAt DESC
+    // - 위 UNIQUE 는 (formId, applicantEmail) 이라 정렬 커버 불가 → 별도 인덱스 필요.
+    // - 리드 헤비(관리자 열람 위주)라 인덱스 유지비용 대비 조회 이득이 큽니다.
+    formSubmittedAtIdx: index("idx_application_submissions_form_submitted_at").on(
+      table.formId,
+      table.submittedAt.desc()
+    ),
   })
 );
 
@@ -805,22 +830,35 @@ export const sessionCategoryEnum = pgEnum("session_category", [
  * - CLASS 유형: scheduleSessions 자식 레코드들을 가짐
  * - EVENT 유형: 단독으로 사용 (세션 없음)
  */
-export const scheduleEvents = pgTable("schedule_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  eventDate: timestamp("event_date").notNull(), // 수업/행사 시작 날짜+시간 (UTC 저장)
-  endTime: varchar("end_time", { length: 5 }), // 종료 시간 "HH:MM" 형식 (선택)
-  eventType: scheduleEventTypeEnum("event_type").notNull(), // CLASS | EVENT
-  title: varchar("title", { length: 200 }).notNull(), // 예: "5기 3주차 수업", "수료식"
-  cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 관련 기수 (CLASS 필수, EVENT 선택)
-  weekNumber: integer("week_number"), // 몇 주차인지 (CLASS일 때만 사용)
-  description: text("description"), // 비고/설명 (선택)
-  isPublic: boolean("is_public").notNull().default(true), // 메인 페이지 공개 여부
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const scheduleEvents = pgTable(
+  "schedule_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    eventDate: timestamp("event_date").notNull(), // 수업/행사 시작 날짜+시간 (UTC 저장)
+    endTime: varchar("end_time", { length: 5 }), // 종료 시간 "HH:MM" 형식 (선택)
+    eventType: scheduleEventTypeEnum("event_type").notNull(), // CLASS | EVENT
+    title: varchar("title", { length: 200 }).notNull(), // 예: "5기 3주차 수업", "수료식"
+    cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 관련 기수 (CLASS 필수, EVENT 선택)
+    weekNumber: integer("week_number"), // 몇 주차인지 (CLASS일 때만 사용)
+    description: text("description"), // 비고/설명 (선택)
+    isPublic: boolean("is_public").notNull().default(true), // 메인 페이지 공개 여부
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    // 공개 캘린더 범위 조회 + 관리자 전체 정렬 조회를 함께 지원하는 인덱스.
+    // - 공개 쿼리 사이트: src/features/schedule/actions/index.ts (getPublicScheduleEvents)
+    //   WHERE isPublic = true AND eventDate BETWEEN X, Y ORDER BY eventDate ASC
+    // - 관리자 쿼리 사이트: 같은 파일의 관리자 목록 (WHERE 없이 ORDER BY eventDate DESC)
+    // - Postgres B-tree 는 양방향 스캔이 가능하므로 ASC 인덱스가 DESC 정렬도 커버합니다.
+    // - boolean 컬럼(isPublic)은 선택도가 낮아 선두 컬럼 이점이 작아 단일 컬럼 인덱스로 충분.
+    //   추후 공개 쿼리에만 최적화가 필요해지면 partial index (WHERE is_public = true) 로 재검토.
+    index("idx_schedule_events_event_date").on(table.eventDate),
+  ]
+);
 
 // scheduleEvents 관계 정의
 export const scheduleEventsRelations = relations(scheduleEvents, ({ one, many }) => ({
