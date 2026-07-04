@@ -203,23 +203,31 @@ export async function updateRecruitmentSettings(
   let nextPosterImageUrl: string | null = existingSettings?.posterImageUrl ?? null;
 
   if (removePoster) {
-    if (existingSettings?.posterImageUrl && isBlobUrl(existingSettings.posterImageUrl)) {
-      await deleteBlobIfExists(existingSettings.posterImageUrl);
-    }
-
     nextPosterImageUrl = null;
-  }
-
-  if (parsed.data.posterInputMode === "file") {
+  } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      if (existingSettings?.posterImageUrl && !removePoster && isBlobUrl(existingSettings.posterImageUrl)) {
-        await deleteBlobIfExists(existingSettings.posterImageUrl);
-      }
-
       nextPosterImageUrl = await uploadPosterFile(validatedPosterFile.file);
     }
   } else {
     nextPosterImageUrl = parsed.data.posterImageUrl ?? null;
+  }
+
+  // 저장 후 참조를 잃게 되는 기존 blob 을 삭제한다 (모드/브랜치 무관).
+  // 원칙: previous 가 blob URL 이고 new 값과 다르면 삭제 (외부 URL 은 isBlobUrl 로 걸러짐).
+  // - file → file (다른 파일): 이전 blob 삭제
+  // - file → url (외부 URL 로 전환): 이전 blob 삭제 ← 과거에는 누락되었던 케이스
+  // - file → 제거: 이전 blob 삭제
+  // - url → 임의 (previous 가 외부 URL): isBlobUrl 이 false → 미삭제
+  // - 변화 없음 (previous === next): 미삭제
+  // ※ previous 가 blob URL 인데 admin 이 수동으로 *.vercel-storage.com URL 을 입력해 next 가
+  //   다른 blob URL 이 된 경우에도 삭제가 발생한다 (이 역시 이전 blob 은 미참조 → orphan 이므로 의도된 동작).
+  const previousPosterUrl = existingSettings?.posterImageUrl;
+  if (
+    previousPosterUrl &&
+    isBlobUrl(previousPosterUrl) &&
+    previousPosterUrl !== nextPosterImageUrl
+  ) {
+    await deleteBlobIfExists(previousPosterUrl);
   }
 
   const values = {
@@ -370,21 +378,24 @@ export async function updateRecruitmentPoster(
   let nextPosterImageUrl: string | null = existing?.posterImageUrl ?? null;
 
   if (removePoster) {
-    if (existing?.posterImageUrl && isBlobUrl(existing.posterImageUrl)) {
-      await deleteBlobIfExists(existing.posterImageUrl);
-    }
     nextPosterImageUrl = null;
-  }
-
-  if (parsed.data.posterInputMode === "file") {
+  } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      if (existing?.posterImageUrl && !removePoster && isBlobUrl(existing.posterImageUrl)) {
-        await deleteBlobIfExists(existing.posterImageUrl);
-      }
       nextPosterImageUrl = await uploadPosterFile(validatedPosterFile.file);
     }
   } else {
     nextPosterImageUrl = parsed.data.posterImageUrl ?? null;
+  }
+
+  // 저장 후 참조를 잃게 되는 기존 blob 을 삭제한다 (모드/브랜치 무관).
+  // updateRecruitmentSettings 와 동일한 로직 — 자세한 케이스별 설명은 그쪽 주석 참고.
+  const previousPosterUrl = existing?.posterImageUrl;
+  if (
+    previousPosterUrl &&
+    isBlobUrl(previousPosterUrl) &&
+    previousPosterUrl !== nextPosterImageUrl
+  ) {
+    await deleteBlobIfExists(previousPosterUrl);
   }
 
   const values = { posterImageUrl: nextPosterImageUrl, posterLayout: parsed.data.posterLayout };
