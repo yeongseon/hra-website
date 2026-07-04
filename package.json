@@ -18,6 +18,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate-alumni-featured": "node --env-file=.env scripts/migrate-add-alumni-featured.mjs",
     "db:migrate-user-session-version": "node --env-file=.env scripts/migrate-add-user-session-version.mjs",
+    "db:migrate-add-application-unique": "node --env-file=.env scripts/migrate-add-application-submissions-unique.mjs",
     "prepare": "husky"
   },
   "dependencies": {

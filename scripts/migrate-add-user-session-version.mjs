@@ -18,10 +18,10 @@
  *
  * 왜 drizzle-kit push 를 쓰지 않는가:
  *   drizzle-kit push 는 schema.ts 와 DB 를 비교해 모든 drift 를 한 번에 적용하려 하는데,
- *   현재 프로덕션 DB 에는 application_submissions 의 UNIQUE 제약 관련 pre-existing drift 가
- *   있어 대화형 truncate 프롬프트가 뜬다. CI/자동화 환경에서는 프롬프트 처리가 불가능하고,
- *   또 truncate 는 데이터 손실 위험이 있어 별도 판단이 필요하다.
- *   이 스크립트는 #68 스코프의 세션 버전 컬럼만 원자적으로 추가한다.
+ *   대화형 프롬프트가 뜨는 경우 CI/자동화 환경에서 처리가 불가능하다. 이 스크립트는
+ *   #68 스코프의 세션 버전 컬럼만 원자적으로 추가한다.
+ *   (참고: #79 의 application_submissions UNIQUE drift 는
+ *    `scripts/migrate-add-application-submissions-unique.mjs` 로 별도 해소되었다.)
  */
 
 import { neon } from "@neondatabase/serverless";
