@@ -22,7 +22,7 @@ import { z } from "zod/v4";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
-import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
+import { deleteBlobIfExists, deleteMarkdownBlobImages, extractMarkdownBlobUrls } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 
@@ -397,6 +397,15 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
     if (uploadedNewBlobUrl && existing.fileUrl && existing.fileUrl !== uploadedNewBlobUrl) {
       await deleteBlobIfExists(existing.fileUrl);
     }
+
+    // 마크다운 임베드 이미지 orphan cleanup (best-effort).
+    // 저장된 최종 본문: parsed.data.body 가 있으면 그것, 없으면 existing.body (위 UPDATE set 절과 동일 규칙).
+    // 동시성 주의: 두 관리자가 동시에 편집 시 나중 저장자의 임베드가 오삭제될 수 있다 — accepted trade-off.
+    const savedBody = parsed.data.body ?? existing.body ?? "";
+    const oldEmbeddedUrls = extractMarkdownBlobUrls(existing.body ?? "");
+    const newEmbeddedUrls = new Set(extractMarkdownBlobUrls(savedBody));
+    const removedEmbeddedUrls = oldEmbeddedUrls.filter((url) => !newEmbeddedUrls.has(url));
+    await Promise.all(removedEmbeddedUrls.map((url) => deleteBlobIfExists(url)));
 
     revalidateWeeklyTextPaths();
 

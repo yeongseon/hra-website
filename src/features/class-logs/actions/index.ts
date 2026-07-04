@@ -24,7 +24,7 @@ import { put } from "@vercel/blob";
 import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
-import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
+import { deleteBlobIfExists, deleteMarkdownBlobImages, extractMarkdownBlobUrls } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
@@ -404,6 +404,22 @@ export async function updateClassLog(
   }
 
   try {
+    // 마크다운 임베드 이미지 orphan 정리용: UPDATE 전에 옛 본문 스냅샷을 확보한다.
+    // UPDATE 이후에 조회하면 이미 새 본문으로 덮어써져 옛 임베드 URL 을 알 수 없다.
+    const existing = await db.query.classLogs.findFirst({
+      where: eq(classLogs.id, parsedId.data),
+      columns: {
+        content: true,
+      },
+    });
+
+    if (!existing) {
+      return {
+        success: false,
+        error: "수업일지를 찾을 수 없습니다.",
+      };
+    }
+
     // 1단계) 텍스트 필드부터 저장한다.
     //   이미지 교체 로직과 분리해 두면, 이미지 처리 중 실패해도 텍스트 수정은 이미 반영되어
     //   사용자가 재시도 시 이미지만 다시 올리면 되도록 UX 가 단순해진다.
@@ -416,6 +432,14 @@ export async function updateClassLog(
         cohortId: parsed.data.cohortId || null,
       })
       .where(eq(classLogs.id, parsedId.data));
+
+    // 텍스트 UPDATE 성공 확정 → 마크다운 임베드 orphan cleanup (best-effort).
+    // 첨부 이미지(classLogImages 테이블) 처리와는 별개 — 이건 content 안에 삽입된 마크다운 이미지가 대상.
+    // 동시성 주의: 두 관리자가 동시 편집 시 나중 저장자의 임베드가 오삭제될 수 있다 — accepted trade-off.
+    const oldEmbeddedUrls = extractMarkdownBlobUrls(existing.content);
+    const newEmbeddedUrls = new Set(extractMarkdownBlobUrls(parsed.data.content));
+    const removedEmbeddedUrls = oldEmbeddedUrls.filter((url) => !newEmbeddedUrls.has(url));
+    await Promise.all(removedEmbeddedUrls.map((url) => deleteBlobIfExists(url)));
 
     if (validatedImages.files.length > 0) {
       // 2단계) 기존 이미지의 id·url 스냅샷 확보.

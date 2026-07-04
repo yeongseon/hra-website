@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteMarkdownBlobImages } from "@/lib/blob-utils";
+import { deleteBlobIfExists, deleteMarkdownBlobImages, extractMarkdownBlobUrls } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
 
@@ -115,6 +115,22 @@ export async function updateNotice(id: string, formData: FormData): Promise<Noti
     };
   }
 
+  // 마크다운 임베드 이미지 orphan 정리용: 이전 본문 스냅샷을 확보한다.
+  // 순서 원칙: DB update 성공 후에만 옛 URL 을 지운다. update 가 실패하면 옛 URL 은 여전히 참조 중이므로 절대 건드리지 않는다.
+  const existing = await db.query.notices.findFirst({
+    where: eq(notices.id, parsedId.data),
+    columns: {
+      content: true,
+    },
+  });
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "공지사항을 찾을 수 없습니다.",
+    };
+  }
+
   const updatedRows = await db
     .update(notices)
     .set({
@@ -132,6 +148,14 @@ export async function updateNotice(id: string, formData: FormData): Promise<Noti
       message: "공지사항을 찾을 수 없습니다.",
     };
   }
+
+  // DB update 성공 확정 후, 새 본문에서 사라진 임베드 이미지만 골라 best-effort cleanup.
+  // 동시성 주의: 두 관리자가 동일 공지를 동시 편집하면 나중 저장자의 임베드가 오삭제될 수 있다.
+  // neon-http 트랜잭션 미지원 + optimistic lock 미도입 상태에서 감수한다 (편집 빈도 낮음, 저장소 누수 감소가 우선).
+  const oldUrls = extractMarkdownBlobUrls(existing.content);
+  const newUrls = new Set(extractMarkdownBlobUrls(parsed.data.content));
+  const removedUrls = oldUrls.filter((url) => !newUrls.has(url));
+  await Promise.all(removedUrls.map((url) => deleteBlobIfExists(url)));
 
   revalidateNoticePaths();
   redirect("/admin/notices");
