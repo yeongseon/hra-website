@@ -12,7 +12,7 @@
 
 "use server";
 
-import { and, asc, between, desc, eq } from "drizzle-orm";
+import { and, asc, between, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -216,7 +216,11 @@ export async function getScheduleEvent(id: string) {
 
 /**
  * 일정 생성
- * 이벤트 레코드 삽입 후 세션 슬롯들을 일괄 삽입
+ *
+ * 원자화 원칙 (#62): CLASS + sessions 인 경우 event insert 와 sessions insert 를 단일
+ * SQL CTE 로 묶어 Postgres statement-level atomicity 로 partial 반영을 원천 차단한다.
+ * neon-http 드라이버는 db.transaction() 을 지원하지 않으므로 (src/lib/db/reorder.ts:5 참고)
+ * CTE 가 유일한 원자화 수단이다.
  */
 export async function createScheduleEvent(
   _prevState: ScheduleActionState,
@@ -236,34 +240,58 @@ export async function createScheduleEvent(
   }
 
   const { sessions, startTime, endTime, ...eventData } = result.data;
+  const eventDate = buildEventDate(eventData.eventDate, startTime);
+  const hasSessions = eventData.eventType === "CLASS" && sessions.length > 0;
 
-  // 이벤트 삽입
-  const [newEvent] = await db
-    .insert(scheduleEvents)
-    .values({
+  if (!hasSessions) {
+    // 세션이 없으면 단일 INSERT 로 충분 — 원자화 이슈 없음.
+    await db.insert(scheduleEvents).values({
       ...eventData,
       cohortId: eventData.cohortId ?? null,
       weekNumber: eventData.weekNumber ?? null,
       description: eventData.description ?? null,
-      eventDate: buildEventDate(eventData.eventDate, startTime),
+      eventDate,
       endTime: endTime ?? null,
-    })
-    .returning({ id: scheduleEvents.id });
-
-  // CLASS 유형이고 세션이 있으면 세션 일괄 삽입
-  if (eventData.eventType === "CLASS" && sessions.length > 0) {
-    await db.insert(scheduleSessions).values(
-      sessions.map((s, i) => ({
-        scheduleEventId: newEvent.id,
-        category: s.category,
-        facultyId: s.facultyId ?? null,
-        content: s.content ?? null,
-        reportCategory: s.reportCategory ?? null,
-        subTitle: s.subTitle ?? null,
-        subDescription: s.subDescription ?? null,
-        order: s.order ?? i,
-      }))
+    });
+  } else {
+    // CLASS + sessions — 단일 CTE 문장으로 원자 처리.
+    // VALUES 절 첫 행 타입이 컬럼 타입을 결정하므로 NULL 가능 값은 명시적 캐스트가 필요하다.
+    const sessionValues = sessions.map(
+      (s, i) => sql`(
+        ${s.category}::session_category,
+        ${s.facultyId ?? null}::uuid,
+        ${s.content ?? null}::text,
+        ${s.reportCategory ?? null}::text,
+        ${s.subTitle ?? null}::text,
+        ${s.subDescription ?? null}::text,
+        ${s.order ?? i}::integer
+      )`
     );
+
+    await db.execute(sql`
+      WITH new_event AS (
+        INSERT INTO schedule_events (
+          event_date, end_time, event_type, title, cohort_id, week_number, description, is_public
+        ) VALUES (
+          ${eventDate},
+          ${endTime ?? null},
+          ${eventData.eventType}::schedule_event_type,
+          ${eventData.title},
+          ${eventData.cohortId ?? null}::uuid,
+          ${eventData.weekNumber ?? null}::integer,
+          ${eventData.description ?? null},
+          ${eventData.isPublic}
+        )
+        RETURNING id
+      )
+      INSERT INTO schedule_sessions (
+        schedule_event_id, category, faculty_id, content, report_category, sub_title, sub_description, "order"
+      )
+      SELECT ne.id, s.category, s.faculty_id, s.content, s.report_category, s.sub_title, s.sub_description, s."order"
+      FROM new_event ne
+      CROSS JOIN (VALUES ${sql.join(sessionValues, sql`, `)})
+        AS s(category, faculty_id, content, report_category, sub_title, sub_description, "order")
+    `);
   }
 
   revalidatePath("/");
@@ -273,7 +301,10 @@ export async function createScheduleEvent(
 
 /**
  * 일정 수정
- * 기존 세션을 전부 삭제하고 폼에서 받은 세션으로 교체 (단순 구현)
+ *
+ * UPDATE event + DELETE 기존 sessions + INSERT 새 sessions 를 단일 SQL CTE 로 묶어
+ * partial 반영을 원천 차단한다. 세션 재삽입이 없어도 UPDATE 와 DELETE 는 함께
+ * 원자화되어야 한다 (원자화 근거는 createScheduleEvent 의 docstring 참고).
  */
 export async function updateScheduleEvent(
   id: string,
@@ -294,36 +325,73 @@ export async function updateScheduleEvent(
   }
 
   const { sessions, startTime, endTime, ...eventData } = result.data;
+  const eventDate = buildEventDate(eventData.eventDate, startTime);
+  const hasSessions = eventData.eventType === "CLASS" && sessions.length > 0;
 
-  // 이벤트 수정
-  await db
-    .update(scheduleEvents)
-    .set({
-      ...eventData,
-      cohortId: eventData.cohortId ?? null,
-      weekNumber: eventData.weekNumber ?? null,
-      description: eventData.description ?? null,
-      eventDate: buildEventDate(eventData.eventDate, startTime),
-      endTime: endTime ?? null,
-    })
-    .where(eq(scheduleEvents.id, id));
-
-  // 기존 세션 전체 삭제 후 재삽입
-  await db.delete(scheduleSessions).where(eq(scheduleSessions.scheduleEventId, id));
-
-  if (eventData.eventType === "CLASS" && sessions.length > 0) {
-    await db.insert(scheduleSessions).values(
-      sessions.map((s, i) => ({
-        scheduleEventId: id,
-        category: s.category,
-        facultyId: s.facultyId ?? null,
-        content: s.content ?? null,
-        reportCategory: s.reportCategory ?? null,
-        subTitle: s.subTitle ?? null,
-        subDescription: s.subDescription ?? null,
-        order: s.order ?? i,
-      }))
+  if (!hasSessions) {
+    // 세션 없음 — UPDATE + DELETE 만 원자화.
+    // 데이터 수정 CTE 는 참조되지 않아도 정확히 1회 실행된다 (Postgres 매뉴얼 규정).
+    await db.execute(sql`
+      WITH updated_event AS (
+        UPDATE schedule_events SET
+          event_date = ${eventDate},
+          end_time = ${endTime ?? null},
+          event_type = ${eventData.eventType}::schedule_event_type,
+          title = ${eventData.title},
+          cohort_id = ${eventData.cohortId ?? null}::uuid,
+          week_number = ${eventData.weekNumber ?? null}::integer,
+          description = ${eventData.description ?? null},
+          is_public = ${eventData.isPublic}
+        WHERE id = ${id}::uuid
+        RETURNING id
+      )
+      DELETE FROM schedule_sessions
+      WHERE schedule_event_id = ${id}::uuid
+    `);
+  } else {
+    // CLASS + sessions — UPDATE + DELETE 기존 + INSERT 새 sessions 을 CTE 한 문장으로 처리.
+    // DELETE 와 INSERT 모두 schedule_sessions 를 대상으로 하지만 새 sessions 는 PK
+    // (defaultRandom UUID) 가 새로 발급되므로 PK 충돌은 발생하지 않는다.
+    const sessionValues = sessions.map(
+      (s, i) => sql`(
+        ${s.category}::session_category,
+        ${s.facultyId ?? null}::uuid,
+        ${s.content ?? null}::text,
+        ${s.reportCategory ?? null}::text,
+        ${s.subTitle ?? null}::text,
+        ${s.subDescription ?? null}::text,
+        ${s.order ?? i}::integer
+      )`
     );
+
+    await db.execute(sql`
+      WITH updated_event AS (
+        UPDATE schedule_events SET
+          event_date = ${eventDate},
+          end_time = ${endTime ?? null},
+          event_type = ${eventData.eventType}::schedule_event_type,
+          title = ${eventData.title},
+          cohort_id = ${eventData.cohortId ?? null}::uuid,
+          week_number = ${eventData.weekNumber ?? null}::integer,
+          description = ${eventData.description ?? null},
+          is_public = ${eventData.isPublic}
+        WHERE id = ${id}::uuid
+        RETURNING id
+      ),
+      deleted_sessions AS (
+        DELETE FROM schedule_sessions
+        WHERE schedule_event_id = ${id}::uuid
+        RETURNING id
+      )
+      INSERT INTO schedule_sessions (
+        schedule_event_id, category, faculty_id, content, report_category, sub_title, sub_description, "order"
+      )
+      SELECT
+        ${id}::uuid,
+        s.category, s.faculty_id, s.content, s.report_category, s.sub_title, s.sub_description, s."order"
+      FROM (VALUES ${sql.join(sessionValues, sql`, `)})
+        AS s(category, faculty_id, content, report_category, sub_title, sub_description, "order")
+    `);
   }
 
   revalidatePath("/");
