@@ -17,6 +17,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
+import { reorderByCase } from "@/lib/db/reorder";
 import { galleries, galleryImages } from "@/lib/db/schema";
 
 export type GalleryActionState = {
@@ -408,17 +409,24 @@ export async function reorderGalleryImages(
   }
 
   try {
-    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
-    for (const [index, id] of orderedIds.entries()) {
-      await db
-        .update(galleryImages)
-        .set({ order: index })
-        .where(
-          and(
-            eq(galleryImages.id, id),
-            eq(galleryImages.galleryId, parsedGalleryId.data)
-          )
-        );
+    // 단일 UPDATE ... CASE 문으로 원자적으로 갱신 —
+    // extraWhere 로 galleryId 조건을 함께 걸어 다른 앨범 이미지가
+    // 사전 검증과 UPDATE 사이(TOCTOU) 에 끼어들어도 갱신되지 않도록 방어한다.
+    const { affected } = await reorderByCase({
+      table: galleryImages,
+      idColumn: galleryImages.id,
+      targetColumn: galleryImages.order,
+      // 갤러리는 0-based (0, 1, 2, ...) — alumni/press/faq(1-based) 와 다름
+      assignments: orderedIds.map((id, index) => ({ id, value: index })),
+      extraWhere: eq(galleryImages.galleryId, parsedGalleryId.data),
+    });
+
+    // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
+    if (affected !== orderedIds.length) {
+      console.error(
+        `[gallery/reorder-images] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
+      );
+      return initialError("일부 이미지를 저장하지 못했습니다.");
     }
   } catch (err) {
     console.error("[gallery/reorder-images] 순서 변경 실패:", err);

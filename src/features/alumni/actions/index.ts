@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
+import { reorderByCase } from "@/lib/db/reorder";
 import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
 
 const maxImageSize = 5 * 1024 * 1024;
@@ -271,6 +272,8 @@ export async function toggleAlumniPin(id: string): Promise<{ success: boolean; m
 
 // 수료생 이야기 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
 // orderedIds: 새 순서대로 정렬된 수료생 이야기 ID 배열
+// 단일 UPDATE ... CASE 문(reorderByCase 헬퍼)으로 원자적으로 갱신 —
+// 개별 UPDATE 루프에서 중간 실패 시 정렬 상태가 뒤엉키던 문제를 근본 차단한다.
 export async function reorderAlumniStories(
   orderedIds: string[]
 ): Promise<{ success: boolean; message: string }> {
@@ -281,12 +284,20 @@ export async function reorderAlumniStories(
   }
 
   try {
-    // neon-http 드라이버는 transaction()을 지원하지 않으므로 개별 쿼리로 순차 갱신
-    for (const [index, id] of orderedIds.entries()) {
-      await db
-        .update(alumniStories)
-        .set({ order: index + 1 })
-        .where(eq(alumniStories.id, id));
+    const { affected } = await reorderByCase({
+      table: alumniStories,
+      idColumn: alumniStories.id,
+      targetColumn: alumniStories.order,
+      // 기존 로직 유지: order 는 1-based (1, 2, 3, ...)
+      assignments: orderedIds.map((id, index) => ({ id, value: index + 1 })),
+    });
+
+    // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
+    if (affected !== orderedIds.length) {
+      console.error(
+        `[alumni/reorder] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
+      );
+      return { success: false, message: "일부 항목을 저장하지 못했습니다." };
     }
   } catch (err) {
     console.error("[alumni/reorder] 순서 변경 실패:", err);
