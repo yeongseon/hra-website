@@ -194,9 +194,13 @@ export async function saveFormQuestions(
       formId: validFormId,
       questionCount: parsed.data.questions.length,
     });
+    // 사용자 응답에는 raw error.message 를 노출하지 않는다.
+    // Drizzle NeonHttpError 등은 실패한 SQL query text·컬럼명·PII 값을 포함할 수 있어
+    // 관리자 UI 에 그대로 반환되면 정보 유출이 된다. 원본 예외는 위의 logServerError 로
+    // 서버 로그에만 기록되며, 사용자에게는 일반화된 재시도 안내만 반환한다.
     return {
       success: false,
-      message: "질문 저장 중 오류가 발생했습니다: " + (error instanceof Error ? error.message : "알 수 없는 오류"),
+      message: "질문 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
     };
   }
 }

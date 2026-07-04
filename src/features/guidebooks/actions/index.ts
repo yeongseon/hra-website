@@ -122,14 +122,16 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
 
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     logServerError("guidebooks/create", error, {
       hasFile: true,
     });
 
+    // 사용자 응답에 raw error.message 를 노출하지 않는다. Drizzle NeonHttpError·Blob 오류는
+    // SQL query text·PII·인프라 세부를 포함할 수 있어 관리자 UI 로 반환되면 정보 유출이 된다.
+    // 원본 예외는 위의 logServerError 로 서버 로그에만 기록되며, 사용자에게는 재시도 안내만 반환한다.
     return {
       success: false,
-      error: `가이드북 저장에 실패했습니다: ${message}`,
+      error: "가이드북 저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
     };
   }
 }
@@ -195,12 +197,12 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     revalidateGuidebookPaths();
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     logServerError("guidebooks/update", error, {
       id: parsedId.data,
       hasNewFile: formData.get("file") instanceof File,
     });
-    return { success: false, error: `가이드북 수정에 실패했습니다: ${message}` };
+    // createGuidebook 과 동일 정책 — raw error.message 를 사용자에게 노출하지 않는다.
+    return { success: false, error: "가이드북 수정에 실패했습니다. 잠시 후 다시 시도해주세요." };
   }
 }
 
