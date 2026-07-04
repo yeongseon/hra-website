@@ -31,6 +31,61 @@ import { eq } from "drizzle-orm";
 const MEMBER_ONLY_PREFIXES = ["/resources", "/member", "/mypage"] as const;
 
 /**
+ * 사용자 role 값의 런타임 검증용 상수 & type guard (#75)
+ *
+ * 배경: session 콜백에서 `token.role as "ADMIN" | ...` 타입 단언을 사용했다.
+ *   next-auth.d.ts 의 JWT augmentation 으로 token.role 은 컴파일 타임에는 UserRole 이지만,
+ *   런타임에서 token 이 오래된 세션 (schema migration 이전) 이거나 외부 요인으로 role 이
+ *   비어있거나 잘못된 값일 수 있다. 이때 `as` 단언은 위험을 감춘다.
+ *
+ * 해결: 상수 배열 기반 type guard 로 검증 후 fallback (PENDING) 을 명시하여 defense-in-depth.
+ *   schema.ts 의 userRoleEnum 정의와 값이 항상 일치해야 한다.
+ */
+const USER_ROLES = ["ADMIN", "FACULTY", "MEMBER", "PENDING"] as const;
+type UserRole = (typeof USER_ROLES)[number];
+
+function isUserRole(value: unknown): value is UserRole {
+  return typeof value === "string" && (USER_ROLES as readonly string[]).includes(value);
+}
+
+/**
+ * UUID 형식 검증용 정규식 (#75)
+ *
+ * users.id 는 Postgres UUID 컬럼이므로, session.user.id 로 흘러가는 값도 UUID 형식이어야 한다.
+ * 단순히 "빈 문자열이 아님" 만 검사하면 "not-a-uuid" 같은 값이 INSERT/SELECT 에 도달해
+ * invalid_input_syntax 오류를 유발할 수 있다.
+ *
+ * 표준 8-4-4-4-12 헥사 형식만 허용 (v1~v5 모두 커버). 정규식 매칭 비용은 세션당 1회, 무시 가능.
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
+/**
+ * Timing attack 방어용 dummy bcrypt hash (pre-computed 상수)
+ *
+ * 배경 (#71): credentials 로그인 시 이메일이 존재하지 않으면 bcrypt.compare 를 호출하지 않고
+ *   즉시 null 을 반환하는 구조였다. 반면 이메일이 존재하면 bcrypt (cost 12, ~300ms) 를 수행하므로
+ *   응답 시간 차이로 이메일 존재 여부를 통계적으로 추정할 수 있었다 (이메일 enumeration).
+ *
+ * 해결: 이메일이 없어도 항상 bcrypt.compare 를 실행하도록 dummy hash 를 준비한다.
+ *
+ * 왜 pre-computed 상수인가 (Oracle NIT):
+ *   - hashSync("...", 12) 를 모듈 로드 시 실행하면 Vercel serverless 인스턴스가 cold start 될 때마다
+ *     ~300ms CPU 를 소비한다. 다수의 콜드 스타트에서 누적되면 무의미한 비용이다.
+ *   - dummy 값은 상수이며 재계산할 필요가 없으므로 사전에 1회 계산해 두고 하드코딩한다.
+ *   - 생성 방법: `node -e "console.log(require('bcryptjs').hashSync('__hra_timing_attack_defense__', 12))"`
+ *   - cost 12 는 seed-admin.mjs 및 실제 사용자 비밀번호와 동일해야 timing 이 일치한다 ($2b$12$... prefix 로 확인).
+ *
+ * 안전성: 이 dummy hash 는 실제 사용자 레코드에 매칭되지 않으며,
+ *   authorize() 에서 `if (!user || !user.passwordHash || !isValid) return null` 로 최종 차단된다.
+ */
+const DUMMY_PASSWORD_HASH =
+  "$2b$12$z/qEe8YYHyxXWQv8pJpxgOM8sLEXLWOmxou0re9M1IkPPhMYHyd32";
+
+/**
  * 활성화할 로그인 프로바이더 목록을 동적으로 구성합니다.
  *
  * 환경변수가 설정된 소셜 로그인만 providers 배열에 추가합니다.
@@ -92,10 +147,15 @@ providers.push(
         where: eq(users.email, credentials.email),
       });
 
-      if (!user || !user.passwordHash) return null;
+      // Timing attack 방어 (#71): 이메일 존재 여부와 무관하게 항상 bcrypt.compare 를 실행하여
+      // 응답 시간 차이로 이메일 enumeration 이 되지 않도록 한다.
+      // - user 가 없거나 passwordHash 가 null 이면 DUMMY_PASSWORD_HASH 와 비교
+      // - dummy hash 로 비교하면 사용자가 실제 dummy 비밀번호를 알 수도 없고 user 자체도 없으므로
+      //   최종 authorize 결과는 항상 null 이 되어 로그인은 실패한다
+      const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
+      const isValid = await compare(credentials.password, passwordHash);
 
-      const isValid = await compare(credentials.password, user.passwordHash);
-      if (!isValid) return null;
+      if (!user || !user.passwordHash || !isValid) return null;
 
       return {
         id: user.id,
@@ -215,11 +275,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     /**
      * session 콜백: 프론트엔드에서 접근할 수 있는 세션 정보 설정
+     *
+     * 보안 (#75): id 와 role 은 원자적으로 검증한다. session.user.id 는 서버 액션에서
+     *   `authorId: session.user.id` (INSERT) 및 `where(users.id, session.user.id)` (SELECT) 로
+     *   직접 사용되고 users.id 는 Postgres UUID 컬럼이므로, UUID 형식이 아닌 값이 흘러가면
+     *   invalid_input_syntax 오류나 조용한 빈 조회로 이어진다. 따라서 id 가 UUID 형식이 아니면
+     *   role 도 신뢰하지 않고 PENDING 으로 강등하여 authorization 층에서 차단되게 한다.
+     *   실제 방어 경로는 아래 세 곳이며, 이 fallback 은 최종 안전망 역할이다.
+     *     1) authorized() 콜백 (아래 정의): PENDING 을 /admin, /resources, /member, /mypage 에서 차단
+     *     2) requireAdmin() (src/lib/admin.ts): ADMIN 이 아니면 즉시 거부
+     *     3) 각 member 서버 액션: role 화이트리스트로 사전 차단
      */
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-         session.user.role = token.role as "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
+        if (isValidUuid(token.id)) {
+          session.user.id = token.id;
+          session.user.role = isUserRole(token.role) ? token.role : "PENDING";
+        } else {
+          session.user.id = "";
+          session.user.role = "PENDING";
+        }
         if (typeof token.name === "string") {
           session.user.name = token.name;
         }
