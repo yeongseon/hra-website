@@ -26,7 +26,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import {
   alumniStories,
-  legacyApplications,
   applicationSubmissions,
   cohorts,
   galleries,
@@ -53,8 +52,6 @@ const quickLinks = [
 ];
 
 export default async function AdminDashboardPage() {
-  let pendingApplications = 0;
-  let totalApplications = 0;
   let pendingSubmissions = 0;
   let totalSubmissions = 0;
   let pendingUsers = 0;
@@ -67,8 +64,6 @@ export default async function AdminDashboardPage() {
 
   try {
     const [
-      pendingAppRows,
-      totalAppRows,
       pendingSubmissionRows,
       totalSubmissionRows,
       pendingUserRows,
@@ -79,8 +74,6 @@ export default async function AdminDashboardPage() {
       galleryRows,
       alumniRows,
     ] = await Promise.all([
-      db.select({ total: count() }).from(legacyApplications).where(eq(legacyApplications.status, "PENDING")),
-      db.select({ total: count() }).from(legacyApplications),
       db.select({ total: count() }).from(applicationSubmissions).where(eq(applicationSubmissions.status, "PENDING")),
       db.select({ total: count() }).from(applicationSubmissions),
       db.select({ total: count() }).from(users).where(eq(users.role, "PENDING")),
@@ -92,8 +85,6 @@ export default async function AdminDashboardPage() {
       db.select({ total: count() }).from(alumniStories),
     ]);
 
-    pendingApplications = Number(pendingAppRows[0]?.total ?? 0);
-    totalApplications   = Number(totalAppRows[0]?.total ?? 0);
     pendingSubmissions  = Number(pendingSubmissionRows[0]?.total ?? 0);
     totalSubmissions    = Number(totalSubmissionRows[0]?.total ?? 0);
     pendingUsers        = Number(pendingUserRows[0]?.total ?? 0);
@@ -124,18 +115,18 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* ── 주의 필요 항목 ──────────────────────────────────────────── */}
-      {(pendingApplications + pendingSubmissions > 0 || pendingUsers > 0) && (
+      {(pendingSubmissions > 0 || pendingUsers > 0) && (
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">확인 필요</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            {pendingApplications + pendingSubmissions > 0 && (
+            {pendingSubmissions > 0 && (
               <Link href="/admin/application-forms">
                 <Card className="border-blue-200 bg-blue-50 py-0 transition-colors hover:bg-blue-100">
                   <CardContent className="flex items-center justify-between px-5 py-4">
                     <div>
                       <p className="text-xs font-medium text-blue-600">검토 대기 지원서</p>
-                      <p className="mt-1 text-3xl font-bold text-blue-700">{pendingApplications + pendingSubmissions}건</p>
-                      <p className="mt-0.5 text-xs text-blue-500">전체 {totalApplications + totalSubmissions}건 중</p>
+                      <p className="mt-1 text-3xl font-bold text-blue-700">{pendingSubmissions}건</p>
+                      <p className="mt-0.5 text-xs text-blue-500">전체 {totalSubmissions}건 중</p>
                     </div>
                     <FileText className="size-8 text-blue-300" />
                   </CardContent>
@@ -167,7 +158,7 @@ export default async function AdminDashboardPage() {
           {[
             { label: "기수",          value: totalCohorts,    href: "/admin/recruitment" },
             { label: "회원",          value: totalMembers,    href: "/admin/users" },
-            { label: "지원서",        value: totalApplications + totalSubmissions, href: "/admin/application-forms" },
+            { label: "지원서",        value: totalSubmissions, href: "/admin/application-forms" },
             { label: "공지사항",      value: totalNotices,    href: "/admin/notices" },
             { label: "언론보도",      value: totalPress,      href: "/admin/press" },
             { label: "갤러리",        value: totalGalleries,  href: "/admin/gallery" },
