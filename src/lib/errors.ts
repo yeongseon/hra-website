@@ -60,6 +60,36 @@ const PG_KEY_VALUE_PATTERN = /Key\s*\(([^)]+)\)\s*=\s*\([^)]*\)/gi;
 // 치환: `$1 = '[value redacted]'` 대신 그냥 `$1 = [value redacted]` 로 통일하여 quoted/unquoted 구분 없앤다.
 const PG_PARAMETER_DUMP_PATTERN = /(\$\d+\s*=\s*)(?:'(?:[^']|'')*'|[^,\n\r)]*)/gi;
 
+// Postgres 는 컬럼 타입 coercion 실패 시 원본 값을 그대로 인용해 다음 22P02 포맷의 메시지를 낸다:
+//   invalid input syntax for type <typename>: "<user-value>"
+// 대표 발생 경로 (#70 Phase D 배경):
+//   - dynamic route param 이 UUID 컬럼에 바로 흘러갈 때
+//   - formData ID 를 정수/uuid 로 coerce 하기 전 검증 누락
+//   - z.uuid().safeParse() 등 caller-side guard 를 새 액션에서 잊었을 때
+// caller-side guard 는 존재하지만 (Phase D 완료) 새 코드가 이를 잊을 수 있으므로
+// defense-in-depth 로 sanitize 레이어에서 재차 마스킹한다.
+//
+// 범위 (typename):
+//   UUID 만 매칭하는 대신 일반적인 built-in typename 을 매치한다.
+//   Postgres 는 integer/date/json/boolean/double precision 등에서 동일 22P02 템플릿
+//   (`errmsg("invalid input syntax for type %s: \"%s\"", ...)`) 을 재사용하므로
+//   sanitize 레이어에서 한 번에 막는 것이 안전하다.
+//   "double precision" / "timestamp with time zone" 같은 다중 단어 typename 도
+//   [^:\n"]+? (lazy, colon/개행/따옴표 전까지) 로 커버한다.
+//   따옴표를 필요로 하는 특수 typename (스키마 한정자, 대소문자 혼용 사용자 정의 타입 등)
+//   은 현재 스코프에서 제외 — 이 프로젝트 스키마는 built-in 타입만 사용한다.
+//
+// Fail-closed 값 매칭 (Oracle #77 리뷰 BLOCK 대응):
+//   값 부분은 [^\n]* 로 잡아 opening quote 이후 줄 끝까지 통째로 소비한다.
+//   `[^"]*` 를 쓰면 값 안에 " 가 포함될 때 조기 종료되어 tail 이 로그에 유출된다.
+//   Postgres 는 22P02 메시지 안에서 값을 escape 하지 않으므로 (raw %s 삽입)
+//   raw 사용자 입력의 " 가 그대로 실릴 수 있어 fail-closed 매칭이 반드시 필요하다.
+//   원칙: "정확히 최소치만 지우기" 보다 "과하게 지우더라도 절대 남기지 않기".
+//   부작용: 같은 줄에 이어지는 debug 컨텍스트도 함께 redact 되나, 실전 Postgres 는
+//   컨텍스트를 개행으로 분리하므로 (CONTEXT:, DETAIL: 등) 실질 손실은 미미하다.
+const PG_INPUT_SYNTAX_PATTERN =
+  /invalid input syntax for type ([^:\n"]+?): "[^\n]*/gi;
+
 // 절대 파일 경로 (스택 트레이스에 자주 등장) → 서버 내부 디렉토리 구조 노출 방지.
 // 대표적 접두어: /Users(macOS), /home(Linux), /var, /opt, /app(Docker), /root, /mnt, /srv
 const ABSOLUTE_PATH_PATTERN = /\/(?:Users|home|var|opt|app|root|mnt|srv)\/[^\s'":,)]+/gi;
@@ -159,8 +189,9 @@ export interface SanitizedError {
  *   3. `Key (col)=(value)` → `Key (col)=([value redacted])`
  *   4. `Failing row contains (...)` → `Failing row contains ([values redacted])` (parser 기반)
  *   5. `$N = 'value'` (Postgres parameter dump) → `$N = [value redacted]`
- *   6. 절대 경로 → `[path redacted]`
- *   7. MAX_MESSAGE_LENGTH 초과분 절단
+ *   6. `invalid input syntax for type <t>: "<v>"` → `... type <t>: <redacted>` (typename 유지)
+ *   7. 절대 경로 → `[path redacted]`
+ *   8. MAX_MESSAGE_LENGTH 초과분 절단
  *
  * 절단(slice) 이 replace 뒤에 오는 이유: 원본이 매우 긴 경우에도 앞부분에서 SQL 이
  * 짤린 채 잔여 PII 가 남지 않도록 먼저 redact 하고 나서 자른다.
@@ -171,6 +202,10 @@ export function redactMessage(input: string): string {
   out = out.replace(PG_KEY_VALUE_PATTERN, "Key ($1)=([value redacted])");
   out = redactFailingRow(out);
   out = out.replace(PG_PARAMETER_DUMP_PATTERN, "$1[value redacted]");
+  out = out.replace(
+    PG_INPUT_SYNTAX_PATTERN,
+    "invalid input syntax for type $1: <redacted>",
+  );
   out = out.replace(ABSOLUTE_PATH_PATTERN, "[path redacted]");
   return out.slice(0, MAX_MESSAGE_LENGTH);
 }

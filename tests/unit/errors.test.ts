@@ -297,6 +297,176 @@ describe("redactMessage - PG_PARAMETER_DUMP_PATTERN (#70 Oracle v2 BLOCK #2)", (
   });
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// #77: PG_INPUT_SYNTAX_PATTERN — Postgres 타입 coercion 실패 시 값 마스킹
+// ────────────────────────────────────────────────────────────────────────────
+// Postgres 는 컬럼 타입 coercion 실패 시 원본 값을 그대로 인용한다:
+//   invalid input syntax for type uuid: "not-a-uuid-here"
+//   invalid input syntax for type integer: "abc"
+//   invalid input syntax for type date: "2024-13-45"
+// caller-side guard (z.uuid().safeParse 등) 가 있어도 새 액션에서 이를 잊을 수
+// 있으므로, defense-in-depth 로 sanitize 레이어에서 재차 마스킹한다.
+// UUID 만이 아닌 모든 typename 을 대상으로 하여 integer/date/json/boolean/
+// double precision 등 모든 타입 오류에서 원본 값이 로그에 남지 않도록 보장한다.
+
+describe("redactMessage - PG_INPUT_SYNTAX_PATTERN (#77)", () => {
+  it("UUID 타입 오류: 원본 값(잠재 PII)을 <redacted> 로 마스킹하고 typename 유지", () => {
+    // 이슈 #77 의 원문 케이스. dynamic route param 이 그대로 DB 까지 흘렀을 때.
+    const input = 'invalid input syntax for type uuid: "홍길동-사용자-입력"';
+    const out = redactMessage(input);
+    expect(out).toContain("invalid input syntax for type uuid: <redacted>");
+    expect(out).not.toContain("홍길동");
+    expect(out).not.toContain("사용자-입력");
+  });
+
+  it("이메일이 UUID 컬럼에 들어간 케이스도 마스킹한다", () => {
+    // 실전 시나리오: URL param 조작으로 이메일이 UUID 컬럼 조회에 사용됐을 때.
+    const input =
+      'error: invalid input syntax for type uuid: "alice@example.com" at postgres';
+    const out = redactMessage(input);
+    expect(out).toContain("type uuid: <redacted>");
+    expect(out).not.toContain("alice@example.com");
+  });
+
+  it("integer 타입 오류도 마스킹한다 (숫자 컬럼 coercion 실패)", () => {
+    // 사용자가 formData 로 정수 필드에 문자열을 넣었을 때. 값 자체는 PII 가 아닐 수 있지만
+    // 일관성·debug 정보 최소화 원칙으로 마스킹.
+    const input = 'invalid input syntax for type integer: "not-a-number"';
+    const out = redactMessage(input);
+    expect(out).toContain("invalid input syntax for type integer: <redacted>");
+    expect(out).not.toContain("not-a-number");
+  });
+
+  it("date 타입 오류도 마스킹한다", () => {
+    // 잘못된 생년월일 등 개인정보가 date 컬럼 오류에 실려나올 수 있다.
+    const input = 'invalid input syntax for type date: "1990-13-45"';
+    const out = redactMessage(input);
+    expect(out).toContain("invalid input syntax for type date: <redacted>");
+    expect(out).not.toContain("1990-13-45");
+  });
+
+  it("boolean 타입 오류도 마스킹한다", () => {
+    const input = 'invalid input syntax for type boolean: "maybe"';
+    const out = redactMessage(input);
+    expect(out).toContain("invalid input syntax for type boolean: <redacted>");
+    expect(out).not.toContain("maybe");
+  });
+
+  it("json 타입 오류도 마스킹한다 (JSON 필드에 raw 유저 입력이 실릴 수 있음)", () => {
+    const input = 'invalid input syntax for type json: "not{valid}json"';
+    const out = redactMessage(input);
+    expect(out).toContain("invalid input syntax for type json: <redacted>");
+    expect(out).not.toContain("not{valid}json");
+  });
+
+  it("다중 단어 typename (double precision) 도 올바르게 매치한다", () => {
+    // Postgres `format_type_be` 는 "double precision", "character varying",
+    // "timestamp with time zone" 등 공백 포함 typename 을 낸다.
+    // regex 의 [^:\n"]+? 는 공백을 포함하되 콜론에서 멈춰야 한다.
+    const input = 'invalid input syntax for type double precision: "3.14.15"';
+    const out = redactMessage(input);
+    expect(out).toContain(
+      "invalid input syntax for type double precision: <redacted>",
+    );
+    expect(out).not.toContain("3.14.15");
+  });
+
+  it("timestamp with time zone 도 올바르게 매치한다", () => {
+    const input =
+      'invalid input syntax for type timestamp with time zone: "9999-99-99"';
+    const out = redactMessage(input);
+    expect(out).toContain(
+      "invalid input syntax for type timestamp with time zone: <redacted>",
+    );
+    expect(out).not.toContain("9999-99-99");
+  });
+
+  it("한 메시지에 여러 22P02 오류가 개행으로 분리되어 있을 때 각각 마스킹한다", () => {
+    // 실전 Postgres 는 여러 22P02 를 각각의 로그 라인으로 분리해서 낸다
+    // (CONTEXT: / DETAIL: 등 라벨과 함께). fail-closed 매칭 ([^\n]*) 은 각 줄에서
+    // 독립적으로 반응하여 두 값을 모두 마스킹한다.
+    const input =
+      'invalid input syntax for type uuid: "abc"\ninvalid input syntax for type integer: "xyz"';
+    const out = redactMessage(input);
+    expect(out).toContain("type uuid: <redacted>");
+    expect(out).toContain("type integer: <redacted>");
+    expect(out).not.toContain('"abc"');
+    expect(out).not.toContain('"xyz"');
+  });
+
+  it('값 내부에 " 가 포함되어도 tail 이 유출되지 않는다 (fail-closed, Oracle #77 BLOCK 회귀)', () => {
+    // Postgres 22P02 는 raw %s 로 값을 삽입하므로 사용자 입력의 " 가 escape 없이 실린다.
+    // `"[^"]*"` 로 매치하면 첫 번째 " 에서 조기 종료되어 뒤쪽 PII 가 로그에 남는다:
+    //   input:  invalid input syntax for type uuid: "ab"cd@example.com"
+    //   buggy:  invalid input syntax for type uuid: <redacted>cd@example.com"  ← tail 유출
+    //   fixed:  invalid input syntax for type uuid: <redacted>                 ← 줄 끝까지 소비
+    // fail-closed [^\n]* 매칭이 이 취약점을 방지하는지 검증한다.
+    const input = 'invalid input syntax for type uuid: "ab"cd@example.com"';
+    const out = redactMessage(input);
+    expect(out).toContain("type uuid: <redacted>");
+    // tail (embedded quote 이후 부분) 이 절대 남지 않아야 한다.
+    expect(out).not.toContain("cd@example.com");
+    expect(out).not.toContain("example.com");
+  });
+
+  it('여러 embedded quote 가 있어도 안전하게 마스킹한다 (fail-closed)', () => {
+    // 방어적 케이스: 값 안에 " 가 여러 개 있는 경우.
+    // 예: 사용자가 SQL injection 시도를 UUID 컬럼에 넣었을 때 " 문자가 다수 포함될 수 있다.
+    const input =
+      'invalid input syntax for type uuid: "\'; DROP TABLE users;--"@x.com"';
+    const out = redactMessage(input);
+    expect(out).toContain("type uuid: <redacted>");
+    expect(out).not.toContain("DROP TABLE");
+    expect(out).not.toContain("@x.com");
+    expect(out).not.toContain("users");
+  });
+
+  it("빈 값 (\"\") 도 마스킹한다 — 값 부분이 비어있어도 여전히 <redacted>", () => {
+    // 사용자가 빈 문자열을 UUID 컬럼에 넣은 경우.
+    const input = 'invalid input syntax for type uuid: ""';
+    const out = redactMessage(input);
+    expect(out).toContain("type uuid: <redacted>");
+    // 원본 형태가 남지 않음을 확인.
+    expect(out).not.toMatch(/type uuid: ""/);
+  });
+
+  it("false positive 방지: '...syntax for type X...' 자연어에 값 부분이 없으면 매치 안 함", () => {
+    // regex 는 `: "..."` 를 요구하므로 자연어 문장은 지나쳐야 한다.
+    const input =
+      "The correct syntax for type checking is documented in the guide";
+    const out = redactMessage(input);
+    expect(out).toBe(input);
+    expect(out).not.toContain("<redacted>");
+  });
+
+  it("false positive 방지: colon·따옴표 없는 유사 문장은 유지한다", () => {
+    // "invalid input syntax for type uuid" 만 있고 값이 없는 문장 (설명 문서 등).
+    const input = "Documentation: invalid input syntax for type uuid errors";
+    const out = redactMessage(input);
+    // 값 부분이 없으므로 매치되지 않아 원본 유지.
+    expect(out).toBe(input);
+  });
+
+  it("typename 은 debug 힌트로 유지된다 (어느 타입 coercion 실패인지 확인 가능)", () => {
+    // 목적: 값은 마스킹하되 어느 컬럼 타입에서 실패했는지는 debug 로 남긴다.
+    const input = 'invalid input syntax for type uuid: "corrupt-value"';
+    const out = redactMessage(input);
+    // typename "uuid" 는 남아있어야 한다.
+    expect(out).toContain("uuid");
+    // 값은 사라져야 한다.
+    expect(out).not.toContain("corrupt-value");
+  });
+
+  it("sanitizeError 를 통해 호출해도 동일하게 마스킹된다 (통합 확인)", () => {
+    // 실제 서버 액션에서는 redactMessage 를 직접 호출하지 않고 sanitizeError 를 거친다.
+    const err = new Error('invalid input syntax for type uuid: "leaked-pii-value"');
+    const out = sanitizeError(err);
+    expect(out.message).toContain("type uuid: <redacted>");
+    expect(out.message).not.toContain("leaked-pii-value");
+  });
+});
+
+
 describe("redactMessage - SQL false positive 방지 (#70 Oracle NIT #3)", () => {
   // SQL_KEYWORD_PATTERN 이 자연어 로그 메시지를 삼키면 debug 가 어려워진다.
   // Drizzle SQL 은 항상 구조 마커(VALUES / SET / FROM / ( 등) 를 동반하므로
