@@ -190,6 +190,23 @@ https://hra-website-theta.vercel.app/api/auth/callback/kakao
 > 💡 보안을 위해 API 키에 제한을 걸어두면 좋아요:
 > - 만들어진 키 옆의 **연필 아이콘** 클릭 → **API 제한** → **키 제한** → **Google Sheets API**만 선택 → **저장**
 
+#### ⑧ HEALTH_CHECK_SECRET (헬스체크 상세 응답용)
+
+`/api/health` 는 사이트가 살아있는지 확인하는 주소예요. 아무나 접속하면 `{ "status": "ok" }` (또는 문제 있을 때 `"error"`) 만 반환해서 외부에 인프라 정보를 흘리지 않아요. 운영자가 데이터베이스 연결 상태·타임스탬프까지 함께 보고 싶을 때만 이 열쇠를 설정하세요.
+
+1. 터미널(검은 창)에서 이 명령어로 랜덤한 열쇠를 만들어요:
+
+```bash
+openssl rand -hex 32
+```
+
+2. 나온 값을 Vercel Settings → Environment Variables 에 `HEALTH_CHECK_SECRET` 이름으로 등록해요.
+3. 상세 응답이 필요할 때는 요청에 `x-health-check-secret: <위에서 만든 값>` 헤더를 붙이면 돼요.
+
+> 💡 이 설정이 없어도 사이트는 정상 작동해요! Vercel/UptimeRobot 같은 일반 헬스체크는 HTTP 200/503 만 봐도 충분히 동작해요.
+
+> ⚠️ 환경변수는 빌드 시점에 주입되므로, 값을 추가·변경한 뒤에는 반드시 **Redeploy** 를 해야 반영돼요.
+
 ---
 
 ## 3. 내 도메인(주소) 연결하기 (하고 싶을 때만)
