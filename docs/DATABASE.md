@@ -81,19 +81,25 @@
 | 모집 상태 | 모집 중인지 마감인지 | 모집중 / 마감 / 예정 |
 | 활동 기간 | 시작일 ~ 종료일 | 2025-03-01 ~ 2025-08-31 |
 
-### ③ 지원서 (`applications` 테이블)
+### ③ 지원서 (`applicationForms` / `applicationSubmissions` 테이블)
 
-학생들이 사이트에서 제출한 지원서예요.
+학생들이 사이트에서 제출한 지원서예요. 두 개의 테이블이 함께 동작해요.
 
-| 항목 | 뭘 저장하나요? | 예시 |
+| 테이블 | 역할 |
+| --- | --- |
+| `applicationForms` | 관리자가 만드는 **지원서 양식** (질문·안내문) |
+| `applicationSubmissions` | 학생이 실제로 제출한 **답변 마스터** (이름·이메일·상태) |
+| `applicationAnswers` | 각 질문에 대한 학생의 **개별 답변** |
+
+| 대표 항목 | 뭘 저장하나요? | 예시 |
 | --- | --- | --- |
-| 지원 기수 | 어느 기수에 지원했는지 | 3기 |
 | 지원자 이름 | 지원한 사람 이름 | "김학생" |
 | 지원자 이메일 | 연락처 이메일 | "kim@naver.com" |
-| 지원 동기 | 왜 지원했는지 | "성장하고 싶어서..." |
 | 처리 상태 | 대기/합격/불합격 | 대기 → 합격 or 불합격 |
 
-> 💡 관리자 페이지의 **"지원서"** 메뉴에서 합격/불합격을 바꿀 수 있어요!
+> 💡 관리자 페이지의 **"지원서 관리"** (`/admin/application-forms`) 에서 양식을 만들고 제출 내역을 확인할 수 있어요.
+
+> 📌 참고 — 옛 `applications` 테이블은 `legacyApplications` 로 이름이 바뀌었고 신규 코드에서는 사용하지 않아요. 기존 데이터는 남아 있지만 관리자 UI 는 신식 시스템만 가리켜요. 완전 제거는 데이터 정리 후 별도 이슈에서 진행합니다.
 
 ### ④ 공지사항 & 자료실
 
@@ -225,14 +231,18 @@ SELECT title, category, created_at FROM resources ORDER BY created_at DESC LIMIT
 -- 🔢 관리자가 몇 명인지 세기
 SELECT COUNT(*) FROM users WHERE role = 'ADMIN';
 
--- 📬 지원서 현황 보기
-SELECT applicant_name, applicant_email, status FROM applications;
+-- 📬 지원서 현황 보기 (신식 시스템)
+SELECT applicant_name, applicant_email, status FROM application_submissions;
 
--- 📬 특정 기수(예: 3기)의 지원서만 보기
-SELECT a.applicant_name, a.status, c.name as cohort_name
-FROM applications a
-JOIN cohorts c ON a.cohort_id = c.id
-WHERE c.name = '3기';
+-- 📬 특정 양식의 제출 내역만 보기
+SELECT s.applicant_name, s.status, f.title AS form_title
+FROM application_submissions s
+JOIN application_forms f ON s.form_id = f.id
+WHERE f.title = '3기 지원서';
+
+-- 📁 (참고) 옛 legacy_applications 테이블은 신규 코드에서 사용하지 않아요
+--    데이터는 남아 있지만 관리자 UI 는 신식 시스템만 가리킵니다
+-- SELECT applicant_name, applicant_email, status FROM legacy_applications;
 ```
 
 > 💡 **꿀팁**: 데이터를 수정하거나 삭제하기 전에 항상 `SELECT`(보기)부터 먼저 해보세요. 실수로 중요한 데이터를 날리면 되돌리기 어려워요!
