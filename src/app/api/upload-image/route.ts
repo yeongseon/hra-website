@@ -1,6 +1,7 @@
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logServerError } from "@/lib/errors";
 
 // 매직 바이트 (파일 헤더의 고유 시그니처) 로 실제 이미지 타입을 판별.
 // 클라이언트가 보낸 file.type / 확장자 는 위조 가능하므로 신뢰하지 않는다.
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: blob.url });
   } catch (error) {
-    console.error("이미지 업로드 오류:", error);
+    logServerError("api/upload-image", error);
     return NextResponse.json(
       { error: "이미지 업로드 중 오류가 발생했습니다." },
       { status: 500 }

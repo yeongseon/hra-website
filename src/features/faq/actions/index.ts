@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { faqContact, faqItems } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const faqContactSchema = z.object({
   contactName: z.string().trim().min(1, "담당자명을 입력해주세요.").max(100, "담당자명은 100자 이하여야 합니다."),
@@ -136,7 +137,13 @@ export async function getAllFaqItems() {
 export async function getFaqItem(id: string) {
   await requireAdmin();
 
-  const [item] = await db.select().from(faqItems).where(eq(faqItems.id, id)).limit(1);
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) return null;
+
+  const [item] = await db.select().from(faqItems).where(eq(faqItems.id, parsedId.data)).limit(1);
   return item ?? null;
 }
 
@@ -175,6 +182,12 @@ export async function createFaqItem(formData: FormData): Promise<FaqItemActionSt
 export async function updateFaqItem(id: string, formData: FormData): Promise<FaqItemActionState> {
   await requireAdmin();
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, message: "유효하지 않은 ID입니다." };
+  }
+
   const parsed = faqItemSchema.safeParse({
     question: formData.get("question"),
     answer: formData.get("answer"),
@@ -192,7 +205,7 @@ export async function updateFaqItem(id: string, formData: FormData): Promise<Faq
     };
   }
 
-  await db.update(faqItems).set(parsed.data).where(eq(faqItems.id, id));
+  await db.update(faqItems).set(parsed.data).where(eq(faqItems.id, parsedId.data));
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
   redirect("/admin/faq");
@@ -202,7 +215,11 @@ export async function updateFaqItem(id: string, formData: FormData): Promise<Faq
 export async function deleteFaqItem(id: string): Promise<void> {
   await requireAdmin();
 
-  await db.delete(faqItems).where(eq(faqItems.id, id));
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) return;
+
+  await db.delete(faqItems).where(eq(faqItems.id, parsedId.data));
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
 }
@@ -216,9 +233,15 @@ export async function reorderFaqItems(
 ): Promise<{ success: boolean; message: string }> {
   await requireAdmin();
 
-  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+  // Oracle Phase D 5라운드 BLOCK 수정 — orderedIds 각 원소를 UUID 로 사전 검증한다.
+  // 이 배열은 reorderByCase 헬퍼의 `${a.id}::uuid` raw SQL 캐스트로 흘러가는데
+  // UUID 형식이 아닌 값이 도달하면 Postgres cast error 로 raw ID 가 Vercel Logs 에
+  // 노출될 수 있으므로 사전 차단한다. z.array(z.uuid()).min(1) 은 배열/비어있음/원소 형식을 한번에 검증.
+  const parsedIds = z.array(z.uuid()).min(1).safeParse(orderedIds);
+  if (!parsedIds.success) {
     return { success: false, message: "유효하지 않은 요청입니다." };
   }
+  const validIds = parsedIds.data;
 
   try {
     const { affected } = await reorderByCase({
@@ -226,18 +249,25 @@ export async function reorderFaqItems(
       idColumn: faqItems.id,
       targetColumn: faqItems.order,
       // 기존 로직 유지: order 는 1-based (1, 2, 3, ...)
-      assignments: orderedIds.map((id, index) => ({ id, value: index + 1 })),
+      assignments: validIds.map((id, index) => ({ id, value: index + 1 })),
     });
 
     // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
-    if (affected !== orderedIds.length) {
-      console.error(
-        `[faq/reorder] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
+    if (affected !== validIds.length) {
+      logServerError(
+        "faq/reorder",
+        new Error("update count mismatch"),
+        {
+          expected: validIds.length,
+          actual: affected,
+        },
       );
       return { success: false, message: "일부 항목을 저장하지 못했습니다." };
     }
   } catch (err) {
-    console.error("[faq/reorder] 순서 변경 실패:", err);
+    logServerError("faq/reorder", err, {
+      orderedIdsCount: validIds.length,
+    });
     return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
   }
 

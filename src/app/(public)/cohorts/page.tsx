@@ -5,6 +5,7 @@ import { Users, Calendar } from "lucide-react";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { cohorts as cohortsTable } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function CohortsPage() {
   } catch (error) {
     // DB 조회 실패 시: 빈 화면이 "데이터 없음"과 구분되도록 서버 로그에 명확히 기록한다.
     // 이렇게 해야 운영 중 실제 장애와 단순한 미시드(미입력) 상태를 구분할 수 있다.
-    console.error("[cohorts/page] DB 조회 실패 - 빈 목록으로 폴백합니다:", error);
+    logServerError("public/cohorts", error);
     cohortData = [];
   }
 

@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { ChevronLeft, User, Mail, Phone, Calendar, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -47,21 +48,30 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
   await requireAdmin();
   const { id, submissionId } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 두 개의 파라미터(id, submissionId) 모두 DB 쿼리 전 차단한다.
+  // Postgres cast error 로 raw ID 가 Vercel Logs 에 노출되는 것을 사전 방지.
+  const parsedId = z.uuid().safeParse(id);
+  const parsedSubmissionId = z.uuid().safeParse(submissionId);
+  if (!parsedId.success || !parsedSubmissionId.success) {
+    notFound();
+  }
+
   // 1. 제출 마스터 정보 조회
   const submission = await db.query.applicationSubmissions.findFirst({
-    where: eq(applicationSubmissions.id, submissionId),
+    where: eq(applicationSubmissions.id, parsedSubmissionId.data),
     with: {
       form: true,
     }
   });
 
-  if (!submission || submission.formId !== id) {
+  if (!submission || submission.formId !== parsedId.data) {
     notFound();
   }
 
   // 2. 답변 및 관련 질문 정보 조회
   const answers = await db.query.applicationAnswers.findMany({
-    where: eq(applicationAnswers.submissionId, submissionId),
+    where: eq(applicationAnswers.submissionId, parsedSubmissionId.data),
     with: {
       question: true,
     }
@@ -76,7 +86,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
     <section className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-8">
       <div>
         <Link 
-          href={`/admin/application-forms/${id}/submissions`} 
+          href={`/admin/application-forms/${parsedId.data}/submissions`} 
           className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition-colors mb-2"
         >
           <ChevronLeft className="size-4" />
@@ -96,7 +106,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
             />
             <DeleteSubmissionButton
               submissionId={submission.id}
-              formId={id}
+              formId={parsedId.data}
               applicantName={submission.applicantName}
             />
           </div>
@@ -204,7 +214,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
           
           <div className="flex justify-center pt-4">
             <Link
-              href={`/admin/application-forms/${id}/submissions`}
+              href={`/admin/application-forms/${parsedId.data}/submissions`}
               className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
             >
               목록으로 돌아가기

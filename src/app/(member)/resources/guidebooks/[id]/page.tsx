@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
@@ -23,7 +24,14 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, id)).limit(1);
+
+  // Oracle Phase D BLOCK 수정 — z.uuid() 로 사전 차단하여 Postgres cast 에러 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { title: "가이드북" };
+  }
+
+  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, parsedId.data)).limit(1);
   return {
     title: book ? `${book.title} — 가이드북` : "가이드북",
   };
@@ -32,8 +40,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GuidebookViewerPage({ params }: Props) {
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   // DB에서 가이드북 조회
-  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, id)).limit(1);
+  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, parsedId.data)).limit(1);
 
   if (!book) {
     notFound();

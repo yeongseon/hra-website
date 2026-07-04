@@ -29,6 +29,7 @@ import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
+import { logServerError } from "@/lib/errors";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
@@ -255,7 +256,11 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
 
     return { success: true };
   } catch (error) {
-    console.error("[class-logs/createAsMember] 생성 오류:", error);
+    logServerError("class-logs/createAsMember", error, {
+      role,
+      hasImages: validatedImages.files.length > 0,
+      cohortId: parsed.data.cohortId || null,
+    });
     return { success: false, error: "수업일지 생성에 실패했습니다." };
   }
 }
@@ -331,7 +336,10 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
 
     return { success: true };
   } catch (error) {
-    console.error("[class-logs/create] 생성 오류:", error);
+    logServerError("class-logs/create", error, {
+      hasImages: validatedImages.files.length > 0,
+      cohortId: parsed.data.cohortId || null,
+    });
 
     return {
       success: false,
@@ -500,7 +508,11 @@ export async function updateClassLog(
             ),
           );
         } catch (deleteError) {
-          console.error("[class-logs/update] 기존 이미지 row 삭제 실패:", deleteError);
+          logServerError("class-logs/update/imageRowDelete", deleteError, {
+            id: parsedId.data,
+            oldImageCount: oldImageRows.length,
+            newImageCount: newRows.length,
+          });
           throw deleteError;
         }
 
@@ -515,7 +527,10 @@ export async function updateClassLog(
 
     return { success: true };
   } catch (error) {
-    console.error("[class-logs/update] 수정 오류:", error);
+    logServerError("class-logs/update", error, {
+      id: parsedId.data,
+      hasNewImages: validatedImages.files.length > 0,
+    });
 
     return {
       success: false,
@@ -588,7 +603,9 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
 
     return { success: true };
   } catch (error) {
-    console.error("[class-logs/delete] 삭제 오류:", error);
+    logServerError("class-logs/delete", error, {
+      id: parsedId.data,
+    });
 
     return {
       success: false,

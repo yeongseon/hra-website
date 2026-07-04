@@ -9,6 +9,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { applicationForms } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(255, "제목은 255자 이하여야 합니다."),
@@ -69,7 +70,10 @@ export async function createForm(formData: FormData): Promise<FormActionState> {
       id: newForm.id,
     };
   } catch (error) {
-    console.error("지원서 양식 생성 오류:", error);
+    logServerError("application-forms/create", error, {
+      hasCohortId: !!parsed.data.cohortId,
+      isPublished: parsed.data.isPublished,
+    });
     return {
       success: false,
       message: "양식 생성 중 오류가 발생했습니다.",
@@ -82,6 +86,17 @@ export async function createForm(formData: FormData): Promise<FormActionState> {
  */
 export async function updateForm(id: string, formData: FormData): Promise<FormActionState> {
   await requireAdmin();
+
+  // 🛡️ action 파라미터 id 를 DB 조회 전에 UUID 검증합니다 (#70).
+  // raw string 이 DB 로 흘러가면 Postgres 캐스팅 에러의 context 로 새어나가므로 사전 차단합니다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return {
+      success: false,
+      message: "잘못된 요청입니다.",
+    };
+  }
+  const validId = parsedId.data;
 
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
@@ -114,16 +129,20 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
         isPublished: parsed.data.isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, id));
+      .where(eq(applicationForms.id, validId));
 
     revalidatePath("/admin/application-forms");
-    revalidatePath(`/admin/application-forms/${id}`);
+    revalidatePath(`/admin/application-forms/${validId}`);
     return {
       success: true,
       message: "양식이 수정되었습니다.",
     };
   } catch (error) {
-    console.error("지원서 양식 수정 오류:", error);
+    logServerError("application-forms/update", error, {
+      id: validId,
+      hasCohortId: !!parsed.data.cohortId,
+      isPublished: parsed.data.isPublished,
+    });
     return {
       success: false,
       message: "양식 수정 중 오류가 발생했습니다.",
@@ -137,6 +156,16 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
 export async function toggleFormPublishStatus(id: string, isPublished: boolean): Promise<FormActionState> {
   await requireAdmin();
 
+  // 🛡️ action 파라미터 id 를 DB 조회 전에 UUID 검증합니다 (#70).
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return {
+      success: false,
+      message: "잘못된 요청입니다.",
+    };
+  }
+  const validId = parsedId.data;
+
   try {
     await db
       .update(applicationForms)
@@ -144,7 +173,7 @@ export async function toggleFormPublishStatus(id: string, isPublished: boolean):
         isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, id));
+      .where(eq(applicationForms.id, validId));
 
     revalidatePath("/admin/application-forms");
     return {
@@ -152,7 +181,10 @@ export async function toggleFormPublishStatus(id: string, isPublished: boolean):
       message: isPublished ? "양식이 공개되었습니다." : "양식이 비공개되었습니다.",
     };
   } catch (error) {
-    console.error("공개 상태 전환 오류:", error);
+    logServerError("application-forms/toggle-publish", error, {
+      id: validId,
+      isPublished,
+    });
     return {
       success: false,
       message: "상태 변경 중 오류가 발생했습니다.",
@@ -166,8 +198,18 @@ export async function toggleFormPublishStatus(id: string, isPublished: boolean):
 export async function deleteForm(id: string): Promise<FormActionState> {
   await requireAdmin();
 
+  // 🛡️ action 파라미터 id 를 DB 조회 전에 UUID 검증합니다 (#70).
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return {
+      success: false,
+      message: "잘못된 요청입니다.",
+    };
+  }
+  const validId = parsedId.data;
+
   try {
-    await db.delete(applicationForms).where(eq(applicationForms.id, id));
+    await db.delete(applicationForms).where(eq(applicationForms.id, validId));
 
     revalidatePath("/admin/application-forms");
     return {
@@ -175,7 +217,7 @@ export async function deleteForm(id: string): Promise<FormActionState> {
       message: "양식이 삭제되었습니다.",
     };
   } catch (error) {
-    console.error("지원서 양식 삭제 오류:", error);
+    logServerError("application-forms/delete", error, { id: validId });
     return {
       success: false,
       message: "양식 삭제 중 오류가 발생했습니다.",

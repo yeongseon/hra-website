@@ -15,6 +15,7 @@ import { createClassLog } from "@/features/class-logs/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function NewClassLogPage() {
       .from(cohorts)
       .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
   } catch (error) {
-    console.error("[admin/resources/new] DB 조회 오류:", error);
+    logServerError("admin/resources/new", error);
   }
 
   return (

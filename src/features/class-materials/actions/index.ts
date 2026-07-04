@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth";
 import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
+import { logServerError, redactBlobUrl } from "@/lib/errors";
 
 export type ClassMaterialActionState = {
   success: boolean;
@@ -169,13 +170,18 @@ export async function createClassMaterial(
 
     return { success: true };
   } catch (error) {
-    console.error("[class-materials/create] 생성 오류:", error);
+    logServerError("class-materials/create", error, {
+      audience: parsed.data.audience,
+      hasUploadedBlob: uploadedBlobUrl !== null,
+    });
 
     if (uploadedBlobUrl) {
       try {
         await deleteBlobIfExists(uploadedBlobUrl);
       } catch (blobDeleteError) {
-        console.error("[class-materials/create] 업로드 롤백 오류:", blobDeleteError);
+        logServerError("class-materials/create/rollback", blobDeleteError, {
+          blobUrl: redactBlobUrl(uploadedBlobUrl),
+        });
       }
     }
 
@@ -263,7 +269,10 @@ export async function updateClassMaterial(id: string, formData: FormData): Promi
     revalidateClassMaterialPaths();
     return { success: true };
   } catch (error) {
-    console.error("[class-materials/update] 수정 오류:", error);
+    logServerError("class-materials/update", error, {
+      id: parsedId.data,
+      audience: parsed.data.audience,
+    });
     return { success: false, error: "강의 자료 수정에 실패했습니다." };
   }
 }
@@ -298,7 +307,9 @@ export async function deleteClassMaterial(id: string): Promise<ClassMaterialActi
 
     return { success: true };
   } catch (error) {
-    console.error("[class-materials/delete] 삭제 오류:", error);
+    logServerError("class-materials/delete", error, {
+      id: parsedId.data,
+    });
 
     return {
       success: false,

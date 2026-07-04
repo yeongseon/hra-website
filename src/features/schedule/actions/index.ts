@@ -202,8 +202,14 @@ export async function getAllScheduleEvents() {
 export async function getScheduleEvent(id: string) {
   await requireAdmin();
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) return null;
+
   return db.query.scheduleEvents.findFirst({
-    where: eq(scheduleEvents.id, id),
+    where: eq(scheduleEvents.id, parsedId.data),
     with: {
       cohort: true,
       sessions: {
@@ -313,6 +319,14 @@ export async function updateScheduleEvent(
 ): Promise<ScheduleActionState> {
   await requireAdmin();
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // 특히 이 함수는 raw SQL 의 ${id}::uuid 캐스트가 5곳에 있어 캐스트 실패 시
+  // Vercel Logs 에 raw ID 가 노출될 위험이 크므로 반드시 사전 차단이 필요하다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, message: "유효하지 않은 ID입니다." };
+  }
+
   const result = parseFormData(formData);
 
   if (!result.success) {
@@ -342,11 +356,11 @@ export async function updateScheduleEvent(
           week_number = ${eventData.weekNumber ?? null}::integer,
           description = ${eventData.description ?? null},
           is_public = ${eventData.isPublic}
-        WHERE id = ${id}::uuid
+        WHERE id = ${parsedId.data}::uuid
         RETURNING id
       )
       DELETE FROM schedule_sessions
-      WHERE schedule_event_id = ${id}::uuid
+      WHERE schedule_event_id = ${parsedId.data}::uuid
     `);
   } else {
     // CLASS + sessions — UPDATE + DELETE 기존 + INSERT 새 sessions 을 CTE 한 문장으로 처리.
@@ -375,19 +389,19 @@ export async function updateScheduleEvent(
           week_number = ${eventData.weekNumber ?? null}::integer,
           description = ${eventData.description ?? null},
           is_public = ${eventData.isPublic}
-        WHERE id = ${id}::uuid
+        WHERE id = ${parsedId.data}::uuid
         RETURNING id
       ),
       deleted_sessions AS (
         DELETE FROM schedule_sessions
-        WHERE schedule_event_id = ${id}::uuid
+        WHERE schedule_event_id = ${parsedId.data}::uuid
         RETURNING id
       )
       INSERT INTO schedule_sessions (
         schedule_event_id, category, faculty_id, content, report_category, sub_title, sub_description, "order"
       )
       SELECT
-        ${id}::uuid,
+        ${parsedId.data}::uuid,
         s.category, s.faculty_id, s.content, s.report_category, s.sub_title, s.sub_description, s."order"
       FROM (VALUES ${sql.join(sessionValues, sql`, `)})
         AS s(category, faculty_id, content, report_category, sub_title, sub_description, "order")
@@ -406,7 +420,13 @@ export async function updateScheduleEvent(
 export async function deleteScheduleEvent(id: string): Promise<ScheduleActionState> {
   await requireAdmin();
 
-  await db.delete(scheduleEvents).where(eq(scheduleEvents.id, id));
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, message: "유효하지 않은 ID입니다." };
+  }
+
+  await db.delete(scheduleEvents).where(eq(scheduleEvents.id, parsedId.data));
 
   revalidatePath("/");
   revalidatePath("/admin/schedule");

@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resources-tab-nav";
 import { ClassMaterialForm } from "@/app/(admin)/admin/resources/class-materials/_components/class-material-form";
@@ -28,8 +29,16 @@ export default async function EditClassMaterialPage({ params }: Props) {
 
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   const material = await db.query.classMaterials.findFirst({
-    where: eq(classMaterials.id, id),
+    where: eq(classMaterials.id, parsedId.data),
   });
 
   if (!material) {
@@ -37,7 +46,7 @@ export default async function EditClassMaterialPage({ params }: Props) {
   }
 
   // id를 bind해서 action 시그니처를 (formData: FormData) => Promise<State>로 맞춤
-  const boundAction = updateClassMaterial.bind(null, id);
+  const boundAction = updateClassMaterial.bind(null, parsedId.data);
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-10">

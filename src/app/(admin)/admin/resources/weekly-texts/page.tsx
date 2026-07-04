@@ -14,6 +14,7 @@ import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resou
 import { WeeklyTextRowActions } from "@/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function AdminWeeklyTextsPage() {
 
       return { rows, hasDbError: false };
     } catch (error) {
-      console.error("[admin/resources/weekly-texts] DB 조회 오류:", error);
+      logServerError("admin/resources/weekly-texts", error);
       return { rows: [], hasDbError: true };
     }
   })();

@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq, asc } from "drizzle-orm";
+import { z } from "zod/v4";
 import { ChevronLeft } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
@@ -27,9 +28,17 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
   await requireAdmin();
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   // 1. 양식 마스터 정보 조회
   const form = await db.query.applicationForms.findFirst({
-    where: eq(applicationForms.id, id),
+    where: eq(applicationForms.id, parsedId.data),
   });
 
   if (!form) {
@@ -44,7 +53,7 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
 
   // 3. 질문 및 선택지 조회
   const questionsData = await db.query.applicationQuestions.findMany({
-    where: eq(applicationQuestions.formId, id),
+    where: eq(applicationQuestions.formId, parsedId.data),
     orderBy: [asc(applicationQuestions.order)],
     with: {
       options: {
@@ -78,7 +87,7 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
 
         {/* 질문 빌더 섹션 */}
         <FormBuilder
-          formId={id}
+          formId={parsedId.data}
           formTitle={form.title}
           initialQuestions={questionsData.map(q => ({
             ...q,

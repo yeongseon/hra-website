@@ -18,6 +18,7 @@ import {
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { applicationForms, cohorts, applicationSubmissions } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 import { FormRowActions } from "./_components/form-row-actions";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,7 @@ export default async function AdminApplicationFormsPage() {
 
       return { rows, hasError: false };
     } catch (error) {
-      console.error("[admin/application-forms] DB 조회 오류:", error);
+      logServerError("admin/application-forms", error);
       return { rows: [], hasError: true };
     }
   })();

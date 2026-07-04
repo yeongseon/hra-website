@@ -23,6 +23,7 @@ import { requireAdmin } from "@/lib/admin";
 import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export type GuidebookActionState = {
   success: boolean;
@@ -122,7 +123,9 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[guidebooks/create] 생성 오류:", error);
+    logServerError("guidebooks/create", error, {
+      hasFile: true,
+    });
 
     return {
       success: false,
@@ -193,7 +196,10 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[guidebooks/update] 수정 오류:", error);
+    logServerError("guidebooks/update", error, {
+      id: parsedId.data,
+      hasNewFile: formData.get("file") instanceof File,
+    });
     return { success: false, error: `가이드북 수정에 실패했습니다: ${message}` };
   }
 }
@@ -228,7 +234,9 @@ export async function deleteGuidebook(id: string): Promise<GuidebookActionState>
 
     return { success: true };
   } catch (error) {
-    console.error("[guidebooks/delete] 삭제 오류:", error);
+    logServerError("guidebooks/delete", error, {
+      id: parsedId.data,
+    });
 
     return {
       success: false,

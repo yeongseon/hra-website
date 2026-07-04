@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { TemplateForm } from "@/app/(admin)/admin/templates/_components/template-form";
 import { updateReportTemplate } from "@/features/report-templates/actions";
@@ -25,8 +26,16 @@ export default async function EditTemplatePage({ params }: Props) {
   await requireAdmin();
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   const target = await db.query.reportTemplates.findFirst({
-    where: eq(reportTemplates.id, id),
+    where: eq(reportTemplates.id, parsedId.data),
   });
 
   if (!target) {

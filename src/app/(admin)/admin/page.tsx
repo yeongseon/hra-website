@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
+import { logServerError } from "@/lib/errors";
 import {
   alumniStories,
   applicationSubmissions,
@@ -95,7 +96,7 @@ export default async function AdminDashboardPage() {
     totalGalleries      = Number(galleryRows[0]?.total ?? 0);
     totalAlumni         = Number(alumniRows[0]?.total ?? 0);
   } catch (error) {
-    console.error("[admin/dashboard] DB 조회 오류:", error);
+    logServerError("admin/dashboard", error);
     return (
       <div className="space-y-4 p-2">
         <h1 className="text-xl font-semibold text-slate-900">대시보드</h1>

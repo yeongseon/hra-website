@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
@@ -27,10 +28,18 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
+
+  // Oracle Phase D BLOCK 수정 — 검증되지 않은 UUID를 DB에 넘기면 Postgres cast 에러가 원본
+  // 그대로 로그에 기록되어 개인정보(라우트 파라미터)가 leak됨. z.uuid() 로 사전 차단.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { title: "강의 자료" };
+  }
+
   const [material] = await db
     .select({ title: classMaterials.title })
     .from(classMaterials)
-    .where(eq(classMaterials.id, id))
+    .where(eq(classMaterials.id, parsedId.data))
     .limit(1);
   return {
     title: material ? `${material.title} — 강의 자료` : "강의 자료",
@@ -40,10 +49,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ClassMaterialViewerPage({ params }: Props) {
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   const [material] = await db
     .select()
     .from(classMaterials)
-    .where(eq(classMaterials.id, id))
+    .where(eq(classMaterials.id, parsedId.data))
     .limit(1);
 
   if (!material) {

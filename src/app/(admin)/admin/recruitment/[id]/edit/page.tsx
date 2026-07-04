@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent } from "@/components/ui/card";
 import { CohortForm } from "@/app/(admin)/admin/recruitment/_components/cohort-form";
@@ -16,6 +17,7 @@ import { updateCohort } from "@/features/recruitment/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,33 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
 
   const { id } = await params;
 
+  // 🛡️ route id를 DB 조회 전에 UUID 형식으로 검증합니다.
+  // 이유: raw string(예: 이메일·랜덤 텍스트)이 그대로 DB 로 넘어가면 Postgres UUID 캐스팅 에러가
+  //       발생하고, 이때 catch 블록의 logServerError context 에 그 원본 문자열이 그대로 남게 됩니다.
+  //       사전 검증으로 PII 유출과 SQL 에러 노이즈를 동시에 방지합니다. (#70)
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-10">
+        <Card className="border-slate-200 bg-white py-10 shadow-sm">
+          <CardContent className="space-y-4 text-center">
+            <p className="text-lg font-medium text-slate-900">잘못된 요청입니다.</p>
+            <Link
+              href="/admin/recruitment"
+              className={buttonVariants({
+                variant: "outline",
+                className: "border-slate-200 text-slate-700",
+              })}
+            >
+              기수 목록으로 돌아가기
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  const validId = parsedId.data;
+
   let cohort: typeof cohorts.$inferSelect | undefined;
 
   try {
@@ -42,10 +71,10 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
     [cohort] = await db
       .select()
       .from(cohorts)
-      .where(eq(cohorts.id, id))
+      .where(eq(cohorts.id, validId))
       .limit(1);
   } catch (error) {
-    console.error("[admin/recruitment/edit] DB 조회 오류:", error);
+    logServerError("admin/recruitment/edit", error, { id: validId });
 
     return (
       <div className="mx-auto max-w-4xl px-6 py-10">
@@ -78,7 +107,7 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
     );
   }
 
-  const updateAction = updateCohort.bind(null, id);
+  const updateAction = updateCohort.bind(null, validId);
 
   return (
     <CohortForm

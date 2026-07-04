@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 type NoticePageProps = {
   params: Promise<{ id: string }>;
@@ -94,7 +95,7 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     .set({ viewCount: sql`${notices.viewCount} + 1` })
     .where(eq(notices.id, notice.id))
     .catch((err: unknown) => {
-      console.error("공지사항 조회수 업데이트 실패:", err);
+      logServerError("public/notices/viewCount", err, { id: notice.id });
     });
 
   const [prevNotice] = await db

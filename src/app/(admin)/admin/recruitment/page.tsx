@@ -27,6 +27,7 @@ import { RecruitmentRowActions } from "@/app/(admin)/admin/recruitment/_componen
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function AdminRecruitmentPage() {
 
       return { rows, hasDbError: false };
     } catch (error) {
-      console.error("[admin/recruitment] DB 조회 오류:", error);
+      logServerError("admin/recruitment", error);
       return { rows: [], hasDbError: true };
     }
   })();

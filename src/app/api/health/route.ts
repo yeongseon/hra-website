@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       await db.execute(sql`SELECT 1`);
       dbStatus = "connected";
     } catch (error) {
-      console.error("[api/health] DB 연결 오류:", error);
+      logServerError("api/health/db", error);
       dbStatus = "unavailable";
       status = "error";
       httpStatus = 503;

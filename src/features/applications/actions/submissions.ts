@@ -15,6 +15,7 @@ import {
   applicationSubmissions,
   applicationAnswers,
 } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 /**
  * CSV/Excel 에서 셀 값이 수식으로 해석되는 것을 막기 위한 방어 함수입니다.
@@ -73,6 +74,20 @@ export async function submitApplicationForm(
   }
 
   const formId = formData.get("formId") as string;
+
+  // Oracle Phase D 5라운드 BLOCK 수정 — hidden 필드 formId 를 UUID 로 사전 검증.
+  // formData 로 전송되는 formId 는 라우트 파라미터와 달리 지금까지 zod 검증 없이 DB
+  // 쿼리(line 119: eq(applicationForms.id, formId))에 그대로 흘러갔다. UUID 형식이
+  // 아닌 값이 Postgres 로 도달하면 `invalid input syntax for type uuid: "..."` 캐스트
+  // 에러가 발생하고 raw ID 가 Vercel Logs 에 노출된다(logServerError 는 SQL/PII 패턴만
+  // 마스킹하고 UUID 문법 에러의 원본 텍스트는 통과시킴). 사용자 입력 오타가 아니라
+  // 폼 조작 시나리오이므로 일반 오류 메시지로 응답한다.
+  const parsedFormId = z.uuid().safeParse(formId);
+  if (!parsedFormId.success) {
+    return { success: false, message: "잘못된 요청입니다." };
+  }
+  const validFormId = parsedFormId.data;
+
   const applicantName = (formData.get("applicantName") as string)?.trim();
   const applicantEmail = (formData.get("applicantEmail") as string)?.trim().toLowerCase();
   const applicantPhone = (formData.get("applicantPhone") as string)?.trim();
@@ -115,7 +130,7 @@ export async function submitApplicationForm(
 
     // 1. 양식 및 질문 정보 조회
     const form = await db.query.applicationForms.findFirst({
-      where: eq(applicationForms.id, formId),
+      where: eq(applicationForms.id, validFormId),
       with: {
         questions: {
           with: {
@@ -196,7 +211,7 @@ export async function submitApplicationForm(
       const [submission] = await db
         .insert(applicationSubmissions)
         .values({
-          formId,
+          formId: validFormId,
           applicantName,
           applicantEmail,
           applicantPhone,
@@ -235,13 +250,17 @@ export async function submitApplicationForm(
             .where(eq(applicationSubmissions.id, submissionId));
         } catch (cleanupError) {
           // 마스터 삭제마저 실패하면 고아 행이 남아 사용자가 재시도 불가일 수 있습니다.
-          // 운영자가 수동으로 정리해야 하므로 식별 가능한 정보와 함께 로그를 남깁니다.
-          console.error(
-            "제출 마스터 정리 실패 — 고아 행 가능 (수동 정리 필요):",
-            { submissionId, formId, applicantEmail, cleanupError }
-          );
+          // 운영자가 수동으로 정리해야 하므로 식별자만 남깁니다.
+          // #70: applicantEmail 은 PII 이므로 로그에서 제외 — submissionId·formId 로 운영자가 역추적 가능.
+          logServerError("application-submission/cleanup-master", cleanupError, {
+            submissionId,
+            formId: validFormId,
+          });
         }
-        console.error("지원서 답변 저장 실패:", answersError);
+        logServerError("application-submission/insert-answers", answersError, {
+          submissionId,
+          formId: validFormId,
+        });
         return {
           success: false,
           message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
@@ -257,16 +276,16 @@ export async function submitApplicationForm(
         email: applicantEmail,
       });
     } catch (error) {
-      console.error("지원서 제출 로그 저장 오류:", error);
+      logServerError("application-submission/insert-log", error);
     }
 
-    revalidatePath(`/admin/application-forms/${formId}/submissions`);
+    revalidatePath(`/admin/application-forms/${validFormId}/submissions`);
     return {
       success: true,
       message: "지원서가 성공적으로 제출되었습니다. 감사합니다!",
     };
   } catch (error) {
-    console.error("지원서 제출 오류:", error);
+    logServerError("application-submission/submit", error);
     return {
       success: false,
       message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
@@ -280,10 +299,18 @@ export async function submitApplicationForm(
 export async function exportSubmissionsToCsv(formId: string) {
   await requireAdmin();
 
+  // 🛡️ formId 를 DB 조회 전에 UUID 검증합니다 (#70).
+  // raw string 이 DB 로 흘러가면 Postgres 캐스팅 에러의 context 로 새어나가므로 사전 차단합니다.
+  const parsedFormId = z.uuid().safeParse(formId);
+  if (!parsedFormId.success) {
+    return { success: false, message: "잘못된 요청입니다." };
+  }
+  const validFormId = parsedFormId.data;
+
   try {
     // 1. 양식 및 질문 정보 조회
     const form = await db.query.applicationForms.findFirst({
-      where: eq(applicationForms.id, formId),
+      where: eq(applicationForms.id, validFormId),
       with: {
         questions: {
           orderBy: (questions, { asc }) => [asc(questions.order)],
@@ -295,7 +322,7 @@ export async function exportSubmissionsToCsv(formId: string) {
 
     // 2. 제출 내역 및 답변 조회
     const submissions = await db.query.applicationSubmissions.findMany({
-      where: eq(applicationSubmissions.formId, formId),
+      where: eq(applicationSubmissions.formId, validFormId),
       with: {
         answers: true,
       },
@@ -343,7 +370,7 @@ export async function exportSubmissionsToCsv(formId: string) {
       data: "\ufeff" + csvContent,
     };
   } catch (error) {
-    console.error("CSV 내보내기 오류:", error);
+    logServerError("application-submission/export-csv", error, { formId: validFormId });
     return { success: false, message: "데이터 추출 중 오류가 발생했습니다." };
   }
 }
@@ -425,11 +452,10 @@ export async function deleteApplicationSubmission(
     return { success: true, message: "지원서가 삭제되었습니다." };
   } catch (error) {
     // 실패 로그도 동일 정책 — PII 제외, 식별자와 관리자 id 만 남긴다
-    console.error("[application-submission-delete] 지원서 삭제 실패:", {
+    logServerError("application-submission/delete", error, {
       submissionId: parsedId.data,
       formId: target.formId,
       adminUserId: session.user.id,
-      error,
     });
     return { success: false, message: "삭제 중 오류가 발생했습니다." };
   }
@@ -543,10 +569,9 @@ export async function updateSubmissionStatus(
 
     return { success: true, message: "지원서 상태가 변경되었습니다." };
   } catch (error) {
-    console.error("[application-submission-status-change] 상태 변경 실패:", {
+    logServerError("application-submission/status-change", error, {
       submissionId: parsedId.data,
       adminUserId: session.user.id,
-      error,
     });
     return { success: false, message: "상태 변경 중 오류가 발생했습니다." };
   }

@@ -16,6 +16,7 @@ import { z } from "zod/v4";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { galleries, galleryImages } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
     .set({ viewCount: sql`${galleries.viewCount} + 1` })
     .where(eq(galleries.id, gallery.id))
     .catch((err: unknown) => {
-      console.error("갤러리 조회수 업데이트 실패:", err);
+      logServerError("public/gallery/viewCount", err, { id: gallery.id });
     });
 
   return (

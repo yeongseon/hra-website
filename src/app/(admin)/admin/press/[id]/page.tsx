@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { z } from "zod/v4";
 import { PressForm } from "@/app/(admin)/admin/press/_components/press-form";
 import { updatePressArticle } from "@/features/press/actions";
 import { requireAdmin } from "@/lib/admin";
@@ -20,13 +21,22 @@ export default async function EditPressArticlePage({ params }: EditPressArticleP
   await requireAdmin();
 
   const { id } = await params;
-  const [article] = await db.select().from(pressArticles).where(eq(pressArticles.id, id)).limit(1);
+
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
+  const [article] = await db.select().from(pressArticles).where(eq(pressArticles.id, parsedId.data)).limit(1);
 
   if (!article) {
     notFound();
   }
 
-  const updateAction = updatePressArticle.bind(null, id);
+  const updateAction = updatePressArticle.bind(null, parsedId.data);
 
   return (
     <PressForm

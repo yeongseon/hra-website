@@ -22,6 +22,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { reportTemplates } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 // 폼 입력 검증 스키마
 // slug: 영숫자/대시/언더스코어만 허용하여 URL 안정성 확보
@@ -170,7 +171,11 @@ export async function createReportTemplate(
       order: parsed.data.order,
     });
   } catch (error) {
-    console.error("[report-templates/create] 생성 오류:", error);
+    logServerError("report-templates/create", error, {
+      category: parsed.data.category,
+      hasReportCategory: parsed.data.reportCategory !== null,
+      published: parsed.data.published,
+    });
     return {
       success: false,
       message: "양식 저장에 실패했습니다.",
@@ -239,7 +244,11 @@ export async function updateReportTemplate(
       })
       .where(eq(reportTemplates.id, parsedId.data));
   } catch (error) {
-    console.error("[report-templates/update] 수정 오류:", error);
+    logServerError("report-templates/update", error, {
+      id: parsedId.data,
+      category: parsed.data.category,
+      published: parsed.data.published,
+    });
     return {
       success: false,
       message: "양식 수정에 실패했습니다.",
@@ -288,7 +297,9 @@ export async function deleteReportTemplate(
     revalidateTemplatePaths(target.slug);
     return { success: true, message: "비공개 처리되었습니다." };
   } catch (error) {
-    console.error("[report-templates/delete] 비공개 처리 오류:", error);
+    logServerError("report-templates/delete", error, {
+      id: parsedId.data,
+    });
     return {
       success: false,
       message: "양식 비공개 처리에 실패했습니다.",

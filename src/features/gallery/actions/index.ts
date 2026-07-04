@@ -19,6 +19,7 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { galleries, galleryImages } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export type GalleryActionState = {
   success: boolean;
@@ -389,9 +390,17 @@ export async function reorderGalleryImages(
     return initialError(parsedGalleryId.error.issues[0]?.message ?? "잘못된 앨범 ID입니다.");
   }
 
-  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+  // Oracle Phase D 5라운드 BLOCK 수정 — orderedIds 각 원소를 UUID 로 사전 검증한다.
+  // 이 배열은 두 경로에서 SQL 로 흘러간다: (1) inArray(galleryImages.id, orderedIds)
+  // 는 파라미터 바인딩이라 injection 은 없지만 UUID 형식이 아닌 값이 들어가면 Postgres
+  // 캐스트 에러로 raw ID 가 Vercel Logs 에 노출된다, (2) reorderByCase 헬퍼의
+  // `${a.id}::uuid` raw SQL 캐스트도 동일한 leak 벡터를 가진다. 두 경로 진입 전에
+  // 사전 차단한다.
+  const parsedIds = z.array(z.uuid()).min(1).safeParse(orderedIds);
+  if (!parsedIds.success) {
     return initialError("유효하지 않은 요청입니다.");
   }
+  const validIds = parsedIds.data;
 
   // 전달된 ID가 모두 해당 갤러리에 속한 이미지인지 검증
   const existingImages = await db
@@ -400,11 +409,11 @@ export async function reorderGalleryImages(
     .where(
       and(
         eq(galleryImages.galleryId, parsedGalleryId.data),
-        inArray(galleryImages.id, orderedIds)
+        inArray(galleryImages.id, validIds)
       )
     );
 
-  if (existingImages.length !== orderedIds.length) {
+  if (existingImages.length !== validIds.length) {
     return initialError("일부 이미지를 찾을 수 없습니다.");
   }
 
@@ -417,19 +426,28 @@ export async function reorderGalleryImages(
       idColumn: galleryImages.id,
       targetColumn: galleryImages.order,
       // 갤러리는 0-based (0, 1, 2, ...) — alumni/press/faq(1-based) 와 다름
-      assignments: orderedIds.map((id, index) => ({ id, value: index })),
+      assignments: validIds.map((id, index) => ({ id, value: index })),
       extraWhere: eq(galleryImages.galleryId, parsedGalleryId.data),
     });
 
     // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
-    if (affected !== orderedIds.length) {
-      console.error(
-        `[gallery/reorder-images] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
+    if (affected !== validIds.length) {
+      logServerError(
+        "gallery/reorder-images",
+        new Error("update count mismatch"),
+        {
+          galleryId: parsedGalleryId.data,
+          expected: validIds.length,
+          actual: affected,
+        },
       );
       return initialError("일부 이미지를 저장하지 못했습니다.");
     }
   } catch (err) {
-    console.error("[gallery/reorder-images] 순서 변경 실패:", err);
+    logServerError("gallery/reorder-images", err, {
+      galleryId: parsedGalleryId.data,
+      orderedIdsCount: validIds.length,
+    });
     return initialError("순서를 저장하지 못했습니다. 다시 시도해주세요.");
   }
 

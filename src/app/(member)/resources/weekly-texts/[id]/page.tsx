@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Download, Printer } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod/v4";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,14 @@ const getWeeklyText = async (id: string) => {
 
 export async function generateMetadata({ params }: WeeklyTextViewerPageProps): Promise<Metadata> {
   const { id } = await params;
-  const text = await getWeeklyText(id);
+
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 Postgres cast 에러 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { title: "주차별 텍스트" };
+  }
+
+  const text = await getWeeklyText(parsedId.data);
 
   if (!text) {
     return { title: "주차별 텍스트" };
@@ -83,7 +91,14 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
   }
 
   const { id } = await params;
-  const text = await getWeeklyText(id);
+
+  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
+  const text = await getWeeklyText(parsedId.data);
 
   if (!text) {
     notFound();

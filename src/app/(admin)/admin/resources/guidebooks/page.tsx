@@ -15,6 +15,7 @@ import { GuidebookRowActions } from "@/app/(admin)/admin/resources/guidebooks/_c
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function AdminGuidebooksPage() {
 
       return { rows, hasDbError: false };
     } catch (error) {
-      console.error("[admin/resources/guidebooks] DB 조회 오류:", error);
+      logServerError("admin/resources/guidebooks", error);
       return { rows: [], hasDbError: true };
     }
   })();

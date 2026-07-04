@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { z } from "zod/v4";
 import { FacultyForm } from "@/app/(admin)/admin/faculty/_components/faculty-form";
 import { updateFaculty } from "@/features/faculty/actions";
 import { requireAdmin } from "@/lib/admin";
@@ -18,13 +19,22 @@ export default async function EditFacultyPage({ params }: EditFacultyPageProps) 
   await requireAdmin();
 
   const { id } = await params;
-  const [facultyMember] = await db.select().from(faculty).where(eq(faculty.id, id)).limit(1);
+
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
+  const [facultyMember] = await db.select().from(faculty).where(eq(faculty.id, parsedId.data)).limit(1);
 
   if (!facultyMember) {
     notFound();
   }
 
-  const updateAction = updateFaculty.bind(null, id);
+  const updateAction = updateFaculty.bind(null, parsedId.data);
 
   return (
     <FacultyForm

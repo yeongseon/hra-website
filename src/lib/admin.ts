@@ -1,5 +1,6 @@
 import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
+import { logServerError } from "@/lib/errors";
 import { redirect } from "next/navigation";
 
 export async function requireAdmin(): Promise<Session> {
@@ -8,7 +9,7 @@ export async function requireAdmin(): Promise<Session> {
   try {
     session = await auth();
   } catch (error) {
-    console.error("[admin] 인증 확인 실패:", error);
+    logServerError("admin/requireAdmin", error);
     redirect("/system-error");
   }
 

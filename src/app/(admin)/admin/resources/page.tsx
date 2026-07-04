@@ -26,6 +26,7 @@ import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resou
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { classLogs, cohorts, users } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function AdminClassLogsPage() {
 
       return { rows, hasDbError: false };
     } catch (error) {
-      console.error("[admin/resources] DB 조회 오류:", error);
+      logServerError("admin/resources", error);
       return { rows: [], hasDbError: true };
     }
   })();

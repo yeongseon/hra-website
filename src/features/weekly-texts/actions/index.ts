@@ -25,6 +25,7 @@ import { auth } from "@/lib/auth";
 import { deleteBlobIfExists, deleteMarkdownBlobImages, extractMarkdownBlobUrls } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -247,7 +248,13 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
 
     return { success: true };
   } catch (error) {
-    console.error("[weekly-texts/create] 생성 오류:", error);
+    logServerError("weekly-texts/create", error, {
+      cohortId: parsed.data.cohortId || null,
+      textType: parsed.data.textType ?? null,
+      hasBody: !!parsed.data.body,
+      hasFile: !!validatedFile.file,
+      hasImages: validatedImages.files.length > 0,
+    });
 
     return {
       success: false,
@@ -411,7 +418,9 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
 
     return { success: true };
   } catch (error) {
-    console.error("[weekly-texts/update] 수정 오류:", error);
+    logServerError("weekly-texts/update", error, {
+      id: parsedId.data,
+    });
     return { success: false, error: "주차별 텍스트 수정에 실패했습니다." };
   }
 }
@@ -462,7 +471,9 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
 
     return { success: true };
   } catch (error) {
-    console.error("[weekly-texts/delete] 삭제 오류:", error);
+    logServerError("weekly-texts/delete", error, {
+      id: parsedId.data,
+    });
 
     return {
       success: false,

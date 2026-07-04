@@ -13,6 +13,7 @@ import {
   applicationQuestions,
   applicationQuestionOptions,
 } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const optionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -56,16 +57,34 @@ export async function saveFormQuestions(
   // requireAdmin은 미인증 시 /login으로 redirect (NEXT_REDIRECT throw)되므로 catch 금지
   await requireAdmin();
 
+  // 🛡️ formId 를 DB 조회 전에 UUID 검증합니다 (#70).
+  // raw string 이 DB 로 흘러가면 Postgres 캐스팅 에러의 context 로 새어나가므로 사전 차단합니다.
+  // 검증 실패 시 후속 로그 context 에도 원본 formId 대신 boolean flag(hasFormId) 만 남깁니다.
+  const parsedFormId = z.uuid().safeParse(formId);
+  if (!parsedFormId.success) {
+    return {
+      success: false,
+      message: "잘못된 요청입니다.",
+    };
+  }
+  const validFormId = parsedFormId.data;
+
   // 1. 데이터 검증 (description이 빈 문자열일 경우 null로 변환)
   const sanitizedQuestions = questions.map(q => ({
     ...q,
     description: q.description || null,
   }));
 
-  const parsed = saveQuestionsSchema.safeParse({ formId, questions: sanitizedQuestions });
+  const parsed = saveQuestionsSchema.safeParse({ formId: validFormId, questions: sanitizedQuestions });
 
   if (!parsed.success) {
-    console.error("Zod 검증 실패:", parsed.error.issues);
+    logServerError("application-questions/save/validation", parsed.error, {
+      formId: validFormId,
+      issueCount: parsed.error.issues.length,
+      issueFields: parsed.error.issues
+        .map((i) => i.path.join("."))
+        .join(","),
+    });
     return {
       success: false,
       message: parsed.error.issues[0].message,
@@ -77,7 +96,7 @@ export async function saveFormQuestions(
     const existingQuestions = await db
       .select({ id: applicationQuestions.id })
       .from(applicationQuestions)
-      .where(eq(applicationQuestions.formId, formId));
+      .where(eq(applicationQuestions.formId, validFormId));
 
     const existingQuestionIds = existingQuestions.map(q => q.id);
     const incomingQuestionIds = parsed.data.questions
@@ -136,7 +155,7 @@ export async function saveFormQuestions(
         const [newQuestion] = await db
           .insert(applicationQuestions)
           .values({
-            formId,
+            formId: validFormId,
             title: q.title,
             description: q.description,
             type: q.type,
@@ -165,13 +184,16 @@ export async function saveFormQuestions(
       }
     }
 
-    revalidatePath(`/admin/application-forms/${formId}`);
+    revalidatePath(`/admin/application-forms/${validFormId}`);
     return {
       success: true,
       message: "질문 항목이 저장되었습니다.",
     };
   } catch (error) {
-    console.error("질문 저장 중 오류:", error);
+    logServerError("application-questions/save", error, {
+      formId: validFormId,
+      questionCount: parsed.data.questions.length,
+    });
     return {
       success: false,
       message: "질문 저장 중 오류가 발생했습니다: " + (error instanceof Error ? error.message : "알 수 없는 오류"),

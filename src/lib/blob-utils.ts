@@ -4,6 +4,7 @@
  */
 
 import { del } from "@vercel/blob";
+import { logServerError, redactBlobUrl } from "@/lib/errors";
 
 /**
  * 삭제 대상이 Blob 저장소 URL인지 판별한다.
@@ -26,12 +27,18 @@ export function isBlobUrl(url: string): boolean {
 
 /**
  * Blob 삭제 실패를 로그로 남기고 다음 정리 작업을 계속한다.
+ *
+ * PII 정책 (#70):
+ *   - error: sanitizeError 로 감싼다 (Vercel Blob SDK 는 실패 시 응답 body 를 message 에 담을 수 있음)
+ *   - url: raw 로 로그하면 사용자 지정 파일명 (예: "홍길동-프로필.jpg") 이 노출되므로
+ *     redactBlobUrl 로 host + 첫 path segment 만 남긴다. 어느 feature (alumni/gallery 등)
+ *     의 Blob 삭제가 실패했는지 debug 하기에 충분하다.
  */
 async function safelyDeleteBlobUrl(url: string): Promise<void> {
   try {
     await del(url);
   } catch (error) {
-    console.error("[blob-utils/delete] Blob 삭제 오류:", { url, error });
+    logServerError("blob-utils/delete", error, { blobUrl: redactBlobUrl(url) });
   }
 }
 

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { PrintView } from "./_print-view";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -27,6 +28,12 @@ export default async function ClassLogPrintPage({ params }: Props) {
 
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   const [log] = await db
     .select({
       id: classLogs.id,
@@ -37,7 +44,7 @@ export default async function ClassLogPrintPage({ params }: Props) {
     })
     .from(classLogs)
     .leftJoin(users, eq(classLogs.authorId, users.id))
-    .where(eq(classLogs.id, id))
+    .where(eq(classLogs.id, parsedId.data))
     .limit(1);
 
   if (!log) {

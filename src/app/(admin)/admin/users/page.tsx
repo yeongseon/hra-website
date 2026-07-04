@@ -19,6 +19,7 @@ import {
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts, users } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 import { UserGroupButton } from "./_components/user-role-button";
 
 export const dynamic = "force-dynamic";
@@ -75,7 +76,7 @@ export default async function AdminUsersPage() {
           .orderBy(desc(users.createdAt));
         return { rows, hasDbError: false };
       } catch (error) {
-        console.error("[admin/users] DB 조회 오류:", error);
+        logServerError("admin/users", error);
         return { rows: [], hasDbError: true };
       }
     })(),

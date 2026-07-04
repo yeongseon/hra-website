@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logServerError } from "@/lib/errors";
 
 const authProxy = auth(() => {
   return NextResponse.next();
@@ -12,7 +13,7 @@ export default async function proxy(
     return await authProxy(...args);
   } catch (error) {
     const [request] = args;
-    console.error("[proxy] 인증 확인 실패:", error);
+    logServerError("proxy/auth", error);
     return NextResponse.redirect(new URL("/system-error", request.url));
   }
 }

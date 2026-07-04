@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Eye, User, Printer } from "lucide-react";
 import { notFound } from "next/navigation";
 import { asc, eq, sql } from "drizzle-orm";
+import { z } from "zod/v4";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,16 @@ const getClassLogDetail = async (id: string) => {
 
 export async function generateMetadata({ params }: ResourceDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const data = await getClassLogDetail(id);
+
+  // Oracle Phase D BLOCK 수정 — 검증되지 않은 UUID를 DB 쿼리에 넘기면
+  // Postgres cast 에러가 원본 그대로 Vercel Logs에 노출되어 개인정보(라우트 파라미터)가
+  // 서버 로그에 남을 위험이 있음. z.uuid() 로 사전 차단하고 안전한 fallback 을 반환.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return { title: "자료실" };
+  }
+
+  const data = await getClassLogDetail(parsedId.data);
 
   if (!data) {
     return { title: "자료실" };
@@ -70,7 +81,15 @@ export async function generateMetadata({ params }: ResourceDetailPageProps): Pro
 
 export default async function ResourceDetailPage({ params }: ResourceDetailPageProps) {
   const { id } = await params;
-  const data = await getClassLogDetail(id);
+
+  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증하여
+  // Postgres cast 에러로 인한 raw error 로깅(개인정보 leak)을 예방한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
+  const data = await getClassLogDetail(parsedId.data);
 
   if (!data) {
     notFound();
@@ -83,7 +102,7 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
     .set({ viewCount: sql`${classLogs.viewCount} + 1` })
     .where(eq(classLogs.id, log.id))
     .catch((err: unknown) => {
-      console.error("수업일지 조회수 업데이트 실패:", err);
+      logServerError("member/resources/viewCount", err, { id: log.id });
     });
 
   return (

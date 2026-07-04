@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
+import { z } from "zod/v4";
 import { ChevronLeft, FileText, User, Mail, Phone, Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -43,9 +44,17 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
   await requireAdmin();
   const { id } = await params;
 
+  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
+  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
+  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    notFound();
+  }
+
   // 1. 양식 정보 조회
   const form = await db.query.applicationForms.findFirst({
-    where: eq(applicationForms.id, id),
+    where: eq(applicationForms.id, parsedId.data),
   });
 
   if (!form) {
@@ -54,7 +63,7 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
 
   // 2. 제출 내역 조회
   const submissions = await db.query.applicationSubmissions.findMany({
-    where: eq(applicationSubmissions.formId, id),
+    where: eq(applicationSubmissions.formId, parsedId.data),
     orderBy: [desc(applicationSubmissions.submittedAt)],
   });
 
@@ -76,7 +85,7 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <CsvExportButton formId={id} />
+            <CsvExportButton formId={parsedId.data} />
             <Badge variant="outline" className="w-fit h-fit px-3 py-1 bg-slate-50 text-slate-700 font-bold">
               총 {submissions.length}건
             </Badge>
@@ -144,7 +153,7 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
                       </TableCell>
                       <TableCell className="text-right">
                         <Link
-                          href={`/admin/application-forms/${id}/submissions/${sub.id}`}
+                          href={`/admin/application-forms/${parsedId.data}/submissions/${sub.id}`}
                           className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                         >
                           내용 보기

@@ -10,6 +10,7 @@ import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const maxImageSize = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -157,7 +158,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
       );
     }
   } catch (error) {
-    console.error("Failed to create alumni story:", error);
+    logServerError("alumni/create", error);
     return {
       success: false,
       message: "데이터베이스 저장 중 오류가 발생했습니다. DB 마이그레이션 상태를 확인해주세요.",
@@ -232,7 +233,7 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
       );
     }
   } catch (error) {
-    console.error("Failed to update alumni story:", error);
+    logServerError("alumni/update", error, { id: parsedId.data });
     return {
       success: false,
       message: "수정 중 오류가 발생했습니다. DB 마이그레이션 상태를 확인해주세요.",
@@ -279,9 +280,15 @@ export async function reorderAlumniStories(
 ): Promise<{ success: boolean; message: string }> {
   await requireAdmin();
 
-  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+  // Oracle Phase D 5라운드 BLOCK 수정 — orderedIds 각 원소를 UUID 로 사전 검증한다.
+  // 이 배열은 reorderByCase 헬퍼의 `${a.id}::uuid` raw SQL 캐스트로 흘러가는데
+  // UUID 형식이 아닌 값이 도달하면 Postgres cast error 로 raw ID 가 Vercel Logs 에
+  // 노출될 수 있으므로 사전 차단한다.
+  const parsedIds = z.array(z.uuid()).min(1).safeParse(orderedIds);
+  if (!parsedIds.success) {
     return { success: false, message: "유효하지 않은 요청입니다." };
   }
+  const validIds = parsedIds.data;
 
   try {
     const { affected } = await reorderByCase({
@@ -289,18 +296,19 @@ export async function reorderAlumniStories(
       idColumn: alumniStories.id,
       targetColumn: alumniStories.order,
       // 기존 로직 유지: order 는 1-based (1, 2, 3, ...)
-      assignments: orderedIds.map((id, index) => ({ id, value: index + 1 })),
+      assignments: validIds.map((id, index) => ({ id, value: index + 1 })),
     });
 
     // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
-    if (affected !== orderedIds.length) {
-      console.error(
-        `[alumni/reorder] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
-      );
+    if (affected !== validIds.length) {
+      logServerError("alumni/reorder", new Error("update count mismatch"), {
+        expected: validIds.length,
+        actual: affected,
+      });
       return { success: false, message: "일부 항목을 저장하지 못했습니다." };
     }
   } catch (err) {
-    console.error("[alumni/reorder] 순서 변경 실패:", err);
+    logServerError("alumni/reorder", err);
     return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
   }
 
@@ -330,7 +338,7 @@ export async function deleteAlumniStory(id: string): Promise<void> {
 
     await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));
   } catch (error) {
-    console.error("Failed to delete alumni story:", error);
+    logServerError("alumni/delete", error, { id: parsedId.data });
     // 서버 액션 void 반환형이라 에러 발생 시 redirect 등으로 처리하거나 에러를 던질 수 있음
     throw new Error("삭제 중 오류가 발생했습니다.");
   }

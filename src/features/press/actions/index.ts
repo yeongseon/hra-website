@@ -9,6 +9,7 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { pressArticles } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const pressArticleFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
@@ -162,9 +163,15 @@ export async function reorderPressArticles(
 ): Promise<{ success: boolean; message: string }> {
   await requireAdmin();
 
-  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+  // Oracle Phase D 5라운드 BLOCK 수정 — orderedIds 각 원소를 UUID 로 사전 검증한다.
+  // 이 배열은 reorderByCase 헬퍼의 `${a.id}::uuid` raw SQL 캐스트로 흘러가는데
+  // UUID 형식이 아닌 값이 도달하면 Postgres cast error 로 raw ID 가 Vercel Logs 에
+  // 노출될 수 있으므로 사전 차단한다.
+  const parsedIds = z.array(z.uuid()).min(1).safeParse(orderedIds);
+  if (!parsedIds.success) {
     return { success: false, message: "유효하지 않은 요청입니다." };
   }
+  const validIds = parsedIds.data;
 
   try {
     const { affected } = await reorderByCase({
@@ -172,18 +179,25 @@ export async function reorderPressArticles(
       idColumn: pressArticles.id,
       targetColumn: pressArticles.order,
       // 기존 로직 유지: order 는 1-based (1, 2, 3, ...)
-      assignments: orderedIds.map((id, index) => ({ id, value: index + 1 })),
+      assignments: validIds.map((id, index) => ({ id, value: index + 1 })),
     });
 
     // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
-    if (affected !== orderedIds.length) {
-      console.error(
-        `[press/reorder] 예상 갱신 수: ${orderedIds.length}, 실제: ${affected}`
+    if (affected !== validIds.length) {
+      logServerError(
+        "press/reorder",
+        new Error("update count mismatch"),
+        {
+          expected: validIds.length,
+          actual: affected,
+        },
       );
       return { success: false, message: "일부 항목을 저장하지 못했습니다." };
     }
   } catch (err) {
-    console.error("[press/reorder] 순서 변경 실패:", err);
+    logServerError("press/reorder", err, {
+      orderedIdsCount: validIds.length,
+    });
     return { success: false, message: "순서를 저장하지 못했습니다. 다시 시도해주세요." };
   }
 

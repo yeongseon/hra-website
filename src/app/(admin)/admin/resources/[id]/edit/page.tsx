@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
+import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClassLogForm } from "@/app/(admin)/admin/resources/_components/class-log-form";
@@ -16,6 +17,7 @@ import { updateClassLog } from "@/features/class-logs/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { classLogs, cohorts } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,23 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
 
   const { id } = await params;
 
+  // 🛡️ route id 를 DB 조회 전에 UUID 형식으로 검증합니다 (#70).
+  // raw string(예: 이메일)이 그대로 DB 로 넘어가면 Postgres 캐스팅 에러의 context 로 새어나가므로,
+  // 사전 검증으로 PII 유출과 SQL 에러 노이즈를 동시에 차단합니다.
+  const parsedId = z.uuid().safeParse(id);
+  if (!parsedId.success) {
+    return (
+      <section className="mx-auto max-w-4xl px-6 py-10">
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="py-10 text-center text-slate-600">
+            잘못된 요청입니다.
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+  const validId = parsedId.data;
+
   // 데이터 조회와 오류 처리를 렌더 바깥에서 마무리해 React lint 규칙을 지킵니다.
   const { log, cohortRows, hasDbError } = await (async () => {
     try {
@@ -46,7 +65,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
           cohortId: classLogs.cohortId,
         })
         .from(classLogs)
-        .where(eq(classLogs.id, id))
+        .where(eq(classLogs.id, validId))
         .limit(1);
 
       const cohortRows = await db
@@ -56,7 +75,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
 
       return { log, cohortRows, hasDbError: false };
     } catch (error) {
-      console.error("[admin/resources/edit] DB 조회 오류:", error);
+      logServerError("admin/resources/edit", error, { id: validId });
       return { log: null, cohortRows: [], hasDbError: true };
     }
   })();
