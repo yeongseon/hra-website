@@ -164,19 +164,6 @@ const uploadWeeklyTextImages = async (weeklyTextId: string, title: string, files
   return uploadedImages;
 };
 
-const deleteWeeklyTextImagesFromBlob = async (weeklyTextId: string) => {
-  const existingImages = await db
-    .select({ url: weeklyTextImages.url })
-    .from(weeklyTextImages)
-    .where(eq(weeklyTextImages.weeklyTextId, weeklyTextId));
-
-  if (existingImages.length === 0) {
-    return;
-  }
-
-  await Promise.all(existingImages.map((image) => deleteBlobIfExists(image.url)));
-};
-
 const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
   const rawTextType = formData.get("textType");
   const parsedTextType =
@@ -357,14 +344,17 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
 
     let fileUrl = existing.fileUrl;
     let fileName = existing.fileName;
+    let uploadedNewBlobUrl: string | null = null;
 
     if (validatedFile.file) {
-      await deleteBlobIfExists(existing.fileUrl);
+      // 순서 원칙: 새 blob 업로드 → DB update → 옛 blob cleanup (best-effort).
+      // 옛 blob 을 먼저 지우면 이후 단계 실패 시 되돌릴 수 없다.
       const blob = await put(
         `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
         validatedFile.file,
         { access: "public" },
       );
+      uploadedNewBlobUrl = blob.url;
       fileUrl = blob.url;
       fileName = validatedFile.file.name;
     }
@@ -374,21 +364,39 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
       : null;
 
     if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      // 업로드 성공 후 검증 실패 → 새 blob 은 참조되지 않으므로 되지운다.
+      if (uploadedNewBlobUrl) {
+        await deleteBlobIfExists(uploadedNewBlobUrl);
+      }
       return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
     }
 
-    await db
-      .update(weeklyTexts)
-      .set({
-        title: parsed.data.title,
-        cohortId: parsed.data.cohortId || null,
-        textType: parsed.data.textType ?? null,
-        classDate: classDateObj,
-        body: parsed.data.body ?? existing.body,
-        fileUrl,
-        fileName,
-      })
-      .where(eq(weeklyTexts.id, parsedId.data));
+    try {
+      await db
+        .update(weeklyTexts)
+        .set({
+          title: parsed.data.title,
+          cohortId: parsed.data.cohortId || null,
+          textType: parsed.data.textType ?? null,
+          classDate: classDateObj,
+          body: parsed.data.body ?? existing.body,
+          fileUrl,
+          fileName,
+        })
+        .where(eq(weeklyTexts.id, parsedId.data));
+    } catch (dbError) {
+      // 업로드 성공 후 DB 실패 → 새 blob 은 참조되지 않으므로 되지운다.
+      if (uploadedNewBlobUrl) {
+        await deleteBlobIfExists(uploadedNewBlobUrl);
+      }
+      throw dbError;
+    }
+
+    // DB update 성공 → 옛 blob cleanup (best-effort).
+    // uploadedNewBlobUrl 이 있을 때만 = 실제로 교체가 일어난 경우만 삭제 대상.
+    if (uploadedNewBlobUrl && existing.fileUrl && existing.fileUrl !== uploadedNewBlobUrl) {
+      await deleteBlobIfExists(existing.fileUrl);
+    }
 
     revalidateWeeklyTextPaths();
 
@@ -411,6 +419,8 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
   }
 
   try {
+    // 삭제 전 스냅샷: 파일 URL + 마크다운 본문 + 첨부 이미지 URL.
+    // DB 먼저 지우면 참조 정보가 사라져 blob cleanup 불가.
     const target = await db.query.weeklyTexts.findFirst({
       where: eq(weeklyTexts.id, parsedId.data),
     });
@@ -422,13 +432,22 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
       };
     }
 
-    await deleteBlobIfExists(target.fileUrl);
+    const attachedImageRows = await db
+      .select({ url: weeklyTextImages.url })
+      .from(weeklyTextImages)
+      .where(eq(weeklyTextImages.weeklyTextId, parsedId.data));
 
-    await deleteMarkdownBlobImages(target.body ?? "");
-
-    await deleteWeeklyTextImagesFromBlob(parsedId.data);
-
+    // 순서 원칙: DB 먼저 삭제 → blob cleanup (best-effort).
+    // 역순이면 DB 삭제 실패 시 깨진 URL 참조가 남는다.
+    // weeklyTextImages 는 onDelete: "cascade" 로 자동 삭제된다.
     await db.delete(weeklyTexts).where(eq(weeklyTexts.id, parsedId.data));
+
+    // cleanup 실패는 로그만 남고 액션은 성공으로 끝난다 (orphan blob 만 남을 뿐 사용자 영향 없음).
+    await Promise.all([
+      deleteBlobIfExists(target.fileUrl),
+      deleteMarkdownBlobImages(target.body ?? ""),
+      ...attachedImageRows.map((img) => deleteBlobIfExists(img.url)),
+    ]);
 
     revalidateWeeklyTextPaths();
 

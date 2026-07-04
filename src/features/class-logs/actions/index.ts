@@ -21,7 +21,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { deleteMarkdownBlobImages, deleteBlobIfExists } from "@/lib/blob-utils";
@@ -175,19 +175,6 @@ const uploadClassLogImages = async (classLogId: string, title: string, files: Fi
   await db.insert(classLogImages).values(uploadedImages);
 
   return uploadedImages;
-};
-
-const deleteClassLogImagesFromBlob = async (classLogId: string) => {
-  const existingImages = await db
-    .select({ url: classLogImages.url })
-    .from(classLogImages)
-    .where(eq(classLogImages.classLogId, classLogId));
-
-  if (existingImages.length === 0) {
-    return;
-  }
-
-  await Promise.all(existingImages.map((image) => deleteBlobIfExists(image.url)));
 };
 
 /**
@@ -417,6 +404,9 @@ export async function updateClassLog(
   }
 
   try {
+    // 1단계) 텍스트 필드부터 저장한다.
+    //   이미지 교체 로직과 분리해 두면, 이미지 처리 중 실패해도 텍스트 수정은 이미 반영되어
+    //   사용자가 재시도 시 이미지만 다시 올리면 되도록 UX 가 단순해진다.
     await db
       .update(classLogs)
       .set({
@@ -428,9 +418,73 @@ export async function updateClassLog(
       .where(eq(classLogs.id, parsedId.data));
 
     if (validatedImages.files.length > 0) {
-      await deleteClassLogImagesFromBlob(parsedId.data);
-      await db.delete(classLogImages).where(eq(classLogImages.classLogId, parsedId.data));
-      await uploadClassLogImages(parsedId.data, parsed.data.title, validatedImages.files);
+      // 2단계) 기존 이미지의 id·url 스냅샷 확보.
+      //   삭제 시점에 이 id 집합만 정확히 지워야 새로 insert 한 row 를 오삭제하지 않는다.
+      const oldImageRows = await db
+        .select({ id: classLogImages.id, url: classLogImages.url })
+        .from(classLogImages)
+        .where(eq(classLogImages.classLogId, parsedId.data));
+
+      // 3단계) 새 이미지를 순차 업로드.
+      //   Promise.all 을 쓰지 않는 이유: 중간 실패 시 이미 업로드된 URL 을 회수하기 위함.
+      //   실패 시 uploadedUrls 를 best-effort 로 되지운 뒤 예외를 재throw 한다.
+      const uploadedUrls: string[] = [];
+      const newRows: (typeof classLogImages.$inferInsert)[] = [];
+
+      try {
+        for (let i = 0; i < validatedImages.files.length; i += 1) {
+          const file = validatedImages.files[i];
+          const blob = await put(
+            `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
+            file,
+            { access: "public" },
+          );
+          uploadedUrls.push(blob.url);
+          newRows.push({
+            classLogId: parsedId.data,
+            url: blob.url,
+            alt: `${parsed.data.title} 사진 ${i + 1}`,
+            order: i,
+          });
+        }
+      } catch (uploadError) {
+        // 업로드 도중 실패 → 새 blob 은 아무데도 참조되지 않으므로 안전하게 정리한다.
+        await Promise.all(uploadedUrls.map((url) => deleteBlobIfExists(url)));
+        throw uploadError;
+      }
+
+      // 4단계) 새 이미지 row 를 먼저 insert 한다.
+      //   과거 구현처럼 "old delete → new insert" 순서면 insert 실패 시 이미지가 아예 사라진 상태가 되어
+      //   사용자 관점에서 데이터 유실과 동일하다.
+      //   여기서는 짧게나마 old+new 가 함께 보이는 창을 감수하고 참조 유지를 우선한다.
+      try {
+        await db.insert(classLogImages).values(newRows);
+      } catch (insertError) {
+        // insert 실패 → 새 blob 은 아직 참조되지 않으므로 되지운다.
+        await Promise.all(uploadedUrls.map((url) => deleteBlobIfExists(url)));
+        throw insertError;
+      }
+
+      // 5단계) 기존 row 만 id 기준으로 정확히 삭제.
+      //   삭제 실패 시 옛 blob cleanup 은 절대 하지 않는다 (DB 가 여전히 옛 URL 을 참조 중).
+      if (oldImageRows.length > 0) {
+        try {
+          await db.delete(classLogImages).where(
+            inArray(
+              classLogImages.id,
+              oldImageRows.map((img) => img.id),
+            ),
+          );
+        } catch (deleteError) {
+          console.error("[class-logs/update] 기존 이미지 row 삭제 실패:", deleteError);
+          throw deleteError;
+        }
+
+        // 6단계) 옛 blob cleanup (best-effort).
+        //   deleteBlobIfExists 는 내부에서 예외를 삼키므로 여기서 실패해도 액션은 성공으로 끝난다.
+        //   최악의 경우 orphan blob 이 남을 뿐이며, DB 참조는 이미 새 URL 로 전환되어 있다.
+        await Promise.all(oldImageRows.map((img) => deleteBlobIfExists(img.url)));
+      }
     }
 
     revalidateClassLogPaths();
@@ -474,6 +528,8 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
   }
 
   try {
+    // 삭제 전 스냅샷: 본문(마크다운 임베드) + 첨부 이미지 URL.
+    // DB 를 먼저 지우면 참조 정보가 사라져 blob cleanup 불가.
     const target = await db.query.classLogs.findFirst({
       where: eq(classLogs.id, parsedId.data),
       columns: {
@@ -488,10 +544,21 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
       };
     }
 
-    await deleteMarkdownBlobImages(target.content);
+    const attachedImageRows = await db
+      .select({ url: classLogImages.url })
+      .from(classLogImages)
+      .where(eq(classLogImages.classLogId, parsedId.data));
 
-    await deleteClassLogImagesFromBlob(parsedId.data);
+    // 순서 원칙: DB 먼저 삭제 → blob cleanup (best-effort).
+    // 역순으로 blob 을 먼저 지우면 DB 삭제 실패 시 깨진 URL 참조가 남는다.
+    // classLogImages 는 onDelete: "cascade" 로 자동 삭제된다.
     await db.delete(classLogs).where(eq(classLogs.id, parsedId.data));
+
+    // cleanup 실패는 로그만 남고 액션은 성공으로 끝난다 (orphan blob 만 남을 뿐 사용자 영향 없음).
+    await Promise.all([
+      deleteMarkdownBlobImages(target.content),
+      ...attachedImageRows.map((img) => deleteBlobIfExists(img.url)),
+    ]);
 
     revalidateClassLogPaths();
 
