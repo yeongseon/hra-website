@@ -17,6 +17,7 @@
     "seed-cohorts": "node --env-file=.env scripts/seed-cohorts.mjs",
     "db:push": "drizzle-kit push",
     "db:migrate-alumni-featured": "node --env-file=.env scripts/migrate-add-alumni-featured.mjs",
+    "db:migrate-user-session-version": "node --env-file=.env scripts/migrate-add-user-session-version.mjs",
     "prepare": "husky"
   },
   "dependencies": {

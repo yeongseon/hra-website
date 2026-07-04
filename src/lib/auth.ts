@@ -27,41 +27,14 @@ import Kakao from "next-auth/providers/kakao";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  isUserRole,
+  isValidUuid,
+  pickJwtLookupCriteria,
+  resolveJwtSession,
+} from "@/lib/auth-session";
 
 const MEMBER_ONLY_PREFIXES = ["/resources", "/member", "/mypage"] as const;
-
-/**
- * 사용자 role 값의 런타임 검증용 상수 & type guard (#75)
- *
- * 배경: session 콜백에서 `token.role as "ADMIN" | ...` 타입 단언을 사용했다.
- *   next-auth.d.ts 의 JWT augmentation 으로 token.role 은 컴파일 타임에는 UserRole 이지만,
- *   런타임에서 token 이 오래된 세션 (schema migration 이전) 이거나 외부 요인으로 role 이
- *   비어있거나 잘못된 값일 수 있다. 이때 `as` 단언은 위험을 감춘다.
- *
- * 해결: 상수 배열 기반 type guard 로 검증 후 fallback (PENDING) 을 명시하여 defense-in-depth.
- *   schema.ts 의 userRoleEnum 정의와 값이 항상 일치해야 한다.
- */
-const USER_ROLES = ["ADMIN", "FACULTY", "MEMBER", "PENDING"] as const;
-type UserRole = (typeof USER_ROLES)[number];
-
-function isUserRole(value: unknown): value is UserRole {
-  return typeof value === "string" && (USER_ROLES as readonly string[]).includes(value);
-}
-
-/**
- * UUID 형식 검증용 정규식 (#75)
- *
- * users.id 는 Postgres UUID 컬럼이므로, session.user.id 로 흘러가는 값도 UUID 형식이어야 한다.
- * 단순히 "빈 문자열이 아님" 만 검사하면 "not-a-uuid" 같은 값이 INSERT/SELECT 에 도달해
- * invalid_input_syntax 오류를 유발할 수 있다.
- *
- * 표준 8-4-4-4-12 헥사 형식만 허용 (v1~v5 모두 커버). 정규식 매칭 비용은 세션당 1회, 무시 가능.
- */
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isValidUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_PATTERN.test(value);
-}
 
 /**
  * Timing attack 방어용 dummy bcrypt hash (pre-computed 상수)
@@ -250,27 +223,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     /**
-     * jwt 콜백: JWT 토큰에 사용자 DB 정보 추가
-     * 
-     * 소셜 로그인은 외부 서비스에서 사용자 정보를 받아오므로,
-     * 우리 DB에서 해당 사용자를 찾아 id와 role을 토큰에 추가합니다.
+     * jwt 콜백: JWT 토큰에 사용자 DB 정보 추가 및 세션 무효화 판단 (#68, #74)
+     *
+     * 세션 무효화 판단은 pure helper `resolveJwtSession` 에 위임하여 단위 테스트로 회귀 검증한다.
+     * DB 조회 대상은 pure helper `pickJwtLookupCriteria` 가 결정한다 (id 우선, email fallback).
+     *
+     * 성능 (#74): findFirst 의 `columns` 를 명시하여 passwordHash/image 등 불필요한 컬럼을
+     *   전송하지 않는다. Neon serverless 커넥션 오버헤드는 남지만 payload·역직렬화 비용을 줄인다.
      */
     async jwt({ token }) {
-      if (!token.email) {
-        return token;
+      const criteria = pickJwtLookupCriteria(token);
+      if (!criteria) {
+        return null;
       }
 
       const dbUser = await db.query.users.findFirst({
-        where: eq(users.email, token.email),
+        where:
+          criteria.by === "id"
+            ? eq(users.id, criteria.value)
+            : eq(users.email, criteria.value),
+        columns: {
+          id: true,
+          role: true,
+          name: true,
+          sessionVersion: true,
+        },
       });
 
-      if (dbUser) {
-        token.id = dbUser.id;
-        token.role = dbUser.role;
-        token.name = dbUser.name;
-      }
-
-      return token;
+      return resolveJwtSession(token, dbUser);
     },
 
     /**

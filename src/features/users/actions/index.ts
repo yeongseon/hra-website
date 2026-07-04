@@ -90,16 +90,21 @@ export async function updateUserGroup(
   const newCohortId = isFixedRole ? null : parsed.data.groupValue;
 
   /*
-   * 마지막 ADMIN 소실 방지 — write-skew 방지를 위해 단일 SQL 로 원자적으로 처리.
+   * 마지막 ADMIN 소실 방지 + 세션 무효화 (#68) 를 단일 SQL 로 원자 처리.
    *
-   * check-then-act (app 레벨 count + 별도 update) 는 두 관리자가 동시에 서로를 강등시키면
-   * 둘 다 count>=2 를 보고 통과해 결국 ADMIN 이 0명이 되는 race 가 있다.
+   * 1. write-skew 방지:
+   *    check-then-act (app 레벨 count + 별도 update) 는 두 관리자가 동시에 서로를 강등시키면
+   *    둘 다 count>=2 를 보고 통과해 결국 ADMIN 이 0명이 되는 race 가 있다.
+   *    CTE 의 `SELECT ... FOR UPDATE` 는 statement 실행 동안 모든 ADMIN row 를 잠근다.
+   *    (neon-http 는 트랜잭션 미지원이지만 단일 statement 는 원자적)
    *
-   * 아래 CTE 의 `SELECT ... FOR UPDATE` 는 statement 실행 동안 모든 ADMIN row 를 잠근다.
-   * 두 concurrent request 는 같은 row 를 lock 하려 하므로 자연스럽게 직렬화된다.
-   * (neon-http 는 트랜잭션 미지원이지만 단일 statement 는 원자적이므로 이 패턴이 유효)
+   * 2. session_version bump (#68):
+   *    role 또는 cohort_id 가 실제로 변경된 경우에만 session_version + 1.
+   *    IS DISTINCT FROM 은 NULL-safe 비교로, NULL <-> UUID 전환도 정확히 감지한다.
+   *    no-op 업데이트 (같은 값 재저장) 는 sessionVersion 을 증가시키지 않아
+   *    다른 디바이스가 불필요하게 강제 로그아웃되는 일을 방지한다.
    *
-   * WHERE 절 3개 OR:
+   * WHERE 절 3개 OR (마지막 ADMIN 소실 방지 부분):
    *  - role <> 'ADMIN'                 : 원래 ADMIN 이 아니면 무조건 통과 (승격/유지)
    *  - newRole = 'ADMIN'               : 새 role 도 ADMIN 이면 no-op / 승격이므로 통과
    *  - (SELECT count FROM lock) > 1    : 잠금된 ADMIN 수가 2 이상이면 강등해도 안전
@@ -112,6 +117,12 @@ export async function updateUserGroup(
     SET
       ${users.role} = ${newRole}::user_role,
       ${users.cohortId} = ${newCohortId}::uuid,
+      ${users.sessionVersion} = CASE
+        WHEN ${users.role} IS DISTINCT FROM ${newRole}::user_role
+          OR ${users.cohortId} IS DISTINCT FROM ${newCohortId}::uuid
+        THEN ${users.sessionVersion} + 1
+        ELSE ${users.sessionVersion}
+      END,
       ${users.updatedAt} = now()
     WHERE ${users.id} = ${parsed.data.userId}::uuid
       AND (
@@ -165,7 +176,14 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
     return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
   }
 
-  // 마지막 ADMIN 삭제 방지 — updateUserGroup 과 동일한 write-skew 방지 패턴
+  /*
+   * write-skew 방지: ADMIN row 를 FOR UPDATE 로 잠근 뒤 count 검사와 DELETE 를
+   *   단일 statement 로 원자 실행 (updateUserGroup 과 대칭 구조).
+   *
+   * 세션 종료 (#68): 삭제 사용자의 JWT 는 sessionVersion bump 없이도 무효화된다.
+   *   auth.ts 의 `resolveJwtSession` 이 dbUser === undefined 인 경우 null 을 반환하여
+   *   next-auth 가 세션 쿠키를 폐기하기 때문.
+   */
   const result = await db.execute(sql`
     WITH admin_lock AS (
       SELECT id FROM ${users} WHERE ${users.role} = 'ADMIN' FOR UPDATE

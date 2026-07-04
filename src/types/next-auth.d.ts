@@ -68,7 +68,12 @@ declare module "next-auth" {
  */
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
-    role: "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
+    // bootstrap (첫 jwt 콜백 이전) 시점에는 DB 조회 전이므로 세 필드 모두 없다.
+    // 값이 없는 상태는 session 콜백의 UUID guard 에 의해 role=PENDING 으로 강등된다 (auth.ts).
+    id?: string;
+    role?: "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
+    // (#68) DB users.session_version 과 대조되어 세션 무효화 여부를 결정한다.
+    // undefined 는 최초 발급 또는 마이그레이션 이전 상태를 의미하며, 첫 lookup 을 통과한다.
+    sessionVersion?: number;
   }
 }

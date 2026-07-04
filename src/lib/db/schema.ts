@@ -87,6 +87,21 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("PENDING"), // 사용자 역할 (기본값: 승인 대기)
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 소속 기수 ID (MEMBER일 때만 의미 있음, 기수 삭제 시 null로 초기화)
   image: text("image"), // 프로필 사진 URL (선택사항)
+  // 세션 무효화 버전 카운터 (#68, #74)
+  //
+  // 배경: JWT 세션 전략에서는 서버가 발급한 토큰이 클라이언트에 저장되므로,
+  //   role 강등·계정 삭제 후에도 브라우저에 남은 기존 토큰이 계속 인증 통과할 수 있다 (stale session).
+  //
+  // 해결: users 테이블에 sessionVersion 을 두고 다음을 강제한다.
+  //   1) jwt 콜백에서 매 요청마다 DB 의 sessionVersion 을 조회한다.
+  //   2) 발급 시점에 토큰에 심어둔 sessionVersion 이 DB 값과 다르면 세션을 무효화(null 반환) 한다.
+  //   3) role/cohort 변경 등 "즉시 로그아웃되어야 하는" 이벤트 발생 시 sessionVersion + 1.
+  //      단, 실제 값이 바뀐 경우에만 증가시켜 no-op update 로 인한 불필요한 강제 로그아웃을 막는다.
+  //
+  // 이 컬럼은 절대 감소하지 않으며, DEFAULT 0 이므로 기존 사용자 backfill 은 자동 처리된다.
+  // 마이그레이션 이전에 발급된 JWT 는 sessionVersion 필드 자체가 없어 최초 lookup 을 통과하고
+  // 그 자리에서 sessionVersion 이 심어져 자연스러운 backfill 이 이루어진다.
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(), // 계정 생성 시간
   updatedAt: timestamp("updated_at")
     .notNull()
