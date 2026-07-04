@@ -74,8 +74,18 @@ src/
 
 ### 회원 역할 (Role)
 - **ADMIN**: 관리자 (모든 기능 접근 가능)
-- **MEMBER**: 일반 멤버 (로그인 후 자료실 접근 가능)
+- **FACULTY**: 교수진 (MEMBER 권한 + 강의자료(`classMaterials`) 업로드 권한 — ADMIN 과 함께 유일)
+- **MEMBER**: 일반 멤버 (로그인 후 자료실 접근 가능, 본인 기수의 주차별 텍스트·수업일지 업로드 가능)
 - **PENDING**: 승인 대기 (로그인 가능하나 자료실 접근 불가, 관리자 승인 필요)
+
+> 권한 매트릭스 (근거: `src/features/class-materials/actions/index.ts:108`, `src/features/weekly-texts/actions/index.ts:286`, `src/features/class-logs/actions/index.ts:195`, `src/lib/auth.ts:250-259`)
+>
+> | 역할 | 자료실 접근 | 강의자료 업로드 | 주차별 텍스트 업로드 | 수업일지 업로드 |
+> |---|---|---|---|---|
+> | ADMIN | ✅ | ✅ | ✅ | ✅ |
+> | FACULTY | ✅ | ✅ | ✅ | ✅ |
+> | MEMBER | ✅ | ❌ | ✅ | ✅ |
+> | PENDING | ❌ | ❌ | ❌ | ❌ |
 
 ## 5. 코딩 패턴
 
