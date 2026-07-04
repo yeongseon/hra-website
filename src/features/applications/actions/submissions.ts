@@ -3,7 +3,7 @@
  */
 "use server";
 
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod/v4";
@@ -432,5 +432,122 @@ export async function deleteApplicationSubmission(
       error,
     });
     return { success: false, message: "삭제 중 오류가 발생했습니다." };
+  }
+}
+
+/**
+ * 지원서 처리 상태 변경 (관리자 승인/거절/재검토)
+ *
+ * 신식 지원 시스템의 `status` 컬럼(PENDING/ACCEPTED/REJECTED)을 갱신하는 유일한 서버 액션.
+ * 관리자 승인/거절의 표준 경로이며, 결정 이력을 감사 로그로 남긴다.
+ *
+ * 감사 로그 정책 — **PII 최소화** (`deleteApplicationSubmission` 정책과 동일):
+ * 지원자의 합격/불합격 결정은 개인 이해관계에 직접 영향을 주는 관리 행위이므로 감사 대상.
+ * 다만 로그에는 식별자(submissionId, formId, adminUserId)와 상태 전이(oldStatus → newStatus)
+ * 만 남기고, 지원자 이름/이메일 등 평문 PII 는 남기지 않는다. 지원자 개인정보 삭제 요청 시
+ * 감사 로그가 잔존하면 삭제 목적이 훼손되므로 최소 정보 원칙을 지킨다.
+ *
+ * 동시성 처리 — **단일 SQL CTE 로 상태 전이 원자화** (write-skew 방지):
+ * neon-http 드라이버는 `db.transaction()` 을 지원하지 않는다 (`src/lib/db/reorder.ts:5`).
+ * `select oldStatus → update` 를 두 문장으로 나누면 다음 race 가 발생한다:
+ *   A: `PENDING` 을 읽음
+ *   B: `ACCEPTED` 로 갱신 후 커밋
+ *   A: `REJECTED` 로 갱신 성공 → 감사 로그는 `PENDING → REJECTED` 로 남지만
+ *      실제 DB 전이는 `ACCEPTED → REJECTED` 였음
+ * 이 왜곡을 막기 위해 CTE 를 사용한다:
+ *   1) `before` CTE 가 `FOR UPDATE` 로 행을 잠그고 oldStatus 를 캡처
+ *      (EvalPlanQual 로 최신 커밋 값을 재조회하여 stale snapshot 을 회피)
+ *   2) `updated` CTE 가 UPDATE 를 수행하고 newStatus 를 RETURNING
+ *   3) 최종 SELECT 가 둘을 조인해 (oldStatus, newStatus) 를 한 문장에서 반환
+ * Postgres 는 단일 statement 를 statement-level atomic 으로 보장하므로 두 CTE 사이에 다른
+ * 세션이 끼어들 수 없고, `FOR UPDATE` 가 concurrent update 를 직렬화한다.
+ * (동일한 CTE + FOR UPDATE 패턴은 `src/features/users/actions/index.ts:107` 에서
+ *  마지막 ADMIN 소실 방지를 위한 write-skew 방지에 이미 사용된다.)
+ */
+export async function updateSubmissionStatus(
+  submissionId: string,
+  newStatus: "PENDING" | "ACCEPTED" | "REJECTED"
+): Promise<{ success: boolean; message: string }> {
+  const session = await requireAdmin();
+
+  const parsedId = z.uuid("잘못된 지원서 ID 입니다.").safeParse(submissionId);
+  if (!parsedId.success) {
+    return {
+      success: false,
+      message: parsedId.error.issues[0]?.message ?? "잘못된 요청입니다.",
+    };
+  }
+
+  const parsedStatus = z
+    .enum(["PENDING", "ACCEPTED", "REJECTED"])
+    .safeParse(newStatus);
+  if (!parsedStatus.success) {
+    return { success: false, message: "잘못된 상태 값입니다." };
+  }
+
+  try {
+    const result = await db.execute<{
+      id: string;
+      form_id: string;
+      old_status: "PENDING" | "ACCEPTED" | "REJECTED";
+      new_status: "PENDING" | "ACCEPTED" | "REJECTED";
+    }>(sql`
+      WITH before AS (
+        SELECT id, form_id, status AS old_status
+        FROM ${applicationSubmissions}
+        WHERE id = ${parsedId.data}::uuid
+        FOR UPDATE
+      ),
+      updated AS (
+        UPDATE ${applicationSubmissions}
+        SET status = ${parsedStatus.data}::application_status
+        WHERE id IN (SELECT id FROM before)
+        RETURNING id, form_id, status AS new_status
+      )
+      SELECT updated.id, updated.form_id, before.old_status, updated.new_status
+      FROM updated
+      JOIN before ON before.id = updated.id
+    `);
+
+    const rows = result.rows;
+    if (rows.length === 0) {
+      // 다른 세션이 이미 삭제한 경우 — 전이가 발생하지 않았으므로 감사 로그를 남기지 않는다
+      return { success: false, message: "지원서를 찾을 수 없습니다." };
+    }
+
+    const [
+      {
+        id: updatedId,
+        form_id: formId,
+        old_status: oldStatus,
+        new_status: newStatusValue,
+      },
+    ] = rows;
+
+    console.info(
+      "[audit][application-submission-status-changed]",
+      JSON.stringify({
+        adminUserId: session.user.id,
+        submissionId: updatedId,
+        formId,
+        oldStatus,
+        newStatus: newStatusValue,
+        changedAt: new Date().toISOString(),
+      })
+    );
+
+    revalidatePath(`/admin/application-forms/${formId}/submissions`);
+    revalidatePath(
+      `/admin/application-forms/${formId}/submissions/${updatedId}`
+    );
+
+    return { success: true, message: "지원서 상태가 변경되었습니다." };
+  } catch (error) {
+    console.error("[application-submission-status-change] 상태 변경 실패:", {
+      submissionId: parsedId.data,
+      adminUserId: session.user.id,
+      error,
+    });
+    return { success: false, message: "상태 변경 중 오류가 발생했습니다." };
   }
 }

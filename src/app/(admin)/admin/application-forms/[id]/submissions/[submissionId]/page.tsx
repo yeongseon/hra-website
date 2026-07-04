@@ -7,7 +7,6 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ChevronLeft, User, Mail, Phone, Calendar, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { requireAdmin } from "@/lib/admin";
@@ -17,6 +16,7 @@ import {
   applicationAnswers,
 } from "@/lib/db/schema";
 import { DeleteSubmissionButton } from "./_components/delete-submission-button";
+import { StatusChangeButton } from "./_components/status-change-button";
 
 export const dynamic = "force-dynamic";
 
@@ -90,13 +90,10 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={
-              submission.status === "PENDING" ? "bg-slate-200 text-slate-700 hover:bg-slate-300" :
-              submission.status === "ACCEPTED" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-              "bg-red-100 text-red-700 hover:bg-red-200"
-            }>
-              {submission.status === "PENDING" ? "검토 대기" : submission.status === "ACCEPTED" ? "합격" : "불합격"}
-            </Badge>
+            <StatusChangeButton
+              submissionId={submission.id}
+              currentStatus={submission.status}
+            />
             <DeleteSubmissionButton
               submissionId={submission.id}
               formId={id}
