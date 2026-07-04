@@ -16,6 +16,7 @@ import {
   applicationSubmissions,
   applicationAnswers,
 } from "@/lib/db/schema";
+import { DeleteSubmissionButton } from "./_components/delete-submission-button";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,15 @@ const formatDateTime = (value: Date) =>
     minute: "2-digit",
     second: "2-digit"
   }).format(value);
+
+const parseChoiceAnswerValue = (rawValue: string): string[] | null => {
+  try {
+    const parsed = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : null;
+  } catch {
+    return null;
+  }
+};
 
 export default async function AdminSubmissionDetailPage({ params }: Props) {
   await requireAdmin();
@@ -79,13 +89,20 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
               [{submission.form.title}] 양식에 제출된 답변 상세 내용입니다.
             </p>
           </div>
-          <Badge className={
-            submission.status === "PENDING" ? "bg-slate-200 text-slate-700 hover:bg-slate-300" :
-            submission.status === "ACCEPTED" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
-            "bg-red-100 text-red-700 hover:bg-red-200"
-          }>
-            {submission.status === "PENDING" ? "검토 대기" : submission.status === "ACCEPTED" ? "합격" : "불합격"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={
+              submission.status === "PENDING" ? "bg-slate-200 text-slate-700 hover:bg-slate-300" :
+              submission.status === "ACCEPTED" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" :
+              "bg-red-100 text-red-700 hover:bg-red-200"
+            }>
+              {submission.status === "PENDING" ? "검토 대기" : submission.status === "ACCEPTED" ? "합격" : "불합격"}
+            </Badge>
+            <DeleteSubmissionButton
+              submissionId={submission.id}
+              formId={id}
+              applicantName={submission.applicantName}
+            />
+          </div>
         </div>
       </div>
 
@@ -161,20 +178,17 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                     
                     <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
                       <div className="text-slate-800 whitespace-pre-wrap leading-relaxed">
-                        {/* 답변 값이 JSON 문자열(체크박스)인 경우 파싱해서 보여줌 */}
                         {(() => {
-                          try {
-                            const parsed = JSON.parse(ans.value);
-                            if (Array.isArray(parsed)) {
-                              return (
-                                <ul className="list-disc list-inside space-y-1.5">
-                                  {parsed.map((v, i) => (
-                                    <li key={i} className="text-slate-700 font-medium">{v}</li>
-                                  ))}
-                                </ul>
-                              );
-                            }
-                          } catch {}
+                          const choices = parseChoiceAnswerValue(ans.value);
+                          if (choices) {
+                            return (
+                              <ul className="list-disc list-inside space-y-1.5">
+                                {choices.map((v) => (
+                                  <li key={`${ans.id}-${v}`} className="text-slate-700 font-medium">{v}</li>
+                                ))}
+                              </ul>
+                            );
+                          }
                           return ans.value;
                         })()}
                       </div>

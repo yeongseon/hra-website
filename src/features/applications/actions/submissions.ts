@@ -347,3 +347,90 @@ export async function exportSubmissionsToCsv(formId: string) {
     return { success: false, message: "데이터 추출 중 오류가 발생했습니다." };
   }
 }
+
+/**
+ * 지원자 개인정보(제출된 지원서) 관리자 삭제
+ *
+ * 개인정보보호법 §36(정보 주체의 삭제 요구권) 대응:
+ * 지원자로부터 "내 정보를 지워달라" 요청을 받았을 때 관리자가 직접 DB 콘솔에
+ * 접근하지 않고 안전하게 삭제할 수 있는 표준 경로를 제공합니다.
+ *
+ * 삭제 범위:
+ * - `applicationSubmissions` 마스터 행
+ * - `applicationAnswers` 는 FK `onDelete: "cascade"` 로 자동 삭제
+ * - (현재 스키마상 파일 첨부 컬럼이 없어 Blob 정리 대상 없음)
+ *
+ * 감사 로그 정책 — **PII 최소화**:
+ * 이 액션 자체가 "정보 주체의 삭제 요구권"에 대응하는 경로이므로, 감사 로그에는
+ * 지원자 이름/이메일 같은 평문 PII를 남기지 않습니다. 주 테이블에서 PII를 지웠는데
+ * 로그(Vercel Logs)에 잔존하면 삭제 요청 자체의 목적이 훼손됩니다. 대신
+ * `submissionId`/`formId` 로 다른 시스템의 활동을 역추적할 수 있도록 식별자만 남깁니다.
+ * 삭제 관리자도 책임 추적에 필요한 `adminUserId` 만 남기고 `adminEmail` 은 제외합니다.
+ *
+ * 동시성 처리:
+ * `delete(...).returning({...})` 로 실제 삭제된 행 수를 확인합니다. `select → delete`
+ * 만 사용하면 두 관리자가 동시에 같은 행을 삭제할 때 두 번째 요청도 성공 로그가
+ * 찍혀 감사 로그가 왜곡됩니다.
+ */
+export async function deleteApplicationSubmission(
+  submissionId: string
+): Promise<{ success: boolean; message: string }> {
+  const session = await requireAdmin();
+
+  const parsedId = z.uuid("잘못된 지원서 ID 입니다.").safeParse(submissionId);
+  if (!parsedId.success) {
+    return {
+      success: false,
+      message: parsedId.error.issues[0]?.message ?? "잘못된 요청입니다.",
+    };
+  }
+
+  // 존재 검증 + 성공 후 재검증할 목록 경로용 formId 확보.
+  // PII 컬럼(이름/이메일)은 로그 정책상 조회하지 않습니다.
+  const target = await db.query.applicationSubmissions.findFirst({
+    where: eq(applicationSubmissions.id, parsedId.data),
+    columns: {
+      id: true,
+      formId: true,
+    },
+  });
+
+  if (!target) {
+    return { success: false, message: "지원서를 찾을 수 없습니다." };
+  }
+
+  try {
+    // returning 으로 실제 삭제된 행 확인 → 동시 삭제 시 감사 로그 왜곡 방지
+    const deleted = await db
+      .delete(applicationSubmissions)
+      .where(eq(applicationSubmissions.id, parsedId.data))
+      .returning({ id: applicationSubmissions.id });
+
+    if (deleted.length === 0) {
+      // 다른 세션이 이미 지운 경우 — 이 트랜잭션은 삭제자가 아니므로 감사 로그를 남기지 않는다
+      return { success: false, message: "지원서를 찾을 수 없습니다." };
+    }
+
+    console.info(
+      "[audit][application-submission-deleted]",
+      JSON.stringify({
+        adminUserId: session.user.id,
+        submissionId: target.id,
+        formId: target.formId,
+        deletedAt: new Date().toISOString(),
+      })
+    );
+
+    revalidatePath(`/admin/application-forms/${target.formId}/submissions`);
+    return { success: true, message: "지원서가 삭제되었습니다." };
+  } catch (error) {
+    // 실패 로그도 동일 정책 — PII 제외, 식별자와 관리자 id 만 남긴다
+    console.error("[application-submission-delete] 지원서 삭제 실패:", {
+      submissionId: parsedId.data,
+      formId: target.formId,
+      adminUserId: session.user.id,
+      error,
+    });
+    return { success: false, message: "삭제 중 오류가 발생했습니다." };
+  }
+}
