@@ -17,7 +17,12 @@ export default function PublicError({ error, reset }: Props) {
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
       <div className="w-full max-w-md text-center">
         <h1 className="text-3xl font-bold">문제가 발생했습니다</h1>
-        <p className="mt-4 truncate text-sm text-zinc-300">{error.message}</p>
+        <p className="mt-4 text-sm text-zinc-300">
+          요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.
+        </p>
+        {error.digest && (
+          <p className="mt-2 text-xs text-zinc-500">오류 ID: {error.digest}</p>
+        )}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
             type="button"
