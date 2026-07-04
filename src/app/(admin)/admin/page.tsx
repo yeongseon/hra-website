@@ -26,7 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import {
   alumniStories,
-  applications,
+  legacyApplications,
   applicationSubmissions,
   cohorts,
   galleries,
@@ -79,8 +79,8 @@ export default async function AdminDashboardPage() {
       galleryRows,
       alumniRows,
     ] = await Promise.all([
-      db.select({ total: count() }).from(applications).where(eq(applications.status, "PENDING")),
-      db.select({ total: count() }).from(applications),
+      db.select({ total: count() }).from(legacyApplications).where(eq(legacyApplications.status, "PENDING")),
+      db.select({ total: count() }).from(legacyApplications),
       db.select({ total: count() }).from(applicationSubmissions).where(eq(applicationSubmissions.status, "PENDING")),
       db.select({ total: count() }).from(applicationSubmissions),
       db.select({ total: count() }).from(users).where(eq(users.role, "PENDING")),

@@ -2,16 +2,16 @@
  * 기수 관리 페이지 (목록)
  *
  * 역할: 관리자가 등록된 모든 기수를 테이블 형태로 볼 수 있는 페이지
- * - 기수 목록 조회 (기수명, 활성 여부, 기간, 지원자 수)
+ * - 기수 목록 조회 (기수명, 활성 여부, 기간, 설명)
  * - 각 기수별 수정/삭제 액션
  * - "새 기수 추가" 버튼으로 새 항목 생성 가능
  *
- * 데이터 흐름: DB에서 모든 기수 + 각 기수의 지원서 개수 조회
+ * 데이터 흐름: DB에서 모든 기수 조회
  * 모집 관련 설정(모집 기수, 상태, 구글폼)은 모집 설정 페이지에서 관리
  */
 
 import Link from "next/link";
-import { desc, eq, count, sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,7 @@ import {
 import { RecruitmentRowActions } from "@/app/(admin)/admin/recruitment/_components/recruitment-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { cohorts, applications } from "@/lib/db/schema";
+import { cohorts } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +41,10 @@ const formatDate = (value: Date | null) => {
 
 
 export default async function AdminRecruitmentPage() {
-  // 🔒 관리자 권한 확인
+  // 관리자 권한 확인
   await requireAdmin();
 
-  // 📊 DB에서 모든 기수 조회 + 각 기수의 지원서 개수 계산
-  // - cohorts: 기수 정보 테이블
-  // - applications: 지원서 테이블 (count 사용하여 지원자 수 계산)
-  // - leftJoin + groupBy: 지원자가 없는 기수도 표시 가능하게 함
+  // 모든 기수 조회 (기수명에서 숫자만 추출해 내림차순 정렬: 20기 → 19기 → ... → 1기)
   const { rows, hasDbError } = await (async () => {
     try {
       const rows = await db
@@ -58,12 +55,8 @@ export default async function AdminRecruitmentPage() {
           isActive: cohorts.isActive,
           startDate: cohorts.startDate,
           endDate: cohorts.endDate,
-          applicationCount: count(applications.id),
         })
         .from(cohorts)
-        .leftJoin(applications, eq(applications.cohortId, cohorts.id))
-        .groupBy(cohorts.id)
-        // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
         .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
 
       return { rows, hasDbError: false };

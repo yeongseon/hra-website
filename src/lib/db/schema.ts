@@ -12,7 +12,7 @@
  * - classLogImages: 수업일지의 이미지들
  * - galleries: 갤러리 (여러 이미지를 모아놓은 앨범)
  * - galleryImages: 갤러리에 포함된 이미지들
- * - applications: 동아리 지원서
+ * - legacyApplications: 동아리 지원서 (LEGACY — read-only, 신규 접수는 applicationForms/applicationSubmissions 사용)
  */
 
 // Drizzle ORM의 PostgreSQL 데이터 타입들
@@ -136,9 +136,9 @@ export const cohorts = pgTable("cohorts", {
 });
 
 // Cohorts 테이블과 다른 테이블의 관계 정의
-// 한 기수에 여러 지원서가 제출될 수 있음
+// 한 기수에 여러 지원서가 제출될 수 있음 (legacy 테이블 기준 — 신규 접수는 별도 시스템)
 export const cohortsRelations = relations(cohorts, ({ many }) => ({
-  applications: many(applications), // 이 기수에 제출된 모든 지원서
+  legacyApplications: many(legacyApplications), // 이 기수에 제출된 모든 지원서 (legacy)
 }));
 
 // ============================================================
@@ -285,12 +285,20 @@ export const galleryImagesRelations = relations(galleryImages, ({ one }) => ({
 }));
 
 // ============================================================
-// Applications (지원서 테이블)
+// Applications (지원서 테이블) — [LEGACY / READ-ONLY]
 // ============================================================
-
-// 동아리에 지원한 사람들의 지원서를 저장하는 테이블
-// 로그인하지 않은 비회원도 지원할 수 있으므로 이름/이메일/전화번호는 직접 입력받습니다.
-export const applications = pgTable("applications", {
+//
+// ⚠️ LEGACY TABLE — 신규 쓰기 경로는 없음 (2026-07 정리).
+//
+// - 신규 지원 접수는 `applicationForms` + `applicationSubmissions` 로 대체됨.
+// - 이 테이블은 과거 데이터 보존 목적으로 유지되며, 관리자 대시보드
+//   (`src/app/(admin)/admin/page.tsx`) 에서 "지원서 수 집계 (count)" 용도로만 read 된다.
+// - 신규 서버 액션에서 이 테이블에 write / update 하지 말 것.
+//   대신 `src/features/applications/actions/submissions.ts` 사용.
+// - 데이터 마이그레이션 후 최종 drop 예정 (별도 이슈).
+//
+// 동아리에 지원한 사람들의 지원서를 저장하는 테이블 (레거시).
+export const legacyApplications = pgTable("applications", {
   id: uuid("id").primaryKey().defaultRandom(), // 지원서 고유 ID (자동 생성)
   cohortId: uuid("cohort_id")
     .notNull()
@@ -308,9 +316,9 @@ export const applications = pgTable("applications", {
 
 // Applications 테이블과 다른 테이블의 관계 정의
 // 각 지원서는 정확히 하나의 기수에 속함
-export const applicationsRelations = relations(applications, ({ one }) => ({
+export const legacyApplicationsRelations = relations(legacyApplications, ({ one }) => ({
   cohort: one(cohorts, { // 이 지원서가 속한 기수
-    fields: [applications.cohortId],
+    fields: [legacyApplications.cohortId],
     references: [cohorts.id],
   }),
 }));
@@ -868,7 +876,7 @@ export type Notice = typeof notices.$inferSelect;
 export type ClassLog = typeof classLogs.$inferSelect;
 export type Gallery = typeof galleries.$inferSelect;
 export type GalleryImage = typeof galleryImages.$inferSelect;
-export type Application = typeof applications.$inferSelect;
+export type LegacyApplication = typeof legacyApplications.$inferSelect;
 export type Faculty = typeof faculty.$inferSelect;
 export type AlumniStory = typeof alumniStories.$inferSelect;
 export type FaqContactInfo = typeof faqContact.$inferSelect;
