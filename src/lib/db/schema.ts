@@ -28,11 +28,12 @@ import {
   pgEnum, // PostgreSQL의 enum 타입 (정해진 선택지만 가능)
   uuid, // 고유 ID 저장 (128비트 무작위 값)
   unique, // 복합 컬럼에 대한 UNIQUE 제약(중복 차단)을 선언할 때 사용
+  check, // 컬럼 값에 대한 CHECK 제약 (조건식) 을 선언할 때 사용
 } from "drizzle-orm/pg-core";
 
 // Drizzle ORM의 관계 설정 함수
 // 테이블 간의 1:1, 1:N 관계를 정의할 때 사용
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ============================================================
 // Enums (열거형 - 정해진 선택지만 가능한 데이터 타입)
@@ -87,6 +88,31 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("PENDING"), // 사용자 역할 (기본값: 승인 대기)
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 소속 기수 ID (MEMBER일 때만 의미 있음, 기수 삭제 시 null로 초기화)
   image: text("image"), // 프로필 사진 URL (선택사항)
+  // OAuth provider binding (#67)
+  //
+  // 배경: signIn 콜백이 email 일치만으로 기존 사용자를 재인증하면, 공격자가 같은 email 의
+  //   다른 provider 계정 (예: Kakao) 이나 같은 provider 의 다른 계정 (예: 매각된 Google account) 으로
+  //   로그인해 피해자의 role 세션을 인수할 수 있다 (cross-provider account takeover).
+  //
+  // 해결: provider + providerAccountId 튜플을 영속 저장해 "이 계정은 이 provider 의 이 accountId 로만
+  //   재로그인 가능" 이라는 강한 바인딩을 만든다. signIn 콜백은 이 튜플로 기존 계정 인계 여부를
+  //   판단하고, email 매칭은 기존 계정 인계 근거로는 쓰지 않고 신규 생성 여부 및 차단 사유
+  //   판정에만 사용한다 (자동 backfill 없음).
+  //
+  // NULL 허용 이유: 마이그레이션 이전 기존 소셜 사용자와 로컬 계정은 binding 이 없다.
+  //   로컬 계정은 passwordHash 로 식별해 여전히 차단하고, 기존 소셜 사용자는 로그인 경로에서
+  //   fail-closed (block(legacy-unbound)) 로 처리되며 관리자가 DB 나 오프라인 스크립트로
+  //   직접 수동 바인딩해야만 재활성화된다 (관리자 UI 상의 수동 바인딩 액션은 없다).
+  //   자동 backfill 은 email 선점 공격 (공격자가 피해자 email 로 새 소셜 계정을 만들어
+  //   legacy row 를 임의 provider 로 채우는 공격) 을 재현하므로 도입하지 않는다.
+  //
+  // 데이터 무결성:
+  //   1) UNIQUE 복합 제약 (usersOauthBindingUnique): (provider, providerAccountId) 튜플 전역 유일.
+  //      Postgres 는 UNIQUE 에서 NULL 을 위반으로 보지 않으므로 미백필 row 는 공존 가능하다.
+  //   2) CHECK 제약 (usersOauthBindingBothOrNeither): 둘 다 NULL 이거나 둘 다 NOT NULL 만 허용.
+  //      부분 채움 (한쪽만 NULL) row 는 스키마 레벨에서 원천 차단한다.
+  oauthProvider: text("oauth_provider"),
+  oauthProviderAccountId: text("oauth_provider_account_id"),
   // 세션 무효화 버전 카운터 (#68, #74)
   //
   // 배경: JWT 세션 전략에서는 서버가 발급한 토큰이 클라이언트에 저장되므로,
@@ -107,7 +133,28 @@ export const users = pgTable("users", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()), // 마지막 수정 시간 (수정할 때마다 자동 업데이트)
-});
+}, table => ({
+  // (provider, providerAccountId) 튜플 전역 유일 (#67)
+  //
+  // Postgres 는 NULL 을 unique 로 보지 않으므로 미백필 row 는 여러 개 공존 가능하다.
+  // legacy null/null row 는 로그인 경로에서 block(legacy-unbound) 로 차단되므로
+  // 이 UNIQUE 제약과 함께 관리자가 DB/오프라인 스크립트로 수동 바인딩할 때만 튜플이 채워진다.
+  usersOauthBindingUnique: unique("users_oauth_binding_unique").on(
+    table.oauthProvider,
+    table.oauthProviderAccountId,
+  ),
+  // (provider, providerAccountId) 둘 다 NULL 또는 둘 다 NOT NULL 강제 (#67)
+  //
+  // 목적: 부분 채움 (한쪽만 NULL) row 는 로직상 의미가 없다.
+  //   - 코드 경로에서는 signIn 이 항상 두 값을 함께 write 하므로 부분 채움이 생기지 않지만,
+  //   - 수동 SQL, 시드 스크립트, 실패한 운영 스크립트, 미래의 API 확장 등에서 위반이 발생하면
+  //     decideOAuthSignIn 이 이를 legacy 로 오인해 예상 못한 block/allow 판정을 낼 수 있다.
+  // 스키마 레벨에서 원천 차단해 코드와 데이터 무결성을 이중으로 보장한다.
+  usersOauthBindingBothOrNeither: check(
+    "users_oauth_binding_both_or_neither",
+    sql`(${table.oauthProvider} IS NULL AND ${table.oauthProviderAccountId} IS NULL) OR (${table.oauthProvider} IS NOT NULL AND ${table.oauthProviderAccountId} IS NOT NULL)`,
+  ),
+}));
 
 // Users 테이블과 다른 테이블의 관계 정의
 // 한 사용자가 여러 개의 공지사항과 수업일지를 작성할 수 있음

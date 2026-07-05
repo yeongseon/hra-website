@@ -21,6 +21,12 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
+  // signIn 콜백이 URL 문자열을 반환하면 next-auth 가 `?error=...` 를 붙여 이 페이지로 돌려보낸다.
+  // #67 에서 OAuth 자동 계정 병합을 차단하면서 `OAuthAccountNotLinked` 코드를 함께 전달한다.
+  // 로컬 계정 차단 / 다른 provider 매칭 실패 두 경우 모두 같은 코드로 통합해 문구를 일반화한다
+  // (email enumeration 완화).
+  const authError = searchParams.get("error");
+
   const handleSocialLogin = async (provider: "google" | "kakao") => {
     setIsLoading(provider);
     await signIn(provider, { callbackUrl });
@@ -49,6 +55,16 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
+        {authError === "OAuthAccountNotLinked" && (
+          <div
+            role="alert"
+            className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+          >
+            이 소셜 계정으로는 로그인할 수 없습니다. 기존에 사용하던 로그인 방법을
+            이용하거나 관리자에게 문의해 주세요.
+          </div>
+        )}
+
         {enabledProviders.kakao && (
           <button
             type="button"
