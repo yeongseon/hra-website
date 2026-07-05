@@ -524,7 +524,8 @@ async function scenarioBoundUserWinsOverEmailConflict() {
     oauthProviderAccountId: null,
   });
 
-  const beforeA = await fetchUser(idA);
+  // beforeA 는 필요 없음: A 는 assert 에서 새 값(afterA)만 검증한다.
+  // beforeB 는 필요: B 가 "변경되지 않았음" 을 증명하려면 이전 값과 비교해야 한다.
   const beforeB = await fetchUser(idB);
   const result = await simulateSignIn({
     provider: "google",
