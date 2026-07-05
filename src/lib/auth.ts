@@ -33,6 +33,8 @@ import {
   pickJwtLookupCriteria,
   resolveJwtSession,
 } from "@/lib/auth-session";
+import { checkLoginAttempts, recordLoginAttempt } from "@/lib/rate-limit";
+import { extractClientIp } from "@/lib/rate-limit-core";
 
 const MEMBER_ONLY_PREFIXES = ["/resources", "/member", "/mypage"] as const;
 
@@ -107,7 +109,7 @@ providers.push(
       email: { label: "이메일", type: "email" },
       password: { label: "비밀번호", type: "password" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       if (!credentials?.email || !credentials?.password) return null;
       if (
         typeof credentials.email !== "string" ||
@@ -116,19 +118,31 @@ providers.push(
         return null;
       }
 
+      // Rate limit 확인 (#69): 15분 / 실패 5회 초과 시 잠금.
+      // IP + email 두 축으로 credential stuffing / password spray 모두 방어.
+      const ip = extractClientIp(request.headers);
+      const { blocked } = await checkLoginAttempts(ip, credentials.email);
+
       const user = await db.query.users.findFirst({
         where: eq(users.email, credentials.email),
       });
 
       // Timing attack 방어 (#71): 이메일 존재 여부와 무관하게 항상 bcrypt.compare 를 실행하여
       // 응답 시간 차이로 이메일 enumeration 이 되지 않도록 한다.
-      // - user 가 없거나 passwordHash 가 null 이면 DUMMY_PASSWORD_HASH 와 비교
-      // - dummy hash 로 비교하면 사용자가 실제 dummy 비밀번호를 알 수도 없고 user 자체도 없으므로
-      //   최종 authorize 결과는 항상 null 이 되어 로그인은 실패한다
+      // blocked=true 여도 여전히 실행: 429 응답이 아니라 null 을 반환할 계획이므로
+      // 응답 시간 균일화를 유지하려면 bcrypt 는 항상 돌아야 한다.
       const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
       const isValid = await compare(credentials.password, passwordHash);
 
-      if (!user || !user.passwordHash || !isValid) return null;
+      const authSucceeded = !!user && !!user.passwordHash && isValid;
+
+      // 시도 결과 기록 (#69): blocked 여부와 무관하게 매 시도를 기록해야
+      // sliding window 가 정확히 만료되고, 공격자가 요청 폭주로 로그를 우회하지 못한다.
+      // 성공 시도는 카운트 대상에서 제외되므로 (checkLoginAttempts 에서 success=false 필터)
+      // 정상 사용자의 이후 접속에 영향이 없다.
+      await recordLoginAttempt(ip, credentials.email, authSucceeded);
+
+      if (blocked || !authSucceeded) return null;
 
       return {
         id: user.id,

@@ -807,6 +807,81 @@ export const applicationSubmissionsLog = pgTable(
 );
 
 // ============================================================
+// Login Attempts (로그인 시도 로그 - Rate Limiting 용, #69)
+// ============================================================
+
+/**
+ * 로그인 시도 로그 테이블.
+ *
+ * 목적:
+ *   - Credentials brute-force / credential stuffing 방어.
+ *   - Rate limit 판정 시 sliding window 안에서 실패 시도 수를 세는 원천 데이터.
+ *
+ * 스키마 근거:
+ *   - id: uuid PK — 로우 식별용 (다른 값 없음).
+ *   - ip: varchar(45) — IPv4(15) / IPv6(45) 최대 길이 수용. nullable —
+ *     UNKNOWN_IP fallback 을 사용하지만 마이그레이션 안전상 nullable 유지
+ *     (applicationSubmissionsLog 와 동일 패턴).
+ *   - email: varchar(255) — RFC 5321 기준 이메일 로컬+도메인 최대 길이.
+ *     nullable — 프론트가 email 없이 authorize 를 호출하는 병리 케이스 대비.
+ *   - attemptedAt: with-timezone timestamp — Neon 은 UTC 로 저장하지만 timezone
+ *     정보 보존이 rate window 계산의 정확도를 보장.
+ *   - success: boolean NOT NULL — 실패 카운트만 잠금 판단에 쓰므로 성공/실패
+ *     구분 필수. 감사 로그 목적으로 성공도 함께 기록해 이상 로그인 사후 분석 가능.
+ *
+ * 인덱스:
+ *   - (ip, attempted_at): IP 기준 sliding window 스캔 (동일 IP 로 여러 이메일
+ *     시도하는 credential stuffing 방어). 시간 컬럼을 뒤에 두어 범위 스캔 최적화.
+ *   - (email, attempted_at): 이메일 기준 sliding window 스캔 (동일 이메일에
+ *     여러 IP 로 시도하는 password spray 방어).
+ *   - 별도 (ip, email, attempted_at) composite 는 만들지 않음 — 대부분의 쿼리는
+ *     OR (ip=? OR email=?) 형태이므로 위 두 인덱스가 union 스캔에 유리.
+ *
+ * 유지보수:
+ *   - 이 테이블은 무한히 커지므로 별도 크론(예: 24시간 전 로그 삭제)이 필요.
+ *   - Phase 2 에서 vercel cron / neon TTL 로직 도입 예정 (#69 후속).
+ */
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ip: varchar("ip", { length: 45 }),
+    email: varchar("email", { length: 255 }),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+    success: boolean("success").notNull(),
+  },
+  (table) => [
+    index("idx_login_attempts_ip_attempted").on(table.ip, table.attemptedAt),
+    index("idx_login_attempts_email_attempted").on(table.email, table.attemptedAt),
+  ]
+);
+
+/**
+ * 이미지 업로드 rate limit 로그 테이블 (#69).
+ *
+ * `/api/upload-image` 남용 방어 (Vercel Blob 실비 폭증 방지) 를 위한 IP 기준
+ * sliding window 판정의 원천 데이터. 정책 상수 `UPLOAD_RATE_LIMIT` 참조.
+ *
+ * loginAttempts 와 스키마를 공유하지 않는 이유:
+ *   업로드 이벤트에는 success/email 이 무의미하며, 감사·인덱스 크기·쿼리 계획
+ *   명확성 확보를 위해 단일 목적 테이블로 분리한다.
+ *
+ * 유지보수:
+ *   loginAttempts 와 동일한 무한 성장 특성. TTL 크론 필수 (Phase 2 후속 이슈).
+ */
+export const uploadRateLimitLog = pgTable(
+  "upload_rate_limit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ip: varchar("ip", { length: 45 }),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_upload_rate_limit_ip_attempted").on(table.ip, table.attemptedAt),
+  ]
+);
+
+// ============================================================
 // Schedule Events (일정 관리 테이블)
 // ============================================================
 
@@ -943,3 +1018,7 @@ export type ScheduleEvent = typeof scheduleEvents.$inferSelect;
 export type NewScheduleEvent = typeof scheduleEvents.$inferInsert;
 export type ScheduleSession = typeof scheduleSessions.$inferSelect;
 export type NewScheduleSession = typeof scheduleSessions.$inferInsert;
+export type LoginAttempt = typeof loginAttempts.$inferSelect;
+export type NewLoginAttempt = typeof loginAttempts.$inferInsert;
+export type UploadRateLimitEntry = typeof uploadRateLimitLog.$inferSelect;
+export type NewUploadRateLimitEntry = typeof uploadRateLimitLog.$inferInsert;

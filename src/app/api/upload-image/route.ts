@@ -2,6 +2,11 @@ import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
+import {
+  checkUploadRateLimit,
+  recordUploadAttempt,
+} from "@/lib/rate-limit";
+import { extractClientIp } from "@/lib/rate-limit-core";
 
 // 매직 바이트 (파일 헤더의 고유 시그니처) 로 실제 이미지 타입을 판별.
 // 클라이언트가 보낸 file.type / 확장자 는 위조 가능하므로 신뢰하지 않는다.
@@ -59,6 +64,30 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Rate limit (#69): 인증·역할 검사 통과 후 IP 기준 60초 / 30회.
+    // 인증 이후에 두는 이유: 미인증 요청까지 카운트하면 세션 만료 반복과 실제
+    // abuse 를 구분할 수 없다. formData() 이전에 두는 이유: 파일 전체를
+    // 메모리로 로드하기 전에 차단해 리소스 소비를 최소화.
+    // 실패 검증 (매직바이트, put 오류) 도 카운트해야 잘못된 파일 스팸으로
+    // sliding window 를 우회하는 걸 막을 수 있어 record 를 검증 전에 호출한다.
+    // 차단된 (429) 시도 역시 record 해 sliding window 를 정상적으로 소진하도록
+    // 유지 — 기록하지 않으면 공격자가 무한 요청으로 로그를 우회할 수 있고,
+    // Retry-After 로 사용자에게 안내한 대기시간이 실제 만료되지 않는다.
+    // (recordLoginAttempt 와 동일 정책; 소스 auth.ts:credentials.authorize.)
+    const ip = extractClientIp(request.headers);
+    const { blocked, retryAfterSec } = await checkUploadRateLimit(ip);
+    if (blocked) {
+      await recordUploadAttempt(ip);
+      return NextResponse.json(
+        { error: "업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(retryAfterSec) },
+        },
+      );
+    }
+    await recordUploadAttempt(ip);
 
     const formData = await request.formData();
     const file = formData.get("file");

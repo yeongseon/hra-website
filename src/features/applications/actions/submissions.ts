@@ -16,6 +16,8 @@ import {
   applicationAnswers,
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { checkApplicationSubmissionHourlyLimit } from "@/lib/rate-limit";
+import { extractClientIp } from "@/lib/rate-limit-core";
 
 /**
  * CSV/Excel 에서 셀 값이 수식으로 해석되는 것을 막기 위한 방어 함수입니다.
@@ -100,18 +102,14 @@ export async function submitApplicationForm(
   if (!applicantPhone) return { success: false, message: "연락처를 입력해주세요." };
 
   try {
-    // IP 기반 rate limit: 24시간 내 동일 IP에서 10건을 초과하면 차단합니다.
-    // neon-http 드라이버는 트랜잭션을 지원하지 않아 카운트 조회와 로그 삽입 사이에
-    // 짧은 TOCTOU 윈도우가 존재하지만, 동일 (form_id, email) 중복 제출은 아래의
-    // unique 제약으로 원자적으로 차단되므로 실 익스플로잇 영향은 제한적입니다.
-    // 더 엄격한 IP 제한이 필요하면 Vercel Edge Middleware 또는 Upstash Ratelimit 도입을 권장합니다.
+    // IP 기반 rate limit — 두 층 병행 (#69):
+    //   (a) 24시간 10회 (총량): 장기 abuse 방어. 인라인 카운트 유지.
+    //   (b) 시간당 5회 (스퍼트): 봇의 짧은 시간창 폭주 방어. 헬퍼로 분리.
+    // neon-http 는 트랜잭션이 없어 카운트-후-삽입 사이에 짧은 TOCTOU 창이 있으나,
+    // 동일 (form_id, email) 중복은 아래 unique 제약이 원자적으로 차단하므로
+    // 실 익스플로잇 영향은 제한적. 더 엄격한 제한이 필요하면 Upstash Ratelimit 도입.
     const hdrs = await headers();
-    const ip =
-      hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      hdrs.get("x-real-ip") ||
-      hdrs.get("cf-connecting-ip") ||
-      hdrs.get("x-vercel-forwarded-for") ||
-      "unknown";
+    const ip = extractClientIp(hdrs);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const [ipSubmissionCount] = await db
@@ -125,6 +123,11 @@ export async function submitApplicationForm(
       );
 
     if ((ipSubmissionCount?.c ?? 0) >= 10) {
+      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
+    }
+
+    const hourly = await checkApplicationSubmissionHourlyLimit(ip);
+    if (hourly.blocked) {
       return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
     }
 
