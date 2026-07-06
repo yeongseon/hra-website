@@ -536,6 +536,22 @@ async function scenarioBoundUserWinsOverEmailConflict() {
   const afterA = await fetchUser(idA);
   const afterB = await fetchUser(idB);
 
+  // Precondition: 이중 SELECT 가 실제로 서로 다른 계정을 반환했는지 (충돌 형성 관측).
+  // 이 검증이 없으면 emailUser 조회가 잘못되어 B 대신 null 이나 A 를 반환해도
+  // postcondition 은 통과할 수 있어, boundUser 우선순위가 진짜로 동작했는지 증명이 약해진다.
+  assert(
+    "이중 SELECT precondition: boundUser 는 A 를 반환한다",
+    result.boundUser?.id === idA,
+    { boundUserId: result.boundUser?.id, expectedId: idA },
+    { boundUserId: idA },
+  );
+  assert(
+    "이중 SELECT precondition: emailUser 는 B 를 반환한다 (실제 conflict 형성)",
+    result.emailUser?.id === idB,
+    { emailUserId: result.emailUser?.id, expectedId: idB },
+    { emailUserId: idB },
+  );
+
   assert(
     "결정이 allow-existing 이다",
     result.decision.kind === "allow-existing",
@@ -566,6 +582,12 @@ async function scenarioBoundUserWinsOverEmailConflict() {
       oauth_provider: "google",
       oauth_provider_account_id: "google-account-A-scenario-8",
     },
+  );
+  assert(
+    "A 의 email 은 원래 emailA 그대로다 (email takeover 방지 명시 검증)",
+    afterA.email === emailA,
+    { after: afterA.email, expected: emailA },
+    emailA,
   );
   assert(
     "B 의 name 은 절대 변경되지 않음",
@@ -655,6 +677,13 @@ async function main() {
   console.log(`🔬 OAuth binding 보안 회귀 검증 시작 (nonce=${NONCE})`);
   console.log("   프로덕션 DB 를 사용합니다. 모든 fixture 는 .invalid TLD 로 격리됩니다.\n");
 
+  // 시나리오 실행 도중 catch 로 잡히는 예외가 있었는지 별도 플래그로 추적한다.
+  // 이유: catch 안에서 process.exitCode = 1 만 세팅하면 프로세스 종료 코드는 실패지만,
+  // results 배열에 assert 실패가 하나도 push 되지 않았을 경우 (= 예외로 인해 assert
+  // 자체가 실행되지 못한 경우) 아래 "모든 시나리오가 예상대로 동작합니다" 배너가
+  // 잘못 출력될 수 있다. hadException 플래그로 이 오출력을 차단한다.
+  let hadException = false;
+
   try {
     await scenarioLegacyUnbound();
     await scenarioProviderMismatchBound();
@@ -665,6 +694,7 @@ async function main() {
     await scenarioKakaoPlaceholderEmail();
     await scenarioBoundUserWinsOverEmailConflict();
   } catch (err) {
+    hadException = true;
     console.error("\n💥 시나리오 실행 중 예외 발생:", err);
     process.exitCode = 1;
   } finally {
@@ -677,8 +707,12 @@ async function main() {
   console.log(`   결과: ${passed} PASS / ${failed} FAIL (총 ${results.length})`);
   console.log("=".repeat(60));
 
-  if (failed > 0) {
-    console.error("\n❌ 회귀가 감지되었습니다.");
+  if (failed > 0 || hadException) {
+    if (hadException) {
+      console.error("\n❌ 시나리오 실행 중 예외가 발생했습니다. 위 stack trace 를 확인하세요.");
+    } else {
+      console.error("\n❌ 회귀가 감지되었습니다.");
+    }
     process.exit(1);
   } else {
     console.log("\n✅ 모든 시나리오가 예상대로 동작합니다.");
