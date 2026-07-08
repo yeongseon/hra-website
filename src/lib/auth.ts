@@ -26,14 +26,14 @@ import Google from "next-auth/providers/google";
 import Kakao from "next-auth/providers/kakao";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
-  decideOAuthSignIn,
   isUserRole,
   isValidUuid,
   pickJwtLookupCriteria,
   resolveJwtSession,
 } from "@/lib/auth-session";
+import { createDrizzleSignInIO, handleOAuthSignIn } from "@/lib/auth-signin";
 import { checkLoginAttempts, recordLoginAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 
@@ -168,6 +168,18 @@ export const enabledProviders = {
 };
 
 /**
+ * OAuth signIn 콜백 본체를 실제 drizzle DB 로 실행시키는 어댑터 (#67, #81).
+ *
+ * signIn 콜백 자체는 auth.ts 최상단에서 NextAuth() 초기화 안에 익명 async 함수로
+ * 들어 있어 vitest 에서 격리 import 가 불가능하다. 그래서 결정 트리와 IO 조합은
+ * `handleOAuthSignIn` (src/lib/auth-signin.ts) 로 이동시켰고, 그 함수는 DB IO 를
+ * `SignInIO` 포트로 주입받는다. 이 상수는 프로덕션 어댑터 (drizzle 실행) 이며,
+ * 단위 테스트는 vi.fn() 으로 SignInIO 각 메서드를 mock 해서 signIn 콜백의 IO 조합
+ * 자체를 회귀 검증한다.
+ */
+const signInIO = createDrizzleSignInIO(db);
+
+/**
  * ========================================
  * NextAuth 인증 시스템 설정
  * ========================================
@@ -188,99 +200,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     /**
      * signIn 콜백: OAuth 로그인 처리 및 신규 계정 생성.
      *
-     * 불변식 (#67, cross-provider account takeover 방어):
-     *   OAuth 로 재인증할 때는 (provider, providerAccountId) 튜플 매칭이 최우선이다.
-     *   email 매칭만으로 기존 사용자를 인계하면, 공격자가 피해자와 같은 email 의 다른
-     *   provider 계정 (또는 매각된 provider account) 으로 로그인해 피해자의 role
-     *   세션을 그대로 획득할 수 있다. Google 의 `email_verified` 나 Kakao 의 email
-     *   정책을 우리는 검증하지 않으므로 provider 의 email 소유권을 신뢰할 수 없다.
-     *   판정 트리는 pure helper `decideOAuthSignIn` 으로 격리해 회귀 테스트로 고정한다.
+     * 콜백 본체는 `handleOAuthSignIn` (src/lib/auth-signin.ts) 로 격리되어 있다.
+     * 그 함수는 DB IO 를 `SignInIO` 포트로 주입받으므로, 이 콜백에서 CI 회귀 검증
+     * 대상인 IO 조합 (dual SELECT / INSERT/UPDATE 분기 / redirect string / user.email
+     * mutation) 을 vitest 에서 mock 으로 확인할 수 있다.
      *
-     * 흐름:
-     *   1) provider === "credentials": 이 콜백은 OAuth 전용이므로 통과.
-     *   2) (provider, providerAccountId) 로 boundUser 조회 (drizzle and(eq, eq)).
-     *   3) email 로 emailUser 조회.
-     *   4) decideOAuthSignIn 이 반환한 결정에 따라 IO 수행:
-     *      - allow-existing: 이미 바인딩된 계정 → 프로필만 최신화 (name/image).
-     *      - allow-new: 신규 email → 계정 생성 (role=PENDING, binding 포함).
-     *      - block(local-account | legacy-unbound | provider-mismatch)
-     *        → 자동 병합 금지. 로그인 페이지로 redirect.
+     * 격리한 이유 (#81):
+     *   auth.ts 는 모듈 로드 시점에 NextAuth() 를 호출하므로, vitest 에서 이 파일을
+     *   import 하면 next-auth 내부의 next/server 참조가 module resolution 을 깨뜨린다.
+     *   콜백 본체를 독립 모듈로 분리하면 auth.ts 를 import 하지 않고도 로직을 테스트할
+     *   수 있고, 회귀 방지가 CI 로 강제된다.
      *
-     * 자동 backfill 제거 근거 (#67 Oracle BLOCK):
-     *   기존 소셜 계정 (binding null/null) 을 email 매칭만으로 첫 재로그인 시 임의
-     *   (provider, providerAccountId) 로 채워 주면, 공격자가 피해자 email 로 새 소셜
-     *   계정을 만들어 legacy row 를 선점할 수 있다 (원 BLOCK 시나리오 재현).
-     *   legacy 계정은 관리자가 DB 를 직접 조작하거나 신뢰 가능한 과거 provider 데이터
-     *   기반 오프라인 backfill 스크립트로만 재활성화한다 (관리자 UI 상의 수동 바인딩
-     *   액션은 없다). 로그인 경로에서는 fail-closed.
-     *
-     * URL 문자열 반환은 next-auth 가 세션 생성 없이 해당 경로로 redirect 하도록 만든다
-     * (@auth/core signIn action 처리 규약).
+     * 결정 트리 및 불변식은 handleOAuthSignIn 문서와 decideOAuthSignIn 문서를 참조.
+     * `signInIO` 는 위 모듈 스코프에서 초기화된 drizzle 어댑터이다.
      */
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return true;
-
       if (!account) return false;
-
-      // 카카오는 비즈앱 심사 없이는 email claim 을 제공하지 않는다.
-      // 이 경우 provider + 고유 accountId 로 결정적 placeholder 이메일을 만든다.
-      const email =
-        user.email || `${account.provider}_${account.providerAccountId}@oauth.placeholder`;
-
-      // boundUser 와 emailUser 를 동시에 조회한다.
-      //   boundUser: (provider, providerAccountId) 튜플 매칭 — 가장 강한 재인증 신호.
-      //   emailUser: email 매칭 — 신규/차단 여부 판정에만 사용, 재인증 근거 아님.
-      const [boundUser, emailUser] = await Promise.all([
-        db.query.users.findFirst({
-          where: and(
-            eq(users.oauthProvider, account.provider),
-            eq(users.oauthProviderAccountId, account.providerAccountId),
-          ),
-        }),
-        db.query.users.findFirst({
-          where: eq(users.email, email),
-        }),
-      ]);
-
-      const decision = decideOAuthSignIn({ boundUser, emailUser });
-
-      if (decision.kind === "block") {
-        return "/login?error=OAuthAccountNotLinked";
-      }
-
-      if (decision.kind === "allow-new") {
-        await db.insert(users).values({
-          name:
-            user.name?.trim() ||
-            (account.provider === "kakao" ? "카카오 사용자" : "구글 사용자"),
-          email,
-          image: user.image,
-          role: "PENDING",
-          oauthProvider: account.provider,
-          oauthProviderAccountId: account.providerAccountId,
-        });
-      } else {
-        // allow-existing: boundUser 를 기준으로 프로필만 최신화한다.
-        // binding 튜플은 이미 채워져 있으므로 절대 갱신하지 않는다 (race 회피).
-        const updates: Partial<{ name: string; image: string }> = {};
-
-        if (user.name && boundUser && boundUser.name !== user.name) {
-          updates.name = user.name;
-        }
-        if (user.image && boundUser && boundUser.image !== user.image) {
-          updates.image = user.image;
-        }
-
-        if (Object.keys(updates).length > 0) {
-          await db.update(users).set(updates).where(eq(users.id, decision.userId));
-        }
-      }
-
-      // NextAuth 가 jwt 콜백에서 email 로 DB 조회할 수 있도록 최종 email 을 심어 둔다.
-      // placeholder email 을 사용하는 kakao 경로에서도 동일 규칙이 적용되어야 한다.
-      user.email = email;
-
-      return true;
+      return handleOAuthSignIn({ user, account }, signInIO);
     },
 
     /**
