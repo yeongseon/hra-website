@@ -22,8 +22,9 @@
  *     - pureDecide/hasLocalCredentials 는 scripts/_lib/mirror-decide.mjs 로 분리.
  *     - tests/unit/auth-decision-mirror-parity.test.ts 가 원본 (src/lib/auth-session.ts)
  *       과 이 미러의 결정 결과 equality 를 CI 에서 강제 검증한다 (#82).
- *   simulateSignIn 의 IO 조합 (SELECT/INSERT/UPDATE 결합) 은 여전히 사람이 원본 auth.ts
- *   와 대조해야 한다. 이는 signIn 콜백에 대한 격리 통합 테스트가 도입되면 자동화될 예정 (#81).
+ *   simulateSignIn 의 IO 조합 (SELECT/INSERT/UPDATE 결합) 은 이제 tests/unit/auth-signin-io.test.ts
+ *   가 mock SignInIO 로 CI 에서 회귀 검증한다 (#81, `handleOAuthSignIn` 격리). 이 스크립트는
+ *   프로덕션 DB 경계에서 실제 drizzle SQL 정합성만 확인한다.
  *
  * 안전성 (프로덕션 DB 에 대해 실행 가능하도록 설계):
  *   실제 격리력의 핵심은 아래 두 요소의 조합이다.
@@ -694,7 +695,7 @@ async function cleanup() {
 
 async function main() {
   console.log(`🔬 OAuth binding 보안 회귀 검증 시작 (nonce=${NONCE})`);
-  console.log("   프로덕션 DB 를 사용합니다. 모든 fixture 는 .invalid TLD 로 격리됩니다.\n");
+  console.log("   프로덕션 DB 를 사용합니다. 격리는 실행별 NONCE prefix + fixture ID 기반 cleanup 으로 보장됩니다.\n");
 
   // 시나리오 실행 도중 catch 로 잡히는 예외가 있었는지 별도 플래그로 추적한다.
   // 이유: catch 안에서 process.exitCode = 1 만 세팅하면 프로세스 종료 코드는 실패지만,
