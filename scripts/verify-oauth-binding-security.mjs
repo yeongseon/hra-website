@@ -18,8 +18,12 @@
  *   pureDecide() 는 auth-session.ts::decideOAuthSignIn 을 재구현한 근사치이고,
  *   simulateSignIn() 도 auth.ts::signIn 의 IO 조합을 재구현한 근사치다. 기본값 처리
  *   (예: name/image fallback) 등 일부 비-보안 분기는 정확히 일치하지 않을 수 있다.
- *   보안 결정 트리 (5-way) 는 정확히 일치시키되, 원본 함수 변경 시 이 파일도 함께
- *   갱신해야 한다. 자동 drift 검사는 하지 않으므로 코드 리뷰 시 사람이 확인해야 한다.
+ *   보안 결정 트리 (5-way) 는 정확히 일치시켜야 한다. 이를 위해:
+ *     - pureDecide/hasLocalCredentials 는 scripts/_lib/mirror-decide.mjs 로 분리.
+ *     - tests/unit/auth-decision-mirror-parity.test.ts 가 원본 (src/lib/auth-session.ts)
+ *       과 이 미러의 결정 결과 equality 를 CI 에서 강제 검증한다 (#82).
+ *   simulateSignIn 의 IO 조합 (SELECT/INSERT/UPDATE 결합) 은 여전히 사람이 원본 auth.ts
+ *   와 대조해야 한다. 이는 signIn 콜백에 대한 격리 통합 테스트가 도입되면 자동화될 예정 (#81).
  *
  * 안전성 (프로덕션 DB 에 대해 실행 가능하도록 설계):
  *   실제 격리력의 핵심은 아래 두 요소의 조합이다.
@@ -49,6 +53,7 @@
  */
 
 import { neon } from "@neondatabase/serverless";
+import { pureDecide } from "./_lib/mirror-decide.mjs";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -67,23 +72,9 @@ const emailFor = suffix => `${NONCE}-${suffix}@oauth-binding-verify.invalid`;
 const insertedIds = new Set();
 
 // ---------------------------------------------------------------------------
-// decideOAuthSignIn 미러 (src/lib/auth-session.ts 원본의 5-way 결정 트리를 재구현).
-// 보안 결정 로직은 원본과 정확히 일치시켜야 하며, 원본 변경 시 이 파일도 함께 갱신한다.
-// 자동 drift 검사는 없으므로 코드 리뷰 시 사람이 원본과 대조하여 확인해야 한다.
+// decideOAuthSignIn 미러는 `./_lib/mirror-decide.mjs` 로 분리되었다 (#82).
+// parity 는 tests/unit/auth-decision-mirror-parity.test.ts 가 CI 에서 강제한다.
 // ---------------------------------------------------------------------------
-function hasLocalCredentials(user) {
-  return typeof user.passwordHash === "string" && user.passwordHash.length > 0;
-}
-
-function pureDecide({ boundUser, emailUser }) {
-  if (boundUser) return { kind: "allow-existing", userId: boundUser.id };
-  if (!emailUser) return { kind: "allow-new" };
-  if (hasLocalCredentials(emailUser)) return { kind: "block", reason: "local-account" };
-  if (emailUser.oauth_provider === null && emailUser.oauth_provider_account_id === null) {
-    return { kind: "block", reason: "legacy-unbound" };
-  }
-  return { kind: "block", reason: "provider-mismatch" };
-}
 
 // ---------------------------------------------------------------------------
 // auth.ts::signIn 콜백 미러 (SELECT boundUser + SELECT emailUser + IO 를 재구현).
@@ -105,11 +96,31 @@ async function simulateSignIn({ provider, providerAccountId, providedEmail, name
         LIMIT 1`,
   ]);
 
+  // Neon serverless 는 snake_case 컬럼 그대로 반환한다. mirror pureDecide 는
+  // src/lib/auth-session.ts 원본과 signature 를 맞추기 위해 camelCase 를 기대하므로,
+  // 여기서 정규화한 뒤 전달한다. 이 정규화 지점 하나만 유지하면 mirror 는 원본과
+  // 동일 shape 를 받아 parity 테스트로 CI 강제 검증이 가능하다.
   const boundUser = boundRows[0]
-    ? { ...boundRows[0], passwordHash: boundRows[0].password_hash }
+    ? {
+        id: boundRows[0].id,
+        name: boundRows[0].name,
+        image: boundRows[0].image,
+        role: boundRows[0].role,
+        passwordHash: boundRows[0].password_hash,
+        oauthProvider: boundRows[0].oauth_provider,
+        oauthProviderAccountId: boundRows[0].oauth_provider_account_id,
+      }
     : null;
   const emailUser = emailRows[0]
-    ? { ...emailRows[0], passwordHash: emailRows[0].password_hash }
+    ? {
+        id: emailRows[0].id,
+        name: emailRows[0].name,
+        image: emailRows[0].image,
+        role: emailRows[0].role,
+        passwordHash: emailRows[0].password_hash,
+        oauthProvider: emailRows[0].oauth_provider,
+        oauthProviderAccountId: emailRows[0].oauth_provider_account_id,
+      }
     : null;
 
   const decision = pureDecide({ boundUser, emailUser });
