@@ -22,14 +22,22 @@
  *   갱신해야 한다. 자동 drift 검사는 하지 않으므로 코드 리뷰 시 사람이 확인해야 한다.
  *
  * 안전성 (프로덕션 DB 에 대해 실행 가능하도록 설계):
- *   - 모든 fixture email 은 `.invalid` TLD (RFC 6761 예약 도메인) 로, 실제 사용자와 충돌 불가능.
- *   - 각 fixture id 는 crypto.randomUUID() 로, 실제 UUID 와 충돌 확률 무시 가능.
- *   - 삽입된 모든 fixture id 를 `insertedIds` 에 추적해, 예외/크래시 시에도 finally 에서
- *     ID 기반 cleanup 을 먼저 시도한 뒤 nonce LIKE fallback 을 실행한다 (scenario 7 처럼
- *     nonce prefix 를 갖지 않는 placeholder email 도 안전하게 정리).
- *   - cleanup 이 실패해도 수동 정리용 SQL 을 stderr 에 출력한다.
+ *   실제 격리력의 핵심은 아래 두 요소의 조합이다.
+ *     (1) 실행별 고유 NONCE prefix (Date.now() + crypto.randomUUID() slice) — 실행 간
+ *         email 충돌 확률이 실무상 무시 가능. **이것이 격리력의 실제 근거다.**
+ *     (2) `.invalid` TLD (RFC 6761 예약 도메인) — 실제 이메일 규약상 발송이 불가능한
+ *         표기 관례. 그 자체만으로 격리력을 주지는 않는다 (누군가 수동으로 `.invalid`
+ *         row 를 DB 에 넣을 수는 있으므로). 실제 안전은 (1) 에서 나온다.
+ *
+ *   - 각 fixture id 는 crypto.randomUUID() 로, 실제 사용자 UUID 와 충돌할 확률은 실무상 무시 가능.
+ *   - 삽입된 모든 fixture id 를 `insertedIds` 에 추적해, **정상 JS 예외** 시 finally
+ *     블록에서 ID 기반 cleanup 을 먼저 시도한 뒤 nonce LIKE fallback 을 실행한다
+ *     (scenario 7 처럼 nonce prefix 를 갖지 않는 placeholder email 도 안전하게 정리).
+ *     ※ SIGKILL / 프로세스 crash 등 강제 종료 시엔 finally 가 실행되지 않는다.
+ *       이 경우 stderr 에 안내된 수동 정리 SQL 을 참고해서 직접 DELETE 해야 한다.
+ *   - cleanup 이 부분 실패해도 수동 정리용 SQL 을 stderr 에 출력한다.
  *   - INSERT/UPDATE/DELETE 는 모두 fixture id 또는 nonce LIKE 로 스코프됨. 실제 사용자
- *     row 를 절대로 건드리지 않는다.
+ *     row 를 건드릴 위험은 실무상 무시 가능 수준.
  *
  * 사용법:
  *   npm run verify:oauth-binding-security
