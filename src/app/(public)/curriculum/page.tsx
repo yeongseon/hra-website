@@ -195,6 +195,21 @@ export default function CurriculumPage() {
   }, []);
 
   /**
+   * 타임라인 띠지를 좌우로 스크롤할 때 anchorX 를 다시 계산한다.
+   *
+   * 모바일에서는 12개 달이 한 화면에 들어가지 않아 띠지 안쪽이 가로 스크롤된다.
+   * anchorX 는 pill 의 화면상 위치를 기준으로 측정한 값이므로,
+   * 스크롤로 pill 이 움직이면 팝업 카드의 삼각형이 엉뚱한 그룹을 가리키게 된다.
+   * 스크롤할 때마다 현재 열려 있는 그룹 기준으로 다시 측정해 둘을 붙여 놓는다.
+   */
+  const handleTimelineScroll = useCallback(() => {
+    const dm = displayMonthRef.current;
+    if (!dm) return;
+    const groupIdx = timelineGroups.findIndex((g) => g.months.some((m) => m.value === dm));
+    if (groupIdx >= 0) updateAnchor(groupIdx);
+  }, [updateAnchor]);
+
+  /**
    * ResizeObserver: 창 크기가 바뀔 때마다 content area 너비를 재측정하고
    * 현재 displayMonth 가 있으면 anchorX 도 재계산한다.
    */
@@ -299,8 +314,24 @@ export default function CurriculumPage() {
                 ref={containerRef}
                 className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8"
               >
-                {/* 그룹별 pill 로 묶인 타임라인 — pill 사이 선 없음, pill 내부 달끼리 선 연결 */}
-                <div className="flex w-full items-center gap-1 sm:gap-2">
+                {/*
+                  그룹별 pill 로 묶인 타임라인 — pill 사이 선 없음, pill 내부 달끼리 선 연결
+
+                  overflow-x-auto 를 준 이유 (모바일 대응)
+                    9월~8월 12개 달을 한 줄에 늘어놓으면 라벨만 340px 가 넘어서
+                    390px 화면에는 물리적으로 들어가지 않는다.
+                    이전에는 넘치는 부분이 그대로 잘려서 3월 이후 그룹을 아예 탭할 수 없었다.
+                    이제 띠지 안에서만 좌우로 스크롤되므로(페이지 자체는 가로 스크롤되지 않음)
+                    모든 기간에 접근할 수 있다.
+
+                  [&::-webkit-scrollbar]:hidden
+                    파란 띠지 위에 회색 스크롤바가 겹쳐 보이는 것을 막는다.
+                    스크롤 자체는 터치·트랙패드로 그대로 동작한다.
+                */}
+                <div
+                  className="flex w-full items-center gap-1 sm:gap-2 overflow-x-auto py-2 -my-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  onScroll={handleTimelineScroll}
+                >
                   {timelineGroups.map((group, groupIdx) => {
                     const isGroupActive = monthCategory === group.category;
                     return (
@@ -321,7 +352,7 @@ export default function CurriculumPage() {
                             prev === group.months[0].value ? null : group.months[0].value
                           );
                         }}
-                        className={`flex items-center rounded-full border transition-all duration-300 py-5 px-3 cursor-pointer ${
+                        className={`flex shrink-0 items-center rounded-full border transition-all duration-300 py-4 px-2 sm:py-5 sm:px-3 cursor-pointer ${
                           isGroupActive
                             ? "bg-white border-white shadow-md scale-[1.02]"
                             : "bg-[#2563EB] border-white/40 hover:bg-[#1D4ED8]"
@@ -334,7 +365,7 @@ export default function CurriculumPage() {
                             items.push(
                               <div
                                 key={`line-${month.value}`}
-                                className={`w-6 sm:w-10 h-px shrink-0 transition-colors duration-300 ${
+                                className={`w-3 sm:w-6 md:w-10 h-px shrink-0 transition-colors duration-300 ${
                                   isGroupActive ? "bg-[#2563EB]/30" : "bg-white/30"
                                 }`}
                               />

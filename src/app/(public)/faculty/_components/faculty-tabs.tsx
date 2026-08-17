@@ -38,7 +38,7 @@ export function FacultyTabs({
   return (
     <div>
       {/* 탭 네비게이션 */}
-      <div className="flex gap-8 border-b border-[#D9D9D9] mb-6 overflow-x-auto">
+      <div className="flex gap-6 sm:gap-8 border-b border-[#D9D9D9] mb-6 overflow-x-auto">
         {CATEGORIES.map((category) => {
           const isActive = activeTab === category.id;
           const memberCount = displayFacultyByCategory[category.id].length;
@@ -54,7 +54,7 @@ export function FacultyTabs({
                   : "text-[#666666] border-b-2 border-transparent hover:text-[#1a1a1a]"
               }`}
             >
-              <span className="text-lg">{category.label}</span>
+              <span className="text-base sm:text-lg">{category.label}</span>
               <Badge
                 variant="outline"
                 className={`ml-1 ${
@@ -71,17 +71,17 @@ export function FacultyTabs({
       </div>
 
       {/* 선택된 카테고리의 교수진 목록 */}
-      <div className="rounded-2xl bg-[#f9fafb] p-6 mt-6">
+      <div className="rounded-2xl bg-[#f9fafb] p-3 sm:p-6 mt-6">
         {currentMembers.length === 0 ? (
           <div className="rounded-2xl border border-[#D9D9D9] bg-white px-6 py-10 text-center text-sm text-[#666666] shadow-[var(--shadow-soft)] sm:text-base">
             등록된 교수진 정보가 없습니다.
           </div>
         ) : (
-          <div className="rounded-2xl border border-[#D9D9D9] bg-white px-6 shadow-[var(--shadow-soft)]">
+          <div className="rounded-2xl border border-[#D9D9D9] bg-white px-4 sm:px-6 shadow-[var(--shadow-soft)]">
             {currentMembers.map((member) => (
               <div
                 key={member.id}
-                className="flex gap-6 border-b border-[#D9D9D9] py-6 last:border-0"
+                className="flex gap-4 sm:gap-6 border-b border-[#D9D9D9] py-5 sm:py-6 last:border-0"
               >
                 {/* 프로필 이미지 또는 이름 이니셜 */}
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 text-lg font-bold text-blue-600">
