@@ -17,7 +17,7 @@ export function Footer() {
   return (
     <footer className="border-t border-[#D9D9D9] bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid gap-8 py-16 md:grid-cols-[1fr_2fr]">
+        <div className="grid gap-8 py-12 sm:py-16 md:grid-cols-[1fr_2fr]">
           <div>
             <h3 className="text-xl font-bold text-[#1a1a1a]">HRA</h3>
             <p className="mt-2 text-sm text-[#666666]">
@@ -33,17 +33,17 @@ export function Footer() {
               <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">HRA소개</h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/about" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/about" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     HRA
                   </Link>
                 </li>
                 <li>
-                  <Link href="/curriculum" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/curriculum" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     커리큘럼
                   </Link>
                 </li>
                 <li>
-                  <Link href="/faculty" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/faculty" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     교수진
                   </Link>
                 </li>
@@ -54,12 +54,12 @@ export function Footer() {
               <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">입학안내</h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/recruitment" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/recruitment" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     모집안내
                   </Link>
                 </li>
                 <li>
-                  <Link href="/faq" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/faq" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     FAQ
                   </Link>
                 </li>
@@ -70,17 +70,17 @@ export function Footer() {
               <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">소식</h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/notices" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/notices" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     공지사항
                   </Link>
                 </li>
                 <li>
-                  <Link href="/press" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/press" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     언론보도
                   </Link>
                 </li>
                 <li>
-                  <Link href="/gallery" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/gallery" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     갤러리
                   </Link>
                 </li>
@@ -89,13 +89,13 @@ export function Footer() {
                     href="https://instagram.com/hra_official_"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]"
+                    className="inline-flex items-center gap-2 py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]"
                   >
                     <span>@hra_official_</span>
                   </a>
                 </li>
                 <li>
-                  <Link href="/faq" className="flex items-center gap-2 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/faq" className="inline-flex items-center gap-2 py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     <Mail className="h-4 w-4" />
                     <span>문의</span>
                   </Link>
@@ -107,12 +107,12 @@ export function Footer() {
               <h4 className="mb-4 text-sm font-semibold text-[#1a1a1a]">커뮤니티</h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/cohorts" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/cohorts" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     기수
                   </Link>
                 </li>
                 <li>
-                  <Link href="/alumni" className="text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
+                  <Link href="/alumni" className="inline-block py-1 sm:py-0 text-sm text-[#666666] transition-colors hover:text-[#1a1a1a]">
                     수료생 이야기
                   </Link>
                 </li>

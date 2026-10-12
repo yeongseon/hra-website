@@ -73,12 +73,12 @@ export default async function CohortsPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col justify-center w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
+        <div className="flex items-stretch gap-3">
+          <div className="flex flex-1 min-w-0 flex-col justify-center sm:flex-none sm:w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
             <span className="text-xs sm:text-sm font-medium text-[#666666] mb-1">총 기수</span>
             <span className="text-xl sm:text-2xl font-bold text-[#2563EB]">{totalCohorts}기</span>
           </div>
-          <div className="flex flex-col justify-center w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
+          <div className="flex flex-1 min-w-0 flex-col justify-center sm:flex-none sm:w-[120px] rounded-xl border border-[#D9D9D9] bg-white p-3 sm:p-4 shadow-[var(--shadow-soft)]">
             <span className="text-xs sm:text-sm font-medium text-[#666666] mb-1">총 수료생</span>
             <span className="text-xl sm:text-2xl font-bold text-[#2563EB]">406명</span>
           </div>

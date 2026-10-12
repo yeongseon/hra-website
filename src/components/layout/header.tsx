@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X, LogIn, LogOut, ChevronDown, User } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -73,6 +73,38 @@ export function Header({ session }: HeaderProps) {
     ? [...navItems, { label: "자료실", href: "/resources" }]
     : navItems;
 
+  /**
+   * 모바일 메뉴가 열려 있는 동안 뒤쪽 페이지 스크롤을 잠근다.
+   *
+   * 메뉴 패널은 헤더에 absolute 로 붙어 있어서, 잠그지 않으면 메뉴를 스크롤하려다
+   * 뒤 페이지가 같이 밀려 내려가 메뉴가 화면 밖으로 사라지는 현상이 생긴다.
+   * 언마운트 시에도 반드시 원복해야 하므로 cleanup 에서 overflow 를 되돌린다.
+   */
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    /**
+     * md(768px) 이상으로 화면이 넓어지면 모바일 메뉴 패널과 닫기(X) 버튼이 모두
+     * md:hidden 으로 사라진다. 이때 mobileOpen 이 true 로 남아 있으면
+     * body 스크롤이 잠긴 채 풀 수단이 없어져 페이지가 완전히 멈춘다.
+     * (예: 세로 모드에서 메뉴를 연 뒤 가로로 회전, 데스크톱 창 넓히기)
+     * 그래서 md 이상으로 넘어가는 순간 메뉴를 강제로 닫는다.
+     */
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileOpen(false);
+    };
+    desktopQuery.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      desktopQuery.removeEventListener("change", closeOnDesktop);
+    };
+  }, [mobileOpen]);
+
   const handleSignOut = async () => {
     setUserMenuOpen(false);
     setMobileOpen(false);
@@ -88,7 +120,8 @@ export function Header({ session }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#D9D9D9]">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-         <Link href="/" className="text-xl font-bold tracking-tight text-gray-900">
+         {/* 로고 — 모바일 메뉴가 열린 상태에서 눌러도 메뉴가 닫히도록 onClick 추가 */}
+         <Link href="/" onClick={() => setMobileOpen(false)} className="text-xl font-bold tracking-tight text-gray-900">
            HRA
          </Link>
 
@@ -221,8 +254,10 @@ export function Header({ session }: HeaderProps) {
          </div>
 
          <div className="flex items-center gap-3 md:hidden">
+           {/* 지원하기 — 모바일 메뉴가 열린 채 이동하면 스크롤 잠금이 다음 페이지까지 따라가므로 여기서 닫는다 */}
            <Link
   href="/recruitment/apply"
+  onClick={() => setMobileOpen(false)}
   className="inline-flex items-center justify-center rounded-lg bg-[#2563EB] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
 >
   지원하기
