@@ -35,8 +35,13 @@ afterEach(() => {
   cleanup();
 });
 
-// 에디터에 마크다운을 넣어 열고, 문서 끝에 한 글자짜리 문단을 추가한 뒤 저장될 값을 돌려준다.
-async function openEditAndSave(markdown: string, typed: string): Promise<string> {
+// 에디터에 마크다운을 넣어 열고, edit 로 편집한 뒤 저장될 값(hidden input)을 돌려준다.
+// edit 를 주지 않으면 문서 끝에 한 글자짜리 문단을 추가한다 ("다른 곳의 오타 수정" 상황).
+async function openEditAndSave(
+  markdown: string,
+  typed: string,
+  edit?: (editor: Editor) => void,
+): Promise<string> {
   const view = render(createElement(RichTextEditor, { name: "body", defaultValue: markdown }));
   await waitFor(() => {
     if (!view.container.querySelector(".ProseMirror")) throw new Error("에디터가 아직 준비되지 않았습니다.");
@@ -44,10 +49,14 @@ async function openEditAndSave(markdown: string, typed: string): Promise<string>
   const element = view.container.querySelector(".ProseMirror") as HTMLElement & { editor: Editor };
   const editor = element.editor;
   await act(async () => {
-    editor.commands.insertContentAt(editor.state.doc.content.size, {
-      type: "paragraph",
-      content: [{ type: "text", text: typed }],
-    });
+    if (edit) {
+      edit(editor);
+    } else {
+      editor.commands.insertContentAt(editor.state.doc.content.size, {
+        type: "paragraph",
+        content: [{ type: "text", text: typed }],
+      });
+    }
   });
   const hidden = view.container.querySelector<HTMLInputElement>('input[type="hidden"][name="body"]');
   if (!hidden) throw new Error("저장용 hidden input 을 찾지 못했습니다.");
@@ -55,6 +64,13 @@ async function openEditAndSave(markdown: string, typed: string): Promise<string>
   cleanup();
   return value;
 }
+
+// 마크다운에서 표 줄만 뽑아 공백을 정리한다 (열 맞춤용 공백 차이는 비교하지 않는다).
+const tableOf = (markdown: string) =>
+  markdown
+    .split("\n")
+    .filter((line) => line.trim().startsWith("|"))
+    .map((line) => line.replace(/\s+/g, " ").trim());
 
 const SOURCE = [
   "앞 문단",
@@ -90,12 +106,6 @@ describe("RichTextEditor — 표 셀 서식 보존", () => {
   });
 
   it("다시 열어 한 번 더 저장해도 표 내용이 달라지지 않는다", async () => {
-    const tableOf = (markdown: string) =>
-      markdown
-        .split("\n")
-        .filter((line) => line.trim().startsWith("|"))
-        .map((line) => line.replace(/\s+/g, " ").trim());
-
     const first = await openEditAndSave(SOURCE, "x");
     const second = await openEditAndSave(first, "y");
 
@@ -109,5 +119,64 @@ describe("RichTextEditor — 표 셀 서식 보존", () => {
 
     expect(saved).toContain("**굵게**");
     expect(saved).not.toContain("\\*");
+  });
+
+  it("빈 셀이 있는 표를 두 번 저장해도 &nbsp; 가 글자로 바뀌지 않는다", async () => {
+    const withEmptyCell = ["| 항목 | 값 |", "| --- | --- |", "| 이름 | |"].join("\n");
+    const first = await openEditAndSave(withEmptyCell, "x");
+    const second = await openEditAndSave(first, "y");
+
+    expect(second).not.toContain("&amp;");
+    expect(tableOf(second)).toEqual(tableOf(first));
+  });
+
+  it("셀 안의 이미지가 저장에서 사라지지 않는다", async () => {
+    // 표를 만들고 본문 셀에 글자와 이미지를 넣는다 (이미지는 자식이 없는 블록 노드다).
+    const saved = await openEditAndSave("", "", (editor) => {
+      editor.chain().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run();
+      let bodyCell = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (bodyCell === -1 && node.type.name === "tableCell") bodyCell = pos;
+      });
+      editor
+        .chain()
+        .setTextSelection(bodyCell + 2)
+        .insertContent("설명")
+        .setImage({ src: "https://example.com/y.png", alt: "a" })
+        .run();
+    });
+
+    expect(saved).toContain("설명");
+    expect(saved).toContain("![a](https://example.com/y.png)");
+  });
+
+  it("한 셀의 여러 문단은 <br> 로 이어서 저장한다", async () => {
+    const saved = await openEditAndSave("", "", (editor) => {
+      editor.chain().insertTable({ rows: 2, cols: 1, withHeaderRow: true }).run();
+      let bodyCell = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (bodyCell === -1 && node.type.name === "tableCell") bodyCell = pos;
+      });
+      editor
+        .chain()
+        .setTextSelection(bodyCell + 2)
+        .insertContent([
+          { type: "paragraph", content: [{ type: "text", text: "문단1" }] },
+          { type: "paragraph", content: [{ type: "text", text: "문단2" }] },
+        ])
+        .run();
+    });
+
+    expect(saved).toContain("문단1<br>문단2");
+  });
+
+  it("본문에 사설 영역 문자가 있어도 줄바꿈으로 바뀌지 않는다", async () => {
+    const privateUse = "\uE000";
+    const source = ["| 항목 | 값 |", "| --- | --- |", `| 이름 | 가${privateUse}나 |`].join("\n");
+    const saved = await openEditAndSave(source, "x");
+    const row = saved.split("\n").find((line) => line.includes("이름"));
+
+    expect(row).toContain(`가${privateUse}나`);
+    expect(row).not.toContain("<br>");
   });
 });
