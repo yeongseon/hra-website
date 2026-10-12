@@ -81,6 +81,12 @@ const normalizeFileName = (fileName: string) => {
     .replace(/\s+/g, "-")
     .replace(/[^a-zA-Z0-9._-]/g, "");
 
+  // 한글로만 된 파일명은 위 정리 후 ".pdf" 처럼 확장자만 남는다. 이름 부분이 비면 기본 이름을 붙여
+  // 저장 경로가 점으로 시작하지 않게 한다 (확장자로 파일 형식을 추정하는 동작을 보존).
+  if (sanitized.startsWith(".")) {
+    return `weekly-text${sanitized}`;
+  }
+
   return sanitized || "weekly-text";
 };
 

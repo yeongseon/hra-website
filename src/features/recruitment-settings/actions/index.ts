@@ -217,7 +217,17 @@ export async function updateRecruitmentSettings(
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
+      try {
+        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      } catch (error) {
+        logServerError("recruitment-settings/poster-upload", error);
+        return {
+          success: false,
+          message: "포스터 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
+        };
+      }
       nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
@@ -407,7 +417,17 @@ export async function updateRecruitmentPoster(
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
+      try {
+        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      } catch (error) {
+        logServerError("recruitment-settings/poster-upload", error);
+        return {
+          success: false,
+          message: "포스터 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
+        };
+      }
       nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
