@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { desc, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resources-tab-nav";
 import { WeeklyTextForm } from "@/app/(admin)/admin/resources/weekly-texts/_components/weekly-text-form";
 import { createWeeklyText } from "@/features/weekly-texts/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 
@@ -20,7 +20,7 @@ export default async function NewWeeklyTextPage() {
     cohortRows = await db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
+      .orderBy(cohortNumberDesc(cohorts.name));
   } catch (error) {
     logServerError("admin/resources/weekly-texts/new", error);
   }

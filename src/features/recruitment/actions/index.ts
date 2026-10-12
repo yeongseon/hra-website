@@ -296,7 +296,8 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
       startDate: toDateOrNull(parsed.data.startDate),
       endDate: toDateOrNull(parsed.data.endDate),
       isActive: parsed.data.isActive,
-      order: parsed.data.order,
+      // 기수 폼에는 정렬 순서 입력이 없다. 값이 넘어온 경우에만 갱신해 기존 순서를 0 으로 덮어쓰지 않는다 (#115).
+      ...(formData.has("order") ? { order: parsed.data.order } : {}),
       imageUrl: nextImageUrl,
     })
     .where(eq(cohorts.id, parsedId.data));
