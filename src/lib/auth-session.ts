@@ -52,22 +52,64 @@ export function isValidUuid(value: unknown): value is string {
 /**
  * jwt 콜백에서 DB lookup 시 사용할 조회 조건 (#68, #74)
  *
- * 우선순위: 유효한 UUID id → email fallback.
- *   - id 우선은 사용자가 이메일을 변경한 뒤에도 같은 세션을 유지하도록 하기 위함.
- *   - 둘 다 없으면 (bootstrap 실패 등) null 을 반환하여 jwt 콜백이 세션을 무효화하도록 위임.
+ * 조회 기준은 "로그인 직후(최초 발급)" 와 "이후 요청" 두 경우로 나뉜다.
  *
- * pure function 이므로 테스트로 각 우선순위 분기와 fallback 을 검증할 수 있다.
+ * 1) 로그인 직후 — next-auth 가 jwt 콜백에 `account` 를 함께 넘겨주는 유일한 시점.
+ *    - OAuth: (provider, providerAccountId) binding 튜플로 조회한다.
+ *      signIn 콜백이 인가한 바로 그 row (boundUser 또는 방금 INSERT 한 row) 를 가리키는
+ *      유일한 키이기 때문이다.
+ *    - credentials: authorize() 가 반환한 DB id (UUID) 로 조회한다.
+ * 2) 이후 요청 — token.id (최초 발급 때 resolveJwtSession 이 심은 DB id) 로 조회한다.
+ *
+ * 보안: email 로는 절대 조회하지 않는다.
+ *   provider 가 내려주는 email 은 사용자가 provider 쪽에서 바꿀 수 있는 값이고, 우리는
+ *   그 소유권을 신뢰하지 않는다 (decideOAuthSignIn 문서 참조). 과거에는 최초 발급 때
+ *   token.email 로 fallback 했는데, 그러면 signIn 은 boundUser 를 인가해 놓고 세션은
+ *   "provider email 과 같은 email 을 가진 다른 row" 로 발급되어 계정이 뒤바뀔 수 있었다.
+ *   조건을 만들 수 없으면 null 을 반환하여 jwt 콜백이 세션을 무효화하도록 한다 (fail-closed).
+ *
+ * pure function 이므로 테스트로 각 분기를 검증할 수 있다.
  */
 export type JwtLookupCriteria =
   | { by: "id"; value: string }
-  | { by: "email"; value: string };
+  | { by: "binding"; provider: string; providerAccountId: string };
 
-export function pickJwtLookupCriteria(token: JWT): JwtLookupCriteria | null {
+/**
+ * 로그인 직후 jwt 콜백이 받는 값 중 조회 조건 결정에 필요한 최소 shape.
+ * `type` 은 next-auth account.type ("credentials" | "oauth" | "oidc" 등) 이다.
+ * `userId` 는 credentials 로그인에서 authorize() 가 반환한 DB id 이다
+ * (OAuth 에서는 next-auth 가 임의로 만든 UUID 이므로 절대 사용하지 않는다 —
+ *  그래서 provider 이름이 아니라 type 으로 분기한다).
+ */
+export type JwtSignInContext = {
+  type: string;
+  provider: string;
+  providerAccountId: string;
+  userId?: string | null;
+};
+
+export function pickJwtLookupCriteria(
+  token: JWT,
+  signIn?: JwtSignInContext | null,
+): JwtLookupCriteria | null {
+  if (signIn) {
+    if (signIn.type === "credentials") {
+      return isValidUuid(signIn.userId)
+        ? { by: "id", value: signIn.userId }
+        : null;
+    }
+    if (signIn.provider.length > 0 && signIn.providerAccountId.length > 0) {
+      return {
+        by: "binding",
+        provider: signIn.provider,
+        providerAccountId: signIn.providerAccountId,
+      };
+    }
+    return null;
+  }
+
   if (isValidUuid(token.id)) {
     return { by: "id", value: token.id };
-  }
-  if (typeof token.email === "string" && token.email.length > 0) {
-    return { by: "email", value: token.email };
   }
   return null;
 }

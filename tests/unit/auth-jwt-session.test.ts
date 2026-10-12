@@ -2,7 +2,10 @@
  * auth-session pure helper 회귀 테스트 (#67, #68, #74)
  *
  * 검증 대상 (src/lib/auth-session.ts):
- *   - pickJwtLookupCriteria: DB 조회 우선순위 (UUID id → email fallback → null)
+ *   - pickJwtLookupCriteria: DB 조회 조건
+ *     · 로그인 직후: OAuth 는 binding 튜플, credentials 는 authorize() 의 DB id
+ *     · 이후 요청: token.id (UUID)
+ *     · email 로는 절대 조회하지 않음 → 조건을 못 만들면 null (fail-closed)
  *   - resolveJwtSession: 세션 무효화 판단
  *     · dbUser 없음 → null (계정 삭제 시나리오)
  *     · sessionVersion 불일치 → null (권한 변경 후 강제 로그아웃)
@@ -41,46 +44,126 @@ import {
 const UUID_A = "a3f9b1c2-4d5e-4f6a-8b7c-9d0e1f2a3b4c";
 
 describe("pickJwtLookupCriteria", () => {
-  it("유효한 UUID id 가 있으면 id 기준 조회 조건을 반환한다", () => {
-    const token = { id: UUID_A, email: "user@example.com" } as JWT;
-    expect(pickJwtLookupCriteria(token)).toEqual({ by: "id", value: UUID_A });
-  });
+  describe("이후 요청 (signIn context 없음)", () => {
+    it("유효한 UUID id 가 있으면 id 기준 조회 조건을 반환한다", () => {
+      const token = { id: UUID_A, email: "user@example.com" } as JWT;
+      expect(pickJwtLookupCriteria(token)).toEqual({ by: "id", value: UUID_A });
+    });
 
-  it("id 가 없고 email 만 있으면 email 로 fallback 한다", () => {
-    const token = { email: "user@example.com" } as JWT;
-    expect(pickJwtLookupCriteria(token)).toEqual({
-      by: "email",
-      value: "user@example.com",
+    it("id 가 없으면 email 이 있어도 null 을 반환한다 (email 조회 금지)", () => {
+      // email 로 fallback 하면 provider email 이 가리키는 다른 계정으로 세션이 발급될 수 있다.
+      const token = { email: "user@example.com" } as JWT;
+      expect(pickJwtLookupCriteria(token)).toBeNull();
+    });
+
+    it("id 가 UUID 형식이 아니면 email 이 있어도 null 을 반환한다 (조작 방어)", () => {
+      const token = {
+        id: "not-a-uuid",
+        email: "user@example.com",
+      } as unknown as JWT;
+      expect(pickJwtLookupCriteria(token)).toBeNull();
+    });
+
+    it("id 도 없고 email 도 없으면 null 을 반환한다 (bootstrap 실패)", () => {
+      const token = {} as JWT;
+      expect(pickJwtLookupCriteria(token)).toBeNull();
+    });
+
+    it("signIn context 가 null 이어도 token.id 기준으로 동작한다", () => {
+      const token = { id: UUID_A } as JWT;
+      expect(pickJwtLookupCriteria(token, null)).toEqual({
+        by: "id",
+        value: UUID_A,
+      });
     });
   });
 
-  it("id 가 UUID 형식이 아니면 email 로 fallback 한다 (조작 방어)", () => {
-    // 프론트에서 개발자 툴로 조작한 토큰 등에 대비.
-    const token = {
-      id: "not-a-uuid",
-      email: "user@example.com",
-    } as unknown as JWT;
-    expect(pickJwtLookupCriteria(token)).toEqual({
-      by: "email",
-      value: "user@example.com",
+  describe("로그인 직후 — OAuth", () => {
+    it("binding 튜플 기준 조회 조건을 반환한다 (userId 가 UUID 여도 무시)", () => {
+      // next-auth 가 만든 defaultToken: id 없음, email 은 provider 가 준 값.
+      // OAuth 의 user.id 는 next-auth 가 임의 생성한 UUID 일 수 있으므로 id 조회에 쓰면 안 된다.
+      const token = { email: "provider@example.com", sub: "g-1" } as JWT;
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "oidc",
+          provider: "google",
+          providerAccountId: "g-1",
+          userId: UUID_A,
+        }),
+      ).toEqual({ by: "binding", provider: "google", providerAccountId: "g-1" });
+    });
+
+    it("provider email 이 다른 계정의 email 과 같아도 조회 조건에 email 이 들어가지 않는다", () => {
+      // 회귀 방지: 바인딩된 계정으로 로그인했는데 provider email 이 관리자 email 과 같은 경우.
+      // 조회 조건은 오직 binding 튜플이어야 하며 email 은 어떤 형태로도 포함되면 안 된다.
+      const token = { email: "admin@example.com" } as JWT;
+      const criteria = pickJwtLookupCriteria(token, {
+        type: "oauth",
+        provider: "kakao",
+        providerAccountId: "kakao-123",
+      });
+      expect(criteria).toEqual({
+        by: "binding",
+        provider: "kakao",
+        providerAccountId: "kakao-123",
+      });
+      expect(JSON.stringify(criteria)).not.toContain("admin@example.com");
+    });
+
+    it("token.id 가 이미 있어도 로그인 직후에는 binding 이 우선한다", () => {
+      const token = { id: UUID_A } as JWT;
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "oidc",
+          provider: "google",
+          providerAccountId: "g-2",
+        }),
+      ).toEqual({ by: "binding", provider: "google", providerAccountId: "g-2" });
+    });
+
+    it("providerAccountId 가 비어 있으면 null 을 반환한다 (fail-closed)", () => {
+      const token = { id: UUID_A, email: "user@example.com" } as JWT;
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "oidc",
+          provider: "google",
+          providerAccountId: "",
+        }),
+      ).toBeNull();
     });
   });
 
-  it("id 도 없고 email 도 없으면 null 을 반환한다 (bootstrap 실패)", () => {
-    const token = {} as JWT;
-    expect(pickJwtLookupCriteria(token)).toBeNull();
-  });
+  describe("로그인 직후 — credentials", () => {
+    it("authorize() 가 반환한 DB id 기준 조회 조건을 반환한다", () => {
+      const token = { email: "user@example.com", sub: UUID_A } as JWT;
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "credentials",
+          provider: "credentials",
+          providerAccountId: UUID_A,
+          userId: UUID_A,
+        }),
+      ).toEqual({ by: "id", value: UUID_A });
+    });
 
-  it("email 이 빈 문자열이면 fallback 하지 않는다", () => {
-    const token = { email: "" } as JWT;
-    expect(pickJwtLookupCriteria(token)).toBeNull();
-  });
-
-  it("email 이 non-string 이면 fallback 하지 않는다 (런타임 방어)", () => {
-    // JWT 타입 상 email 은 string | null | undefined 지만
-    // 오래된 세션이나 조작된 토큰에 대비한 런타임 방어.
-    const token = { email: 42 as unknown as string } as JWT;
-    expect(pickJwtLookupCriteria(token)).toBeNull();
+    it("userId 가 UUID 가 아니면 null 을 반환한다 (email fallback 없음)", () => {
+      const token = { email: "user@example.com" } as JWT;
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "credentials",
+          provider: "credentials",
+          providerAccountId: "x",
+          userId: "not-a-uuid",
+        }),
+      ).toBeNull();
+      expect(
+        pickJwtLookupCriteria(token, {
+          type: "credentials",
+          provider: "credentials",
+          providerAccountId: "x",
+        }),
+      ).toBeNull();
+    });
   });
 });
 
@@ -134,9 +217,9 @@ describe("resolveJwtSession", () => {
     expect(resolveJwtSession(token, dbUser)).toBeNull();
   });
 
-  it("email fallback 조회 후 dbUser.id 를 token.id 에 채운다", () => {
-    // credentials 로그인 초기에는 token.id 가 없어 email 로 fallback 하고,
-    // 이후 요청부터 id 우선 조회가 가능하도록 dbUser.id 를 심는다.
+  it("최초 발급 시 dbUser.id 를 token.id 에 채운다", () => {
+    // 로그인 직후에는 token.id 가 없다 (binding 또는 authorize() id 로 조회).
+    // 이후 요청부터 id 기준 조회가 가능하도록 dbUser.id 를 심는다.
     const token = { email: "user@example.com" } as JWT;
     const result = resolveJwtSession(token, dbUser);
     expect(result?.id).toBe(UUID_A);

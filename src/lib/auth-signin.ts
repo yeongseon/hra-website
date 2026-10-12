@@ -118,10 +118,12 @@ export interface OAuthSignInInput {
  * 결정 트리는 `decideOAuthSignIn` (pure) 에 위임하고, 이 함수는 IO 조합만 담당한다.
  *
  * 부수효과:
- *   `input.user.email` 을 최종 email (kakao placeholder 포함) 로 덮어쓴다.
- *   NextAuth 의 후속 jwt 콜백이 token.email 을 통해 DB 조회할 때 placeholder email
- *   에도 동일 규칙이 적용되도록 하기 위함이다. 이 mutation 은 원본 auth.ts 콜백의
- *   동작을 그대로 보존한 것이며 signIn-io 테스트로 회귀 검증된다.
+ *   `input.user.email` 을 "세션이 가리켜야 할 DB row 의 email" 로 덮어쓴다.
+ *     - allow-new: 방금 INSERT 한 email (kakao placeholder 포함).
+ *     - allow-existing: boundUser 의 DB email. provider 가 지금 내려준 email 이 아니다.
+ *   provider email 은 사용자가 provider 쪽에서 바꿀 수 있으므로, 그 값을 token.email 로
+ *   흘려보내면 세션에 다른 사람의 email 이 표시되거나 (과거 구현처럼) 다른 row 로 조회될
+ *   수 있다. 세션 조회 자체는 jwt 콜백이 binding 튜플로 수행한다 (pickJwtLookupCriteria).
  */
 export async function handleOAuthSignIn(
   input: OAuthSignInInput,
@@ -173,6 +175,8 @@ export async function handleOAuthSignIn(
     }
   }
 
-  user.email = email;
+  // allow-existing 이면 인가된 row (boundUser) 의 email 을, allow-new 면 방금 저장한 email 을 심는다.
+  user.email =
+    decision.kind === "allow-existing" && boundUser ? boundUser.email : email;
   return true;
 }
