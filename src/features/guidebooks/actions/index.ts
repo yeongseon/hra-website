@@ -52,6 +52,12 @@ const normalizeFileName = (fileName: string) => {
     .replace(/\s+/g, "-")
     .replace(/[^a-zA-Z0-9._-]/g, "");
 
+  // 한글로만 된 파일명은 위 정리 후 ".pdf" 처럼 확장자만 남는다. 이름 부분이 비면 기본 이름을 붙여
+  // 저장 경로가 점으로 시작하지 않게 한다 (확장자로 파일 형식을 추정하는 동작을 보존).
+  if (sanitized.startsWith(".")) {
+    return `guidebook${sanitized}`;
+  }
+
   return sanitized || "guidebook";
 };
 
@@ -110,6 +116,8 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
       access: "public",
+      // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
+      addRandomSuffix: true,
     });
 
     await db.insert(guidebooks).values({
@@ -178,7 +186,10 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
       }
 
       const safeFileName = normalizeFileName(validatedFile.file.name);
-      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, { access: "public" });
+      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
+        access: "public",
+        addRandomSuffix: true,
+      });
 
       await db
         .update(guidebooks)

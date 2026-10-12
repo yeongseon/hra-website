@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/admin";
 import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
+import { logServerError } from "@/lib/errors";
 
 const maxPosterFileSize = 10 * 1024 * 1024;
 const posterInputModeSchema = z.enum(["url", "file"]);
@@ -114,23 +115,30 @@ async function uploadPosterFile(file: File) {
   const originalBuffer = Buffer.from(await file.arrayBuffer());
   const safeFileName = normalizePosterFileName(file.name);
 
+  // WebP 변환만 try 로 감싼다. 예전에는 업로드(put)까지 같은 try 안에 있어, 업로드 실패가
+  // 변환 실패로 취급되어 변환 전 원본이 대신 올라갔다 (#110).
+  let webpBuffer: Buffer | null = null;
   try {
-    const webpBuffer = await sharp(originalBuffer).webp({ quality: 85 }).toBuffer();
-    const webpFileName = toWebpFileName(safeFileName);
-    const blob = await put(`recruitment/포스터-${webpFileName}`, webpBuffer, {
-      access: "public",
-      contentType: "image/webp",
-    });
-
-    return blob.url;
-  } catch {
-    const blob = await put(`recruitment/포스터-${safeFileName}`, originalBuffer, {
-      access: "public",
-      contentType: file.type || undefined,
-    });
-
-    return blob.url;
+    webpBuffer = await sharp(originalBuffer).webp({ quality: 85 }).toBuffer();
+  } catch (error) {
+    // sharp 가 처리하지 못하는 이미지면 원본을 그대로 올린다.
+    logServerError("recruitment-settings/poster-convert", error);
   }
+
+  // addRandomSuffix: 같은 이름의 포스터를 다시 올려도 경로가 겹치지 않고, 지운 주소가 재사용되지 않는다.
+  const blob = webpBuffer
+    ? await put(`recruitment/포스터-${toWebpFileName(safeFileName)}`, webpBuffer, {
+        access: "public",
+        contentType: "image/webp",
+        addRandomSuffix: true,
+      })
+    : await put(`recruitment/포스터-${safeFileName}`, originalBuffer, {
+        access: "public",
+        contentType: file.type || undefined,
+        addRandomSuffix: true,
+      });
+
+  return blob.url;
 }
 
 function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: string }>) {
@@ -209,7 +217,17 @@ export async function updateRecruitmentSettings(
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
+      try {
+        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      } catch (error) {
+        logServerError("recruitment-settings/poster-upload", error);
+        return {
+          success: false,
+          message: "포스터 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
+        };
+      }
       nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
@@ -399,7 +417,17 @@ export async function updateRecruitmentPoster(
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
     if (validatedPosterFile.file) {
-      newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
+      try {
+        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+      } catch (error) {
+        logServerError("recruitment-settings/poster-upload", error);
+        return {
+          success: false,
+          message: "포스터 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
+        };
+      }
       nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
