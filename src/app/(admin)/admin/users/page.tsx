@@ -4,7 +4,7 @@
  * 전체 회원 목록을 표시하고 그룹(관리자/교수/기수/승인대기)을 변경하거나 삭제할 수 있습니다.
  * 기수 목록을 함께 조회하여 드롭다운에 동적으로 표시합니다.
  */
-import { desc, sql } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, users } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import { UserGroupButton } from "./_components/user-role-button";
@@ -84,7 +85,7 @@ export default async function AdminUsersPage() {
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
       // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
-      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
+      .orderBy(cohortNumberDesc(cohorts.name)),
   ]);
 
   // cohortId → cohort name 빠른 조회를 위한 맵

@@ -8,12 +8,12 @@
  */
 
 import Link from "next/link";
-import { desc, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { ClassLogForm } from "@/app/(admin)/admin/resources/_components/class-log-form";
 import { createClassLog } from "@/features/class-logs/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 
@@ -30,7 +30,7 @@ export default async function NewClassLogPage() {
     cohortRows = await db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
+      .orderBy(cohortNumberDesc(cohorts.name));
   } catch (error) {
     logServerError("admin/resources/new", error);
   }

@@ -12,6 +12,7 @@ import { Info, Plus } from "lucide-react";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import {
   classMaterials,
   classLogs,
@@ -55,7 +56,7 @@ export default async function ResourcesPage() {
         .select({ id: cohorts.id, name: cohorts.name })
         .from(cohorts)
         // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
-        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
+        .orderBy(cohortNumberDesc(cohorts.name)),
 
       // 로그인 사용자의 cohortId 조회 (MEMBER일 때 업로드 권한 제한에 사용)
       session?.user?.id
