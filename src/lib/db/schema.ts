@@ -823,7 +823,9 @@ export const applicationAnswers = pgTable("application_answers", {
     .references(() => applicationSubmissions.id, { onDelete: "cascade" }),
   questionId: uuid("question_id")
     .notNull()
-    .references(() => applicationQuestions.id, { onDelete: "cascade" }),
+    // 질문 단독 삭제는 차단합니다. 양식·기수 cascade 완료 후 검사는 별도 SQL의
+    // DEFERRABLE INITIALLY DEFERRED로 보장합니다 (Drizzle 선언 API 미지원).
+    .references(() => applicationQuestions.id, { onDelete: "no action" }),
   value: text("value").notNull(), // 답변 내용 (다중 선택은 구분자나 JSON 등으로 저장 가능)
 });
 

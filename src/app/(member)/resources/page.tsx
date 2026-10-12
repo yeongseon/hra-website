@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Info, Plus } from "lucide-react";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { classMaterialReadFilter } from "@/features/class-materials/access";
 import { db } from "@/lib/db";
 import {
   classMaterials,
@@ -37,7 +38,6 @@ export default async function ResourcesPage() {
   const showAccessWarning =
     userRole !== "ADMIN" && userRole !== "FACULTY" && userRole !== "MEMBER";
   const isAdmin = userRole === "ADMIN";
-  const canViewFacultyMaterials = userRole === "ADMIN" || userRole === "FACULTY";
 
   // 기수(최신순), 사용자 cohortId, 자료들을 병렬 조회
   const [
@@ -95,8 +95,7 @@ export default async function ResourcesPage() {
         .from(weeklyTexts)
         .orderBy(sql`${weeklyTexts.classDate} DESC NULLS LAST`, desc(weeklyTexts.createdAt)),
 
-      (canViewFacultyMaterials
-        ? db
+      db
             .select({
               id: classMaterials.id,
               title: classMaterials.title,
@@ -109,22 +108,8 @@ export default async function ResourcesPage() {
             })
             .from(classMaterials)
             .leftJoin(users, eq(classMaterials.uploadedById, users.id))
-            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt))
-        : db
-            .select({
-              id: classMaterials.id,
-              title: classMaterials.title,
-              classDate: classMaterials.classDate,
-              createdAt: classMaterials.createdAt,
-              audience: classMaterials.audience,
-              weekNumber: classMaterials.weekNumber,
-              lectureTitle: classMaterials.lectureTitle,
-              uploaderName: users.name,
-            })
-            .from(classMaterials)
-            .leftJoin(users, eq(classMaterials.uploadedById, users.id))
-            .where(eq(classMaterials.audience, "STUDENT"))
-            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt))),
+            .where(classMaterialReadFilter(session?.user))
+            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt)),
 
       // 가이드북 파일 (Vercel Blob)
       db.select().from(guidebooks).orderBy(desc(guidebooks.createdAt)),
