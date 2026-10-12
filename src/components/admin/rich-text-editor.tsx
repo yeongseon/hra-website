@@ -9,7 +9,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
 // Table, TableRow 등은 단일 패키지에서 named export로 제공됨
 import { Table, TableRow, TableCell, TableHeader, renderTableToMarkdown } from "@tiptap/extension-table";
-import type { JSONContent } from "@tiptap/core";
+import type { JSONContent, MarkdownToken } from "@tiptap/core";
 
 /** 이미지 크기 조정 프리셋 — null 은 "원본(크기 제한 없음)"을 의미한다 */
 const SIZE_PRESETS = [
@@ -225,13 +225,15 @@ const MarkdownParagraph = Paragraph.extend({
 /**
  * 표(GFM 테이블) 마크다운 직렬화·역직렬화 확장
  *
- * @tiptap/markdown 은 table 노드를 기본 지원하지 않으므로 직접 구현한다.
+ * 열 너비를 HTML 로 보존하는 등 이 에디터만의 저장 규칙이 있어 직접 구현한다.
  * - renderMarkdown: TipTap table 노드 → GFM 마크다운 표 (`| 헤더 | ... |`)
  * - parseMarkdown: marked 의 "table" 토큰 → TipTap table 노드 JSON
  */
+// marked 의 표 셀 토큰. tokens 는 셀 내용을 인라인 단위(굵게·링크·줄바꿈 등)로 나눈 결과다.
+type MarkedTableCell = { text: string; tokens?: MarkdownToken[] };
 type MarkedTableToken = {
-  header: Array<{ text: string }>;
-  rows: Array<Array<{ text: string }>>;
+  header: MarkedTableCell[];
+  rows: MarkedTableCell[][];
 };
 
 // 표 스트립 방향 — 오른쪽(열 추가) or 아래쪽(행 추가)
@@ -342,6 +344,63 @@ function renderTableAsHtml(tableNode: JSONContent): string {
   return html;
 }
 
+/**
+ * 표 셀 안 줄바꿈을 GFM 표로 저장할 때 잠시 대신 넣어 둘 문자를 고른다.
+ * 사설 영역(U+E000~) 문자 중 이 표에 실제로 쓰이지 않은 것을 골라, 본문에 우연히 들어 있던
+ * 같은 문자(HWP 에서 붙여 넣은 글 등)가 줄바꿈으로 바뀌는 일을 막는다.
+ */
+function pickCellBreakPlaceholder(tableNode: JSONContent): string {
+  const serialized = JSON.stringify(tableNode);
+  for (let code = 0xe000; code <= 0xe0ff; code += 1) {
+    const candidate = String.fromCharCode(code);
+    if (!serialized.includes(candidate)) return candidate;
+  }
+  // 256개가 모두 쓰인 표는 현실적으로 없다. 그래도 값은 돌려준다.
+  return "\uE000";
+}
+
+/**
+ * 표 노드를 GFM 마크다운 표로 직렬화하되, 셀 안 줄바꿈을 `<br>` 로 보존한다 (#118).
+ *
+ * 라이브러리의 renderTableToMarkdown 은 셀 내용의 공백·줄바꿈을 모두 한 칸 공백으로 합친다.
+ * 그대로 쓰면 "김철수<br>이영희" 가 저장 후 "김철수 이영희" 가 되어 줄바꿈이 사라진다.
+ * 그래서 줄바꿈 노드를 임시 문자로 바꿔 직렬화한 뒤, 결과 문자열에서 `<br>` 로 되돌린다.
+ * 한 셀에 문단이 여러 개인 경우(Enter 로 나눈 줄)도 같은 임시 문자를 구분자로 써서 `<br>` 로 잇는다.
+ */
+function renderTableKeepingBreaks(
+  tableNode: JSONContent,
+  helpers: Parameters<typeof renderTableToMarkdown>[1],
+): string {
+  const placeholder = pickCellBreakPlaceholder(tableNode);
+
+  // 셀 → 블록 → 인라인 순으로 내려가며 hardBreak 만 임시 문자 텍스트로 바꾼 복사본을 만든다.
+  // 자식이 없는 블록(셀 안의 이미지 등)은 그대로 둔다. 빈 content 를 붙이면 이미지가 직렬화에서 사라진다.
+  const withPlaceholders: JSONContent = {
+    ...tableNode,
+    content: (tableNode.content ?? []).map((row) => ({
+      ...row,
+      content: (row.content ?? []).map((cell) => ({
+        ...cell,
+        content: (cell.content ?? []).map((block) =>
+          block.content
+            ? {
+                ...block,
+                content: block.content.map((inline) =>
+                  inline.type === "hardBreak" ? { type: "text", text: placeholder } : inline,
+                ),
+              }
+            : block,
+        ),
+      })),
+    })),
+  };
+
+  return renderTableToMarkdown(withPlaceholders, helpers, { cellLineSeparator: placeholder }).replaceAll(
+    placeholder,
+    "<br>",
+  );
+}
+
 const MarkdownTable = Table.configure({ resizable: true }).extend({
   // @tiptap/markdown 에 "table" 토큰을 이 확장이 처리함을 등록
   markdownTokenName: "table",
@@ -354,25 +413,43 @@ const MarkdownTable = Table.configure({ resizable: true }).extend({
     const firstRowFirstCell = (node.content ?? [])[0]?.content?.[0];
     const hasColWidths = !!((firstRowFirstCell?.attrs?.colwidth as number[] | null)?.[0]);
     if (hasColWidths) return renderTableAsHtml(node);
-    return renderTableToMarkdown(node, helpers);
+    return renderTableKeepingBreaks(node, helpers);
   },
 
   // marked "table" 토큰 → TipTap 노드 JSON
-  parseMarkdown(token) {
+  //
+  // 셀 내용은 반드시 인라인 토큰(cell.tokens)을 파싱해서 만든다 (#118).
+  // 예전에는 셀의 원본 문자열(cell.text)을 통째로 텍스트 노드에 넣었다. 그러면 `**굵게**` 나
+  // 링크 문법이 "글자" 로 취급되어 다음 저장 때 `\*\*굵게\*\*` 처럼 이스케이프되고,
+  // 저장할 때마다 손상이 누적되어 공개 화면에 별표와 대괄호가 그대로 보였다.
+  parseMarkdown(token, helpers) {
     const t = token as MarkedTableToken;
 
-    const toCell = (text: string, cellType: "tableHeader" | "tableCell") => ({
+    // 빈 셀은 저장할 때 `&nbsp;` 로 기록된다 (빈 문단 직렬화 규칙). 다시 열 때 이를 글자로 읽으면
+    // 다음 저장에서 `&amp;nbsp;` 가 되어 공개 화면에 "&nbsp;" 가 그대로 보이므로 빈 셀로 되돌린다.
+    const isBlankCell = (cell: MarkedTableCell) => {
+      const text = cell.text.trim();
+      return text === "" || text === "&nbsp;";
+    };
+
+    const toCell = (cell: MarkedTableCell, cellType: "tableHeader" | "tableCell") => ({
       type: cellType,
-      content: [{ type: "paragraph", content: text ? [{ type: "text", text }] : [] }],
+      content: [
+        {
+          type: "paragraph",
+          content:
+            !isBlankCell(cell) && cell.tokens && cell.tokens.length > 0 ? helpers.parseInline(cell.tokens) : [],
+        },
+      ],
     });
 
     return {
       type: "table",
       content: [
-        { type: "tableRow", content: t.header.map((cell) => toCell(cell.text, "tableHeader")) },
+        { type: "tableRow", content: t.header.map((cell) => toCell(cell, "tableHeader")) },
         ...t.rows.map((row) => ({
           type: "tableRow",
-          content: row.map((cell) => toCell(cell.text, "tableCell")),
+          content: row.map((cell) => toCell(cell, "tableCell")),
         })),
       ],
     };
