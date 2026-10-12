@@ -1,0 +1,48 @@
+# 버그 이슈 폼. 섹션 이름(label)은 scripts/_lib/process-format.mjs 의 BUG_SECTIONS 와 같아야 한다.
+name: 버그
+description: 기능 오류, 보안 문제, 데이터 문제를 기록합니다.
+labels: ["bug", "P2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **제목**에는 요약만 적습니다. `[P1]`, `[보안]` 같은 대괄호 접두어를 쓰지 않습니다.
+        **라벨** (만든 뒤 오른쪽 Labels 에서 지정. 권한이 없으면 관리자가 지정합니다):
+        - 우선순위: 기본값 `P2`. 보안 경계·데이터 유실·서비스 중단이면 `P1` 으로 바꿉니다.
+        - 분류 하나: 보안 / 무결성 / 검증 / 업로드 / 기능 / 접근성 / 품질
+        한 이슈에는 한 가지 문제만 적습니다. 공개 저장소이므로 개인정보, 실제 자료 URL, 공격 코드는 올리지 마세요.
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제와 기대 결과
+      description: 현재 동작을 적고, 마지막 줄에 "기대: …" 로 기대하는 동작을 적어주세요.
+      placeholder: |
+        현재 …합니다.
+
+        기대: …합니다.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 재현 근거와 영향
+      description: 재현 순서, 오류 메시지, 관련 파일(경로:줄), 영향받는 사용자, 확인 수준(재현함 / 코드로만 확인)을 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      description: 닫아도 되는지 확인할 수 있는 조건을 체크리스트로 적어주세요.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: 관련 이슈
+      description: 중복·선행 이슈 번호와 이번에 다루지 않는 범위를 적어주세요.
+      value: 없음
+    validations:
+      required: true

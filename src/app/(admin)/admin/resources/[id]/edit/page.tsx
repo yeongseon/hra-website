@@ -8,7 +8,7 @@
  */
 
 import Link from "next/link";
-import { desc, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { ClassLogForm } from "@/app/(admin)/admin/resources/_components/class-lo
 import { updateClassLog } from "@/features/class-logs/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { classLogs, cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 
@@ -71,7 +72,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
       const cohortRows = await db
         .select({ id: cohorts.id, name: cohorts.name })
         .from(cohorts)
-        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
+        .orderBy(cohortNumberDesc(cohorts.name));
 
       return { log, cohortRows, hasDbError: false };
     } catch (error) {

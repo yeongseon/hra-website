@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull, sql } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, users } from "@/lib/db/schema";
 import { UserRoleButton } from "../_components/user-role-button";
 
@@ -56,7 +57,7 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
     db
       .select({ id: cohorts.id, name: cohorts.name })
       .from(cohorts)
-      .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`)),
+      .orderBy(cohortNumberDesc(cohorts.name)),
   ]);
 
   if (!user) {

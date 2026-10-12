@@ -11,7 +11,6 @@
  */
 
 import Link from "next/link";
-import { desc, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +25,7 @@ import {
 import { RecruitmentRowActions } from "@/app/(admin)/admin/recruitment/_components/recruitment-row-actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 
@@ -58,7 +58,7 @@ export default async function AdminRecruitmentPage() {
           endDate: cohorts.endDate,
         })
         .from(cohorts)
-        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
+        .orderBy(cohortNumberDesc(cohorts.name));
 
       return { rows, hasDbError: false };
     } catch (error) {
