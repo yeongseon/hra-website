@@ -1,0 +1,42 @@
+# 정책 확인 이슈 폼. 섹션 이름(label)은 scripts/_lib/process-format.mjs 의 TASK_SECTIONS 와 같아야 한다.
+name: 정책 확인
+description: 구현 전에 결정이 필요한 요구사항·운영 정책을 기록합니다.
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **제목**에는 결정할 내용을 요약만 적습니다. 대괄호 접두어를 쓰지 않습니다.
+        `question` 라벨이 자동으로 붙습니다. 우선순위·분류 라벨은 붙이지 않습니다.
+        결정이 내려지면 결과를 댓글로 남기고, 구현이 필요하면 버그 또는 작업 이슈를 따로 만듭니다.
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 무엇을 결정해야 하는지, 지금 관찰되는 동작은 무엇인지 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 근거와 범위
+      description: 관련 파일(경로:줄), 선택지, 이번에 다루지 않는 범위를 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      description: 무엇이 결정·기록되면 닫을 수 있는지 체크리스트로 적어주세요.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: 관련 이슈
+      description: 이 결정에 영향받는 이슈 번호를 적어주세요.
+      value: 없음
+    validations:
+      required: true

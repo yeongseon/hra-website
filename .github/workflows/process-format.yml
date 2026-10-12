@@ -1,0 +1,59 @@
+# 이슈·PR 형식 검사.
+# 이슈 폼은 웹 화면에서만 적용되므로, gh CLI·API·자동화 도구로 만든 이슈까지 여기서 검사한다.
+# 규칙의 정의는 scripts/_lib/process-format.mjs 한 곳이다.
+name: 이슈·PR 형식
+
+on:
+  issues:
+    types: [opened, edited, reopened, labeled, unlabeled]
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  issue:
+    name: 이슈 형식
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    # 같은 이슈의 실행은 한 번에 하나씩 처리한다 (라벨 여러 개를 한꺼번에 붙일 때 댓글 중복 방지).
+    concurrency:
+      group: process-format-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # 항상 기본 브랜치의 검사 코드를 사용한다 (이슈 이벤트는 기본 브랜치에서 실행된다).
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 이슈 형식 검사
+        run: node scripts/check-process-format.mjs --event
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  pull-request:
+    name: PR 형식
+    # 의존성 봇이 만든 PR 은 템플릿을 쓰지 않으므로 제외한다.
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # PR 브랜치가 아니라 기본 브랜치의 검사 코드를 사용한다 (PR 이 검사 자체를 바꾸지 못하게).
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: PR 형식 검사
+        # 검사 코드가 기본 브랜치에 들어오기 전(이 워크플로를 처음 추가하는 PR)에는 건너뛴다.
+        run: |
+          if [ -f scripts/check-process-format.mjs ]; then
+            node scripts/check-process-format.mjs --event
+          else
+            echo "::notice::기본 브랜치에 형식 검사 코드가 아직 없어 건너뜁니다."
+          fi
