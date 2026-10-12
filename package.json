@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "issues:check": "node scripts/check-process-format.mjs",
     "spell-check": "node scripts/spell-check.mjs",
     "spell-fix": "node scripts/spell-check.mjs --fix",
     "seed-admin": "node --env-file=.env scripts/seed-admin.mjs",
