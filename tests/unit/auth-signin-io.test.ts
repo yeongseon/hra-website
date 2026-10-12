@@ -502,9 +502,8 @@ describe("handleOAuthSignIn — block 3종 (redirect + no writes)", () => {
 });
 
 describe("handleOAuthSignIn — 부수효과 (user.email mutation)", () => {
-  it("Google + email 존재 → user.email 은 그대로 유지된다", async () => {
-    // 후속 jwt 콜백이 token.email 로 DB 조회할 때 사용될 값을 심는다.
-    // email 이 이미 있으면 덮어써도 동일한 값이어야 한다.
+  it("allow-new: Google + email 존재 → user.email 은 그대로 유지된다", async () => {
+    // 방금 INSERT 한 row 의 email 과 동일한 값이 token.email 로 흘러간다.
     const io = makeMockIO();
     const input = makeInput({ user: { email: "keep@example.com" } });
 
@@ -513,9 +512,8 @@ describe("handleOAuthSignIn — 부수효과 (user.email mutation)", () => {
     expect(input.user.email).toBe("keep@example.com");
   });
 
-  it("Kakao email null → user.email 이 placeholder 로 채워진다 (jwt 콜백 조회용)", async () => {
-    // NextAuth 후속 jwt 콜백이 token.email 을 통해 users 를 조회하는데,
-    // kakao placeholder email 을 심어둬야 방금 INSERT 된 사용자를 찾을 수 있다.
+  it("allow-new: Kakao email null → user.email 이 placeholder 로 채워진다", async () => {
+    // INSERT 된 row 의 email (placeholder) 과 token.email 이 일치해야 한다.
     const io = makeMockIO();
     const input = makeInput({
       user: { email: null },
@@ -525,6 +523,42 @@ describe("handleOAuthSignIn — 부수효과 (user.email mutation)", () => {
     await handleOAuthSignIn(input, io);
 
     expect(input.user.email).toBe("kakao_kakao-mut-1@oauth.placeholder");
+  });
+
+  it("allow-existing: provider email 이 바뀌어도 user.email 은 boundUser 의 DB email 이다", async () => {
+    // provider 쪽에서 email 을 바꾼 뒤 로그인. DB 에 그 email 을 가진 row 는 없다.
+    const boundUser = makeBoundUser({ email: "bound@example.com" });
+    const io = makeMockIO({
+      findByBinding: vi.fn().mockResolvedValue(boundUser),
+    });
+    const input = makeInput({ user: { email: "changed@example.com" } });
+
+    const result = await handleOAuthSignIn(input, io);
+
+    expect(result).toBe(true);
+    expect(input.user.email).toBe("bound@example.com");
+  });
+
+  it("allow-existing: provider email 이 다른 계정 (emailUser) 의 email 과 같아도 boundUser 의 email 을 심는다", async () => {
+    // 회귀 방지: 바인딩된 일반 계정의 provider email 이 관리자 계정 email 과 같아진 경우.
+    // 세션은 boundUser 를 가리켜야 하며 emailUser 의 email 이 token 으로 흘러가면 안 된다.
+    const boundUser = makeBoundUser({ email: "bound@example.com" });
+    const emailUser = makeEmailUser({
+      email: "admin@example.com",
+      role: "ADMIN",
+      passwordHash: "$2b$12$fakehash",
+    });
+    const io = makeMockIO({
+      findByBinding: vi.fn().mockResolvedValue(boundUser),
+      findByEmail: vi.fn().mockResolvedValue(emailUser),
+    });
+    const input = makeInput({ user: { email: "admin@example.com" } });
+
+    const result = await handleOAuthSignIn(input, io);
+
+    expect(result).toBe(true);
+    expect(input.user.email).toBe("bound@example.com");
+    expect(io.insertNew).not.toHaveBeenCalled();
   });
 
   it("block 분기여도 user.email mutation 은 발생하지 않는다 (redirect 이후 세션 미생성)", async () => {

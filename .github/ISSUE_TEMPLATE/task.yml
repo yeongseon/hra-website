@@ -1,0 +1,42 @@
+# 작업 이슈 폼. 섹션 이름(label)은 scripts/_lib/process-format.mjs 의 TASK_SECTIONS 와 같아야 한다.
+name: 작업
+description: 기능 개선, 테스트·문서·설정 정리처럼 버그가 아닌 작업을 기록합니다.
+labels: ["enhancement", "P2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **제목**에는 요약만 적습니다. `[P2]`, `[품질]` 같은 대괄호 접두어를 쓰지 않습니다.
+        **라벨** (만든 뒤 오른쪽 Labels 에서 지정. 권한이 없으면 관리자가 지정합니다): 우선순위는 기본값 `P2`, 분류는 보안 / 무결성 / 검증 / 업로드 / 기능 / 접근성 / 품질 중 하나.
+        한 이슈에는 한 가지 결과만 적습니다. 요구사항이 아직 정해지지 않았다면 "정책 확인" 폼을 사용하세요.
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 이 작업으로 얻을 결과를 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 근거와 범위
+      description: 관련 사용자 문제, 파일(경로:줄), 이번에 다루지 않는 범위를 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      description: 닫아도 되는지 확인할 수 있는 조건을 체크리스트로 적어주세요.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: related
+    attributes:
+      label: 관련 이슈
+      description: 선행·중복 이슈 번호를 적어주세요.
+      value: 없음
+    validations:
+      required: true

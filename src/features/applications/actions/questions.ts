@@ -14,6 +14,7 @@ import {
   applicationQuestionOptions,
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { isConstraintViolation } from "@/lib/db/constraint-errors";
 
 const optionSchema = z.object({
   id: z.string().uuid().optional(),
@@ -190,6 +191,10 @@ export async function saveFormQuestions(
       message: "질문 항목이 저장되었습니다.",
     };
   } catch (error) {
+    // 사전 조회 후 제출된 답변은 DB FK가 보호합니다. 원본 오류·답변은 응답에 담지 않습니다.
+    if (isConstraintViolation(error, "23503", "application_answers_question_id_application_questions_id_fk")) {
+      return { success: false, message: "답변이 제출된 질문은 삭제할 수 없습니다. 새로고침 후 다시 확인해주세요." };
+    }
     logServerError("application-questions/save", error, {
       formId: validFormId,
       questionCount: parsed.data.questions.length,

@@ -26,7 +26,7 @@ import Google from "next-auth/providers/google";
 import Kakao from "next-auth/providers/kakao";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   isUserRole,
   isValidUuid,
@@ -224,13 +224,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * jwt 콜백: JWT 토큰에 사용자 DB 정보 추가 및 세션 무효화 판단 (#68, #74)
      *
      * 세션 무효화 판단은 pure helper `resolveJwtSession` 에 위임하여 단위 테스트로 회귀 검증한다.
-     * DB 조회 대상은 pure helper `pickJwtLookupCriteria` 가 결정한다 (id 우선, email fallback).
+     * DB 조회 대상은 pure helper `pickJwtLookupCriteria` 가 결정한다.
+     *   - 로그인 직후 (account 가 넘어오는 유일한 시점): OAuth 는 (provider, providerAccountId)
+     *     binding 튜플, credentials 는 authorize() 가 반환한 DB id.
+     *   - 이후 요청: token.id.
+     *   email 로는 조회하지 않는다 — signIn 콜백이 인가한 row 와 세션이 가리키는 row 가
+     *   달라지는 것 (계정 뒤바뀜) 을 막기 위함이다.
      *
      * 성능 (#74): findFirst 의 `columns` 를 명시하여 passwordHash/image 등 불필요한 컬럼을
      *   전송하지 않는다. Neon serverless 커넥션 오버헤드는 남지만 payload·역직렬화 비용을 줄인다.
      */
-    async jwt({ token }) {
-      const criteria = pickJwtLookupCriteria(token);
+    async jwt({ token, user, account }) {
+      const criteria = pickJwtLookupCriteria(
+        token,
+        account
+          ? {
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              userId: user?.id,
+            }
+          : null,
+      );
       if (!criteria) {
         return null;
       }
@@ -239,7 +254,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         where:
           criteria.by === "id"
             ? eq(users.id, criteria.value)
-            : eq(users.email, criteria.value),
+            : and(
+                eq(users.oauthProvider, criteria.provider),
+                eq(users.oauthProviderAccountId, criteria.providerAccountId),
+              ),
         columns: {
           id: true,
           role: true,

@@ -257,7 +257,7 @@ const user = data as { id: string; name: string };
 - [ ] 새 JSX `{조건 && (...)}` 블록의 `)}` 짝이 맞는가?
 - [ ] 사용자에게 보이는 텍스트가 한국어인가?
 - [ ] `as any` / `@ts-ignore` / `@ts-expect-error` 안 썼는가?
-- [ ] 다중 파일 변경이라면 [Oracle 리뷰](../../AGENTS.md#11-코드-리뷰-정책-oracle-필수) 받았는가?
+- [ ] 다중 파일 변경이라면 [Oracle 리뷰](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md#11-코드-리뷰-정책-oracle-필수) 받았는가?
 
 ---
 
@@ -290,7 +290,7 @@ const user = data as { id: string; name: string };
 
 - [협업 워크플로우](workflow.md) — 브랜치, 커밋, PR 만들기
 - [코드 컨벤션](conventions.md) — 변수명, 파일명 규칙
-- [AGENTS.md §12 (저장소 루트)](../../AGENTS.md) — 가드 정책 전문
+- [AGENTS.md §12 (저장소 루트)](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md) — 가드 정책 전문
 - [품질 게이트 (docs/QUALITY-GATE.md)](../QUALITY-GATE.md) — CI/CD 통과 기준
 
 > 이 문서가 11번의 사고를 다시는 만들지 않는 데 도움이 되기를 바랍니다.

@@ -7,18 +7,20 @@
  *     (파일 URL이 공개(public)이어야 동작 — Vercel Blob은 access:"public"이므로 OK)
  *   - HWP: 온라인 뷰어 없음 → 다운로드 안내
  *
- * 접근 권한: 로그인된 MEMBER 이상 (미들웨어로 제어)
+ * 접근 권한: MEMBER는 학생용, FACULTY/ADMIN은 학생용·교수용 (조회 단계에서 제어)
  */
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
+import { auth } from "@/lib/auth";
+import { classMaterialReadFilter } from "@/features/class-materials/access";
 
 export const dynamic = "force-dynamic";
 
@@ -26,21 +28,24 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-
-  // Oracle Phase D BLOCK 수정 — 검증되지 않은 UUID를 DB에 넘기면 Postgres cast 에러가 원본
-  // 그대로 로그에 기록되어 개인정보(라우트 파라미터)가 leak됨. z.uuid() 로 사전 차단.
+// 페이지와 메타데이터 모두 동일한 인가 경로를 통과합니다. 전역 캐시는 사용하지 않습니다.
+async function getVisibleMaterial(id: string) {
   const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    return { title: "강의 자료" };
-  }
+  if (!parsedId.success) return null;
+  const session = await auth();
+  if (!session?.user?.id) return null;
 
   const [material] = await db
-    .select({ title: classMaterials.title })
+    .select()
     .from(classMaterials)
-    .where(eq(classMaterials.id, parsedId.data))
+    .where(and(eq(classMaterials.id, parsedId.data), classMaterialReadFilter(session.user)))
     .limit(1);
+  return material ?? null;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const material = await getVisibleMaterial(id);
   return {
     title: material ? `${material.title} — 강의 자료` : "강의 자료",
   };
@@ -49,17 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ClassMaterialViewerPage({ params }: Props) {
   const { id } = await params;
 
-  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    notFound();
-  }
-
-  const [material] = await db
-    .select()
-    .from(classMaterials)
-    .where(eq(classMaterials.id, parsedId.data))
-    .limit(1);
+  const material = await getVisibleMaterial(id);
 
   if (!material) {
     notFound();

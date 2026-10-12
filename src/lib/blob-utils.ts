@@ -1,6 +1,7 @@
 /**
  * Vercel Blob 삭제 공통 유틸.
- * 외부 URL 오삭제를 막기 위해 Blob 도메인만 선별한다.
+ * 도메인 검사는 소유권 검사가 아닙니다. 호출자는 서버가 확인한 업로드 URL만 전달해야 합니다.
+ * 본문 URL을 삭제하는 API는 제공하지 않습니다 (#88).
  */
 
 import { del } from "@vercel/blob";
@@ -40,41 +41,6 @@ async function safelyDeleteBlobUrl(url: string): Promise<void> {
   } catch (error) {
     logServerError("blob-utils/delete", error, { blobUrl: redactBlobUrl(url) });
   }
-}
-
-/**
- * 마크다운 이미지 문법을 정규식으로 스캔해 Blob URL만 추출한다.
- */
-export function extractMarkdownBlobUrls(markdown: string): string[] {
-  const regex = /!\[.*?\]\((https?:\/\/[^)]+)\)/g;
-  const urls = new Set<string>();
-
-  let match: RegExpExecArray | null = regex.exec(markdown);
-
-  while (match !== null) {
-    const url = match[1];
-
-    if (isBlobUrl(url)) {
-      urls.add(url);
-    }
-
-    match = regex.exec(markdown);
-  }
-
-  return [...urls];
-}
-
-/**
- * 마크다운 본문 안에 임베드된 Blob 이미지를 모두 삭제한다.
- */
-export async function deleteMarkdownBlobImages(markdown: string): Promise<void> {
-  const urls = extractMarkdownBlobUrls(markdown);
-
-  if (urls.length === 0) {
-    return;
-  }
-
-  await Promise.all(urls.map((url) => safelyDeleteBlobUrl(url)));
 }
 
 /**

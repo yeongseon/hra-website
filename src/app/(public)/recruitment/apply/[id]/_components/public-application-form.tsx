@@ -3,7 +3,7 @@
  */
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, type FormEvent } from "react";
 import { CheckCircle2, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,6 +52,19 @@ const initialState = {
 export function PublicApplicationForm({ form, questions }: PublicApplicationFormProps) {
   const [state, action, isPending] = useActionState(submitApplicationForm, initialState);
 
+  // 제출을 직접 처리하는 이유 (#111):
+  //   React 19 는 <form action> 으로 실행한 액션이 끝나면 성공·실패와 상관없이 비제어 입력을 초기화한다.
+  //   그래서 중복 이메일·요청 제한 같은 오류가 한 번 나면 지원자가 쓴 답변이 전부 사라졌다.
+  //   기본 동작을 막고 FormData 를 직접 넘기면 초기화가 일어나지 않아, 오류 뒤에도 입력이 그대로 남는다.
+  //   action 속성은 그대로 두어 JavaScript 가 로드되기 전에도 제출할 수 있게 한다.
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    startTransition(() => {
+      action(formData);
+    });
+  };
+
   if (state.success) {
     return (
       <div className="py-20 text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -70,7 +83,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
   }
 
   return (
-    <form action={action} className="space-y-12">
+    <form action={action} onSubmit={handleSubmit} className="space-y-12">
       <input type="hidden" name="formId" value={form.id} />
 
       {/* honeypot: 봇 방어용 숨김 필드.

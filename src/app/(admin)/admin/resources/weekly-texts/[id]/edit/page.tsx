@@ -8,7 +8,7 @@
  */
 
 import Link from "next/link";
-import { desc, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { WeeklyTextEditForm } from "@/app/(admin)/admin/resources/weekly-texts/_
 import { updateWeeklyText } from "@/features/weekly-texts/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, weeklyTexts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 
@@ -70,7 +71,7 @@ export default async function WeeklyTextEditPage({ params }: Props) {
       const cohortRows = await db
         .select({ id: cohorts.id, name: cohorts.name })
         .from(cohorts)
-        .orderBy(desc(sql<number>`CAST(regexp_replace(${cohorts.name}, '[^0-9]', '', 'g') AS INTEGER)`));
+        .orderBy(cohortNumberDesc(cohorts.name));
 
       return { row, cohortRows, hasDbError: false };
     } catch (error) {
