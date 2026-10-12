@@ -110,6 +110,8 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
       access: "public",
+      // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
+      addRandomSuffix: true,
     });
 
     await db.insert(guidebooks).values({
@@ -178,7 +180,10 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
       }
 
       const safeFileName = normalizeFileName(validatedFile.file.name);
-      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, { access: "public" });
+      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
+        access: "public",
+        addRandomSuffix: true,
+      });
 
       await db
         .update(guidebooks)

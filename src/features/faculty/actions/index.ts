@@ -102,7 +102,8 @@ function validateImageFile(fileEntry: FormDataEntryValue | null) {
 
 async function uploadFacultyImage(file: File) {
   const safeFileName = file.name.replace(/\s+/g, "-");
-  const blob = await put(`faculty/${safeFileName}`, file, { access: "public" });
+  // addRandomSuffix: 다른 교수와 사진 파일명이 같아도 경로가 겹치지 않게 한다 (#110).
+  const blob = await put(`faculty/${safeFileName}`, file, { access: "public", addRandomSuffix: true });
 
   return blob.url;
 }
