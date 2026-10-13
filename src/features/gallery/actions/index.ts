@@ -329,47 +329,52 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     }
   });
   const baseOrder = galleryResult.gallery.images.length;
-  const uploadedBlobs: Array<{ url: string }> = [];
+  // 모든 업로드가 끝날 때까지 기다립니다. 하나가 먼저 실패해도 뒤늦게 완료된
+  // 파일까지 수집해야 DB에 등록되지 않은 파일만 빠짐없이 정리할 수 있습니다.
+  const uploads = await Promise.allSettled(
+    files.map((file, index) => {
+      const safeFileName = `gallery/${Date.now()}-${index}-${normalizeFileName(file.name)}`;
+      return put(safeFileName, file, { access: "public", addRandomSuffix: true });
+    }),
+  );
+  const uploadedBlobs = uploads.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+
+  if (uploads.some((result) => result.status === "rejected")) {
+    await Promise.all(uploadedBlobs.map((blob) => deleteBlobIfExists(blob.url)));
+    return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
+  }
 
   try {
-    const blobs = await Promise.all(
-      files.map(async (file, index) => {
-        // index 포함: Promise.all 병렬 실행 시 Date.now()가 동일 ms여도 충돌 방지
-        const safeFileName = `gallery/${Date.now()}-${index}-${normalizeFileName(file.name)}`;
-        const blob = await put(safeFileName, file, {
-          access: "public",
-        });
-
-        uploadedBlobs.push({ url: blob.url });
-        return blob;
-      }),
-    );
-
     await db.insert(galleryImages).values(
-      blobs.map((blob, index) => ({
+      uploadedBlobs.map((blob, index) => ({
         galleryId: galleryResult.gallery.id,
         url: blob.url,
         alt: parsed.data.alt ?? null,
         order: baseOrder + index,
       })),
     );
+  } catch (error) {
+    logServerError("gallery/add-images-insert", error, { galleryId: galleryResult.gallery.id });
+    // DB 응답이 실패해도 INSERT가 계속 진행 중이거나 커밋됐을 수 있습니다.
+    // 즉시 조회에서 참조가 안 보여도 삭제 근거가 되지 않으므로 파일을 보존합니다.
+    return initialError("이미지 저장 중 오류가 발생했습니다. 앨범을 확인해주세요.");
+  }
 
-    const firstBlob = blobs[0];
-
-    if (!galleryResult.gallery.coverImageUrl && firstBlob) {
+  const firstBlob = uploadedBlobs[0];
+  if (!galleryResult.gallery.coverImageUrl && firstBlob) {
+    try {
       await db
         .update(galleries)
-        .set({
-          coverImageUrl: firstBlob.url,
-        })
+        .set({ coverImageUrl: firstBlob.url })
         .where(eq(galleries.id, galleryResult.gallery.id));
+    } catch (error) {
+      // 이미지 행이 이미 저장됐으므로 파일을 지우거나 전체 실패로 돌리지 않습니다.
+      logServerError("gallery/add-images-cover", error, { galleryId: galleryResult.gallery.id });
+      revalidateGalleryPaths(galleryResult.gallery.id);
+      return successState("이미지는 추가됐지만 대표 사진 설정에 실패했습니다. 앨범을 확인해주세요.");
     }
-  } catch {
-    if (uploadedBlobs.length > 0) {
-      await Promise.all(uploadedBlobs.map((blob) => deleteBlobIfExists(blob.url)));
-    }
-
-    return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
   }
 
   revalidateGalleryPaths(galleryResult.gallery.id);
