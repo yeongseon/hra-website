@@ -51,6 +51,21 @@ function isUniqueViolation(error: unknown, constraintName?: string): boolean {
   return false;
 }
 
+/** 제출 전에 양식이 변경되거나 닫힌 경우의 저장 함수 오류를 식별한다. */
+function isFormRevisionError(error: unknown): boolean {
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current && current.code === "P0001" &&
+        "message" in current && typeof current.message === "string" &&
+        (current.message.includes("application_form_questions_stale") ||
+         current.message.includes("application_form_unavailable"))) return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
 export type SubmitActionState = {
   success: boolean;
   message: string;
@@ -201,10 +216,16 @@ export async function submitApplicationForm(
       }
     }
 
-    // 3. 제출 ID를 미리 만들고 마스터·답변 INSERT를 Neon HTTP 원자적 배치에 묶는다.
-    //    unique(form_id, applicant_email)은 동시 중복 제출 중 하나만 확정한다.
+    // 3. 읽은 질문 버전을 양식 행 잠금과 함께 확인한 뒤 마스터·답변을 원자적 배치에 넣는다.
+    //    저장 중 변경된 질문의 옛 답변은 거부하고, UNIQUE는 동시 중복 제출을 차단한다.
     const submissionId = crypto.randomUUID();
     try {
+      const verifyRevision = db.execute(sql`
+        SELECT assert_application_form_questions_revision(
+          ${validFormId}::uuid,
+          ${form.questionsRevision}::integer
+        )
+      `);
       const insertSubmission = db.insert(applicationSubmissions).values({
         id: submissionId,
         formId: validFormId,
@@ -214,6 +235,7 @@ export async function submitApplicationForm(
       });
       if (answers.length > 0) {
         await db.batch([
+          verifyRevision,
           insertSubmission,
           db.insert(applicationAnswers).values(answers.map(answer => ({
             submissionId,
@@ -222,9 +244,12 @@ export async function submitApplicationForm(
           }))),
         ]);
       } else {
-        await insertSubmission;
+        await db.batch([verifyRevision, insertSubmission]);
       }
     } catch (error) {
+      if (isFormRevisionError(error)) {
+        return { success: false, message: "지원서가 변경되었습니다. 새로고침 후 다시 제출해주세요." };
+      }
       if (isUniqueViolation(error, "application_submissions_form_applicant_unique")) {
         return {
           success: false,

@@ -16,6 +16,12 @@ DECLARE
   option_data jsonb;
   saved_question_id uuid;
   saved_ids jsonb := '[]'::jsonb;
+  answered boolean;
+  previous_title text;
+  previous_description text;
+  previous_type application_question_type;
+  previous_options jsonb;
+  requested_options jsonb;
 BEGIN
   SELECT forms.questions_revision INTO current_revision
   FROM application_forms AS forms
@@ -44,6 +50,41 @@ BEGIN
   FOR question_data IN SELECT value FROM jsonb_array_elements(p_questions) LOOP
     IF question_data ? 'id' AND question_data->>'id' IS NOT NULL THEN
       saved_question_id := (question_data->>'id')::uuid;
+      -- 질문 행 잠금은 답변 INSERT의 FK 검사와 경합한다. 검사 후 새 답변이 끼어들지 못한다.
+      SELECT questions.title, questions.description, questions.type
+      INTO previous_title, previous_description, previous_type
+      FROM application_questions AS questions
+      WHERE questions.id = saved_question_id AND questions.form_id = p_form_id
+      FOR UPDATE;
+
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'application_form_questions_invalid_id' USING ERRCODE = 'P0001';
+      END IF;
+
+      SELECT EXISTS (
+        SELECT 1 FROM application_answers AS answers
+        WHERE answers.question_id = saved_question_id
+      ) INTO answered;
+
+      IF answered THEN
+        -- 순서·필수 여부는 과거 답변의 의미를 바꾸지 않는다. 문구·유형·값은 정확히 보존한다.
+        SELECT COALESCE(jsonb_agg(options.value ORDER BY options.value), '[]'::jsonb)
+        INTO previous_options
+        FROM application_question_options AS options
+        WHERE options.question_id = saved_question_id;
+
+        SELECT COALESCE(jsonb_agg(item->>'value' ORDER BY item->>'value'), '[]'::jsonb)
+        INTO requested_options
+        FROM jsonb_array_elements(COALESCE(question_data->'options', '[]'::jsonb)) AS item;
+
+        IF previous_title IS DISTINCT FROM question_data->>'title'
+           OR previous_description IS DISTINCT FROM question_data->>'description'
+           OR previous_type::text IS DISTINCT FROM question_data->>'type'
+           OR previous_options IS DISTINCT FROM requested_options THEN
+          RAISE EXCEPTION 'application_form_questions_answered_immutable' USING ERRCODE = 'P0001';
+        END IF;
+      END IF;
+
       UPDATE application_questions AS questions
       SET title = question_data->>'title',
           description = question_data->>'description',

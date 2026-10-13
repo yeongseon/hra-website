@@ -96,6 +96,9 @@ export async function saveFormQuestions(
     if (isQuestionSaveError(error, "application_form_questions_stale")) {
       return { success: false, message: "다른 관리자가 질문을 변경했습니다. 새로고침 후 다시 저장해주세요." };
     }
+    if (isQuestionSaveError(error, "application_form_questions_answered_immutable")) {
+      return { success: false, message: "답변이 제출된 질문의 제목·설명·유형·선택지 내용은 변경할 수 없습니다. 새 질문을 추가해주세요." };
+    }
     if (isQuestionSaveError(error, "application_form_questions_missing") ||
         isQuestionSaveError(error, "application_form_questions_invalid_id")) {
       return { success: false, message: "양식 또는 질문이 변경되었습니다. 새로고침 후 다시 확인해주세요." };

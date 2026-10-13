@@ -59,7 +59,8 @@ describe.skipIf(!bin)("지원서 질문 저장 원자성", () => {
     run(`CREATE TYPE application_question_type AS ENUM
         ('SHORT_ANSWER', 'LONG_ANSWER', 'MULTIPLE_CHOICE', 'CHECKBOX', 'DROPDOWN');
       CREATE TABLE application_forms (
-        id uuid PRIMARY KEY, questions_revision integer NOT NULL DEFAULT 0, updated_at timestamp NOT NULL DEFAULT now());
+        id uuid PRIMARY KEY, is_published boolean NOT NULL DEFAULT true,
+        questions_revision integer NOT NULL DEFAULT 0, updated_at timestamp NOT NULL DEFAULT now());
       CREATE TABLE application_questions (
         id uuid PRIMARY KEY, form_id uuid NOT NULL REFERENCES application_forms ON DELETE CASCADE,
         title text NOT NULL, description text, type application_question_type NOT NULL,
@@ -75,6 +76,7 @@ describe.skipIf(!bin)("지원서 질문 저장 원자성", () => {
         question_id uuid NOT NULL REFERENCES application_questions, value text NOT NULL);
       ALTER TABLE application_question_options ADD CONSTRAINT reject_test_option CHECK (value <> '삽입 실패');`);
     run(readFileSync("scripts/migrate-atomic-application-questions.sql", "utf8"));
+    run(readFileSync("scripts/migrate-assert-application-question-revision.sql", "utf8"));
   }, 30000);
 
   afterAll(() => {
@@ -109,6 +111,147 @@ describe.skipIf(!bin)("지원서 질문 저장 원자성", () => {
       '${formId}', 1, '${JSON.stringify([{ ...newQuestion, id: savedIds[0], title: "재저장 질문" }])}'::jsonb);`)).toBe("2");
     expect(readSnapshot()).toBe("재저장 질문:추가 선택");
   });
+
+  it("답변된 질문의 제목·유형·선택지 값 변경은 거부하고 순서·필수 여부는 허용한다", () => {
+    reset();
+    run(`INSERT INTO application_submissions VALUES ('33333333-3333-4333-8333-333333333333', '${formId}');
+      INSERT INTO application_answers VALUES
+        ('44444444-4444-4444-8444-444444444444',
+         '33333333-3333-4333-8333-333333333333', '${questionId}', '기존 1');`);
+
+    expect(() => run(save("다른 의미의 질문", ["기존 1", "기존 2"]))).toThrow(/application_form_questions_answered_immutable/);
+    expect(() => run(save("기존 질문", ["다른 선택지", "기존 2"]))).toThrow(/application_form_questions_answered_immutable/);
+    const changedDescription = request("기존 질문", ["기존 1", "기존 2"])
+      .replace('"description":null', '"description":"새 설명"');
+    expect(() => run(`SELECT * FROM save_application_form_questions('${formId}', 0, '${changedDescription}'::jsonb);`))
+      .toThrow(/application_form_questions_answered_immutable/);
+    const changedType = request("기존 질문", ["기존 1", "기존 2"]).replace("MULTIPLE_CHOICE", "CHECKBOX");
+    expect(() => run(`SELECT * FROM save_application_form_questions('${formId}', 0, '${changedType}'::jsonb);`))
+      .toThrow(/application_form_questions_answered_immutable/);
+    expect(readSnapshot()).toBe("기존 질문:기존 1,기존 2");
+
+    const reorder = JSON.stringify([{
+      id: questionId, title: "기존 질문", description: null, type: "MULTIPLE_CHOICE",
+      isRequired: false, order: 3,
+      options: [{ value: "기존 2", order: 0 }, { value: "기존 1", order: 1 }],
+    }]);
+    expect(run(`SELECT revision FROM save_application_form_questions('${formId}', 0, '${reorder}'::jsonb);`)).toBe("1");
+    expect(run(`SELECT is_required::text || ':' || "order" FROM application_questions WHERE id = '${questionId}';`)).toBe("false:3");
+    expect(run("SELECT value FROM application_answers;")).toBe("기존 1");
+  });
+
+  it("제출은 자신이 읽은 질문 버전이 바뀌었으면 거부한다", () => {
+    reset();
+    expect(run(`SELECT assert_application_form_questions_revision('${formId}', 0);`)).toBe("");
+    run(save("새 질문", ["새 선택지"]));
+    expect(() => run(`SELECT assert_application_form_questions_revision('${formId}', 0);`))
+      .toThrow(/application_form_questions_stale/);
+    expect(run(`SELECT assert_application_form_questions_revision('${formId}', 1);`)).toBe("");
+  });
+
+  it("저장과 겹친 제출은 잠금 해제 후 새 버전을 확인하고 오래된 답변을 거부한다", async () => {
+    reset();
+    const editor = spawn(program("psql"), psqlArgs, { stdio: ["pipe", "pipe", "pipe"] });
+    const editorDone = new Promise<number | null>((resolve, reject) => {
+      editor.on("error", reject);
+      editor.on("close", resolve);
+    });
+    editor.stdin.write(`SET application_name = 'hra_revision_editor'; BEGIN; ${save("변경 질문", ["새 선택지"])}\n`);
+    try {
+      let ready = false;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (run("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'hra_revision_editor' AND state = 'idle in transaction';") === "1") {
+          ready = true;
+          break;
+        }
+        await delay(20);
+      }
+      expect(ready).toBe(true);
+      const submitter = spawn(program("psql"), psqlArgs, { stdio: ["pipe", "pipe", "pipe"] });
+      let submitError = "";
+      submitter.stderr.on("data", chunk => { submitError += String(chunk); });
+      const submitted = new Promise<number | null>((resolve, reject) => {
+        submitter.on("error", reject);
+        submitter.on("close", resolve);
+      });
+      submitter.stdin.end(`SET application_name = 'hra_revision_submit';
+        SELECT assert_application_form_questions_revision('${formId}', 0);`);
+      let waiting = false;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (run("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'hra_revision_submit' AND wait_event_type = 'Lock';") === "1") {
+          waiting = true;
+          break;
+        }
+        await delay(20);
+      }
+      expect(waiting, submitError).toBe(true);
+      editor.stdin.end("COMMIT;\n");
+      expect(await editorDone).toBe(0);
+      expect(await submitted).not.toBe(0);
+      expect(submitError).toContain("application_form_questions_stale");
+      expect(run("SELECT count(*) FROM application_submissions;")).toBe("0");
+    } finally {
+      if (!editor.stdin.writableEnded) editor.stdin.end("ROLLBACK;\n");
+      if (editor.exitCode === null) {
+        editor.kill();
+        await editorDone;
+      }
+    }
+  }, 15000);
+
+  it("제출이 먼저 양식 잠금을 잡으면 편집은 답변 확정 후 의미 변경을 거부한다", async () => {
+    reset();
+    const submitter = spawn(program("psql"), psqlArgs, { stdio: ["pipe", "pipe", "pipe"] });
+    const submitted = new Promise<number | null>((resolve, reject) => {
+      submitter.on("error", reject);
+      submitter.on("close", resolve);
+    });
+    submitter.stdin.write(`SET application_name = 'hra_first_revision_submit'; BEGIN;
+      SELECT assert_application_form_questions_revision('${formId}', 0);
+      INSERT INTO application_submissions VALUES ('33333333-3333-4333-8333-333333333333', '${formId}');
+      INSERT INTO application_answers VALUES
+        ('44444444-4444-4444-8444-444444444444',
+         '33333333-3333-4333-8333-333333333333', '${questionId}', '기존 1');\n`);
+    try {
+      let ready = false;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (run("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'hra_first_revision_submit' AND state = 'idle in transaction';") === "1") {
+          ready = true;
+          break;
+        }
+        await delay(20);
+      }
+      expect(ready).toBe(true);
+      const editor = spawn(program("psql"), psqlArgs, { stdio: ["pipe", "pipe", "pipe"] });
+      let editError = "";
+      editor.stderr.on("data", chunk => { editError += String(chunk); });
+      const edited = new Promise<number | null>((resolve, reject) => {
+        editor.on("error", reject);
+        editor.on("close", resolve);
+      });
+      editor.stdin.end(`SET application_name = 'hra_second_revision_editor'; ${save("다른 의미", ["기존 1", "기존 2"])}`);
+      let waiting = false;
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (run("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'hra_second_revision_editor' AND wait_event_type = 'Lock';") === "1") {
+          waiting = true;
+          break;
+        }
+        await delay(20);
+      }
+      expect(waiting, editError).toBe(true);
+      submitter.stdin.end("COMMIT;\n");
+      expect(await submitted).toBe(0);
+      expect(await edited).not.toBe(0);
+      expect(editError).toContain("application_form_questions_answered_immutable");
+      expect(readSnapshot()).toBe("기존 질문:기존 1,기존 2");
+    } finally {
+      if (!submitter.stdin.writableEnded) submitter.stdin.end("ROLLBACK;\n");
+      if (submitter.exitCode === null) {
+        submitter.kill();
+        await submitted;
+      }
+    }
+  }, 15000);
 
   it("저장 중 제출자는 커밋 전 전체 상태를 읽고 커밋 후 새 전체 상태를 읽는다", async () => {
     reset();
