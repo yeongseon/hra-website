@@ -38,7 +38,8 @@ await sql.transaction([
     CREATE INDEX IF NOT EXISTS idx_markdown_image_assets_created_at
     ON markdown_image_assets (created_at)
   `,
-  sql.unsafe(referencesView),
+  // unsafe()는 원시 SQL 조각이므로 템플릿 쿼리로 감싸 트랜잭션에 전달합니다.
+  sql`${sql.unsafe(referencesView)}`,
 ]);
 
 const columns = await sql`
