@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
 import { createWeeklyTextAsMember } from "@/features/weekly-texts/actions";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, users } from "@/lib/db/schema";
@@ -27,7 +27,7 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 export default async function WeeklyTextsPage() {
-  const session = await auth();
+  const session = await requireSharedResourceReader();
   const role = session?.user?.role;
   // ADMIN, FACULTY, MEMBER 업로드 가능 (PENDING 불가)
   const canUpload = role === "ADMIN" || role === "FACULTY" || role === "MEMBER";

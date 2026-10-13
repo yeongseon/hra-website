@@ -3,7 +3,7 @@
  *
  * 역할: 가이드북 파일(PDF)을 인라인으로 미리보기하고 다운로드 버튼을 제공합니다.
  *       PDF 파일은 iframe으로 임베드, 그 외 파일(HWP/DOCX 등)은 다운로드 안내를 표시합니다.
- *       로그인된 MEMBER 이상 접근 가능 (미들웨어로 제어).
+ *       승인된 MEMBER 이상만 서버 조회 전에 접근을 허용한다.
  */
 
 import type { Metadata } from "next";
@@ -13,8 +13,11 @@ import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canReadSharedResource } from "@/features/resources/access";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,8 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const session = await auth();
+  if (!canReadSharedResource(session?.user?.role)) return { title: "가이드북" };
   const { id } = await params;
 
   // Oracle Phase D BLOCK 수정 — z.uuid() 로 사전 차단하여 Postgres cast 에러 leak 방지.
@@ -38,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function GuidebookViewerPage({ params }: Props) {
+  await requireSharedResourceReader();
   const { id } = await params;
 
   // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
