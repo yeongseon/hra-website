@@ -1,14 +1,14 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 
 const facultyCategorySchema = z.enum(["CLASSICS", "BUSINESS", "LECTURE"]);
 const maxImageSize = 5 * 1024 * 1024;
@@ -100,16 +100,17 @@ function validateImageFile(fileEntry: FormDataEntryValue | null) {
   };
 }
 
-async function uploadFacultyImage(file: File) {
+async function uploadFacultyImage(file: File, uploadedById: string) {
   const safeFileName = file.name.replace(/\s+/g, "-");
   // addRandomSuffix: 다른 교수와 사진 파일명이 같아도 경로가 겹치지 않게 한다 (#110).
   const blob = await put(`faculty/${safeFileName}`, file, { access: "public", addRandomSuffix: true });
+  await recordOwnedBlob(blob.url, uploadedById);
 
   return blob.url;
 }
 
 export async function createFaculty(formData: FormData): Promise<FacultyActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = parseFacultyFormData(formData);
   if (!parsed.success) {
@@ -131,7 +132,7 @@ export async function createFaculty(formData: FormData): Promise<FacultyActionSt
     };
   }
 
-  const imageUrl = validatedImage.file ? await uploadFacultyImage(validatedImage.file) : null;
+  const imageUrl = validatedImage.file ? await uploadFacultyImage(validatedImage.file, session.user.id) : null;
 
   await db.insert(faculty).values({
     name: parsed.data.name,
@@ -148,7 +149,7 @@ export async function createFaculty(formData: FormData): Promise<FacultyActionSt
 }
 
 export async function updateFaculty(id: string, formData: FormData): Promise<FacultyActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) {
@@ -183,6 +184,10 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
     .from(faculty)
     .where(eq(faculty.id, parsedId.data));
 
+  if (!existingFaculty) {
+    return { success: false, message: "교수진을 찾을 수 없습니다." };
+  }
+
   const updateValues: {
     name: string;
     category: z.infer<typeof facultyCategorySchema>;
@@ -199,17 +204,25 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
   };
 
   if (validatedImage.file) {
-    if (existingFaculty?.imageUrl) {
-      await deleteBlobIfExists(existingFaculty.imageUrl);
-    }
-
-    updateValues.imageUrl = await uploadFacultyImage(validatedImage.file);
+    updateValues.imageUrl = await uploadFacultyImage(validatedImage.file, session.user.id);
   }
 
-  await db
+  // 이전 사진 URL을 조건에 포함해 다른 관리자가 먼저 교체한 내용을 덮어쓰지 않습니다.
+  // 기존 파일은 업로드 소유권이 확인되지 않아 여기서 즉시 삭제하지 않습니다.
+  const [updated] = await db
     .update(faculty)
     .set(updateValues)
-    .where(eq(faculty.id, parsedId.data));
+    .where(and(
+      eq(faculty.id, parsedId.data),
+      existingFaculty.imageUrl
+        ? eq(faculty.imageUrl, existingFaculty.imageUrl)
+        : isNull(faculty.imageUrl),
+    ))
+    .returning({ id: faculty.id });
+
+  if (!updated) {
+    return { success: false, message: "교수진 정보가 변경됐습니다. 새로고침 후 다시 시도해주세요." };
+  }
 
   revalidatePath("/admin/faculty");
   revalidatePath("/faculty");
@@ -224,15 +237,7 @@ export async function deleteFaculty(id: string): Promise<void> {
     return;
   }
 
-  const [existingFaculty] = await db
-    .select({ imageUrl: faculty.imageUrl })
-    .from(faculty)
-    .where(eq(faculty.id, parsedId.data));
-
-  if (existingFaculty?.imageUrl) {
-    await deleteBlobIfExists(existingFaculty.imageUrl);
-  }
-
+  // 삭제할 파일의 소유권이 기록되지 않은 기존 행은 DB만 제거해 파일 유실을 막습니다.
   await db.delete(faculty).where(eq(faculty.id, parsedId.data));
   revalidatePath("/admin/faculty");
   revalidatePath("/faculty");

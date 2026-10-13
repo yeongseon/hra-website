@@ -10,16 +10,16 @@
  */
 
 import { put } from "@vercel/blob";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { galleries, galleryImages } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 
 export type GalleryActionState = {
   success: boolean;
@@ -223,17 +223,19 @@ export async function deleteGallery(id: string): Promise<GalleryActionState> {
     return initialError(galleryResult.error ?? "앨범을 찾을 수 없습니다.");
   }
 
-  // DB 레코드를 지우기 전에 Blob 이미지를 먼저 정리해 고아 파일을 남기지 않습니다.
-  await Promise.all(galleryResult.gallery.images.map((image) => deleteBlobIfExists(image.url)));
-
-  await db.delete(galleries).where(eq(galleries.id, galleryResult.gallery.id));
+  // 기존 이미지의 업로드 소유권이 확인되지 않아 파일은 보존합니다.
+  // DB 삭제가 실패해도 원본 사진은 계속 열 수 있어야 합니다 (#93).
+  const [deleted] = await db.delete(galleries)
+    .where(eq(galleries.id, galleryResult.gallery.id))
+    .returning({ id: galleries.id });
+  if (!deleted) return initialError("앨범을 찾을 수 없습니다.");
 
   revalidateGalleryPaths(galleryResult.gallery.id);
   return successState("앨범이 삭제되었습니다.");
 }
 
 export async function addGalleryImage(id: string, formData: FormData): Promise<GalleryActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const validated = validateGalleryImageFile(formData.get("image"));
   if ("error" in validated) {
@@ -257,7 +259,9 @@ export async function addGalleryImage(id: string, formData: FormData): Promise<G
   const safeFileName = `gallery/${Date.now()}-${normalizeFileName(validated.file.name)}`;
   const blob = await put(safeFileName, validated.file, {
     access: "public",
+    addRandomSuffix: true,
   });
+  await recordOwnedBlob(blob.url, session.user.id);
 
   await db.insert(galleryImages).values({
     galleryId: galleryResult.gallery.id,
@@ -281,7 +285,7 @@ export async function addGalleryImage(id: string, formData: FormData): Promise<G
 }
 
 export async function addGalleryImages(id: string, formData: FormData): Promise<GalleryActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = galleryImageBulkSchema.safeParse({
     alt: normalizeOptionalText(formData.get("alt")),
@@ -334,7 +338,11 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
   const uploads = await Promise.allSettled(
     files.map((file, index) => {
       const safeFileName = `gallery/${Date.now()}-${index}-${normalizeFileName(file.name)}`;
-      return put(safeFileName, file, { access: "public", addRandomSuffix: true });
+      return put(safeFileName, file, { access: "public", addRandomSuffix: true })
+        .then(async (blob) => {
+          await recordOwnedBlob(blob.url, session.user.id);
+          return blob;
+        });
     }),
   );
   const uploadedBlobs = uploads.flatMap((result) =>
@@ -342,7 +350,8 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
   );
 
   if (uploads.some((result) => result.status === "rejected")) {
-    await Promise.all(uploadedBlobs.map((blob) => deleteBlobIfExists(blob.url)));
+    // 성공한 업로드는 원장에 남깁니다. 정리 시점에 다른 콘텐츠 참조를
+    // 다시 확인하고 실패한 삭제도 다음 실행에서 재시도할 수 있습니다.
     return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
   }
 
@@ -490,30 +499,42 @@ export async function deleteGalleryImage(id: string, imageId: string): Promise<G
     return initialError("이미지를 찾을 수 없습니다.");
   }
 
-  // 커버가 삭제될 경우를 대비해 다음 커버 후보를 미리 계산합니다.
-  const nextImages = gallery.images.filter((image) => image.id !== targetImage.id);
-  const nextCoverImageUrl =
-    gallery.coverImageUrl === targetImage.url
-      ? (nextImages[0]?.url ?? null)
-      : (gallery.coverImageUrl ?? nextImages[0]?.url ?? null);
-
-  await deleteBlobIfExists(targetImage.url);
-
-  await db
+  // 이미지 행 삭제가 실패하거나 다른 관리자와 경합해도 파일은 보존합니다.
+  const [deleted] = await db
     .delete(galleryImages)
     .where(
       and(
         eq(galleryImages.id, parsedImageId.data),
         eq(galleryImages.galleryId, parsedGalleryId.data),
       ),
-    );
+    )
+    .returning({ id: galleryImages.id });
 
-  await db
-    .update(galleries)
-    .set({
-      coverImageUrl: nextCoverImageUrl,
-    })
-    .where(eq(galleries.id, parsedGalleryId.data));
+  if (!deleted) return initialError("이미지를 찾을 수 없습니다.");
+
+  try {
+    // 삭제 직전의 앨범 스냅샷 대신 현재 DB의 남은 사진을 조회합니다.
+    // 다른 관리자가 대표 사진을 바꿨다면 조건이 맞지 않아 덮어쓰지 않습니다.
+    await db
+      .update(galleries)
+      .set({
+        coverImageUrl: sql<string | null>`(
+          SELECT ${galleryImages.url} FROM ${galleryImages}
+          WHERE ${galleryImages.galleryId} = ${parsedGalleryId.data}
+          ORDER BY ${galleryImages.order}, ${galleryImages.createdAt}
+          LIMIT 1
+        )`,
+      })
+      .where(and(
+        eq(galleries.id, parsedGalleryId.data),
+        eq(galleries.coverImageUrl, targetImage.url),
+      ));
+  } catch (error) {
+    // 사진 행은 이미 삭제됐으므로 DB 작업 전체를 실패로 돌리지 않습니다.
+    logServerError("gallery/delete-image-cover", error, { galleryId: parsedGalleryId.data });
+    revalidateGalleryPaths(parsedGalleryId.data);
+    return successState("이미지는 삭제됐지만 대표 사진 갱신에 실패했습니다. 앨범을 확인해주세요.");
+  }
 
   revalidateGalleryPaths(parsedGalleryId.data);
   return successState("이미지가 삭제되었습니다.");
