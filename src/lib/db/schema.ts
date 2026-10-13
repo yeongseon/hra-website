@@ -714,6 +714,7 @@ export const applicationForms = pgTable("application_forms", {
   description: text("description"), // 양식 설명
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }), // 대상 기수
   isPublished: boolean("is_published").notNull().default(false), // 공개 여부
+  questionsRevision: integer("questions_revision").notNull().default(0), // 질문 일괄 저장 충돌 감지용 버전
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()

@@ -57,6 +57,20 @@ const questionSchema = z
 export const saveQuestionsSchema = z.object({
   formId: z.string().uuid(),
   questions: z.array(questionSchema),
+}).superRefine((input, context) => {
+  // 같은 질문 ID를 두 번 보내면 순차 UPDATE 결과가 요청 순서에 따라 달라지므로 차단한다.
+  const seenIds = new Set<string>();
+  input.questions.forEach((question, index) => {
+    if (!question.id) return;
+    if (seenIds.has(question.id)) {
+      context.addIssue({
+        code: "custom",
+        path: ["questions", index, "id"],
+        message: "같은 질문이 중복되어 있습니다. 새로고침 후 다시 시도해주세요.",
+      });
+    }
+    seenIds.add(question.id);
+  });
 });
 
 export type QuestionInput = z.infer<typeof questionSchema>;

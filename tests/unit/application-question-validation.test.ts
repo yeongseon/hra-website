@@ -77,4 +77,17 @@ describe("지원서 질문 선택지 검증 (#94)", () => {
       expect(result.error.issues[0].path).toEqual(["questions", 1, "options"]);
     }
   });
+
+  it("같은 질문 ID가 두 번 전달되면 저장 전에 거부한다", () => {
+    const id = "22222222-2222-4222-8222-222222222222";
+    const result = parse([
+      { ...question("SHORT_ANSWER"), id },
+      { ...question("LONG_ANSWER"), id },
+    ]);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(["questions", 1, "id"]);
+    }
+  });
 });
