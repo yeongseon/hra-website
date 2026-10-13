@@ -9,9 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
+import { canReadSharedResource } from "@/features/resources/access";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,9 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 const getClassLogDetail = async (id: string) => {
+  // 메타데이터 경로에서도 본문과 같은 역할 검사를 DB 조회보다 먼저 수행한다.
+  const session = await auth();
+  if (!canReadSharedResource(session?.user?.role)) return null;
   const [log] = await db
     .select({
       id: classLogs.id,
@@ -80,6 +86,7 @@ export async function generateMetadata({ params }: ResourceDetailPageProps): Pro
 }
 
 export default async function ResourceDetailPage({ params }: ResourceDetailPageProps) {
+  await requireSharedResourceReader();
   const { id } = await params;
 
   // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증하여

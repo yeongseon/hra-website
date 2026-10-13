@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Info, Plus } from "lucide-react";
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
 import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ResourcesPage() {
-  const session = await auth();
+  const session = await requireSharedResourceReader();
   const userRole = session?.user?.role;
 
   // ADMIN/FACULTY/MEMBER는 열람 권한이 있으므로 경고 불필요
