@@ -38,21 +38,17 @@ function sanitizeCsvCell(val: unknown): string {
  *                      이를 통해 미래에 다른 unique 제약이 추가되어도 메시지를 오진하지 않습니다.
  */
 function isUniqueViolation(error: unknown, constraintName?: string): boolean {
-  if (
-    typeof error !== "object" ||
-    error === null ||
-    !("code" in error) ||
-    (error as { code: unknown }).code !== "23505"
-  ) {
-    return false;
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current && current.code === "23505" &&
+        (constraintName === undefined || ("constraint" in current && current.constraint === constraintName))) {
+      return true;
+    }
+    current = "cause" in current ? current.cause : undefined;
   }
-  if (constraintName === undefined) {
-    return true;
-  }
-  return (
-    "constraint" in error &&
-    (error as { constraint: unknown }).constraint === constraintName
-  );
+  return false;
 }
 
 export type SubmitActionState = {
@@ -105,7 +101,7 @@ export async function submitApplicationForm(
     // IP 기반 rate limit — 두 층 병행 (#69):
     //   (a) 24시간 10회 (총량): 장기 abuse 방어. 인라인 카운트 유지.
     //   (b) 시간당 5회 (스퍼트): 봇의 짧은 시간창 폭주 방어. 헬퍼로 분리.
-    // neon-http 는 트랜잭션이 없어 카운트-후-삽입 사이에 짧은 TOCTOU 창이 있으나,
+    // 카운트-후-삽입 사이에는 짧은 TOCTOU 창이 있으나,
     // 동일 (form_id, email) 중복은 아래 unique 제약이 원자적으로 차단하므로
     // 실 익스플로잇 영향은 제한적. 더 엄격한 제한이 필요하면 Upstash Ratelimit 도입.
     const hdrs = await headers();
@@ -205,22 +201,29 @@ export async function submitApplicationForm(
       }
     }
 
-    // 3. 제출 마스터 생성.
-    //    schema의 unique(form_id, applicant_email) 제약 덕분에 동일 이메일이
-    //    같은 양식에 두 번 제출하려 하면 Postgres가 23505로 거부합니다.
-    //    이는 TOCTOU race를 DB 레벨에서 원자적으로 차단합니다.
-    let submissionId: string;
+    // 3. 제출 ID를 미리 만들고 마스터·답변 INSERT를 Neon HTTP 원자적 배치에 묶는다.
+    //    unique(form_id, applicant_email)은 동시 중복 제출 중 하나만 확정한다.
+    const submissionId = crypto.randomUUID();
     try {
-      const [submission] = await db
-        .insert(applicationSubmissions)
-        .values({
-          formId: validFormId,
-          applicantName,
-          applicantEmail,
-          applicantPhone,
-        })
-        .returning({ id: applicationSubmissions.id });
-      submissionId = submission.id;
+      const insertSubmission = db.insert(applicationSubmissions).values({
+        id: submissionId,
+        formId: validFormId,
+        applicantName,
+        applicantEmail,
+        applicantPhone,
+      });
+      if (answers.length > 0) {
+        await db.batch([
+          insertSubmission,
+          db.insert(applicationAnswers).values(answers.map(answer => ({
+            submissionId,
+            questionId: answer.questionId,
+            value: answer.value,
+          }))),
+        ]);
+      } else {
+        await insertSubmission;
+      }
     } catch (error) {
       if (isUniqueViolation(error, "application_submissions_form_applicant_unique")) {
         return {
@@ -228,50 +231,25 @@ export async function submitApplicationForm(
           message: "이미 같은 이메일로 이 지원서를 제출하셨습니다.",
         };
       }
-      throw error;
-    }
-
-    // 4. 질문별 답변 저장.
-    //    중요(원자성 보상): neon-http 드라이버는 트랜잭션을 미지원하므로 마스터-답변 두 단계
-    //    insert가 원자적이지 않습니다. 만약 답변 insert가 실패하면 이미 만들어진 마스터 행은
-    //    unique(form_id, email) 제약 때문에 사용자의 영구 재시도 차단을 유발합니다.
-    //    이를 막기 위해 답변 insert 실패 시 방금 만든 마스터 행을 best-effort로 삭제합니다.
-    if (answers.length > 0) {
+      // 응답만 유실된 경우에도 배치가 이미 커밋됐을 수 있다. 요청별 ID로 결과를 확인한다.
+      // 결과가 보이지 않으면 안전하게 재시도할 수 있고, 늦은 커밋은 UNIQUE가 중복을 막는다.
       try {
-        await db.insert(applicationAnswers).values(
-          answers.map(ans => ({
-            submissionId,
-            questionId: ans.questionId,
-            value: ans.value,
-          }))
-        );
-      } catch (answersError) {
-        // 보상 삭제: 마스터 행을 지워 unique 제약을 해제하고 사용자의 재시도를 허용합니다.
-        try {
-          await db
-            .delete(applicationSubmissions)
-            .where(eq(applicationSubmissions.id, submissionId));
-        } catch (cleanupError) {
-          // 마스터 삭제마저 실패하면 고아 행이 남아 사용자가 재시도 불가일 수 있습니다.
-          // 운영자가 수동으로 정리해야 하므로 식별자만 남깁니다.
-          // #70: applicantEmail 은 PII 이므로 로그에서 제외 — submissionId·formId 로 운영자가 역추적 가능.
-          logServerError("application-submission/cleanup-master", cleanupError, {
-            submissionId,
-            formId: validFormId,
-          });
+        const [persisted] = await db
+          .select({ id: applicationSubmissions.id })
+          .from(applicationSubmissions)
+          .where(eq(applicationSubmissions.id, submissionId))
+          .limit(1);
+        if (!persisted) {
+          logServerError("application-submission/atomic-insert", error, { submissionId, formId: validFormId });
+          return { success: false, message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
         }
-        logServerError("application-submission/insert-answers", answersError, {
-          submissionId,
-          formId: validFormId,
-        });
-        return {
-          success: false,
-          message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        };
+      } catch (verificationError) {
+        logServerError("application-submission/verify-commit", verificationError, { submissionId, formId: validFormId });
+        return { success: false, message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
       }
     }
 
-    // 5. rate limit 카운트용 로그 적재.
+    // 4. rate limit 카운트용 로그 적재.
     //    실패해도 제출 자체는 성공 처리합니다(다음 요청의 카운트가 1만큼 적게 잡힐 뿐).
     try {
       await db.insert(applicationSubmissionsLog).values({
