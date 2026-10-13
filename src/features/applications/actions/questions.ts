@@ -1,18 +1,14 @@
 /**
- * 지원서 질문 및 선택지 관리 서버 액션
+ * 지원서 질문과 선택지를 PostgreSQL의 단일 저장 함수로 원자적으로 변경한다.
+ * 양식 버전을 비교해 다른 관리자의 저장 결과를 오래된 화면이 덮어쓰지 못하게 한다.
  */
 "use server";
 
-import { eq, inArray } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import {
-  applicationAnswers,
-  applicationQuestions,
-  applicationQuestionOptions,
-} from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import { isConstraintViolation } from "@/lib/db/constraint-errors";
 import {
@@ -23,166 +19,94 @@ import {
 export type QuestionActionState = {
   success: boolean;
   message: string;
+  revision?: number;
+  questionIds?: string[];
 };
 
-/**
- * 지원서 양식의 전체 질문 및 선택지 저장 (일괄 업데이트)
- */
+/** PostgreSQL 오류가 드라이버의 cause 체인 안에 있어도 지정한 저장 충돌만 구분한다. */
+function isQuestionSaveError(error: unknown, message: string): boolean {
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current && current.code === "P0001" &&
+        "message" in current && typeof current.message === "string" &&
+        current.message.includes(message)) return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
+/** 입력 전체를 검증한 후 질문·선택지·버전을 한 문장으로 확정한다. */
 export async function saveFormQuestions(
   formId: string,
-  questions: QuestionInput[]
+  questions: QuestionInput[],
+  expectedRevision: number,
 ): Promise<QuestionActionState> {
-  // requireAdmin은 미인증 시 /login으로 redirect (NEXT_REDIRECT throw)되므로 catch 금지
+  // 인증 실패는 Next.js redirect 예외이므로 저장 오류 처리 범위에 넣지 않는다.
   await requireAdmin();
 
-  // 🛡️ formId 를 DB 조회 전에 UUID 검증합니다 (#70).
-  // raw string 이 DB 로 흘러가면 Postgres 캐스팅 에러의 context 로 새어나가므로 사전 차단합니다.
-  // 검증 실패 시 후속 로그 context 에도 원본 formId 대신 boolean flag(hasFormId) 만 남깁니다.
   const parsedFormId = z.uuid().safeParse(formId);
-  if (!parsedFormId.success) {
-    return {
-      success: false,
-      message: "잘못된 요청입니다.",
-    };
+  const parsedRevision = z.number().int().nonnegative().safeParse(expectedRevision);
+  if (!parsedFormId.success || !parsedRevision.success) {
+    return { success: false, message: "잘못된 요청입니다." };
   }
-  const validFormId = parsedFormId.data;
 
-  // 1. 데이터 검증 (description이 빈 문자열일 경우 null로 변환)
-  const sanitizedQuestions = questions.map(q => ({
-    ...q,
-    description: q.description || null,
+  const sanitizedQuestions = questions.map(question => ({
+    ...question,
+    description: question.description || null,
   }));
-
-  const parsed = saveQuestionsSchema.safeParse({ formId: validFormId, questions: sanitizedQuestions });
-
+  const parsed = saveQuestionsSchema.safeParse({
+    formId: parsedFormId.data,
+    questions: sanitizedQuestions,
+  });
   if (!parsed.success) {
     logServerError("application-questions/save/validation", parsed.error, {
-      formId: validFormId,
+      formId: parsedFormId.data,
       issueCount: parsed.error.issues.length,
-      issueFields: parsed.error.issues
-        .map((i) => i.path.join("."))
-        .join(","),
+      issueFields: parsed.error.issues.map(issue => issue.path.join(".")).join(","),
     });
-    return {
-      success: false,
-      message: parsed.error.issues[0].message,
-    };
+    return { success: false, message: parsed.error.issues[0].message };
   }
 
   try {
-    // 1. 현재 DB에 있는 이 양식의 모든 질문 ID 조회
-    const existingQuestions = await db
-      .select({ id: applicationQuestions.id })
-      .from(applicationQuestions)
-      .where(eq(applicationQuestions.formId, validFormId));
-
-    const existingQuestionIds = existingQuestions.map(q => q.id);
-    const incomingQuestionIds = parsed.data.questions
-      .map(q => q.id)
-      .filter((id): id is string => !!id);
-
-    // 2. 삭제된 질문 제거 (cascade로 선택지도 함께 삭제됨)
-    const questionIdsToDelete = existingQuestionIds.filter(
-      id => !incomingQuestionIds.includes(id)
-    );
-
-    // 답변이 cascade 로 영구 삭제되는 것을 방지 — 운영자는 먼저 제출 내역을 별도 처리해야 함
-    if (questionIdsToDelete.length > 0) {
-      const answeredRows = await db
-        .select({ questionId: applicationAnswers.questionId })
-        .from(applicationAnswers)
-        .where(inArray(applicationAnswers.questionId, questionIdsToDelete));
-
-      const answeredQuestionIds = [...new Set(answeredRows.map(row => row.questionId))];
-
-      if (answeredQuestionIds.length > 0) {
-        const blockedQuestions = await db
-          .select({ title: applicationQuestions.title })
-          .from(applicationQuestions)
-          .where(inArray(applicationQuestions.id, answeredQuestionIds));
-
-        return {
-          success: false,
-          message: `다음 질문은 이미 답변이 제출되어 삭제할 수 없습니다: ${blockedQuestions.map(question => question.title).join(", ")}`,
-        };
-      }
-
-      await db
-        .delete(applicationQuestions)
-        .where(inArray(applicationQuestions.id, questionIdsToDelete));
+    // 함수는 양식 행을 잠그고 버전을 비교한다. 함수 내부 오류는 이 문장 전체를 롤백한다.
+    const result = await db.execute(sql`
+      SELECT revision, question_ids
+      FROM save_application_form_questions(
+        ${parsedFormId.data}::uuid,
+        ${parsedRevision.data}::integer,
+        ${JSON.stringify(parsed.data.questions)}::jsonb
+      )
+    `);
+    const saved = z.object({ revision: z.number().int(), question_ids: z.array(z.uuid()) })
+      .safeParse(result.rows[0]);
+    if (!saved.success || saved.data.question_ids.length !== parsed.data.questions.length) {
+      throw new Error("질문 저장 함수의 결과가 요청과 일치하지 않습니다.");
     }
 
-    // 3. 질문 업데이트 또는 생성
-    for (const q of parsed.data.questions) {
-      let questionId = q.id;
-
-      if (questionId && existingQuestionIds.includes(questionId)) {
-        // 기존 질문 업데이트
-        await db
-          .update(applicationQuestions)
-          .set({
-            title: q.title,
-            description: q.description,
-            type: q.type,
-            isRequired: q.isRequired,
-            order: q.order,
-          })
-          .where(eq(applicationQuestions.id, questionId));
-      } else {
-        // 새 질문 생성
-        const [newQuestion] = await db
-          .insert(applicationQuestions)
-          .values({
-            formId: validFormId,
-            title: q.title,
-            description: q.description,
-            type: q.type,
-            isRequired: q.isRequired,
-            order: q.order,
-          })
-          .returning({ id: applicationQuestions.id });
-        questionId = newQuestion.id;
-      }
-
-      // 4. 선택지 처리: 기존 선택지 삭제 후 재생성
-      await db
-        .delete(applicationQuestionOptions)
-        .where(eq(applicationQuestionOptions.questionId, questionId!));
-
-      if (["MULTIPLE_CHOICE", "CHECKBOX", "DROPDOWN"].includes(q.type) && q.options && q.options.length > 0) {
-        await db
-          .insert(applicationQuestionOptions)
-          .values(
-            q.options.map(opt => ({
-              questionId: questionId!,
-              value: opt.value,
-              order: opt.order,
-            }))
-          );
-      }
-    }
-
-    revalidatePath(`/admin/application-forms/${validFormId}`);
+    revalidatePath(`/admin/application-forms/${parsedFormId.data}`);
     return {
       success: true,
       message: "질문 항목이 저장되었습니다.",
+      revision: saved.data.revision,
+      questionIds: saved.data.question_ids,
     };
   } catch (error) {
-    // 사전 조회 후 제출된 답변은 DB FK가 보호합니다. 원본 오류·답변은 응답에 담지 않습니다.
+    if (isQuestionSaveError(error, "application_form_questions_stale")) {
+      return { success: false, message: "다른 관리자가 질문을 변경했습니다. 새로고침 후 다시 저장해주세요." };
+    }
+    if (isQuestionSaveError(error, "application_form_questions_missing") ||
+        isQuestionSaveError(error, "application_form_questions_invalid_id")) {
+      return { success: false, message: "양식 또는 질문이 변경되었습니다. 새로고침 후 다시 확인해주세요." };
+    }
     if (isConstraintViolation(error, "23503", "application_answers_question_id_application_questions_id_fk")) {
       return { success: false, message: "답변이 제출된 질문은 삭제할 수 없습니다. 새로고침 후 다시 확인해주세요." };
     }
     logServerError("application-questions/save", error, {
-      formId: validFormId,
+      formId: parsedFormId.data,
       questionCount: parsed.data.questions.length,
     });
-    // 사용자 응답에는 raw error.message 를 노출하지 않는다.
-    // Drizzle NeonHttpError 등은 실패한 SQL query text·컬럼명·PII 값을 포함할 수 있어
-    // 관리자 UI 에 그대로 반환되면 정보 유출이 된다. 원본 예외는 위의 logServerError 로
-    // 서버 로그에만 기록되며, 사용자에게는 일반화된 재시도 안내만 반환한다.
-    return {
-      success: false,
-      message: "질문 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-    };
+    return { success: false, message: "질문 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
   }
 }
