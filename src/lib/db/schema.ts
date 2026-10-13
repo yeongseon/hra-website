@@ -499,6 +499,7 @@ export const faqContact = pgTable("faq_contact", {
 // 모집 안내 페이지의 설정 정보 (포스터, D-day, 현재 모집 기수 등)
 export const recruitmentSettings = pgTable("recruitment_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
+  singletonKey: integer("singleton_key").notNull().default(1), // 설정은 고정 키 1인 한 행만 허용
   // 현재 모집 기수 정보 (모집 설정 관리자 페이지 상단 섹션)
   activeCohortId: uuid("active_cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 현재 모집 중인 기수 (null이면 모집 없음)
   recruitmentStatus: recruitmentStatusEnum("recruitment_status").default("UPCOMING"), // 모집 상태: 예정/모집중/마감
@@ -516,7 +517,10 @@ export const recruitmentSettings = pgTable("recruitment_settings", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, table => ({
+  singletonUnique: unique("recruitment_settings_singleton_key_unique").on(table.singletonKey),
+  singletonCheck: check("recruitment_settings_singleton_key_check", sql`${table.singletonKey} = 1`),
+}));
 
 // ============================================================
 // Notice Attachments (공지사항 첨부파일 테이블)
