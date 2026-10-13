@@ -8,6 +8,7 @@
 - 기존 `users`는 로그인 계정 및 시스템 역할의 정본이다. `users.role`을 재학·수료·탈퇴로 확장하지 않는다.
 - `cohorts`는 교육 기수의 정본이다. `users.cohortId`는 현재 회원 UI 호환을 위한 기존 필드로만 다루고, 학적 이력의 정본으로 사용하지 않는다.
 - 기존 `schedule_events`와 `schedule_sessions`는 수업일·시간 구성·교수·카테고리의 정본이다. G1에서 복제된 수업 테이블을 만들지 않는다.
+- **HRA 실제 운영 구분:** 교수는 수업을 담당하지만 **출결을 담당하지 않는다**. 수업에는 **어드바이저(Advisor)**라는 별도 수업 운영 담당자가 존재한다. 따라서 `schedule_sessions.facultyId`로 출결 담당자를 추론하지 않으며, G2에서 배정된 어드바이저와 출결 변경 주체를 별도로 연결한다.
 - `weekly_texts` / `class_logs` / `report_templates`는 공동 학습 자료다. 개인별 과제 실적을 이들 행의 개수로 계산하지 않는다.
 - `application_submissions`는 **지원 이력**이지 학적의 정본이 아니다. `status=ACCEPTED`를 곧바로 유효한 학적/로그인 권한으로 해석하지 않는다.
 
@@ -137,9 +138,23 @@
 
 ## 5. G2/G3 후보 (지금 생성하지 않음)
 
-- `attendance_records(enrollment_id, schedule_event_id, state, changed_by, changed_at, reason)`: `UNIQUE(enrollment_id, schedule_event_id)`; 출결 `UNMARKED`/미입력과 `ABSENT`/결석 구분. 세션별 출석 필요성 미확정.
+### G2: 수업 어드바이저(Advisor)와 출결 데이터 분리
+
+**확인된 사실:** 출결은 교수가 담당하지 않고 수업에는 Advisor라는 운영자가 있다. **추가 정책 확인(#143):** 한 수업에 Advisor 1명 또는 복수인지, 배정·대체·해제 담당, 출결 입력·정정·승인 최종 권한, ADMIN 긴급 처리 방식.
+
+- `class_advisor_assignments(id, schedule_event_id, advisor_user_id, assigned_by_user_id, assigned_at, revoked_at)` 제안: 해당 **CLASS 수업일**에 누가 어드바이저로 배정되었는지 관리한다. 세션 단위 배정은 실제 운영이 필요하다고 확인될 때만 확장한다.
+- 어드바이저는 최초에는 기존 로그인 사용자에 연결되는 **수업 단위 업무 역할**로 취급한다. 새 전역 `ADVISOR` enum 도입은 별도 운영 요구가 확인된 뒤 결정한다. 기존 `FACULTY` 역할은 출결 등록/정정 권한을 뜻하지 않는다.
+- `(schedule_event_id, advisor_user_id)`의 중복 활성 배정을 방지하는 DB 제약/인덱스, 배정 취소 후 권한 회수, 관리자 승인 이력을 설계한다. 수업당 Advisor 인원 제약은 #143 결정 후 확정한다.
+- `canManageAttendance(session, scheduleEventId)`: 유효한 인증 계정과 **해당 수업의 활성 Advisor 배정**을 재검증한다. ADMIN 감독·비상 수정 권한은 #143 정책으로 별도 처리하고, 비배정 Advisor 및 `FACULTY` 역할만 가진 사용자는 거부한다. PENDING·비로그인도 거부한다.
+- Advisor의 명부 접근은 **배정된 수업의 출결 대상 학생 최소 정보**로 제한한다. 과제 평가·개인 제출 파일·다른 수업 학적을 기본 열람 대상으로 삼지 않는다.
+- 교수/교수 프로필(`faculty`)과 Advisor 배정은 별도 정본이다. 양자를 동일한 ID나 로그인 역할로 통합하지 않는다.
+
+관련 작업: [#165 수업 Advisor 배정 및 권한](https://github.com/yeongseon/hra-website/issues/165), [#159 출결 모델](https://github.com/yeongseon/hra-website/issues/159), [#160 출결 UI](https://github.com/yeongseon/hra-website/issues/160).
+
+- `attendance_records(enrollment_id, schedule_event_id, state, recorded_by_user_id, updated_at)` 제안: `UNIQUE(enrollment_id, schedule_event_id)`. 실제 기록 행 부재(`UNMARKED`/미입력에 해당)와 명시적 `ABSENT`/결석은 다르다. 학생의 기수는 수업 기수와 일치해야 한다. `recorded_by_user_id`가 교수의 `facultyId`와 같다고 추정하지 않는다.
+- `attendance_change_history(attendance_record_id, previous_state, next_state, changed_by_user_id, reason, changed_at)` 또는 공통 감사 로그: 최초 입력·정정·취소의 주체/사유/시간을 보존하고 담당 Advisor 배정 당시의 권한 여부를 검증한다. 세션별 출석 필요성은 미확정이다.
 - `academic_audit_logs(actor_user_id, resource_type, resource_id, action, before_summary, after_summary, reason, occurred_at)`: 내용 전문·민감 URL 금지, 보존 기간·열람권 분리.
-- `assignment_reviews`: 담당 교수/운영진 검토, 피드백, 과거 버전 추적 (G3).
+- `assignment_reviews`: 별도 정책에 따라 담당 교수/운영진 검토, 피드백, 과거 버전 추적 (G3). 이 권한을 출결 입력·정정 권한과 결합하지 않는다.
 - `completion_decisions`: 수료 조건 버전·운영진 승인·예외 사유·확정 시각 (G3).
 
 새 엔터티 추가는 운영 정책과 이용자 요구가 확인되었을 때만 진행한다. 선제적인 학점/학과/학기 테이블은 만들지 않는다.

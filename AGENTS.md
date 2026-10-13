@@ -87,6 +87,16 @@ src/
 > | MEMBER | ✅ | ❌ | ✅ | ✅ |
 > | PENDING | ❌ | ❌ | ❌ | ❌ |
 
+### 학사관리 G2 역할 구분 (설계 중, 구현되지 않음)
+
+> HRA 운영 사실(2026-10-13 확인): **교수는 출결을 담당하지 않는다. 각 수업에는 어드바이저(Advisor)라는 운영 담당자가 있다.**
+>
+> - `faculty` 및 `schedule_sessions.facultyId`는 수업 내용 담당 교수 정보를 나타내며, **출결 조회·입력·정정 인가의 근거가 아니다.** `FACULTY` 역할만으로 출결 관리 권한을 주지 않는다.
+> - 출결은 **수업별 유효 Advisor 배정**과 검증된 로그인 계정으로 인가한다. 기존 `users.role`에 ADVISOR enum은 아직 없으며, 수업별 업무 배정과 전역 사용자 역할 신설은 별도 결정이다.
+> - Advisor 배정·교체·정정/승인·ADMIN 예외 처리 상세는 [#143](https://github.com/yeongseon/hra-website/issues/143) 정책에 따르고, 구현은 [#165](https://github.com/yeongseon/hra-website/issues/165) 및 #159/#160을 통해 진행한다.
+> - 교수의 담당 수업/과제 검토 기능은 별도 #161/#162. 기존 일정/공동 자료를 개인별 출결 기록으로 재해석하지 않는다.
+> - 설계 정본: [학사관리 로드맵](docs/ACADEMIC-MANAGEMENT-ROADMAP.md), [데이터 모델](docs/ACADEMIC-DATA-MODEL.md). **현재 학사관리 출결 기능이 구현되었다는 뜻이 아니다.**
+
 ## 5. 코딩 패턴
 
 ### 서버 액션 패턴 (`src/features/*/actions/index.ts`)
