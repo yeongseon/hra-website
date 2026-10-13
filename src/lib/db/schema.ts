@@ -930,6 +930,23 @@ export const uploadRateLimitLog = pgTable(
   ]
 );
 
+/**
+ * 본문 편집기에서 서버가 업로드한 이미지의 소유권 원장 (#88).
+ * 본문에 적힌 URL이나 Blob 도메인만으로 이 테이블에 소유권을 소급 부여하지 않습니다.
+ * 콘텐츠 참조는 현재 저장된 본문을 기준으로 확인하며, 기존 미등록 파일은 자동 정리하지 않습니다.
+ */
+export const markdownImageAssets = pgTable(
+  "markdown_image_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    url: text("url").notNull().unique(),
+    uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [index("idx_markdown_image_assets_created_at").on(table.createdAt)],
+);
+
 // ============================================================
 // Schedule Events (일정 관리 테이블)
 // ============================================================

@@ -1,6 +1,14 @@
+/**
+ * 본문 편집기의 이미지 업로드 API입니다.
+ * 인증·요청 제한·파일 형식을 검사한 뒤 Blob에 저장하고 서버 소유권 원장에 기록합니다.
+ * 원장 기록에 실패하면 이번 요청에서 업로드한 파일만 정리합니다.
+ */
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
+import { db } from "@/lib/db";
+import { markdownImageAssets } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import {
   checkUploadRateLimit,
@@ -120,6 +128,18 @@ export async function POST(request: NextRequest) {
     // Blob 파일명은 서버에서만 생성 (사용자 입력 배제 — path traversal 및 잘못된 확장자 차단)
     const fileName = `markdown-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${detectedExt}`;
     const blob = await put(fileName, file, { access: "public" });
+
+    // 업로드 응답 전에 소유권을 기록합니다. 기록이 실패하면 이 요청에서 막 만든
+    // 파일만 되지우며, URL을 클라이언트에 돌려주지 않습니다. 기존 파일은 건드리지 않습니다.
+    try {
+      await db.insert(markdownImageAssets).values({
+        url: blob.url,
+        uploadedById: session.user.id,
+      });
+    } catch (error) {
+      await deleteBlobIfExists(blob.url);
+      throw error;
+    }
 
     return NextResponse.json({ url: blob.url });
   } catch (error) {
