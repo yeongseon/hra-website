@@ -1,15 +1,15 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq, max } from "drizzle-orm";
+import { and, eq, isNull, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 import { logServerError } from "@/lib/errors";
 
 const maxImageSize = 5 * 1024 * 1024;
@@ -89,10 +89,11 @@ function validateImageFiles(formData: FormData) {
   return { success: true as const, files: validFiles };
 }
 
-async function uploadAlumniImage(file: File) {
+async function uploadAlumniImage(file: File, uploadedById: string) {
   const timestamp = Date.now();
   const safeFileName = `${timestamp}-${file.name.replace(/\s+/g, "-")}`;
   const blob = await put(`alumni/${safeFileName}`, file, { access: "public" });
+  await recordOwnedBlob(blob.url, uploadedById);
   return blob.url;
 }
 
@@ -103,7 +104,7 @@ function revalidateAlumniPaths() {
 }
 
 export async function createAlumniStory(formData: FormData): Promise<AlumniStoryActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = parseAlumniStoryFormData(formData);
   if (!parsed.success) {
@@ -127,7 +128,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
   try {
     const uploadedUrls: string[] = [];
     for (const file of validatedImages.files) {
-      const url = await uploadAlumniImage(file);
+      const url = await uploadAlumniImage(file, session.user.id);
       uploadedUrls.push(url);
     }
 
@@ -170,7 +171,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
 }
 
 export async function updateAlumniStory(id: string, formData: FormData): Promise<AlumniStoryActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) {
@@ -200,28 +201,42 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
   }
 
   try {
-    const uploadedUrls: string[] = [];
-    for (const file of validatedImages.files) {
-      const url = await uploadAlumniImage(file);
-      uploadedUrls.push(url);
-    }
-
     const [existing] = await db
       .select({ imageUrl: alumniStories.imageUrl })
       .from(alumniStories)
       .where(eq(alumniStories.id, parsedId.data));
+    if (!existing) {
+      return { success: false, message: "수료생 이야기를 찾을 수 없습니다." };
+    }
 
-    await db
+    const uploadedUrls: string[] = [];
+    for (const file of validatedImages.files) {
+      const url = await uploadAlumniImage(file, session.user.id);
+      uploadedUrls.push(url);
+    }
+
+    // 대표 이미지가 먼저 바뀌었다면 최신 값을 덮어쓰지 않습니다.
+    // 이 요청에서 새로 올린 미참조 파일은 소유권 원장이 나중에 정리합니다.
+    const [updated] = await db
       .update(alumniStories)
       .set({
         name: parsed.data.name,
         title: parsed.data.title ?? null,
         quote: parsed.data.quote,
         content: parsed.data.content,
-        imageUrl: parsed.data.imageUrl || existing?.imageUrl,
+        imageUrl: parsed.data.imageUrl || existing.imageUrl,
         isFeatured: parsed.data.isFeatured,
       })
-      .where(eq(alumniStories.id, parsedId.data));
+      .where(and(
+        eq(alumniStories.id, parsedId.data),
+        existing.imageUrl
+          ? eq(alumniStories.imageUrl, existing.imageUrl)
+          : isNull(alumniStories.imageUrl),
+      ))
+      .returning({ id: alumniStories.id });
+    if (!updated) {
+      return { success: false, message: "수료생 이야기 정보가 변경됐습니다. 새로고침 후 다시 시도해주세요." };
+    }
 
     if (uploadedUrls.length > 0) {
       await db.insert(alumniStoryImages).values(
@@ -325,17 +340,8 @@ export async function deleteAlumniStory(id: string): Promise<void> {
   }
 
   try {
-    const images = await db
-      .select({ url: alumniStoryImages.url })
-      .from(alumniStoryImages)
-      .where(eq(alumniStoryImages.alumniStoryId, parsedId.data));
-
-    for (const img of images) {
-      if (isBlobUrl(img.url)) {
-        await deleteBlobIfExists(img.url);
-      }
-    }
-
+    // 기존 이미지 URL만으로 파일 소유권을 증명할 수 없으므로 DB 삭제 전에
+    // Blob을 지우지 않습니다. 미확인 파일은 보존합니다 (#93).
     await db.delete(alumniStories).where(eq(alumniStories.id, parsedId.data));
   } catch (error) {
     logServerError("alumni/delete", error, { id: parsedId.data });

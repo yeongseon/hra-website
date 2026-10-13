@@ -1,5 +1,5 @@
 /**
- * 갤러리 다중 업로드에서 DB 참조 파일을 지우지 않는지 확인합니다 (#92).
+ * 갤러리 다중 업로드에서 DB 참조 파일을 지우지 않는지 확인합니다 (#92, #93).
  * 업로드, 이미지 행 저장, 커버 갱신의 실패 단계를 각각 주입합니다.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,11 +13,13 @@ const mocks = vi.hoisted(() => ({
   deleteBlobIfExists: vi.fn(),
   logServerError: vi.fn(),
   revalidatePath: vi.fn(),
+  recordOwnedBlob: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExists }));
+vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
@@ -42,14 +44,16 @@ function imagesForm() {
   return formData;
 }
 
-describe("갤러리 다중 업로드 보상 정리", () => {
+describe("갤러리 다중 업로드 소유권 기록과 지연 정리", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.findGallery.mockResolvedValue({ id: galleryId, coverImageUrl: null, images: [] });
+    mocks.requireAdmin.mockResolvedValue({ user: { id: galleryId } });
     mocks.put.mockResolvedValueOnce({ url: firstUrl }).mockResolvedValueOnce({ url: secondUrl });
     mocks.insertValues.mockResolvedValue([]);
     mocks.updateWhere.mockResolvedValue([]);
     mocks.deleteBlobIfExists.mockResolvedValue(undefined);
+    mocks.recordOwnedBlob.mockResolvedValue(undefined);
   });
 
   it("정상 저장 시 이미지 두 건과 커버를 갱신하고 파일을 보존한다", async () => {
@@ -59,9 +63,10 @@ describe("갤러리 다중 업로드 보상 정리", () => {
     expect(mocks.insertValues).toHaveBeenCalledOnce();
     expect(mocks.updateWhere).toHaveBeenCalledOnce();
     expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
+    expect(mocks.recordOwnedBlob).toHaveBeenCalledTimes(2);
   });
 
-  it("한 업로드가 먼저 실패해도 나머지 업로드 종료 후 생성 파일을 정리한다", async () => {
+  it("한 업로드가 먼저 실패해도 나머지 업로드를 원장에 기록하고 지연 정리한다", async () => {
     let finishSecond!: (value: { url: string }) => void;
     mocks.put.mockReset()
       .mockRejectedValueOnce(new Error("첫 번째 업로드 실패"))
@@ -76,7 +81,8 @@ describe("갤러리 다중 업로드 보상 정리", () => {
 
     expect(result.success).toBe(false);
     expect(mocks.insertValues).not.toHaveBeenCalled();
-    expect(mocks.deleteBlobIfExists).toHaveBeenCalledExactlyOnceWith(secondUrl);
+    expect(mocks.recordOwnedBlob).toHaveBeenCalledExactlyOnceWith(secondUrl, galleryId);
+    expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
   });
 
   it("이미지 INSERT 실패 시 커밋 여부를 알 수 없어 파일을 보존한다", async () => {

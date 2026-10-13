@@ -1,15 +1,15 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
-import { logServerError, redactBlobUrl } from "@/lib/errors";
+import { logServerError } from "@/lib/errors";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 
 export type ClassMaterialActionState = {
   success: boolean;
@@ -138,12 +138,6 @@ export async function createClassMaterial(
   let uploadedBlobUrl: string | null = null;
 
   try {
-    const safeFileName = normalizeFileName(validatedFile.file.name);
-    const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, {
-      access: "public",
-    });
-    uploadedBlobUrl = blob.url;
-
     const classDateObj = parsed.data.classDate
       ? new Date(`${parsed.data.classDate}T00:00:00`)
       : null;
@@ -151,6 +145,13 @@ export async function createClassMaterial(
     if (classDateObj && Number.isNaN(classDateObj.getTime())) {
       return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
     }
+
+    const safeFileName = normalizeFileName(validatedFile.file.name);
+    const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, {
+      access: "public",
+    });
+    uploadedBlobUrl = blob.url;
+    await recordOwnedBlob(blob.url, session.user.id);
 
     await db.insert(classMaterials).values({
       title: parsed.data.title,
@@ -175,15 +176,8 @@ export async function createClassMaterial(
       hasUploadedBlob: uploadedBlobUrl !== null,
     });
 
-    if (uploadedBlobUrl) {
-      try {
-        await deleteBlobIfExists(uploadedBlobUrl);
-      } catch (blobDeleteError) {
-        logServerError("class-materials/create/rollback", blobDeleteError, {
-          blobUrl: redactBlobUrl(uploadedBlobUrl),
-        });
-      }
-    }
+    // INSERT 응답 오류만으로 커밋 여부를 단정할 수 없습니다. 원장에 남은
+    // 미참조 파일은 쓰기를 멈춘 정리 작업에서 재검증한 뒤 삭제합니다.
 
     return {
       success: false,
@@ -197,7 +191,7 @@ export async function createClassMaterial(
  * 새 파일이 없으면 기존 파일을 그대로 유지한다.
  */
 export async function updateClassMaterial(id: string, formData: FormData): Promise<ClassMaterialActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = classMaterialIdSchema.safeParse(id);
   if (!parsedId.success) {
@@ -243,7 +237,8 @@ export async function updateClassMaterial(id: string, formData: FormData): Promi
     const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
 
     if (hasNewFile) {
-      // 새 파일 검증 및 업로드 후 기존 파일 제거
+      // 새 파일 검증 및 업로드 후 DB 참조를 교체합니다. 이전 파일은 소유권이
+      // 확인되지 않아 즉시 삭제하지 않습니다 (#93).
       const validatedFile = getValidatedFile(fileEntry);
       if ("error" in validatedFile) {
         return { success: false, error: validatedFile.error };
@@ -251,19 +246,25 @@ export async function updateClassMaterial(id: string, formData: FormData): Promi
 
       const safeFileName = normalizeFileName(validatedFile.file.name);
       const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, { access: "public" });
+      await recordOwnedBlob(blob.url, session.user.id);
 
-      await db
+      const [updated] = await db
         .update(classMaterials)
         .set({ ...textFields, fileUrl: blob.url, fileName: validatedFile.file.name })
-        .where(eq(classMaterials.id, parsedId.data));
+        .where(and(eq(classMaterials.id, parsedId.data), eq(classMaterials.fileUrl, target.fileUrl)))
+        .returning({ id: classMaterials.id });
+      if (!updated) {
+        return { success: false, error: "강의 자료 정보가 변경됐습니다. 새로고침 후 다시 시도해주세요." };
+      }
 
-      await deleteBlobIfExists(target.fileUrl);
     } else {
       // 파일 교체 없이 텍스트 필드만 수정
-      await db
+      const [updated] = await db
         .update(classMaterials)
         .set(textFields)
-        .where(eq(classMaterials.id, parsedId.data));
+        .where(eq(classMaterials.id, parsedId.data))
+        .returning({ id: classMaterials.id });
+      if (!updated) return { success: false, error: "강의 자료를 찾을 수 없습니다." };
     }
 
     revalidateClassMaterialPaths();
@@ -300,8 +301,10 @@ export async function deleteClassMaterial(id: string): Promise<ClassMaterialActi
       };
     }
 
-    await deleteBlobIfExists(target.fileUrl);
-    await db.delete(classMaterials).where(eq(classMaterials.id, parsedId.data));
+    const [deleted] = await db.delete(classMaterials)
+      .where(eq(classMaterials.id, parsedId.data))
+      .returning({ id: classMaterials.id });
+    if (!deleted) return { success: false, error: "강의 자료를 찾을 수 없습니다." };
 
     revalidateClassMaterialPaths();
 

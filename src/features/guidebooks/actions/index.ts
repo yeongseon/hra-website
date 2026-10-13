@@ -16,14 +16,14 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 
 export type GuidebookActionState = {
   success: boolean;
@@ -87,7 +87,7 @@ const revalidateGuidebookPaths = () => {
 };
 
 export async function createGuidebook(formData: FormData): Promise<GuidebookActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = guidebookFormSchema.safeParse({
     title: formData.get("title"),
@@ -119,6 +119,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
       // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
       addRandomSuffix: true,
     });
+    await recordOwnedBlob(blob.url, session.user.id);
 
     await db.insert(guidebooks).values({
       title: parsed.data.title,
@@ -149,7 +150,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
  * 새 파일이 없으면 기존 파일을 그대로 유지한다.
  */
 export async function updateGuidebook(id: string, formData: FormData): Promise<GuidebookActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = guidebookIdSchema.safeParse(id);
   if (!parsedId.success) {
@@ -175,7 +176,8 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
 
     if (hasNewFile) {
-      // 새 파일 검증 및 업로드 후 기존 파일 제거
+      // 새 파일 검증 및 업로드 후 DB 참조를 교체합니다. 이전 파일은 소유권이
+      // 확인되지 않아 즉시 삭제하지 않습니다 (#93).
       const validatedFile = getValidatedFile(fileEntry);
       if ("error" in validatedFile) {
         return { success: false, error: validatedFile.error };
@@ -190,19 +192,26 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
         access: "public",
         addRandomSuffix: true,
       });
+      await recordOwnedBlob(blob.url, session.user.id);
 
-      await db
+      const [updated] = await db
         .update(guidebooks)
         .set({ title: parsed.data.title, fileUrl: blob.url, fileName: validatedFile.file.name })
-        .where(eq(guidebooks.id, parsedId.data));
+        .where(and(eq(guidebooks.id, parsedId.data), eq(guidebooks.fileUrl, target.fileUrl)))
+        .returning({ id: guidebooks.id });
 
-      await deleteBlobIfExists(target.fileUrl);
+      if (!updated) {
+        return { success: false, error: "가이드북 정보가 변경됐습니다. 새로고침 후 다시 시도해주세요." };
+      }
+
     } else {
       // 파일 교체 없이 제목만 수정
-      await db
+      const [updated] = await db
         .update(guidebooks)
         .set({ title: parsed.data.title })
-        .where(eq(guidebooks.id, parsedId.data));
+        .where(eq(guidebooks.id, parsedId.data))
+        .returning({ id: guidebooks.id });
+      if (!updated) return { success: false, error: "가이드북을 찾을 수 없습니다." };
     }
 
     revalidateGuidebookPaths();
@@ -240,8 +249,10 @@ export async function deleteGuidebook(id: string): Promise<GuidebookActionState>
       };
     }
 
-    await deleteBlobIfExists(target.fileUrl);
-    await db.delete(guidebooks).where(eq(guidebooks.id, parsedId.data));
+    const [deleted] = await db.delete(guidebooks)
+      .where(eq(guidebooks.id, parsedId.data))
+      .returning({ id: guidebooks.id });
+    if (!deleted) return { success: false, error: "가이드북을 찾을 수 없습니다." };
 
     revalidateGuidebookPaths();
 
