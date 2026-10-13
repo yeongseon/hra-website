@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists, isBlobUrl } from "@/lib/blob-utils";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
@@ -246,9 +246,8 @@ export async function updateRecruitmentSettings(
     posterLayout: parsed.data.posterLayout,
   };
 
-  // 순서 원칙 (data-integrity, #62): 새 Blob 업로드 완료 → DB write → 옛 Blob cleanup.
-  // 옛 Blob 을 DB write 전에 지우면 write 실패 시 옛 이미지도 사라지고 새 참조도 저장되지 않아
-  // 사용자 관점에서 데이터가 유실된다. write 성공을 확인한 뒤 옛 Blob 을 정리해야 한다.
+  // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
+  // 이전 URL은 소유권을 확인할 수 없어 DB 저장 성공 여부와 관계없이 삭제하지 않습니다.
   try {
     if (!existingSettings) {
       await db.insert(recruitmentSettings).values(values);
@@ -267,23 +266,8 @@ export async function updateRecruitmentSettings(
     throw dbError;
   }
 
-  // DB write 가 성공한 뒤에만 옛 Blob 을 지운다 (best-effort — 실패해도 이미 저장된 row 는 무결).
-  // 원칙: previous 가 blob URL 이고 new 값과 다르면 삭제 (외부 URL 은 isBlobUrl 로 걸러짐).
-  // - file → file (다른 파일): 이전 blob 삭제
-  // - file → url (외부 URL 로 전환): 이전 blob 삭제
-  // - file → 제거: 이전 blob 삭제
-  // - url → 임의 (previous 가 외부 URL): isBlobUrl 이 false → 미삭제
-  // - 변화 없음 (previous === next): 미삭제
-  // ※ previous 가 blob URL 인데 admin 이 수동으로 *.vercel-storage.com URL 을 입력해 next 가
-  //   다른 blob URL 이 된 경우에도 삭제가 발생한다 (이 역시 이전 blob 은 미참조 → orphan 이므로 의도된 동작).
-  const previousPosterUrl = existingSettings?.posterImageUrl;
-  if (
-    previousPosterUrl &&
-    isBlobUrl(previousPosterUrl) &&
-    previousPosterUrl !== nextPosterImageUrl
-  ) {
-    await deleteBlobIfExists(previousPosterUrl);
-  }
+  // 이전 URL은 관리자 입력값일 수 있습니다. 같은 Blob 도메인이어도 현재 설정이
+  // 파일 소유자임을 증명하지 못하므로 교체·제거 시 자동 삭제하지 않습니다 (#88).
 
   revalidatePath("/recruitment");
   revalidatePath("/admin/recruitment-settings");
@@ -436,7 +420,7 @@ export async function updateRecruitmentPoster(
 
   const values = { posterImageUrl: nextPosterImageUrl, posterLayout: parsed.data.posterLayout };
 
-  // 순서 원칙 (data-integrity, #62): 새 Blob 업로드 완료 → DB write → 옛 Blob cleanup.
+  // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
   // 상세 근거는 updateRecruitmentSettings 의 동일 블록 주석 참고.
   try {
     if (!existing) {
@@ -452,16 +436,7 @@ export async function updateRecruitmentPoster(
     throw dbError;
   }
 
-  // DB write 성공 후에만 옛 Blob 을 지운다 (best-effort — 실패해도 저장된 row 는 무결).
-  // 케이스 분석은 updateRecruitmentSettings 의 동일 블록 주석 참고.
-  const previousPosterUrl = existing?.posterImageUrl;
-  if (
-    previousPosterUrl &&
-    isBlobUrl(previousPosterUrl) &&
-    previousPosterUrl !== nextPosterImageUrl
-  ) {
-    await deleteBlobIfExists(previousPosterUrl);
-  }
+  // 이전 URL은 파일 소유권을 확인할 수 없으므로 자동 삭제하지 않습니다 (#88).
 
   revalidatePath("/recruitment");
   revalidatePath("/admin/recruitment-settings");
