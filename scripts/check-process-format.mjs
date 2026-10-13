@@ -1,117 +1,101 @@
 /**
- * 이슈·PR 형식 검사 실행기
- *
- * 역할:
- *   scripts/_lib/process-format.mjs 의 규칙으로 실제 GitHub 이슈·PR 을 검사한다.
- *
- * 사용법:
- *   npm run issues:check                 열린 이슈 전체 검사 (gh CLI 로그인 필요)
- *   node scripts/check-process-format.mjs --event
- *                                        GitHub Actions 전용. 이벤트(이슈 또는 PR) 한 건을 검사한다.
- *
- * --event 동작:
- *   - 이슈: 위반이 있으면 이슈에 안내 댓글을 하나 남기고(이미 있으면 그 댓글을 고친다) 실패로 끝난다.
- *           위반이 없어지면 같은 댓글을 "통과" 로 고친다. 상태 라벨은 만들지 않는다.
- *   - PR:   위반이 있으면 검사가 실패한다. 댓글은 남기지 않는다 (fork PR 은 쓰기 권한이 없다).
- *
- * 보안: 이슈·PR 의 제목과 본문은 외부 입력이다. 셸 문자열에 끼워 넣지 않고 execFileSync 의
- *   인자 배열과 표준 입력으로만 전달한다.
+ * 기존 이슈 본문/라벨과 PR 제목/본문을 하나의 실행기에서 검사한다.
+ * 기본: 열린 이슈. --pull-requests: 열린 PR. --all: 둘 다(읽기 전용).
+ * --event만 이슈 안내 댓글을 갱신한다. API 입력을 셸 문자열에 끼워 넣지 않는다.
  */
-
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { validateIssue, validatePullRequest } from "./_lib/process-format.mjs";
+import { classifyPullRequest } from "./_lib/release-policy.mjs";
 
-// 안내 댓글을 다시 찾기 위한 표식 (화면에는 보이지 않는다).
 const MARKER = "<!-- process-format-check -->";
-
+const releaseAuthor = process.env.RELEASE_PLEASE_BOT_LOGIN?.trim() || "github-actions[bot]";
 function gh(args, input) {
   return execFileSync("gh", args, { encoding: "utf8", input, stdio: ["pipe", "pipe", "inherit"] });
 }
+function api(path) {
+  return JSON.parse(gh(["api", path]));
+}
+function pages(path) {
+  const result = JSON.parse(gh(["api", "--paginate", "--slurp", path]));
+  if (!Array.isArray(result) || !result.every(Array.isArray)) throw new Error("페이지 응답 형식이 다릅니다.");
+  return result.flat();
+}
+function repository() {
+  return process.env.GITHUB_REPOSITORY || gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim();
+}
+function issueErrors(issue) {
+  return validateIssue({ title: issue.title, body: issue.body, labels: (issue.labels ?? []).map((label) => label.name) });
+}
+function report(kind, number, errors) {
+  console.log(`${errors.length ? "✗" : "✓"} ${kind} #${number}`);
+  for (const error of errors) console.log(`  - ${error}`);
+  return errors.length > 0 ? 1 : 0;
+}
 
-// 열린 이슈 전체를 검사하고 위반 건수를 반환한다.
-function checkAllOpenIssues() {
-  const issues = JSON.parse(
-    gh(["issue", "list", "--state", "open", "--limit", "500", "--json", "number,title,body,labels"]),
-  );
-  let failed = 0;
-  for (const issue of issues.sort((a, b) => a.number - b.number)) {
-    const errors = validateIssue({
-      title: issue.title,
-      body: issue.body,
-      labels: issue.labels.map((label) => label.name),
-    });
-    if (errors.length > 0) {
-      failed += 1;
-      console.log(`✗ #${issue.number} ${issue.title}`);
-      for (const error of errors) console.log(`    - ${error}`);
-    }
+// PR 작성자·브랜치·파일은 이벤트에 들어온 문자열 대신 현재 GitHub 메타데이터로 확인한다.
+function pullRequestErrors(repo, number) {
+  const pr = api(`repos/${repo}/pulls/${number}`);
+  const files = pages(`repos/${repo}/pulls/${number}/files?per_page=100`);
+  const current = api(`repos/${repo}/pulls/${number}`);
+  if (current.head.sha !== pr.head.sha || current.changed_files !== pr.changed_files) {
+    return ["검사 중 PR head가 변경되었습니다. 최신 실행으로 다시 검사하세요."];
   }
-  console.log(`\n열린 이슈 ${issues.length}건 중 ${failed}건이 형식에 맞지 않습니다.`);
+  const result = classifyPullRequest(current, { repository: repo, files, releaseAuthor });
+  // 생성형 본문 예외는 제목 검사를 생략하지 않으며 앱 CI의 통과 여부와도 무관하다.
+  if (result.kind === "standard") result.errors.push(...validatePullRequest({ body: current.body }));
+  else console.log(`생성형 PR 본문 확인: ${result.kind}`);
+  return result.errors;
+}
+function checkAllOpenIssues(repo) {
+  const issues = pages(`repos/${repo}/issues?state=open&per_page=100`).filter((issue) => !issue.pull_request);
+  let failed = 0;
+  for (const issue of issues.sort((a, b) => a.number - b.number)) failed += report("이슈", issue.number, issueErrors(issue));
+  console.log(`열린 이슈 ${issues.length}건 중 ${failed}건 위반`);
   return failed;
 }
-
-// 이슈에 달린 안내 댓글(표식 포함)의 id 를 찾는다. 없으면 null.
+function checkAllOpenPullRequests(repo) {
+  const prs = pages(`repos/${repo}/pulls?state=open&per_page=100`);
+  let failed = 0;
+  for (const pr of prs.sort((a, b) => a.number - b.number)) failed += report("PR", pr.number, pullRequestErrors(repo, pr.number));
+  console.log(`열린 PR ${prs.length}건 중 ${failed}건 위반`);
+  return failed;
+}
 function findMarkerComment(repo, number) {
-  const comments = JSON.parse(gh(["api", "--paginate", `repos/${repo}/issues/${number}/comments`]));
-  const found = comments.find((comment) => typeof comment.body === "string" && comment.body.includes(MARKER));
-  return found ? found.id : null;
+  // 같은 표식을 붙인 사람의 댓글을 봇 댓글로 오인하여 수정하지 않는다.
+  const comments = pages(`repos/${repo}/issues/${number}/comments?per_page=100`);
+  return comments.find((comment) => comment.user?.login === "github-actions[bot]" &&
+    typeof comment.body === "string" && comment.body.includes(MARKER))?.id ?? null;
 }
-
 function upsertComment(repo, number, commentId, body) {
-  const payload = JSON.stringify({ body });
-  if (commentId) {
-    gh(["api", "-X", "PATCH", `repos/${repo}/issues/comments/${commentId}`, "--input", "-"], payload);
-  } else {
-    gh(["api", "-X", "POST", `repos/${repo}/issues/${number}/comments`, "--input", "-"], payload);
-  }
+  const path = commentId ? `repos/${repo}/issues/comments/${commentId}` : `repos/${repo}/issues/${number}/comments`;
+  gh(["api", "-X", commentId ? "PATCH" : "POST", path, "--input", "-"], JSON.stringify({ body }));
 }
-
-// GitHub Actions 이벤트 한 건을 검사한다. 위반 건수를 반환한다.
-function checkEvent() {
+function checkEvent(repo) {
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
-  const repo = process.env.GITHUB_REPOSITORY;
-
-  if (event.pull_request) {
-    const errors = validatePullRequest({ body: event.pull_request.body });
-    for (const error of errors) console.log(`- ${error}`);
-    if (errors.length === 0) console.log("PR 형식 확인 통과");
-    return errors.length;
-  }
-
-  // PR 댓글 등 이슈가 아닌 이벤트는 대상이 아니다.
+  if (event.pull_request) return report("PR", event.pull_request.number, pullRequestErrors(repo, event.pull_request.number));
   if (!event.issue || event.issue.pull_request) return 0;
-
-  // 이벤트에 담긴 내용은 발생 시점의 스냅샷이다. 라벨을 여러 개 연달아 붙이면 실행이 여러 번 일어나므로,
-  // 늦게 끝난 실행이 옛 상태로 판정하지 않도록 지금 상태를 다시 읽는다.
-  const issue = JSON.parse(gh(["api", `repos/${repo}/issues/${event.issue.number}`]));
-
-  const errors = validateIssue({
-    title: issue.title,
-    body: issue.body,
-    labels: (issue.labels ?? []).map((label) => label.name),
-  });
-  const commentId = findMarkerComment(repo, issue.number);
-
-  if (errors.length > 0) {
-    for (const error of errors) console.log(`- ${error}`);
-    upsertComment(
-      repo,
-      issue.number,
-      commentId,
-      `${MARKER}\n이 이슈는 저장소의 이슈 형식과 다릅니다. 아래 항목을 고치면 이 댓글이 자동으로 갱신됩니다.\n\n` +
-        errors.map((error) => `- ${error}`).join("\n") +
-        "\n\n라벨을 바꿀 권한이 없다면 그대로 두세요. 관리자가 지정합니다." +
-        "\n형식 안내: `docs/contributing/workflow.md` 의 \"이슈로 작업 정하기\"",
-    );
-  } else {
-    console.log("이슈 형식 확인 통과");
-    if (commentId) {
-      upsertComment(repo, issue.number, commentId, `${MARKER}\n이슈 형식 확인 통과.`);
-    }
-  }
-  return errors.length;
+  const issue = api(`repos/${repo}/issues/${event.issue.number}`);
+  const errors = issueErrors(issue);
+  const id = findMarkerComment(repo, issue.number);
+  if (errors.length) {
+    upsertComment(repo, issue.number, id, `${MARKER}\n이 이슈는 저장소 형식과 다릅니다. 수정하면 이 댓글이 갱신됩니다.\n\n` +
+      errors.map((error) => `- ${error}`).join("\n") +
+      "\n\n라벨 권한이 없다면 관리자가 지정합니다. 안내: `docs/contributing/workflow.md`");
+  } else if (id) upsertComment(repo, issue.number, id, `${MARKER}\n이슈 형식 확인 통과.`);
+  return report("이슈", issue.number, errors);
 }
 
-const failed = process.argv.includes("--event") ? checkEvent() : checkAllOpenIssues();
-process.exit(failed > 0 ? 1 : 0);
+try {
+  const repo = repository();
+  const args = process.argv.slice(2);
+  const allowed = ["--event", "--all", "--pull-requests"];
+  if (args.some((arg) => !allowed.includes(arg)) || args.length > 1) throw new Error("인자는 --event, --all, --pull-requests 중 하나만 사용합니다.");
+  const failed = args.includes("--event") ? checkEvent(repo) :
+    args.includes("--all") ? checkAllOpenIssues(repo) + checkAllOpenPullRequests(repo) :
+    args.includes("--pull-requests") ? checkAllOpenPullRequests(repo) : checkAllOpenIssues(repo);
+  process.exitCode = failed > 0 ? 1 : 0;
+} catch (error) {
+  console.error("형식 검사를 완료하지 못했습니다:", error instanceof Error ? error.message : "알 수 없는 오류");
+  process.exitCode = 1;
+}
