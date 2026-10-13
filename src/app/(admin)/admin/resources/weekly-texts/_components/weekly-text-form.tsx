@@ -44,6 +44,7 @@ const acceptValue = [
 export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const requestIdRef = useRef<string | null>(null);
   const [selectedImageNames, setSelectedImageNames] = useState<string[]>([]);
   const {
     body,
@@ -72,7 +73,13 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
   ];
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: WeeklyTextActionState, formData: FormData) => action(formData),
+    async (_previous: WeeklyTextActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
+      const result = await action(formData);
+      if (result.success) requestIdRef.current = null;
+      return result;
+    },
     initialState,
   );
 

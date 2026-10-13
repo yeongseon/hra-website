@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,12 +60,18 @@ export function ClassLogForm({
   successMessage = "저장되었습니다.",
 }: ClassLogFormProps) {
   const router = useRouter();
+  const requestIdRef = useRef<string | null>(null);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
     // ⚙️ 서버 액션 호출 - 폼 데이터를 서버로 전송
     // FormData 객체를 받아서 action 함수 실행 (DB 저장 처리)
     async (_previous: ClassLogActionResult, formData: FormData) => {
-      return action(formData);
+      // 실패 후 같은 폼을 다시 제출하면 동일한 글 ID를 사용해 중복 생성을 막습니다.
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
+      const result = await action(formData);
+      if (result.success) requestIdRef.current = null;
+      return result;
     },
     initialState
   );

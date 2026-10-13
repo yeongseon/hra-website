@@ -11,6 +11,7 @@ import { reorderByCase } from "@/lib/db/reorder";
 import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
 import { recordOwnedBlob } from "@/lib/owned-blob";
 import { logServerError } from "@/lib/errors";
+import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
 
 const maxImageSize = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -125,44 +126,69 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     };
   }
 
+  const requestId = z.uuid().safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, message: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const uploadedUrls: string[] = [];
-    for (const file of validatedImages.files) {
-      const url = await uploadAlumniImage(file, session.user.id);
-      uploadedUrls.push(url);
-    }
-
-    // 대표 이미지 결정
-    const representativeUrl = parsed.data.imageUrl || (uploadedUrls.length > 0 ? uploadedUrls[0] : null);
-
-    // 새 항목은 목록 맨 아래에 추가: 기존 최대 order + 1
-    const [{ maxOrder }] = await db.select({ maxOrder: max(alumniStories.order) }).from(alumniStories);
-    const nextOrder = (maxOrder ?? 0) + 1;
-
-    const [newStory] = await db.insert(alumniStories).values({
-      name: parsed.data.name,
-      title: parsed.data.title ?? null,
-      quote: parsed.data.quote,
-      content: parsed.data.content,
-      imageUrl: representativeUrl,
-      isFeatured: parsed.data.isFeatured,
-      order: nextOrder,
-    }).returning({ id: alumniStories.id });
-
-    if (uploadedUrls.length > 0) {
-      await db.insert(alumniStoryImages).values(
-        uploadedUrls.map((url, index) => ({
-          alumniStoryId: newStory.id,
-          url,
-          order: index,
-        }))
+    const id = requestId.data;
+    const [alreadyCreated] = await db.select({ id: alumniStories.id }).from(alumniStories).where(eq(alumniStories.id, id)).limit(1);
+    if (!alreadyCreated) {
+      // 새 항목은 목록 맨 아래에 추가합니다.
+      const [{ maxOrder }] = await db.select({ maxOrder: max(alumniStories.order) }).from(alumniStories);
+      const nextOrder = (maxOrder ?? 0) + 1;
+      const uploadedUrls = await uploadBlobsForCreate(
+        validatedImages.files.map((file, index) => ({
+          pathname: `alumni/${id}-${index}-${file.name.replace(/\s+/g, "-")}`,
+          file,
+        })),
+        session.user.id,
       );
+
+      try {
+        // 글과 이미지 메타를 한 배치에 넣어 후반부 실패 시 글도 롤백합니다.
+        const insertStory = db.insert(alumniStories).values({
+          id,
+          name: parsed.data.name,
+          title: parsed.data.title ?? null,
+          quote: parsed.data.quote,
+          content: parsed.data.content,
+          imageUrl: parsed.data.imageUrl || uploadedUrls[0] || null,
+          isFeatured: parsed.data.isFeatured,
+          order: nextOrder,
+        });
+        if (uploadedUrls.length > 0) {
+          await db.batch([
+            insertStory,
+            db.insert(alumniStoryImages).values(uploadedUrls.map((url, index) => ({
+              alumniStoryId: id,
+              url,
+              order: index,
+            }))),
+          ]);
+        } else {
+          await insertStory;
+        }
+      } catch (error) {
+        // 커밋 후 응답 유실 가능성을 확인한 뒤 미참조 Blob만 정리합니다.
+        const [existing] = await db.select({ id: alumniStories.id }).from(alumniStories).where(eq(alumniStories.id, id)).limit(1);
+        if (!existing) {
+          await cleanupCreatedBlobs(uploadedUrls);
+          throw error;
+        }
+        const referenced = uploadedUrls.length > 0
+          ? await db.select({ url: alumniStoryImages.url }).from(alumniStoryImages).where(eq(alumniStoryImages.alumniStoryId, id))
+          : [];
+        const referencedUrls = new Set(referenced.map((row) => row.url));
+        await cleanupCreatedBlobs(uploadedUrls.filter((url) => !referencedUrls.has(url)));
+      }
     }
   } catch (error) {
     logServerError("alumni/create", error);
     return {
       success: false,
-      message: "데이터베이스 저장 중 오류가 발생했습니다. DB 마이그레이션 상태를 확인해주세요.",
+      message: "수료생 이야기 저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
     };
   }
 

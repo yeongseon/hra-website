@@ -45,6 +45,7 @@ const acceptValue = [
 export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const requestIdRef = useRef<string | null>(null);
   const {
     body,
     cohortId,
@@ -72,7 +73,13 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
   ];
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: WeeklyTextActionState, formData: FormData) => action(formData),
+    async (_previous: WeeklyTextActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
+      const result = await action(formData);
+      if (result.success) requestIdRef.current = null;
+      return result;
+    },
     initialState,
   );
 
