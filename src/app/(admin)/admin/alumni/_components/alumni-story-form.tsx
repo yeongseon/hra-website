@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,9 +39,13 @@ export function AlumniStoryForm({
   action,
   defaultValues,
 }: AlumniStoryFormProps) {
+  const requestIdRef = useRef<string | null>(null);
   const [state, formAction, isPending] = useActionState(
     async (_prevState: AlumniStoryActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
       const result = await action(formData);
+      if (result?.success) requestIdRef.current = null;
       return result ?? initialState;
     },
     initialState

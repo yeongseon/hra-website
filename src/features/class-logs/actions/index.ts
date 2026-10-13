@@ -31,12 +31,14 @@ import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
 import { buildImageAlt } from "@/lib/image-alt";
+import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
  * - UUID 형식(예: "550e8400-e29b-41d4-a716-446655440000")이어야 함
  */
 const classLogIdSchema = z.uuid();
+const createRequestIdSchema = z.uuid();
 
 /**
  * 수업일지 작성/수정 시 입력 데이터 검증 규칙
@@ -154,30 +156,54 @@ const getValidatedImageFiles = (formData: FormData) => {
   return { files } as const;
 };
 
-const uploadClassLogImages = async (classLogId: string, title: string, files: File[]) => {
-  if (files.length === 0) {
-    return [];
-  }
+/** 첨부 업로드 후 글과 이미지 메타를 한 DB 배치에 저장합니다. */
+async function createClassLogRecord(
+  id: string,
+  values: { title: string; content: string; classDate: Date; cohortId: string | null; authorId: string },
+  files: File[],
+): Promise<void> {
+  // 동일한 폼의 재제출이면 업로드 전에 기존 글을 확인합니다.
+  const [alreadyCreated] = await db.select({ id: classLogs.id }).from(classLogs).where(eq(classLogs.id, id)).limit(1);
+  if (alreadyCreated) return;
 
-  const uploadedImages = await Promise.all(
-    files.map(async (file, index) => {
-      const blob = await put(`class-logs/${Date.now()}-${index}-${normalizeFileName(file.name)}`, file, {
-        access: "public",
-      });
-
-      return {
-        classLogId,
-        url: blob.url,
-        alt: buildImageAlt(title, index + 1),
-        order: index,
-      };
-    }),
+  const urls = await uploadBlobsForCreate(
+    files.map((file, index) => ({
+      pathname: `class-logs/${id}-${index}-${normalizeFileName(file.name)}`,
+      file,
+    })),
+    values.authorId,
   );
 
-  await db.insert(classLogImages).values(uploadedImages);
-
-  return uploadedImages;
-};
+  try {
+    const insertLog = db.insert(classLogs).values({ id, ...values });
+    if (urls.length > 0) {
+      await db.batch([
+        insertLog,
+        db.insert(classLogImages).values(urls.map((url, index) => ({
+          classLogId: id,
+          url,
+          alt: buildImageAlt(values.title, index + 1),
+          order: index,
+        }))),
+      ]);
+    } else {
+      await insertLog;
+    }
+  } catch (error) {
+    // DB 결과를 다시 확인해 커밋 후 응답만 유실된 경우 참조 중인 Blob을 보존합니다.
+    const [existing] = await db.select({ id: classLogs.id }).from(classLogs).where(eq(classLogs.id, id)).limit(1);
+    if (!existing) {
+      await cleanupCreatedBlobs(urls);
+      throw error;
+    }
+    // 같은 키의 동시 제출은 다른 URL을 올릴 수 있으므로 이미 참조된 URL만 보존합니다.
+    const referenced = urls.length > 0
+      ? await db.select({ url: classLogImages.url }).from(classLogImages).where(eq(classLogImages.classLogId, id))
+      : [];
+    const referencedUrls = new Set(referenced.map((row) => row.url));
+    await cleanupCreatedBlobs(urls.filter((url) => !referencedUrls.has(url)));
+  }
+}
 
 /**
  * 📝 새로운 수업일지를 생성하는 서버 액션 (멤버용)
@@ -237,20 +263,19 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
     return { success: false, error: validatedImages.error };
   }
 
+  const requestId = createRequestIdSchema.safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, error: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const [createdLog] = await db.insert(classLogs).values({
+    await createClassLogRecord(requestId.data, {
       title: parsed.data.title,
       content: parsed.data.content,
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }).returning({ id: classLogs.id });
-
-    if (!createdLog) {
-      return { success: false, error: "수업일지 생성에 실패했습니다." };
-    }
-
-    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+    }, validatedImages.files);
 
     revalidateClassLogPaths();
     revalidatePath("/resources/class-logs");
@@ -315,23 +340,19 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
     };
   }
 
+  const requestId = createRequestIdSchema.safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, error: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const [createdLog] = await db.insert(classLogs).values({
+    await createClassLogRecord(requestId.data, {
       title: parsed.data.title,
       content: parsed.data.content,
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }).returning({ id: classLogs.id });
-
-    if (!createdLog) {
-      return {
-        success: false,
-        error: "수업일지 생성에 실패했습니다.",
-      };
-    }
-
-    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+    }, validatedImages.files);
 
     revalidateClassLogPaths();
 
