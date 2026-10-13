@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
   limit: vi.fn(),
-  where: vi.fn(),
+  upsert: vi.fn(),
+  insertValues: vi.fn(),
   deleteBlobIfExists: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -21,7 +22,10 @@ vi.mock("@/lib/blob-utils", () => ({
 vi.mock("@/lib/db", () => ({
   db: {
     select: () => ({ from: () => ({ limit: mocks.limit }) }),
-    update: () => ({ set: () => ({ where: mocks.where }) }),
+    insert: () => ({ values: (values: unknown) => {
+      mocks.insertValues(values);
+      return { onConflictDoUpdate: mocks.upsert };
+    } }),
   },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -29,6 +33,8 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 import {
   updateRecruitmentPoster,
   updateRecruitmentSettings,
+  updateRecruitmentInfo,
+  updateRecruitmentDetails,
 } from "@/features/recruitment-settings/actions";
 
 const oldUrl = "https://example.public.blob.vercel-storage.com/markdown-images/shared.png";
@@ -48,7 +54,7 @@ describe("모집 포스터 입력 URL 소유권", () => {
       id: "11111111-1111-4111-8111-111111111111",
       posterImageUrl: oldUrl,
     }]);
-    mocks.where.mockResolvedValue([]);
+    mocks.upsert.mockResolvedValue([]);
   });
 
   it.each([
@@ -58,7 +64,22 @@ describe("모집 포스터 입력 URL 소유권", () => {
     const result = await action(posterForm());
 
     expect(result.success).toBe(true);
-    expect(mocks.where).toHaveBeenCalledOnce();
+    expect(mocks.upsert).toHaveBeenCalledOnce();
     expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
+  });
+
+  it("서로 다른 설정 섹션은 같은 고정 키를 사용하고 자기 필드만 갱신한다", async () => {
+    const info = new FormData();
+    info.set("googleFormUrl", "https://example.com/apply");
+    const details = new FormData();
+    details.set("detailsMarkdown", "모집 안내");
+
+    expect((await updateRecruitmentInfo(info)).success).toBe(true);
+    expect((await updateRecruitmentDetails(details)).success).toBe(true);
+    expect(mocks.insertValues.mock.calls.map(([values]) => values.singletonKey)).toEqual([1, 1]);
+    expect(mocks.upsert.mock.calls[0][0].set).toHaveProperty("googleFormUrl", "https://example.com/apply");
+    expect(mocks.upsert.mock.calls[0][0].set).not.toHaveProperty("detailsMarkdown");
+    expect(mocks.upsert.mock.calls[1][0].set).toHaveProperty("detailsMarkdown", "모집 안내");
+    expect(mocks.upsert.mock.calls[1][0].set).not.toHaveProperty("googleFormUrl");
   });
 });

@@ -1,7 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { z } from "zod/v4";
@@ -202,7 +202,6 @@ export async function updateRecruitmentSettings(
 
   const [existingSettings] = await db
     .select({
-      id: recruitmentSettings.id,
       posterImageUrl: recruitmentSettings.posterImageUrl,
     })
     .from(recruitmentSettings)
@@ -249,14 +248,8 @@ export async function updateRecruitmentSettings(
   // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
   // 이전 URL은 소유권을 확인할 수 없어 DB 저장 성공 여부와 관계없이 삭제하지 않습니다.
   try {
-    if (!existingSettings) {
-      await db.insert(recruitmentSettings).values(values);
-    } else {
-      await db
-        .update(recruitmentSettings)
-        .set(values)
-        .where(eq(recruitmentSettings.id, existingSettings.id));
-    }
+    await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+      .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
   } catch (dbError) {
     // DB write 가 실패하면 방금 업로드한 새 Blob 은 어떤 row 에서도 참조되지 않으므로 되지운다.
     // deleteBlobIfExists 는 내부에서 오류를 로그로만 남기므로 rethrow 하기 전에 안전하게 호출 가능하다.
@@ -332,13 +325,8 @@ export async function updateRecruitmentInfo(
     deadlineDate: parsed.data.deadlineDate ? toDate(parsed.data.deadlineDate) : null,
   };
 
-  const [existing] = await db.select({ id: recruitmentSettings.id }).from(recruitmentSettings).limit(1);
-
-  if (!existing) {
-    await db.insert(recruitmentSettings).values(values);
-  } else {
-    await db.update(recruitmentSettings).set(values).where(eq(recruitmentSettings.id, existing.id));
-  }
+  await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+    .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
 
   revalidatePath("/recruitment");
   revalidatePath("/admin/recruitment-settings");
@@ -389,7 +377,7 @@ export async function updateRecruitmentPoster(
   }
 
   const [existing] = await db
-    .select({ id: recruitmentSettings.id, posterImageUrl: recruitmentSettings.posterImageUrl })
+    .select({ posterImageUrl: recruitmentSettings.posterImageUrl })
     .from(recruitmentSettings)
     .limit(1);
 
@@ -423,11 +411,8 @@ export async function updateRecruitmentPoster(
   // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
   // 상세 근거는 updateRecruitmentSettings 의 동일 블록 주석 참고.
   try {
-    if (!existing) {
-      await db.insert(recruitmentSettings).values(values);
-    } else {
-      await db.update(recruitmentSettings).set(values).where(eq(recruitmentSettings.id, existing.id));
-    }
+    await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+      .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
   } catch (dbError) {
     // DB write 실패 시 새 Blob 은 미참조 → best-effort 로 되지운다.
     if (newlyUploadedBlobUrl) {
@@ -471,13 +456,8 @@ export async function updateRecruitmentDetails(
 
   const values = { detailsMarkdown: parsed.data.detailsMarkdown ?? null };
 
-  const [existing] = await db.select({ id: recruitmentSettings.id }).from(recruitmentSettings).limit(1);
-
-  if (!existing) {
-    await db.insert(recruitmentSettings).values(values);
-  } else {
-    await db.update(recruitmentSettings).set(values).where(eq(recruitmentSettings.id, existing.id));
-  }
+  await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+    .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
 
   revalidatePath("/recruitment");
   revalidatePath("/admin/recruitment-settings");
