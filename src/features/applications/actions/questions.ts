@@ -15,33 +15,10 @@ import {
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import { isConstraintViolation } from "@/lib/db/constraint-errors";
-
-const optionSchema = z.object({
-  id: z.string().uuid().optional(),
-  value: z.string().trim().min(1, "선택지 내용을 입력해주세요."),
-  order: z.number().int().default(0),
-});
-
-const questionSchema = z.object({
-  id: z.string().uuid().optional(),
-  title: z.string().trim().min(1, "질문 제목을 입력해주세요."),
-  description: z.string().trim().optional().nullable(),
-  type: z.enum([
-    "SHORT_ANSWER",
-    "LONG_ANSWER",
-    "MULTIPLE_CHOICE",
-    "CHECKBOX",
-    "DROPDOWN",
-  ]),
-  isRequired: z.boolean().default(false),
-  order: z.number().int().default(0),
-  options: z.array(optionSchema).optional(),
-});
-
-const saveQuestionsSchema = z.object({
-  formId: z.string().uuid(),
-  questions: z.array(questionSchema),
-});
+import {
+  saveQuestionsSchema,
+  type QuestionInput,
+} from "@/features/applications/question-validation";
 
 export type QuestionActionState = {
   success: boolean;
@@ -53,7 +30,7 @@ export type QuestionActionState = {
  */
 export async function saveFormQuestions(
   formId: string,
-  questions: z.infer<typeof questionSchema>[]
+  questions: QuestionInput[]
 ): Promise<QuestionActionState> {
   // requireAdmin은 미인증 시 /login으로 redirect (NEXT_REDIRECT throw)되므로 catch 금지
   await requireAdmin();
