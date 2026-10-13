@@ -26,6 +26,7 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { buildImageAlt } from "@/lib/image-alt";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -160,7 +161,7 @@ const uploadWeeklyTextImages = async (weeklyTextId: string, title: string, files
       return {
         weeklyTextId,
         url: blob.url,
-        alt: `${title} 사진 ${index + 1}`,
+        alt: buildImageAlt(title, index + 1),
         order: index,
       };
     }),

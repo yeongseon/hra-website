@@ -30,6 +30,7 @@ import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
+import { buildImageAlt } from "@/lib/image-alt";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
@@ -167,7 +168,7 @@ const uploadClassLogImages = async (classLogId: string, title: string, files: Fi
       return {
         classLogId,
         url: blob.url,
-        alt: `${title} 사진 ${index + 1}`,
+        alt: buildImageAlt(title, index + 1),
         order: index,
       };
     }),
@@ -469,7 +470,7 @@ export async function updateClassLog(
           newRows.push({
             classLogId: parsedId.data,
             url: blob.url,
-            alt: `${parsed.data.title} 사진 ${i + 1}`,
+            alt: buildImageAlt(parsed.data.title, i + 1),
             order: i,
           });
         }
