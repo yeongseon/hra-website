@@ -1,5 +1,10 @@
+/**
+ * 로그인한 회원의 프로필과 계정 설정을 보여주는 마이페이지다.
+ * 소셜 로그인 내부 주소는 실제 연락처로 오인하지 않도록 표시하지 않는다.
+ */
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
+import { getDisplayEmail } from "@/lib/auth-email";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +28,7 @@ export default async function MyPage() {
   }
 
   const { user } = session;
+  const displayEmail = getDisplayEmail(user.email);
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-12 md:py-20">
@@ -80,7 +86,14 @@ export default async function MyPage() {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm text-gray-500 mb-0.5">이메일 주소</span>
-                        <span className="text-base font-medium text-gray-700">{user.email}</span>
+                        <span className="text-base font-medium text-gray-700">
+                          {displayEmail ?? "이메일 미등록"}
+                        </span>
+                        {!displayEmail && (
+                          <span className="text-sm text-gray-500">
+                            소셜 로그인에서 이메일 정보를 제공받지 못했습니다.
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
