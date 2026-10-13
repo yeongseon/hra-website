@@ -53,6 +53,8 @@ nav:
       - 관리자 운영 가이드: ADMIN-GUIDE.md
       - 데이터베이스 가이드: DATABASE.md
   - 📋 기능 기획:
+      - 학사관리 전환 로드맵: ACADEMIC-MANAGEMENT-ROADMAP.md
+      - 학사 데이터 모델: ACADEMIC-DATA-MODEL.md
       - 학생 과제 제출 1차 범위: ASSIGNMENT-SUBMISSION-SCOPE.md
   - 🚢 배포:
       - 배포 & 문제 해결: DEPLOYMENT.md

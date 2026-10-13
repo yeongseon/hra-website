@@ -26,6 +26,16 @@
 4. **[협업 워크플로우](contributing/workflow.md)** — 브랜치 만들고 PR 올리는 법
 5. **[난이도별 작업 가이드](contributing/tasks-by-level.md)** — 내 수준에 맞는 작업 찾기
 
+### HRA 학사관리 기능을 개발하려는 분
+
+현재 사이트의 학적·과제 제출 확장 기능은 **설계 중**이며 아직 구현되지 않았습니다.
+
+- **[학사관리 전환 로드맵](ACADEMIC-MANAGEMENT-ROADMAP.md)** — 구현 범위, 단계, 운영 정책, 출시 게이트
+- **[학사 데이터 모델](ACADEMIC-DATA-MODEL.md)** — 학생·학적·과제·제출·파일 소유권과 마이그레이션
+- **[학생 과제 제출 1차 범위](ASSIGNMENT-SUBMISSION-SCOPE.md)** — 학생/운영진 흐름, 실패 대응, 수용 테스트
+
+---
+
 ### 🤖 AI 도구를 활용하고 싶은 분
 
 6. **[AI 도구로 기여하기](contributing/ai-tools.md)** — OpenCode, Codex, Claude로 개발하기
