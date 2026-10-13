@@ -23,7 +23,7 @@ import type { Provider } from "next-auth/providers";
 import { compare } from "bcryptjs";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import Kakao from "next-auth/providers/kakao";
+import { createKakaoProvider } from "@/lib/kakao-provider";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -80,15 +80,15 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
   );
 }
 
-// 카카오 로그인: AUTH_KAKAO_ID, AUTH_KAKAO_SECRET 둘 다 있어야 활성화
-// scope에 profile_nickname, profile_image를 명시해야 카카오가 닉네임·프로필 사진 동의를 요청함
-// 기본 authorization URL의 scope가 비어있어서 nickname이 undefined로 오는 버그 수정
+// 카카오 로그인: ID와 SECRET이 모두 있어야 활성화한다.
+// 이메일 동의 항목을 카카오 콘솔에서 허용한 뒤에만 AUTH_KAKAO_EMAIL_SCOPE=true로 범위를 요청한다.
 if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
   providers.push(
-    Kakao({
-      clientId: process.env.AUTH_KAKAO_ID,
-      clientSecret: process.env.AUTH_KAKAO_SECRET,
-    }),
+    createKakaoProvider(
+      process.env.AUTH_KAKAO_ID,
+      process.env.AUTH_KAKAO_SECRET,
+      process.env.AUTH_KAKAO_EMAIL_SCOPE === "true",
+    ),
   );
 }
 
@@ -214,10 +214,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * 결정 트리 및 불변식은 handleOAuthSignIn 문서와 decideOAuthSignIn 문서를 참조.
      * `signInIO` 는 위 모듈 스코프에서 초기화된 drizzle 어댑터이다.
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "credentials") return true;
       if (!account) return false;
-      return handleOAuthSignIn({ user, account }, signInIO);
+      return handleOAuthSignIn({ user, account, profile }, signInIO);
     },
 
     /**
