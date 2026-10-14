@@ -9,7 +9,6 @@
  * - 관리자 페이지와 공개 페이지가 최신 데이터를 바로 보도록 경로를 재검증합니다.
  */
 
-import { put } from "@vercel/blob";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,7 +18,7 @@ import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { galleries, galleryImages } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import { recordOwnedBlob } from "@/lib/owned-blob";
+import { validateGalleryUploadReference } from "@/lib/gallery-upload-server";
 
 export type GalleryActionState = {
   success: boolean;
@@ -31,65 +30,11 @@ const gallerySchema = z.object({
   description: z.string().trim().max(5000, "설명은 5000자 이하여야 합니다.").optional(),
 });
 
-const imageSchema = z.object({
-  alt: z.string().trim().max(255, "대체 텍스트는 255자 이하여야 합니다.").optional(),
-  order: z.number().int().min(0, "정렬 순서는 0 이상이어야 합니다."),
-});
-
 const galleryImageBulkSchema = z.object({
   alt: z.string().trim().max(255, "대체 텍스트는 255자 이하여야 합니다.").optional(),
 });
 
 const idSchema = z.uuid("잘못된 ID입니다.");
-
-// 갤러리 이미지 업로드 제약 조건
-// - 허용 MIME: 일반 웹 이미지 포맷만 (JPEG/PNG/WEBP/GIF)
-// - 최대 크기: 10MB (사진 위주 콘텐츠라 프로필보다 여유 있게)
-const allowedImageTypes = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-] as const;
-const maxImageSize = 10 * 1024 * 1024;
-
-// 파일명 정규화: 공백 -> 하이픈, 영숫자/._- 외 제거
-// Blob URL 가독성 + 비-ASCII(한글 등) 우회 업로드 방어
-// 주의: ".jpg" 처럼 영숫자가 없는 결과는 falsy가 아니므로
-//       /[a-zA-Z0-9]/ 포함 여부로 별도 검사한다.
-function normalizeFileName(fileName: string) {
-  const ext = fileName.includes(".")
-    ? `.${fileName.split(".").pop()?.toLowerCase() ?? ""}`
-    : "";
-  const baseName = ext ? fileName.slice(0, -ext.length) : fileName;
-  const sanitizedBase = baseName.trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9_-]/g, "");
-  const finalBase = /[a-zA-Z0-9]/.test(sanitizedBase) ? sanitizedBase : "gallery-image";
-  return `${finalBase}${ext}`;
-}
-
-// 업로드된 이미지 파일 검증
-// - File 인스턴스 여부, 비어있지 않은지
-// - MIME 타입 화이트리스트
-// - 최대 크기
-function validateGalleryImageFile(value: FormDataEntryValue | null) {
-  if (!(value instanceof File) || value.size === 0) {
-    return { error: "이미지 파일을 선택해주세요." } as const;
-  }
-
-  if (!allowedImageTypes.includes(value.type as (typeof allowedImageTypes)[number])) {
-    return {
-      error: "이미지 파일은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
-    } as const;
-  }
-
-  if (value.size > maxImageSize) {
-    return { error: "이미지 파일은 10MB 이하여야 합니다." } as const;
-  }
-
-  return { file: value } as const;
-}
 
 const initialError = (message: string): GalleryActionState => ({
   success: false,
@@ -112,15 +57,6 @@ const normalizeText = (value: FormDataEntryValue | null) => {
 const normalizeOptionalText = (value: FormDataEntryValue | null) => {
   const text = normalizeText(value);
   return text.length > 0 ? text : undefined;
-};
-
-const normalizeOrder = (value: FormDataEntryValue | null) => {
-  if (typeof value !== "string") {
-    return 0;
-  }
-
-  const parsed = Number.parseInt(value.trim(), 10);
-  return Number.isNaN(parsed) ? -1 : parsed;
 };
 
 function revalidateGalleryPaths(id: string) {
@@ -234,56 +170,6 @@ export async function deleteGallery(id: string): Promise<GalleryActionState> {
   return successState("앨범이 삭제되었습니다.");
 }
 
-export async function addGalleryImage(id: string, formData: FormData): Promise<GalleryActionState> {
-  const session = await requireAdmin();
-
-  const validated = validateGalleryImageFile(formData.get("image"));
-  if ("error" in validated) {
-    return initialError(validated.error ?? "이미지 파일을 확인해주세요.");
-  }
-
-  const parsed = imageSchema.safeParse({
-    alt: normalizeOptionalText(formData.get("alt")),
-    order: normalizeOrder(formData.get("order")),
-  });
-
-  if (!parsed.success) {
-    return initialError(parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.");
-  }
-
-  const galleryResult = await getValidatedGallery(id);
-  if ("error" in galleryResult) {
-    return initialError(galleryResult.error ?? "앨범을 찾을 수 없습니다.");
-  }
-
-  const safeFileName = `gallery/${Date.now()}-${normalizeFileName(validated.file.name)}`;
-  const blob = await put(safeFileName, validated.file, {
-    access: "public",
-    addRandomSuffix: true,
-  });
-  await recordOwnedBlob(blob.url, session.user.id);
-
-  await db.insert(galleryImages).values({
-    galleryId: galleryResult.gallery.id,
-    url: blob.url,
-    alt: parsed.data.alt ?? null,
-    order: parsed.data.order,
-  });
-
-  // 첫 이미지 업로드 시 자동으로 커버 이미지를 설정합니다.
-  if (!galleryResult.gallery.coverImageUrl) {
-    await db
-      .update(galleries)
-      .set({
-        coverImageUrl: blob.url,
-      })
-      .where(eq(galleries.id, galleryResult.gallery.id));
-  }
-
-  revalidateGalleryPaths(galleryResult.gallery.id);
-  return successState("이미지가 추가되었습니다.");
-}
-
 export async function addGalleryImages(id: string, formData: FormData): Promise<GalleryActionState> {
   const session = await requireAdmin();
 
@@ -295,29 +181,12 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     return initialError(parsed.error.issues[0]?.message ?? "입력값을 확인해주세요.");
   }
 
-  const imageEntries = formData.getAll("images");
-  if (imageEntries.length === 0) {
-    return initialError("이미지 파일을 선택해주세요.");
-  }
-
-  const validatedFiles = imageEntries.map((entry, index) => {
-    const validated = validateGalleryImageFile(entry);
-
-    if ("error" in validated) {
-      const fileName = entry instanceof File && entry.name ? entry.name : `${index + 1}번째 파일`;
-      return {
-        error: `${fileName}: ${validated.error ?? "이미지 파일을 확인해주세요."}`,
-      } as const;
-    }
-
-    return {
-      file: validated.file,
-    } as const;
-  });
-
-  const invalidFile = validatedFiles.find((file) => "error" in file);
-  if (invalidFile && "error" in invalidFile) {
-    return initialError(invalidFile.error ?? "이미지 파일을 확인해주세요.");
+  const parsedUrls = z.array(z.url()).min(1).max(100).safeParse((() => {
+    try { return JSON.parse(String(formData.get("uploadedImageUrls") ?? "")); }
+    catch { return null; }
+  })());
+  if (!parsedUrls.success || new Set(parsedUrls.data).size !== parsedUrls.data.length) {
+    return initialError("업로드한 이미지 정보를 확인할 수 없습니다.");
   }
 
   const galleryResult = await getValidatedGallery(id);
@@ -325,50 +194,22 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     return initialError(galleryResult.error ?? "앨범을 찾을 수 없습니다.");
   }
 
-  const files: File[] = [];
-
-  validatedFiles.forEach((file) => {
-    if ("file" in file && file.file) {
-      files.push(file.file);
-    }
-  });
-  const baseOrder = galleryResult.gallery.images.length;
-  // 모든 업로드가 끝날 때까지 기다립니다. 하나가 먼저 실패해도 뒤늦게 완료된
-  // 파일까지 수집해야 DB에 등록되지 않은 파일만 빠짐없이 정리할 수 있습니다.
-  const uploads = await Promise.allSettled(
-    files.map((file, index) => {
-      const safeFileName = `gallery/${Date.now()}-${index}-${normalizeFileName(file.name)}`;
-      return put(safeFileName, file, { access: "public", addRandomSuffix: true })
-        .then(async (blob) => {
-          await recordOwnedBlob(blob.url, session.user.id);
-          return blob;
-        });
-    }),
-  );
-  const uploadedBlobs = uploads.flatMap((result) =>
-    result.status === "fulfilled" ? [result.value] : [],
-  );
-
-  const rejectedUploads = uploads.flatMap((result, index) =>
-    result.status === "rejected" ? [{ index, reason: result.reason }] : [],
-  );
-  if (rejectedUploads.length > 0) {
-    for (const rejected of rejectedUploads) {
-      logServerError("gallery/add-images-upload", rejected.reason, {
-        galleryId: galleryResult.gallery.id,
-        fileIndex: rejected.index,
-      });
-    }
-    // 성공한 업로드는 원장에 남깁니다. 정리 시점에 다른 콘텐츠 참조를
-    // 다시 확인하고 실패한 삭제도 다음 실행에서 재시도할 수 있습니다.
-    return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");
+  // 완료 URL마다 실제 Blob 크기·형식·시작 바이트·업로드 소유자를 확인합니다.
+  const checks = await Promise.all(parsedUrls.data.map((url) =>
+    validateGalleryUploadReference(galleryResult.gallery.id, session.user.id, url)));
+  if (checks.some((valid) => !valid)) {
+    return initialError("업로드한 이미지 정보를 확인할 수 없습니다. 다시 시도해주세요.");
   }
+  const existingImages = await db.select({ url: galleryImages.url }).from(galleryImages)
+    .where(inArray(galleryImages.url, parsedUrls.data));
+  if (existingImages.length > 0) return initialError("이미 등록된 이미지가 포함되어 있습니다.");
+  const baseOrder = galleryResult.gallery.images.length;
 
   try {
     await db.insert(galleryImages).values(
-      uploadedBlobs.map((blob, index) => ({
+      parsedUrls.data.map((url, index) => ({
         galleryId: galleryResult.gallery.id,
-        url: blob.url,
+        url,
         alt: parsed.data.alt ?? null,
         order: baseOrder + index,
       })),
@@ -380,12 +221,12 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     return initialError("이미지 저장 중 오류가 발생했습니다. 앨범을 확인해주세요.");
   }
 
-  const firstBlob = uploadedBlobs[0];
-  if (!galleryResult.gallery.coverImageUrl && firstBlob) {
+  const firstUrl = parsedUrls.data[0];
+  if (!galleryResult.gallery.coverImageUrl && firstUrl) {
     try {
       await db
         .update(galleries)
-        .set({ coverImageUrl: firstBlob.url })
+        .set({ coverImageUrl: firstUrl })
         .where(eq(galleries.id, galleryResult.gallery.id));
     } catch (error) {
       // 이미지 행이 이미 저장됐으므로 파일을 지우거나 전체 실패로 돌리지 않습니다.
@@ -396,7 +237,7 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
   }
 
   revalidateGalleryPaths(galleryResult.gallery.id);
-  return successState(`${files.length}장의 이미지가 추가되었습니다.`);
+  return successState(`${parsedUrls.data.length}장의 이미지가 추가되었습니다.`);
 }
 
 // 갤러리 이미지 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
