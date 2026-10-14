@@ -14,7 +14,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { applicationForms, applicationSubmissions, cohorts, legacyApplications } from "@/lib/db/schema";
 import { isConstraintViolation } from "@/lib/db/constraint-errors";
@@ -280,18 +279,10 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
 
   let nextImageUrl = existingCohort.imageUrl;
 
-  let imageToDelete: string | null = null;
-
   if (uploadedImage.imageUrl) {
     nextImageUrl = uploadedImage.imageUrl;
-    if (existingCohort.imageUrl) {
-      imageToDelete = existingCohort.imageUrl;
-    }
   } else if (shouldRemoveImage) {
     nextImageUrl = null;
-    if (existingCohort.imageUrl) {
-      imageToDelete = existingCohort.imageUrl;
-    }
   }
 
   await db
@@ -308,9 +299,8 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
     })
     .where(eq(cohorts.id, parsedId.data));
 
-  if (imageToDelete) {
-    await deleteBlobIfExists(imageToDelete);
-  }
+  // 이전 이미지도 즉시 삭제하지 않습니다. 소유권 원장과 현재 공유 참조를 확인하는
+  // 유지보수 정리 작업에 맡겨 다른 콘텐츠가 같은 URL을 쓰는 경우를 보존합니다 (#88).
 
   revalidatePath("/admin/recruitment");
   revalidatePath("/cohorts");

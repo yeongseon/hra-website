@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   put: vi.fn(),
   recordOwnedBlob: vi.fn(),
   insertValues: vi.fn(),
+  updateSet: vi.fn(),
 }));
 
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
@@ -34,10 +35,14 @@ vi.mock("@/lib/db", () => ({
     }),
     delete: () => ({ where: () => ({ returning: mocks.deleteReturning }) }),
     insert: () => ({ values: mocks.insertValues }),
+    update: () => ({ set: (values: unknown) => {
+      mocks.updateSet(values);
+      return { where: async () => [] };
+    } }),
   },
 }));
 
-import { createCohort, deleteCohort } from "@/features/recruitment/actions";
+import { createCohort, deleteCohort, updateCohort } from "@/features/recruitment/actions";
 import { deleteForm } from "@/features/applications/actions/forms";
 
 const id = "11111111-1111-4111-8111-111111111111";
@@ -61,6 +66,16 @@ describe("지원서 보존 삭제 액션", () => {
     expect(mocks.recordOwnedBlob).toHaveBeenCalledExactlyOnceWith(
       "https://example.public.blob.vercel-storage.com/cohorts/new.png", id,
     );
+  });
+
+  it("기수 이미지를 제거해도 공유 참조 확인 전에는 Blob을 지우지 않는다", async () => {
+    mocks.selectRows.push([{ imageUrl: "https://example.public.blob.vercel-storage.com/cohorts/old.png" }]);
+    const form = new FormData();
+    form.set("name", "1기");
+    form.set("removeImage", "true");
+    await updateCohort(id, form);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: null }));
+    expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
   });
 
   it("DB 보호 제약이 배포되기 전에는 삭제를 막는다", async () => {
