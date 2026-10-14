@@ -485,7 +485,7 @@ export async function updateClassLog(
           const blob = await put(
             `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
             file,
-            { access: "public" },
+            { access: "public", addRandomSuffix: true },
           );
           uploadedUrls.push(blob.url);
           newRows.push({

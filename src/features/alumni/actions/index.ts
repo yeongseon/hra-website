@@ -93,7 +93,7 @@ function validateImageFiles(formData: FormData) {
 async function uploadAlumniImage(file: File, uploadedById: string) {
   const timestamp = Date.now();
   const safeFileName = `${timestamp}-${file.name.replace(/\s+/g, "-")}`;
-  const blob = await put(`alumni/${safeFileName}`, file, { access: "public" });
+  const blob = await put(`alumni/${safeFileName}`, file, { access: "public", addRandomSuffix: true });
   await recordOwnedBlob(blob.url, uploadedById);
   return blob.url;
 }

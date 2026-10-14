@@ -10,7 +10,6 @@ import { recordOwnedBlob } from "@/lib/owned-blob";
 type Upload = {
   pathname: string;
   file: File;
-  addRandomSuffix?: boolean;
 };
 
 /** 이 요청에서 성공한 업로드만 정리하며, 각 파일의 정리 실패는 공통 유틸에서 기록합니다. */
@@ -24,9 +23,9 @@ export async function uploadBlobsForCreate(
   uploadedById?: string,
 ): Promise<string[]> {
   const results = await Promise.allSettled(
-    uploads.map(async ({ pathname, file, addRandomSuffix }) => {
+    uploads.map(async ({ pathname, file }) => {
       // 같은 요청 키로 재시도하거나 동시 제출해도 기존 파일을 덮어쓰지 않습니다.
-      const blob = await put(pathname, file, { access: "public", addRandomSuffix: addRandomSuffix ?? true });
+      const blob = await put(pathname, file, { access: "public", addRandomSuffix: true });
       await recordOwnedBlob(blob.url, uploadedById);
       return blob.url;
     }),

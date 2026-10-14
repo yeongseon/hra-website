@@ -161,6 +161,7 @@ async function uploadCohortImage(fileEntry: FormDataEntryValue | null) {
   const safeFileName = `cohorts/${Date.now()}-${normalizeFileName(fileEntry.name)}`;
   const blob = await put(safeFileName, fileEntry, {
     access: "public",
+    addRandomSuffix: true,
   });
 
   return { imageUrl: blob.url, error: null } as const;

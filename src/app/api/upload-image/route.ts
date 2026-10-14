@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     // Blob 파일명은 서버에서만 생성 (사용자 입력 배제 — path traversal 및 잘못된 확장자 차단)
     const fileName = `markdown-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${detectedExt}`;
-    const blob = await put(fileName, file, { access: "public" });
+    const blob = await put(fileName, file, { access: "public", addRandomSuffix: true });
 
     // 업로드 응답 전에 소유권을 기록합니다. 기록이 실패하면 이 요청에서 막 만든
     // 파일만 되지우며, URL을 클라이언트에 돌려주지 않습니다. 기존 파일은 건드리지 않습니다.
