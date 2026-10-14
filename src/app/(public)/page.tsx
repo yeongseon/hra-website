@@ -4,6 +4,7 @@ import { Target, Briefcase, Heart } from "lucide-react";
 import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
 import { CalendarSection } from "./_components/calendar-section";
+import { parseCalendarMonth } from "@/lib/query-params";
 
 export const metadata: Metadata = {
   title: "HRA - Human Renaissance Academy",
@@ -18,10 +19,8 @@ type HomeProps = {
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
-  const now = new Date();
-  // URL에 year/month가 있으면 해당 월, 없으면 현재 월
-  const year = params.year ? parseInt(params.year, 10) : now.getFullYear();
-  const month = params.month ? parseInt(params.month, 10) : now.getMonth() + 1;
+  // 형식·범위가 잘못된 연월은 현재 달로 보정해 Invalid Date 렌더링을 막는다.
+  const { year, month } = parseCalendarMonth(params.year, params.month);
   return (
     <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
       <HeroSection />
