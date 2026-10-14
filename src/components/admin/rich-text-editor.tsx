@@ -10,6 +10,7 @@ import { Markdown } from "@tiptap/markdown";
 // Table, TableRow 등은 단일 패키지에서 named export로 제공됨
 import { Table, TableRow, TableCell, TableHeader, renderTableToMarkdown } from "@tiptap/extension-table";
 import type { JSONContent, MarkdownToken } from "@tiptap/core";
+import { uploadEditorImage } from "@/lib/editor-image-upload-client";
 
 /** 이미지 크기 조정 프리셋 — null 은 "원본(크기 제한 없음)"을 의미한다 */
 const SIZE_PRESETS = [
@@ -689,15 +690,8 @@ export function RichTextEditor({
       if (!editor) return;
       setIsUploading(true);
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/upload-image", { method: "POST", body: formData });
-        const data: { url?: string; error?: string } = await res.json();
-        if (data.url) {
-          editor.chain().focus().setImage({ src: data.url }).run();
-        } else {
-          alert(data.error ?? "이미지 업로드에 실패했습니다.");
-        }
+        const url = await uploadEditorImage(file);
+        editor.chain().focus().setImage({ src: url }).run();
       } catch (error) {
         console.error("이미지 업로드 실패:", error);
         alert("이미지 업로드에 실패했습니다.");

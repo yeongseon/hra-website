@@ -68,4 +68,12 @@ describe("본문 이미지 업로드 소유권", () => {
     expect(await response.json()).toEqual({ error: "이미지 업로드 중 오류가 발생했습니다." });
     expect(mocks.deleteBlobIfExists).toHaveBeenCalledExactlyOnceWith(blobUrl);
   });
+
+  it("구형 서버 경유 API는 4MB 초과 요청을 Blob에 보내지 않는다", async () => {
+    const formData = new FormData();
+    formData.set("file", new File([new Uint8Array(4 * 1024 * 1024 + 1)], "large.png", { type: "image/png" }));
+    const response = await POST(new NextRequest("http://localhost/api/upload-image", { method: "POST", body: formData }));
+    expect(response.status).toBe(400);
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
 });
