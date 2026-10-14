@@ -159,7 +159,7 @@ export default async function ResourcesPage({ searchParams }: Props) {
       cohortId: text.cohortId,
       textType: text.textType ?? null,
       href: text.body ? `/resources/weekly-texts/${text.id}` : undefined,
-      downloadUrl: !text.body && text.fileUrl ? text.fileUrl : undefined,
+      downloadUrl: !text.body && text.fileUrl ? `/api/resources/weekly-texts/${text.id}/download` : undefined,
     })),
     ...allClassMaterials.map((material) => ({
       id: `cm-${material.id}`,
