@@ -36,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { saveFormQuestions } from "@/features/applications/actions/questions";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 type Option = {
   id?: string;
@@ -300,6 +301,7 @@ export function FormBuilder({ formId, formTitle, initialRevision, initialQuestio
                         <GripVertical className="size-4 text-slate-300" />
                         <Input 
                           value={opt.value}
+                          maxLength={applicationInputLimits.optionValue}
                           onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
                           placeholder={`옵션 ${optIndex + 1}`}
                           className="h-9 text-sm border-slate-200"

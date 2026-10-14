@@ -3,10 +3,12 @@
  * 선택지 값은 기존 저장 규칙처럼 양끝 공백만 제거하며 대소문자는 구분한다.
  */
 import { z } from "zod/v4";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 const optionSchema = z.object({
   id: z.string().uuid().optional(),
-  value: z.string().trim().min(1, "선택지 내용을 입력해주세요."),
+  value: z.string().trim().min(1, "선택지 내용을 입력해주세요.")
+    .max(applicationInputLimits.optionValue, "선택지는 1000자 이하여야 합니다."),
   order: z.number().int().default(0),
 });
 

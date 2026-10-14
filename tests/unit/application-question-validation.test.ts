@@ -3,6 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { saveQuestionsSchema } from "@/features/applications/question-validation";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 const formId = "11111111-1111-4111-8111-111111111111";
 const selectionTypes = ["MULTIPLE_CHOICE", "CHECKBOX", "DROPDOWN"] as const;
@@ -34,6 +35,17 @@ describe("지원서 질문 선택지 검증 (#94)", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe("선택지 내용을 입력해주세요.");
+    }
+  });
+
+  it("선택지는 공개 답변 상한까지 저장하고 초과하면 거부한다 (#112)", () => {
+    const atLimit = "가".repeat(applicationInputLimits.optionValue);
+    expect(parse([question("DROPDOWN", [{ value: atLimit, order: 0 }])]).success).toBe(true);
+
+    const tooLong = parse([question("DROPDOWN", [{ value: `${atLimit}가`, order: 0 }])]);
+    expect(tooLong.success).toBe(false);
+    if (!tooLong.success) {
+      expect(tooLong.error.issues[0].message).toBe("선택지는 1000자 이하여야 합니다.");
     }
   });
 
