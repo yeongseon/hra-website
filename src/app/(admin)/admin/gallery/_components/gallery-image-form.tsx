@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, ImagePlus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function formatFileSize(size: number) {
 }
 
 export function GalleryImageForm({ action }: GalleryImageFormProps) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -105,6 +107,8 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
         formRef.current?.reset();
         setSelectedFiles([]);
         syncInputFiles([]);
+        // 서버가 새 이미지 목록을 내려주도록 편집 페이지를 다시 요청합니다.
+        router.refresh();
       }
 
       setSubmittedCount(0);

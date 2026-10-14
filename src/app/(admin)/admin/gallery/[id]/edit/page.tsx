@@ -127,8 +127,9 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
         <CardContent className="space-y-6 py-6">
           <GalleryImageForm action={addImageAction} />
 
-          {/* 드래그앤드롭으로 이미지 순서 변경 가능 */}
+          {/* 이미지 ID 구성이 바뀌면 로컬 정렬 상태를 새 서버 목록으로 초기화합니다. */}
           <GalleryImageSortableGrid
+            key={gallery.images.map((image) => image.id).join(",")}
             galleryId={gallery.id}
             coverImageUrl={gallery.coverImageUrl}
             initialImages={gallery.images}
