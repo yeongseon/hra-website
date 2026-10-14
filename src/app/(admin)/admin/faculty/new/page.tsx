@@ -6,7 +6,7 @@ export const metadata = { title: "교수진 추가" };
 export const dynamic = "force-dynamic";
 
 export default async function NewFacultyPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   return (
     <FacultyForm
@@ -14,6 +14,7 @@ export default async function NewFacultyPage() {
       description="새로운 교수진 정보를 입력하세요."
       submitLabel="교수진 추가"
       action={createFaculty}
+      userId={session.user.id}
     />
   );
 }

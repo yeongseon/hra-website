@@ -1,8 +1,9 @@
+/** 교수진 등록·수정 폼에서 프로필 사진을 브라우저에서 직접 업로드합니다. */
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { FacultyActionState } from "@/features/faculty/actions";
+import { prepareFacultyUpload } from "@/lib/faculty-upload-client";
 
 type FacultyCategory = "CLASSICS" | "BUSINESS" | "LECTURE";
 
@@ -33,6 +35,8 @@ type FacultyFormProps = {
   description?: string;
   submitLabel: string;
   action: (formData: FormData) => Promise<FacultyActionState>;
+  userId: string;
+  targetId?: string;
   defaultValues?: FacultyFormValues;
 };
 
@@ -47,10 +51,14 @@ const categoryOptions: Array<{ value: FacultyCategory; label: string }> = [
   { value: "LECTURE", label: "특강" },
 ];
 
-export function FacultyForm({ title, description, submitLabel, action, defaultValues }: FacultyFormProps) {
+export function FacultyForm({ title, description, submitLabel, action, userId, targetId, defaultValues }: FacultyFormProps) {
+  const requestIdRef = useRef<string | null>(null);
   const [state, formAction, isPending] = useActionState(
     async (_prevState: FacultyActionState, formData: FormData) => {
-      return action(formData);
+      requestIdRef.current ??= crypto.randomUUID();
+      const prepared = await prepareFacultyUpload(formData, targetId ?? requestIdRef.current, userId);
+      if ("error" in prepared) return { success: false, message: prepared.error, fieldErrors: { image: prepared.error } };
+      return action(prepared.formData);
     },
     initialState
   );

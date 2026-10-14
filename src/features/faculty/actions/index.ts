@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
 import { recordOwnedBlob } from "@/lib/owned-blob";
+import { validateFacultyImageReference } from "@/lib/faculty-upload-server";
 
 const facultyCategorySchema = z.enum(["CLASSICS", "BUSINESS", "LECTURE"]);
 const maxImageSize = 5 * 1024 * 1024;
@@ -94,10 +95,27 @@ function validateImageFile(fileEntry: FormDataEntryValue | null) {
     };
   }
 
+  // 서버 액션을 직접 호출하는 구형 요청은 플랫폼 본문 한도 아래로 제한합니다.
+  if (fileEntry.size > 3 * 1024 * 1024) {
+    return { success: false as const, message: "프로필 사진을 다시 선택해 업로드해주세요.", fieldErrors: { image: "프로필 사진을 다시 선택해 업로드해주세요." } };
+  }
+
   return {
     success: true as const,
     file: fileEntry,
   };
+}
+
+/** 완료 URL의 UUID 대상·업로더와 Blob 실물을 모두 검증합니다. */
+async function getUploadedFacultyImage(formData: FormData, targetId: string, userId: string): Promise<{ url: string | null } | { error: string }> {
+  const value = formData.get("uploadedImageUrl");
+  if (value === null) return { url: null };
+  const claimedTargetId = z.uuid().safeParse(formData.get("uploadTargetId"));
+  if (typeof value !== "string" || value.length > 2_000 || !claimedTargetId.success || claimedTargetId.data !== targetId ||
+      !await validateFacultyImageReference(targetId, userId, value)) {
+    return { error: "업로드한 프로필 사진을 확인할 수 없습니다. 다시 업로드해주세요." };
+  }
+  return { url: value };
 }
 
 async function uploadFacultyImage(file: File, uploadedById: string) {
@@ -132,7 +150,16 @@ export async function createFaculty(formData: FormData): Promise<FacultyActionSt
     };
   }
 
-  const imageUrl = validatedImage.file ? await uploadFacultyImage(validatedImage.file, session.user.id) : null;
+  const targetId = z.uuid().safeParse(formData.get("uploadTargetId"));
+  if (formData.has("uploadedImageUrl") && !targetId.success) {
+    return { success: false, message: "업로드한 프로필 사진을 확인할 수 없습니다." };
+  }
+  const directImage = targetId.success
+    ? await getUploadedFacultyImage(formData, targetId.data, session.user.id)
+    : { url: null };
+  if ("error" in directImage) return { success: false, message: directImage.error, fieldErrors: { image: directImage.error } };
+
+  const imageUrl = directImage.url ?? (validatedImage.file ? await uploadFacultyImage(validatedImage.file, session.user.id) : null);
 
   await db.insert(faculty).values({
     name: parsed.data.name,
@@ -179,6 +206,9 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
     };
   }
 
+  const directImage = await getUploadedFacultyImage(formData, parsedId.data, session.user.id);
+  if ("error" in directImage) return { success: false, message: directImage.error, fieldErrors: { image: directImage.error } };
+
   const [existingFaculty] = await db
     .select({ imageUrl: faculty.imageUrl })
     .from(faculty)
@@ -203,7 +233,9 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
     order: parsed.data.order,
   };
 
-  if (validatedImage.file) {
+  if (directImage.url) {
+    updateValues.imageUrl = directImage.url;
+  } else if (validatedImage.file) {
     updateValues.imageUrl = await uploadFacultyImage(validatedImage.file, session.user.id);
   }
 

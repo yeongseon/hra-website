@@ -16,7 +16,7 @@ type EditFacultyPageProps = {
 };
 
 export default async function EditFacultyPage({ params }: EditFacultyPageProps) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -42,6 +42,8 @@ export default async function EditFacultyPage({ params }: EditFacultyPageProps) 
       description={`${facultyMember.name} 정보를 수정합니다.`}
       submitLabel="변경사항 저장"
       action={updateAction}
+      userId={session.user.id}
+      targetId={parsedId.data}
       defaultValues={{
         name: facultyMember.name,
         category: facultyMember.category,
