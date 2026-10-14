@@ -13,6 +13,8 @@ import { createElement } from "react";
 import type { Editor } from "@tiptap/core";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+const uploadMocks = vi.hoisted(() => ({ uploadEditorImage: vi.fn() }));
+vi.mock("@/lib/editor-image-upload-client", () => ({ uploadEditorImage: uploadMocks.uploadEditorImage }));
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 
 beforeAll(() => {
@@ -34,6 +36,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  uploadMocks.uploadEditorImage.mockReset();
 });
 
 // 에디터에 마크다운을 넣어 열고, edit 로 편집한 뒤 저장될 값(hidden input)을 돌려준다.
@@ -203,32 +206,32 @@ describe("RichTextEditor — 이미지 붙여넣기", () => {
   }
 
   it("텍스트와 이미지가 함께 있으면 기본 텍스트 붙여넣기를 유지하고 이미지를 업로드하지 않는다", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
     const element = await editorElement();
 
     fireEvent.paste(element, { clipboardData: clipboardData("표 셀 텍스트") });
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(uploadMocks.uploadEditorImage).not.toHaveBeenCalled();
     expect(element.textContent).toContain("표 셀 텍스트");
   });
 
   it("HTML 과 이미지가 함께 있으면 기본 HTML 붙여넣기를 유지한다", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
     const element = await editorElement();
 
     fireEvent.paste(element, { clipboardData: clipboardData("", "<table><tbody><tr><td>표 셀 텍스트</td></tr></tbody></table>") });
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(uploadMocks.uploadEditorImage).not.toHaveBeenCalled();
     expect(element.textContent).toContain("표 셀 텍스트");
   });
 
   it("이미지만 있으면 이미지 업로드를 시작한다", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
+    // 이 테스트는 붙여넣기 분기만 검증합니다. 에디터가 언마운트된 뒤
+    // ProseMirror focus 타이머가 실행되지 않도록 업로드 완료는 보류합니다.
+    uploadMocks.uploadEditorImage.mockImplementation(() => new Promise(() => {}));
     const element = await editorElement();
 
     const notCancelled = fireEvent.paste(element, { clipboardData: clipboardData("") });
 
     expect(notCancelled).toBe(false);
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+    await waitFor(() => expect(uploadMocks.uploadEditorImage).toHaveBeenCalledExactlyOnceWith(file));
   });
 });

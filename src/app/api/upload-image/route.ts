@@ -93,10 +93,12 @@ export async function POST(request: NextRequest) {
 
     // 크기 검증 먼저 — 추가 검사 전에 조기 차단
     // (multipart 업로드 자체는 이미 formData() 시점에 받아진 상태 — 네트워크 절감이 아니라 로직 단순화 목적)
-    const maxSize = 10 * 1024 * 1024;
+    // 이 구형 서버 경유 API는 플랫폼 본문 제한 아래로 고정합니다. 편집기의
+    // 10MB 이미지는 /api/editor-image-uploads 직접 업로드 경로를 사용합니다.
+    const maxSize = 4 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "파일 크기는 10MB를 초과할 수 없습니다." },
+        { error: "파일 크기는 4MB를 초과할 수 없습니다." },
         { status: 400 }
       );
     }

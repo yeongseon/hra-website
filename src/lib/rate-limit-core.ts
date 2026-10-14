@@ -47,7 +47,7 @@ export const LOGIN_IP_RATE_LIMIT = { windowMs: 15 * 60 * 1000, maxAttempts: 50 }
 export const LOGIN_EMAIL_RATE_LIMIT = { windowMs: 15 * 60 * 1000, maxAttempts: 15 } as const;
 
 /**
- * 이미지 업로드 rate limit 정책 (/api/upload-image).
+ * 이미지 업로드 rate limit 정책 (/api/upload-image, /api/editor-image-uploads).
  *
  * 값 근거 (issue #69 사양):
  *   - windowMs = 60초: 짧은 스퍼트 공격 (DoS) 방어.
