@@ -37,8 +37,8 @@ import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blo
  * 수업일지 ID 유효성 검사 스키마
  * - UUID 형식(예: "550e8400-e29b-41d4-a716-446655440000")이어야 함
  */
-const classLogIdSchema = z.uuid();
-const createRequestIdSchema = z.uuid();
+const classLogIdSchema = z.uuid("유효하지 않은 수업일지 ID입니다.");
+const createRequestIdSchema = z.uuid("유효하지 않은 요청 ID입니다.");
 
 /**
  * 수업일지 작성/수정 시 입력 데이터 검증 규칙
@@ -50,10 +50,10 @@ const createRequestIdSchema = z.uuid();
  * - cohortId: 어느 반에 해당하는지 (선택사항, 없어도 됨)
  */
 const classLogFormSchema = z.object({
-  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300),
+  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요."),
   classDate: z.string().trim().min(1, "수업 날짜를 입력해주세요."),
-  cohortId: z.union([z.uuid(), z.literal("")]).optional(),
+  cohortId: z.union([z.uuid("유효하지 않은 기수 ID입니다."), z.literal("")]).optional(),
 });
 
 /**

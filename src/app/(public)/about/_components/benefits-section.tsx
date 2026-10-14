@@ -13,8 +13,8 @@ export function BenefitsSection() {
       {/* Benefit 1 */}
       <div className="grid md:grid-cols-2 rounded-3xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] md:min-h-[220px]">
 
-        <div className="min-h-[220px] h-full bg-gray-200 flex items-center justify-center">
-          <span className="text-gray-500">이미지 영역</span>
+        <div className="flex min-h-[220px] h-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <Compass aria-hidden="true" className="size-24 text-[#2563EB]" />
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
@@ -49,16 +49,16 @@ export function BenefitsSection() {
           </p>
         </div>
 
-        <div className="order-1 md:order-2 min-h-[260px] h-full bg-gray-200 flex items-center justify-center">
-          <span className="text-gray-500">이미지 영역</span>
+        <div className="order-1 md:order-2 flex min-h-[260px] h-full items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
+          <Briefcase aria-hidden="true" className="size-24 text-[#2563EB]" />
         </div>
       </div>
 
       {/* Benefit 3 */}
       <div className="grid md:grid-cols-2 rounded-3xl overflow-hidden border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] md:min-h-[220px]">
 
-        <div className="min-h-[220px] h-full bg-gray-200 flex items-center justify-center">
-          <span className="text-gray-500">이미지 영역</span>
+        <div className="flex min-h-[220px] h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100">
+          <FileText aria-hidden="true" className="size-24 text-[#2563EB]" />
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">

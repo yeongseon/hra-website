@@ -28,9 +28,9 @@
 
 | URL | 페이지 | 액션 |
 |---|---|---|
-| `/admin/templates` | 양식·가이드 목록 | 수정/삭제 다이얼로그 |
-| `/admin/templates/new` | 신규 등록 | `createReportTemplate` |
-| `/admin/templates/[id]/edit` | 수정 | `updateReportTemplate` |
+| `/admin/resources/templates` | 양식·가이드 목록 | 수정/삭제 다이얼로그 |
+| `/admin/resources/templates/new` | 신규 등록 | `createReportTemplate` |
+| `/admin/resources/templates/[id]/edit` | 수정 | `updateReportTemplate` |
 
 폼 동작:
 - `category="template"` 선택 시 `reportCategory` 필드 활성화
