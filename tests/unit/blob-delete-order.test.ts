@@ -9,7 +9,9 @@ const mocks = vi.hoisted(() => ({
   put: vi.fn(),
   selectWhere: vi.fn(),
   updateWhere: vi.fn(),
+  updateSet: vi.fn(),
   updateReturning: vi.fn(),
+  insertValues: vi.fn(),
   deleteWhere: vi.fn(),
   deleteReturning: vi.fn(),
   findGallery: vi.fn(),
@@ -40,7 +42,11 @@ vi.mock("@/lib/db", () => ({
       classMaterials: { findFirst: mocks.findClassMaterial },
     },
     select: () => ({ from: () => ({ where: mocks.selectWhere }) }),
-    update: () => ({ set: () => ({ where: mocks.updateWhere }) }),
+    update: () => ({ set: (values: unknown) => {
+      mocks.updateSet(values);
+      return { where: mocks.updateWhere };
+    } }),
+    insert: () => ({ values: mocks.insertValues }),
     delete: () => ({ where: mocks.deleteWhere }),
   },
 }));
@@ -95,6 +101,7 @@ describe("기존 Blob 보존", () => {
     mocks.put.mockResolvedValue({ url: newUrl });
     mocks.recordOwnedBlob.mockResolvedValue(undefined);
     mocks.updateReturning.mockResolvedValue([{ id }]);
+    mocks.insertValues.mockResolvedValue(undefined);
     mocks.updateWhere.mockImplementation(() =>
       Object.assign(Promise.resolve([]), { returning: mocks.updateReturning }));
     mocks.deleteReturning.mockResolvedValue([{ id }]);
@@ -181,6 +188,15 @@ describe("기존 Blob 보존", () => {
     expect(result.success).toBe(false);
     expect(mocks.recordOwnedBlob).toHaveBeenCalledExactlyOnceWith(newUrl, id);
     expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
+  });
+
+  it("수료생 이야기의 새 사진을 대표 이미지로 저장한다", async () => {
+    await updateAlumniStory(id, alumniForm());
+
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: newUrl }));
+    expect(mocks.insertValues).toHaveBeenCalledWith([
+      expect.objectContaining({ alumniStoryId: id, url: newUrl, order: 0 }),
+    ]);
   });
 
   it("가이드북·강의자료·수료생 이야기 DB 삭제 실패 시 파일은 남는다", async () => {

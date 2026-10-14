@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import { z } from "zod/v4";
 import { AlumniSidebar } from "./_components/alumni-sidebar";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
+import { alumniStorySummary } from "@/features/alumni/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export default async function AlumniDetailPage({ params }: PageProps) {
       id: alumniStories.id,
       name: alumniStories.name,
       title: alumniStories.title,
-      content: alumniStories.content,
+      summary: alumniStorySummary,
       imageUrl: alumniStories.imageUrl,
     })
     .from(alumniStories)

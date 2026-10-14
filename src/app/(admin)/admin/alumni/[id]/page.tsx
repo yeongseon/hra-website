@@ -47,6 +47,7 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
         title: story.title,
         quote: story.quote,
         content: story.content,
+        imageUrl: story.imageUrl,
         isFeatured: story.isFeatured,
       }}
     />

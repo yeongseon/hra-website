@@ -9,7 +9,7 @@ interface Story {
   id: string;
   name: string;
   title: string | null;
-  content: string;
+  summary: string;
   imageUrl: string | null;
 }
 
@@ -57,7 +57,7 @@ export function AlumniSidebar({ stories, currentStoryId }: AlumniSidebarProps) {
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-gray-400 font-medium text-sm">No Image</span>
+                    <span className="text-gray-400 font-medium text-sm">수료생 사진</span>
                   </div>
                 )}
               </div>
@@ -66,7 +66,7 @@ export function AlumniSidebar({ stories, currentStoryId }: AlumniSidebarProps) {
                   {story.title || `${story.name}의 이야기`}
                 </h3>
                 <p className="text-sm text-[#666666] line-clamp-2 mb-3">
-                  {story.content}
+                  {story.summary}
                 </p>
                 <p className="text-sm font-semibold text-[#2563EB]">
                   {story.name}
