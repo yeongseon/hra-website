@@ -65,7 +65,7 @@ export function FormBuilder({ formId, formTitle, initialRevision, initialQuestio
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>(
     initialQuestions.length > 0
-      ? initialQuestions.sort((a, b) => a.order - b.order)
+      ? [...initialQuestions].sort((a, b) => a.order - b.order)
       : []
   );
   const [isPending, startTransition] = useTransition();
