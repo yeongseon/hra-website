@@ -173,21 +173,22 @@ src/app/(admin)/admin/[feature]/
 ## 9. 테스트 전략
 
 - **프레임워크**: Vitest + Playwright
-- **우선순위**: Integration (서버 액션) > E2E (핵심 플로우 5~7개) > Unit (순수 함수)
-- **DB**: mock 대신 별도 test DB 사용
-- **Blob**: 대부분 mock, 실제 업로드 E2E 1개
+- **우선순위**: Integration (서버 액션) > E2E (핵심 플로우) > Unit (순수 함수)
+- **DB**: 단위 테스트는 필요한 경우 mock, DB 경합·제약은 격리 PostgreSQL 사용
+- **Blob**: 대부분 mock, 실제 업로드 검증은 별도 E2E에서 수행
 - **CI**: `lint → typecheck → vitest → playwright(smoke)`
 
 ## 10. 배포
 
 - **프로덕션**: Vercel (`https://hra-website-theta.vercel.app`)
 - **문서**: MkDocs GitHub Pages (`https://yeongseon.github.io/hra-website/`)
-- **DB 마이그레이션**: `npx drizzle-kit push`
+- **DB 변경**: [데이터베이스 변경 절차](docs/developer/database-change-procedure.md). 새 빈 개발 DB에만 `npm run db:push`를 사용하고 추가 SQL·카탈로그를 확인
 - **빌드 확인**: `npm run build` (변경 후 반드시 실행)
 
-## 11. 코드 리뷰 정책 (Oracle 필수)
+## 11. 코드 리뷰 정책 (OpenCode 작업의 Oracle 리뷰)
 
-이 저장소의 **모든 의미 있는 작업 단위**는 커밋/푸시 전에 반드시 Oracle 에이전트의 리뷰를 거쳐야 합니다.
+**OpenCode로 수행한 의미 있는 작업 단위**는 커밋/푸시 전에 Oracle 에이전트의 리뷰를 거칩니다.
+Claude 또는 Codex만 사용한 작업에는 이 Oracle 절차를 적용하지 않습니다. 이 경우에도 아래 빌드·테스트·CI 검증은 수행합니다.
 
 ### Oracle 리뷰 트리거 (필수)
 - 새로운 feature/페이지/서버 액션 추가
@@ -213,7 +214,7 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
 - **NIT**: 합리적인 지적은 반영, 거부 시 사유 명시
 - **APPROVE**: 커밋 진행
 
-> Oracle 결과를 받기 전에 커밋·푸시하는 것은 금지됩니다. 백그라운드로 호출했다면 결과 도착까지 응답을 종료하고 대기하세요.
+> OpenCode 작업은 Oracle 결과를 받기 전에 커밋·푸시하지 않습니다. 백그라운드로 호출했다면 결과를 확인한 뒤 진행합니다.
 
 ## 12. 작업자(특히 학생) 필수 체크리스트
 
@@ -238,7 +239,7 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
   - ❌ `searchParams: { q?: string }` (옛 Next 14 패턴, Next 16 빌드 실패)
 - [ ] `import { z } from "zod/v4"` 인가? (`"zod"` 단독은 금지)
 - [ ] 새 JSX 블록 `{조건 && (...)}` 추가 시 닫는 `)}` 짝이 맞는가?
-- [ ] 다중 파일 변경이라면 §11 의 Oracle 리뷰를 호출했는가?
+- [ ] OpenCode로 다중 파일을 변경했다면 §11 의 Oracle 리뷰를 호출했는가?
 - [ ] 이슈를 만들거나 고쳤다면 `npm run issues:check` 가 통과하는가? (§13)
 
 ### 빌드 실패 시 자주 보는 에러와 해결법

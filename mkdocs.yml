@@ -52,6 +52,8 @@ nav:
   - 👑 관리자:
       - 관리자 운영 가이드: ADMIN-GUIDE.md
       - 데이터베이스 가이드: DATABASE.md
+      - 데이터베이스 변경 절차: developer/database-change-procedure.md
+      - P1 보안 수정 적용 절차: developer/p1-security-rollout.md
   - 📋 기능 기획:
       - 학사관리 전환 로드맵: ACADEMIC-MANAGEMENT-ROADMAP.md
       - 학사 데이터 모델: ACADEMIC-DATA-MODEL.md

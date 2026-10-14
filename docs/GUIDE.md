@@ -337,7 +337,7 @@ UPDATE users SET role = 'ADMIN' WHERE email = '내이메일@example.com';
 | 3 | Vercel에 비밀 설정값 등록하기 | Vercel 사이트 → Settings → Environment Variables |
 | 4 | Vercel에서 사이트 다시 배포하기 | Vercel 사이트 → Deployments → 점 세 개(···) → Redeploy |
 | 5 | 첫 관리자 계정 만들기 | `npm run seed-admin -- --confirm-create` 스크립트를 사용하세요 |
-| 6 | DB에 테이블 만들기 | 터미널에서 `npx drizzle-kit push` 입력 |
+| 6 | DB에 테이블 만들기 | 새 빈 개발 DB에서 [변경 절차](developer/database-change-procedure.md)에 따라 테이블·추가 SQL 적용 |
 | 7 | 첫 기수 만들기 | 관리자 페이지 → 기수 관리 |
 | 8 | 첫 공지사항 쓰기 | 관리자 페이지 → 공지사항 |
 

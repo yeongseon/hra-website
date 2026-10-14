@@ -34,7 +34,7 @@ npm test
 ## 수동 점검 체크리스트
 
 ### DB 마이그레이션
-- [ ] `npx drizzle-kit push` 실행 → `report_templates` 테이블 생성 확인
+- [ ] [DB 변경 절차](developer/database-change-procedure.md)에 따라 적용 → `report_templates` 테이블 생성 확인
 - [ ] `report_template_category` enum 생성 확인 (`template`, `guide`)
 
 ### 관리자 (`/admin/templates`)

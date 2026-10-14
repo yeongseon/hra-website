@@ -103,7 +103,7 @@ src/
 - `npm install`: "필요한 도구들 다 가져와!" (처음 시작할 때 딱 한 번)
 - `npm run dev`: "테스트용 웹사이트 띄워줘!" (코딩하면서 결과를 바로 볼 때)
 - `npm run build`: "진짜 서비스용으로 튼튼하게 만들어줘!" (배포하기 전 필수)
-- `npx drizzle-kit push`: "데이터 창고 구조를 최신으로 업데이트해줘!"
+- `npm run db:push`: 새 빈 개발용 데이터베이스에 테이블을 만들어요. 추가 SQL과 확인 절차는 [DB 변경 절차](docs/developer/database-change-procedure.md)를 따르세요.
 - `npm run seed-admin`: "첫 번째 대장 관리자를 한 명 만들어줘!"
 - `npm run spell-check`: "한국어 맞춤법 틀린 거 있나 봐줘!"
 
@@ -119,7 +119,7 @@ src/
 5.  **도구 설치**: `npm install`을 입력하고 잠시 기다려주세요.
 6.  **비밀 설정**: 폴더 안의 `.env.example` 파일을 복사해서 이름을 `.env`로 바꾸세요.
 7.  **열쇠 채우기**: `.env` 파일 안에 `DATABASE_URL` 등 필수 항목들을 채워 넣으세요. (관리자에게 문의!)
-8.  **창고 정리**: `npx drizzle-kit push`를 입력해서 데이터베이스를 준비하세요.
+8.  **창고 정리**: 새 빈 개발 DB에서 [DB 변경 절차](docs/developer/database-change-procedure.md)에 따라 테이블·추가 SQL을 준비하세요.
 9.  **관리자 생성**: `npm run seed-admin`으로 로그인할 계정을 만드세요.
 10. **실행!**: `npm run dev`를 입력하고, 인터넷 창에 `http://localhost:3000`을 치면 끝! 🎉
 
