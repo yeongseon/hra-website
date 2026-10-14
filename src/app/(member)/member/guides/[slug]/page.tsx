@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { resolveGuide } from "@/lib/markdown/resolve";
+import { requireMember } from "@/lib/member";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await requireMember();
   const { slug } = await params;
   const guide = await resolveGuide(slug);
   return {
@@ -34,6 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function MemberGuideDetailPage({ params }: Props) {
+  await requireMember();
   const { slug } = await params;
   const guide = await resolveGuide(slug);
 

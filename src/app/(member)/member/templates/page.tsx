@@ -6,7 +6,9 @@
  */
 
 import { redirect } from "next/navigation";
+import { requireMember } from "@/lib/member";
 
-export default function MemberTemplatesPage() {
+export default async function MemberTemplatesPage() {
+  await requireMember();
   redirect("/resources");
 }

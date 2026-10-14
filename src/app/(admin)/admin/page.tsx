@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin";
 import { logServerError } from "@/lib/errors";
 import {
   alumniStories,
@@ -53,6 +54,7 @@ const quickLinks = [
 ];
 
 export default async function AdminDashboardPage() {
+  await requireAdmin();
   let pendingSubmissions = 0;
   let totalSubmissions = 0;
   let pendingUsers = 0;
