@@ -192,7 +192,7 @@ export default async function WeeklyTextsPage() {
                     </Card>
                   </Link>
                 ) : (
-                  <a href={text.fileUrl} download={text.fileName ?? undefined} className="block">
+                  <a href={`/api/resources/weekly-texts/${text.id}/download`} download={text.fileName ?? undefined} className="block">
                     <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
                       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-3">
