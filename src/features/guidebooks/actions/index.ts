@@ -15,7 +15,6 @@
  */
 "use server";
 
-import { put } from "@vercel/blob";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
@@ -23,8 +22,7 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import { recordOwnedBlob } from "@/lib/owned-blob";
-import { validateDocumentUpload } from "@/lib/upload-file-validation";
+import { validateResourceUploadReference } from "@/lib/resource-upload-server";
 
 export type GuidebookActionState = {
   success: boolean;
@@ -36,42 +34,6 @@ const guidebookIdSchema = z.uuid("유효하지 않은 가이드북 ID입니다."
 const guidebookFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
 });
-
-const maxFileSize = 30 * 1024 * 1024;
-
-const normalizeFileName = (fileName: string) => {
-  const trimmed = fileName.trim();
-  const sanitized = trimmed
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "");
-
-  // 한글로만 된 파일명은 위 정리 후 ".pdf" 처럼 확장자만 남는다. 이름 부분이 비면 기본 이름을 붙여
-  // 저장 경로가 점으로 시작하지 않게 한다 (확장자로 파일 형식을 추정하는 동작을 보존).
-  if (sanitized.startsWith(".")) {
-    return `guidebook${sanitized}`;
-  }
-
-  return sanitized || "guidebook";
-};
-
-const getValidatedFile = async (value: FormDataEntryValue | null) => {
-  if (!(value instanceof File) || value.size === 0) {
-    return { error: "파일을 선택해주세요." } as const;
-  }
-
-  if (value.size > maxFileSize) {
-    return { error: "파일 크기는 30MB 이하여야 합니다." } as const;
-  }
-
-  const contentType = await validateDocumentUpload(value);
-  if (!contentType) {
-    return {
-      error: "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다.",
-    } as const;
-  }
-
-  return { file: value, contentType } as const;
-};
 
 const revalidateGuidebookPaths = () => {
   revalidatePath("/admin/resources/guidebooks");
@@ -92,32 +54,20 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     };
   }
 
-  const validatedFile = await getValidatedFile(formData.get("file"));
-  if ("error" in validatedFile) {
-    return {
-      success: false,
-      error: validatedFile.error,
-    };
-  }
-
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
+  const uploadedFileUrl = formData.get("uploadedFileUrl");
+  const uploadedFileName = formData.get("uploadedFileName");
+  if (typeof uploadedFileUrl !== "string" || typeof uploadedFileName !== "string") {
+    return { success: false, error: "파일을 다시 업로드해주세요." };
   }
 
   try {
-    const safeFileName = normalizeFileName(validatedFile.file.name);
-    const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
-      access: "public",
-      // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
-      addRandomSuffix: true,
-      contentType: validatedFile.contentType,
-    });
-    await recordOwnedBlob(blob.url, session.user.id);
+    const uploaded = await validateResourceUploadReference("guidebooks", session.user.id, uploadedFileUrl, uploadedFileName);
+    if ("error" in uploaded) return { success: false, error: uploaded.error };
 
     await db.insert(guidebooks).values({
       title: parsed.data.title,
-      fileUrl: blob.url,
-      fileName: validatedFile.file.name,
+      fileUrl: uploaded.url,
+      fileName: uploaded.fileName,
     });
 
     revalidateGuidebookPaths();
@@ -166,31 +116,23 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     }
 
     const fileEntry = formData.get("file");
-    const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
+    if (fileEntry instanceof File && fileEntry.size > 0) {
+      return { success: false, error: "파일을 다시 업로드해주세요." };
+    }
+    const uploadedFileUrl = formData.get("uploadedFileUrl");
+    const uploadedFileName = formData.get("uploadedFileName");
+    const hasNewFile = typeof uploadedFileUrl === "string" && uploadedFileUrl.length > 0;
 
     if (hasNewFile) {
       // 새 파일 검증 및 업로드 후 DB 참조를 교체합니다. 이전 파일은 소유권이
       // 확인되지 않아 즉시 삭제하지 않습니다 (#93).
-      const validatedFile = await getValidatedFile(fileEntry);
-      if ("error" in validatedFile) {
-        return { success: false, error: validatedFile.error };
-      }
-
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
-      }
-
-      const safeFileName = normalizeFileName(validatedFile.file.name);
-      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
-        access: "public",
-        addRandomSuffix: true,
-        contentType: validatedFile.contentType,
-      });
-      await recordOwnedBlob(blob.url, session.user.id);
+      if (typeof uploadedFileName !== "string") return { success: false, error: "파일을 다시 업로드해주세요." };
+      const uploaded = await validateResourceUploadReference("guidebooks", session.user.id, uploadedFileUrl, uploadedFileName);
+      if ("error" in uploaded) return { success: false, error: uploaded.error };
 
       const [updated] = await db
         .update(guidebooks)
-        .set({ title: parsed.data.title, fileUrl: blob.url, fileName: validatedFile.file.name })
+        .set({ title: parsed.data.title, fileUrl: uploaded.url, fileName: uploaded.fileName })
         .where(and(eq(guidebooks.id, parsedId.data), eq(guidebooks.fileUrl, target.fileUrl)))
         .returning({ id: guidebooks.id });
 

@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/admin";
 export const dynamic = "force-dynamic";
 
 export default async function NewGuidebookPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-10">
@@ -21,7 +21,7 @@ export default async function NewGuidebookPage() {
 
       <ResourcesTabNav />
 
-      <GuidebookForm action={createGuidebook} />
+      <GuidebookForm action={createGuidebook} userId={session.user.id} />
     </section>
   );
 }

@@ -25,7 +25,7 @@ type Props = {
 };
 
 export default async function EditClassMaterialPage({ params }: Props) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -61,6 +61,7 @@ export default async function EditClassMaterialPage({ params }: Props) {
 
       <ClassMaterialForm
         action={boundAction}
+        userId={session.user.id}
         defaultValues={{
           title: material.title,
           weekNumber: material.weekNumber,

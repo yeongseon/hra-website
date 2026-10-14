@@ -3,7 +3,7 @@
  * 기본은 읽기 전용 후보 보고입니다. 기존 미등록 Blob은 절대 대상으로 삼지 않습니다.
  * 실제 삭제는 콘텐츠 쓰기를 중단한 유지보수 시간에 --apply와 환경 플래그를 함께 지정합니다.
  */
-import { del } from "@vercel/blob";
+import { BlobNotFoundError, del } from "@vercel/blob";
 import { neon } from "@neondatabase/serverless";
 
 const apply = process.argv.includes("--apply");
@@ -65,6 +65,17 @@ for (const candidate of candidates) {
     `;
     deleted += 1;
   } catch (error) {
+    if (error instanceof BlobNotFoundError) {
+      // 발급된 업로드 토큰을 사용하지 않았거나 전송이 중단된 경우에는
+      // 소유권 원장에 예약 URL만 남습니다. 존재하지 않는 Blob도 정리 완료로 표시합니다.
+      await sql`
+        UPDATE markdown_image_assets
+        SET deleted_at = now()
+        WHERE id = ${candidate.id} AND deleted_at IS NULL
+      `;
+      deleted += 1;
+      continue;
+    }
     // SDK 오류 본문에는 URL/파일명이 들어갈 수 있으므로 메시지는 출력하지 않습니다.
     failed += 1;
     const name = error instanceof Error ? error.name : "UnknownError";
