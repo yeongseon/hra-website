@@ -26,6 +26,7 @@ function containsCarousel(node: ReactNode): boolean {
 describe("수료생 이야기 등록·노출", () => {
   it("사진 파일 입력과 메인 노출 체크박스를 제출 폼에 제공한다", () => {
     const view = render(createElement(AlumniStoryForm, {
+      userId: "22222222-2222-4222-8222-222222222222",
       title: "새 수료생 이야기",
       submitLabel: "등록",
       action: async () => ({ success: false, message: "" }),

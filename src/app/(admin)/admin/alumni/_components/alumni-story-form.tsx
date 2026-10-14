@@ -1,4 +1,4 @@
-/** 수료생 이야기 등록·수정 폼입니다. 이미지는 Blob 업로드 서버 액션으로 전달합니다. */
+/** 수료생 이야기 등록·수정 폼입니다. 사진은 브라우저에서 Blob으로 직접 전송합니다. */
 "use client";
 
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import type { AlumniStoryActionState } from "@/features/alumni/actions";
+import { prepareAlumniUploads } from "@/lib/alumni-upload-client";
 
 type AlumniStoryFormValues = {
   name?: string;
@@ -27,6 +28,8 @@ type AlumniStoryFormProps = {
   description?: string;
   submitLabel: string;
   action: (formData: FormData) => Promise<AlumniStoryActionState | void>;
+  userId: string;
+  storyId?: string;
   defaultValues?: AlumniStoryFormValues;
 };
 
@@ -40,6 +43,8 @@ export function AlumniStoryForm({
   description,
   submitLabel,
   action,
+  userId,
+  storyId,
   defaultValues,
 }: AlumniStoryFormProps) {
   const requestIdRef = useRef<string | null>(null);
@@ -47,7 +52,11 @@ export function AlumniStoryForm({
     async (_prevState: AlumniStoryActionState, formData: FormData) => {
       requestIdRef.current ??= crypto.randomUUID();
       formData.set("requestId", requestIdRef.current);
-      const result = await action(formData);
+      const prepared = await prepareAlumniUploads(formData, storyId ?? requestIdRef.current, userId);
+      if ("error" in prepared) {
+        return { success: false, message: prepared.error, fieldErrors: { images: prepared.error } };
+      }
+      const result = await action(prepared.formData);
       if (result?.success) requestIdRef.current = null;
       return result ?? initialState;
     },

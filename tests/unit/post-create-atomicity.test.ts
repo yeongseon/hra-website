@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   existing: false,
   validateResourceUploadReference: vi.fn(),
   validateWeeklyTextImageReference: vi.fn(),
+  validateAlumniImageReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -27,6 +28,7 @@ vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
 vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExists }));
 vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
 vi.mock("@/lib/weekly-text-image-upload", () => ({ validateWeeklyTextImageReference: mocks.validateWeeklyTextImageReference }));
+vi.mock("@/lib/alumni-upload-server", () => ({ validateAlumniImageReference: mocks.validateAlumniImageReference }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -105,6 +107,7 @@ describe("게시글과 첨부 메타 생성", () => {
     mocks.batch.mockResolvedValue([]);
     mocks.validateResourceUploadReference.mockResolvedValue({ url: "https://blob/direct", fileName: "자료.pdf" });
     mocks.validateWeeklyTextImageReference.mockResolvedValue(true);
+    mocks.validateAlumniImageReference.mockResolvedValue(true);
   });
 
   it.each([
@@ -218,5 +221,26 @@ describe("게시글과 첨부 메타 생성", () => {
     mocks.validateWeeklyTextImageReference.mockResolvedValue(false);
     expect((await createWeeklyText(form)).success).toBe(false);
     expect(mocks.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("수료생 사진의 검증된 직접 업로드 URL만 글과 첨부 행에 저장한다", async () => {
+    const form = alumniForm();
+    form.delete("images");
+    form.set("uploadedImageUrls", JSON.stringify(["https://blob/alumni"]));
+    await createAlumniStory(form);
+    expect(mocks.validateAlumniImageReference).toHaveBeenCalledWith(requestId, userId, "https://blob/alumni");
+    expect(mocks.batch.mock.calls[0]?.[0][1].values[0].url).toBe("https://blob/alumni");
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("수료생 사진의 위조된 완료 URL은 저장하지 않는다", async () => {
+    const form = alumniForm();
+    form.delete("images");
+    form.set("uploadedImageUrls", JSON.stringify(["https://evil.example/photo.png"]));
+    mocks.validateAlumniImageReference.mockResolvedValue(false);
+    const result = await createAlumniStory(form);
+    expect(result?.success).toBe(false);
+    expect(mocks.batch).not.toHaveBeenCalled();
+    expect(mocks.put).not.toHaveBeenCalled();
   });
 });

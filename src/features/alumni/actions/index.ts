@@ -12,6 +12,7 @@ import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
 import { recordOwnedBlob } from "@/lib/owned-blob";
 import { logServerError } from "@/lib/errors";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { validateAlumniImageReference } from "@/lib/alumni-upload-server";
 
 const maxImageSize = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -63,8 +64,9 @@ function parseAlumniStoryFormData(formData: FormData) {
 }
 
 function validateImageFiles(formData: FormData) {
-  const files = formData.getAll("images") as File[];
+  const files = formData.getAll("images").filter((entry): entry is File => entry instanceof File);
   const validFiles: File[] = [];
+  let totalBytes = 0;
 
   for (const file of files) {
     if (file.size === 0) continue;
@@ -84,10 +86,35 @@ function validateImageFiles(formData: FormData) {
         fieldErrors: { images: "이미지는 5MB 이하만 업로드할 수 있습니다." },
       };
     }
+    totalBytes += file.size;
     validFiles.push(file);
   }
 
+  // 구형 서버 경유 요청은 플랫폼 본문 한도 아래에서만 허용합니다.
+  if (totalBytes > 3 * 1024 * 1024) {
+    return { success: false as const, message: "사진을 다시 선택해 업로드해주세요.", fieldErrors: { images: "사진을 다시 선택해 업로드해주세요." } };
+  }
+
   return { success: true as const, files: validFiles };
+}
+
+/** 브라우저 완료 URL은 전달 문자열을 신뢰하지 않고 업로드 실물과 소유자를 재확인합니다. */
+async function getUploadedImageUrls(formData: FormData, storyId: string, userId: string): Promise<{ urls: string[] } | { error: string }> {
+  const raw = formData.get("uploadedImageUrls");
+  if (raw === null) return { urls: [] };
+  if (typeof raw !== "string" || raw.length > 100_000) return { error: "업로드한 사진 정보를 확인해주세요." };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { error: "업로드한 사진 정보를 확인해주세요." };
+  }
+  const urls = z.array(z.url()).max(100).safeParse(parsed);
+  if (!urls.success || new Set(urls.data).size !== urls.data.length) return { error: "업로드한 사진 정보를 확인해주세요." };
+  for (const url of urls.data) {
+    if (!await validateAlumniImageReference(storyId, userId, url)) return { error: "업로드한 사진을 확인할 수 없습니다. 다시 업로드해주세요." };
+  }
+  return { urls: urls.data };
 }
 
 async function uploadAlumniImage(file: File, uploadedById: string) {
@@ -131,6 +158,9 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     return { success: false, message: "페이지를 새로고침한 뒤 다시 제출해주세요." };
   }
 
+  const directImages = await getUploadedImageUrls(formData, requestId.data, session.user.id);
+  if ("error" in directImages) return { success: false, message: directImages.error, fieldErrors: { images: directImages.error } };
+
   try {
     const id = requestId.data;
     const [alreadyCreated] = await db.select({ id: alumniStories.id }).from(alumniStories).where(eq(alumniStories.id, id)).limit(1);
@@ -138,13 +168,14 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
       // 새 항목은 목록 맨 아래에 추가합니다.
       const [{ maxOrder }] = await db.select({ maxOrder: max(alumniStories.order) }).from(alumniStories);
       const nextOrder = (maxOrder ?? 0) + 1;
-      const uploadedUrls = await uploadBlobsForCreate(
+      const legacyUrls = await uploadBlobsForCreate(
         validatedImages.files.map((file, index) => ({
           pathname: `alumni/${id}-${index}-${file.name.replace(/\s+/g, "-")}`,
           file,
         })),
         session.user.id,
       );
+      const uploadedUrls = [...legacyUrls, ...directImages.urls];
 
       try {
         // 글과 이미지 메타를 한 배치에 넣어 후반부 실패 시 글도 롤백합니다.
@@ -174,14 +205,14 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
         // 커밋 후 응답 유실 가능성을 확인한 뒤 미참조 Blob만 정리합니다.
         const [existing] = await db.select({ id: alumniStories.id }).from(alumniStories).where(eq(alumniStories.id, id)).limit(1);
         if (!existing) {
-          await cleanupCreatedBlobs(uploadedUrls);
+          await cleanupCreatedBlobs(legacyUrls);
           throw error;
         }
         const referenced = uploadedUrls.length > 0
           ? await db.select({ url: alumniStoryImages.url }).from(alumniStoryImages).where(eq(alumniStoryImages.alumniStoryId, id))
           : [];
         const referencedUrls = new Set(referenced.map((row) => row.url));
-        await cleanupCreatedBlobs(uploadedUrls.filter((url) => !referencedUrls.has(url)));
+        await cleanupCreatedBlobs(legacyUrls.filter((url) => !referencedUrls.has(url)));
       }
     }
   } catch (error) {
@@ -226,6 +257,9 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     };
   }
 
+  const directImages = await getUploadedImageUrls(formData, parsedId.data, session.user.id);
+  if ("error" in directImages) return { success: false, message: directImages.error, fieldErrors: { images: directImages.error } };
+
   try {
     const [existing] = await db
       .select({ imageUrl: alumniStories.imageUrl })
@@ -235,7 +269,7 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
       return { success: false, message: "수료생 이야기를 찾을 수 없습니다." };
     }
 
-    const uploadedUrls: string[] = [];
+    const uploadedUrls: string[] = [...directImages.urls];
     for (const file of validatedImages.files) {
       const url = await uploadAlumniImage(file, session.user.id);
       uploadedUrls.push(url);
