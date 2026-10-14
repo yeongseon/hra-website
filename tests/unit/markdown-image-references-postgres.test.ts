@@ -102,6 +102,7 @@ describe.skipIf(!bin)("본문 이미지 참조 뷰 PostgreSQL 검증", () => {
     expect(run("SELECT count(*) FROM markdown_image_references WHERE source_type = 'notices';")).toBe("0");
   });
 
+  // 참조 뷰를 두 차례 조회하므로 CI 의 느린 디스크에서는 기본 5초를 넘길 수 있습니다.
   it("30일 지난 소유 파일 중 참조가 없는 것만 정리 후보로 고른다", () => {
     run(`INSERT INTO notices VALUES ('${contentId}', '${otherUrl}');`);
     const candidates = run(`
@@ -118,5 +119,5 @@ describe.skipIf(!bin)("본문 이미지 참조 뷰 PostgreSQL 검증", () => {
     run(`UPDATE markdown_image_assets SET deleted_at = now() WHERE id = '${assetId}';`);
     expect(run(`SELECT count(*) FROM markdown_image_assets WHERE deleted_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM markdown_image_references r WHERE r.asset_id = markdown_image_assets.id);`)).toBe("0");
-  });
+  }, 15000);
 });
