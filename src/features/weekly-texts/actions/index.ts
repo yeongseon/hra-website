@@ -35,11 +35,11 @@ export type WeeklyTextActionState = {
 };
 
 const weeklyTextIdSchema = z.uuid("유효하지 않은 주차별 텍스트 ID입니다.");
-const createRequestIdSchema = z.uuid();
+const createRequestIdSchema = z.uuid("유효하지 않은 요청 ID입니다.");
 
 const weeklyTextFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
-  cohortId: z.union([z.uuid(), z.literal("")]).optional(),
+  cohortId: z.union([z.uuid("유효하지 않은 기수 ID입니다."), z.literal("")]).optional(),
   textType: z
     .enum(WEEKLY_TEXT_TYPE_VALUES)
     .nullable()

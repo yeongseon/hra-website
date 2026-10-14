@@ -15,7 +15,7 @@
 
 ### 1안. DB 우선 + content fallback (채택)
 - 운영 변경은 모두 `report_templates` 테이블에서 발생
-- 관리자 페이지(`/admin/templates`)에서 CRUD
+- 관리자 페이지(`/admin/resources/templates`)에서 CRUD
 - `content/member/templates/`, `content/member/guides/`는 **초기 내장(default) 양식**으로 유지하여 신규 환경/DB 비어있는 상태에서도 회원 페이지가 동작하도록 한다.
 
 ### 2안. content/ fs 단독 저장
@@ -59,12 +59,12 @@ listTemplates():
 
 이유: content/에 동일 slug의 내장 양식이 있을 때 DB row를 실제로 삭제하면, resolver가 content fallback 단계로 넘어가 회원 페이지에 동일 양식이 다시 표시된다("삭제했는데 다시 보임" 문제). DB row가 비공개 상태로 남아 있어야 resolver가 fallback을 차단할 수 있다.
 
-관리자 UI(`/admin/templates`)는 이를 반영해 행 액션을 "비공개"로 명시한다. 비공개로 전환된 항목은 수정 페이지에서 다시 공개로 되돌릴 수 있다. 영구 삭제가 필요한 경우(예: 관리자 실수로 만든 row, content 시드가 없는 사용자 정의 양식 정리)는 별도의 운영 작업으로 처리한다.
+관리자 UI(`/admin/resources/templates`)는 이를 반영해 행 액션을 "비공개"로 명시한다. 비공개로 전환된 항목은 수정 페이지에서 다시 공개로 되돌릴 수 있다. 영구 삭제가 필요한 경우(예: 관리자 실수로 만든 row, content 시드가 없는 사용자 정의 양식 정리)는 별도의 운영 작업으로 처리한다.
 
 ## 비채택 영향
 
 - `content/member/templates/*.md`는 더 이상 회원 페이지의 1차 데이터 소스가 아님
-- 운영 양식 변경은 반드시 `/admin/templates`에서 진행
+- 운영 양식 변경은 반드시 `/admin/resources/templates`에서 진행
 - content/ 내장 양식은 다음 경우에만 사용:
   - 신규 환경에서 DB seed 전 임시 fallback
   - 양식 회귀 테스트(Vitest)의 고정 입력

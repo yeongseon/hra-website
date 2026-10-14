@@ -964,7 +964,10 @@ export function RichTextEditor({
                     break;
                   }
                 }
-              } catch { /* 위치 변환 실패 시 무시 */ }
+              } catch (error) {
+                // 일부 브라우저에서 DOM 셀이 이미 교체된 경우가 있어 해당 셀만 건너뜁니다.
+                console.warn("표 셀 너비 조정 중 위치 변환 실패:", error);
+              }
             }
             if (changed) ed.view.dispatch(pmTr);
           });
@@ -1055,7 +1058,10 @@ export function RichTextEditor({
           try {
             const dom = ed.view.nodeDOM($anchor.before(d));
             if (dom instanceof HTMLElement) prevWidth = dom.offsetWidth || null;
-          } catch { /* ignore */ }
+          } catch (error) {
+            // 셀 DOM이 사라졌어도 열 추가 자체는 유지하고 너비 계산만 생략합니다.
+            console.warn("표 열 추가 중 셀 너비 확인 실패:", error);
+          }
         }
         break;
       }
@@ -1086,7 +1092,10 @@ export function RichTextEditor({
               break;
             }
           }
-        } catch { /* ignore */ }
+        } catch (error) {
+          // 새 셀의 위치 확인 실패는 다른 셀 처리에 영향을 주지 않습니다.
+          console.warn("표 열 추가 중 셀 위치 확인 실패:", error);
+        }
       }
       if (changed) ed.view.dispatch(pmTr);
     });

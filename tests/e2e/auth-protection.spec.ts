@@ -11,6 +11,7 @@ import { expect, test } from "@playwright/test";
 const protectedPaths = [
   "/admin",
   "/admin/templates",
+  "/admin/resources/templates",
   "/resources",
   "/member/templates",
   "/member/templates/management-book",

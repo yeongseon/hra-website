@@ -349,7 +349,16 @@ export async function addGalleryImages(id: string, formData: FormData): Promise<
     result.status === "fulfilled" ? [result.value] : [],
   );
 
-  if (uploads.some((result) => result.status === "rejected")) {
+  const rejectedUploads = uploads.flatMap((result, index) =>
+    result.status === "rejected" ? [{ index, reason: result.reason }] : [],
+  );
+  if (rejectedUploads.length > 0) {
+    for (const rejected of rejectedUploads) {
+      logServerError("gallery/add-images-upload", rejected.reason, {
+        galleryId: galleryResult.gallery.id,
+        fileIndex: rejected.index,
+      });
+    }
     // 성공한 업로드는 원장에 남깁니다. 정리 시점에 다른 콘텐츠 참조를
     // 다시 확인하고 실패한 삭제도 다음 실행에서 재시도할 수 있습니다.
     return initialError("이미지 업로드 중 오류가 발생했습니다. 다시 시도해주세요.");

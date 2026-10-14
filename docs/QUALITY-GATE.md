@@ -17,7 +17,7 @@ npm test
 |---|---|---|
 | ESLint | 신규 코드 0 error / 0 warning | 사전 존재 경고는 별도 이슈로 |
 | TypeScript | `tsc --noEmit` 0 error | `as any` / `@ts-ignore` 금지 |
-| Next build | 빌드 성공 | `/admin/templates`, `/member/templates`, `/member/guides`, print 라우트 포함 |
+| Next build | 빌드 성공 | `/admin/resources/templates`, `/member/templates`, `/member/guides`, print 라우트 포함 |
 | Vitest | 마크다운 단위 테스트 PASS | `tests/unit/markdown-*.test.ts` |
 | Playwright (auth) | 보호 경로 회귀 PASS | `tests/e2e/auth-protection.spec.ts` — 비로그인 접근 시 `/login` 리다이렉트 |
 
@@ -37,7 +37,7 @@ npm test
 - [ ] [DB 변경 절차](developer/database-change-procedure.md)에 따라 적용 → `report_templates` 테이블 생성 확인
 - [ ] `report_template_category` enum 생성 확인 (`template`, `guide`)
 
-### 관리자 (`/admin/templates`)
+### 관리자 (`/admin/resources/templates`)
 - [ ] 신규 등록 — 양식(template, reportCategory 포함) / 가이드(guide, reportCategory null) 둘 다 정상 저장
 - [ ] slug 중복 시 검증 메시지 노출
 - [ ] 수정 — 본문/버전/published 토글 반영

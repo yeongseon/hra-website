@@ -120,7 +120,6 @@ function parseFormData(formData: FormData) {
 }
 
 function revalidateTemplatePaths(slug?: string) {
-  revalidatePath("/admin/templates");
   revalidatePath("/admin/resources/templates");
   revalidatePath("/member/templates");
   revalidatePath("/member/guides");
