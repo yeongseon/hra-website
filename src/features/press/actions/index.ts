@@ -13,11 +13,11 @@ import { logServerError } from "@/lib/errors";
 const pressArticleFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   source: z.string().trim().min(1, "언론사명을 입력해주세요.").max(200, "언론사명은 200자 이하여야 합니다."),
-  url: z.url("올바른 기사 링크를 입력해주세요."),
+  url: z.httpUrl("올바른 기사 링크를 입력해주세요."),
   publishedAt: z.iso.date("올바른 게시일을 입력해주세요."),
   description: z.string().trim().max(5000, "요약은 5000자 이하여야 합니다.").optional(),
   imageUrl: z
-    .union([z.literal(""), z.url("올바른 썸네일 URL을 입력해주세요.")])
+    .union([z.literal(""), z.httpUrl("올바른 썸네일 URL을 입력해주세요.")])
     .optional(),
 });
 
