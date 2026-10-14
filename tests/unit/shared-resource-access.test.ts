@@ -47,7 +47,7 @@ describe("공동 자료 서버 열람 정책", () => {
 
   it("승인 대기 계정의 통합 자료실은 DB 조회를 시작하지 않는다", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "user", role: "PENDING" } });
-    await expect(ResourcesPage()).rejects.toThrow("REDIRECT:/pending");
+    await expect(ResourcesPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/pending");
   });
 
   it("승인 대기 계정에게 상세 메타데이터 제목을 노출하지 않는다", async () => {

@@ -31,7 +31,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ResourcesPage() {
+type Props = {
+  searchParams: Promise<{ category?: string | string[] }>;
+};
+
+export default async function ResourcesPage({ searchParams }: Props) {
+  const requestedCategory = (await searchParams).category;
+  const initialCategory = typeof requestedCategory === "string" ? requestedCategory : undefined;
   const session = await requireSharedResourceReader();
   const userRole = session?.user?.role;
 
@@ -250,6 +256,8 @@ export default async function ResourcesPage() {
 
       {/* 자료실 탭 필터 + 목록 */}
       <ResourcesTabs
+        key={initialCategory}
+        initialCategory={initialCategory}
         items={items}
         cohorts={cohortRows}
         userCohortId={userCohortId}

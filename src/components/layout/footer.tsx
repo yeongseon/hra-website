@@ -122,7 +122,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-[#D9D9D9] py-6 text-center text-sm text-[#999999]">
-          © 2026 Human Renaissance Academy. All rights reserved.
+          © 2026 휴먼르네상스 아카데미. 모든 권리 보유.
         </div>
       </div>
     </footer>

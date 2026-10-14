@@ -158,7 +158,7 @@ export function AdminShell({ userName, children }: AdminShellProps) {
                     </div>
                   </SheetContent>
                 </Sheet>
-                <p className="text-sm font-semibold tracking-wide">HRA Admin</p>
+                <p className="text-sm font-semibold tracking-wide">HRA 관리자</p>
               </div>
 
               {/* 데스크톱에서 표시되는 제목 */}

@@ -64,7 +64,7 @@ export default async function MyPage() {
                         }`}
                       >
                         <Shield className="w-3 h-3 mr-1.5" />
-                        {user.role === "ADMIN" ? "관리자" : "회원"}
+                        {user.role === "ADMIN" ? "관리자" : user.role === "FACULTY" ? "교수진" : user.role === "PENDING" ? "승인 대기" : "회원"}
                       </Badge>
                     </div>
                   </div>
