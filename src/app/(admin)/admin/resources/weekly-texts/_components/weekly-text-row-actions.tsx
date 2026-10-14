@@ -23,6 +23,7 @@ type WeeklyTextRowActionsProps = {
 export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -31,7 +32,10 @@ export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
         수정
       </Button>
 
-    <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+    <Dialog open={isDeleteOpen} onOpenChange={(open) => {
+      setIsDeleteOpen(open);
+      if (open) setDeleteError(null);
+    }}>
       <DialogTrigger render={<Button variant="destructive" size="sm" />}>
         <Trash2 className="size-3.5" />
         삭제
@@ -43,6 +47,7 @@ export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
             삭제 후에는 복구할 수 없으며 업로드된 파일도 함께 제거됩니다.
           </DialogDescription>
         </DialogHeader>
+      {deleteError && <p role="alert" className="text-sm text-red-600">{deleteError}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
             취소
@@ -52,10 +57,18 @@ export function WeeklyTextRowActions({ id }: WeeklyTextRowActionsProps) {
             disabled={isPending}
             onClick={() => {
               startTransition(async () => {
-                const result = await deleteWeeklyText(id);
-                if (result.success) {
-                  setIsDeleteOpen(false);
-                  router.refresh();
+                setDeleteError(null);
+                try {
+                  const result = await deleteWeeklyText(id);
+                  if (result.success) {
+                    setIsDeleteOpen(false);
+                    router.refresh();
+                  } else {
+                    setDeleteError(result.error ?? "주차별 텍스트를 삭제하지 못했습니다.");
+                  }
+                } catch (error) {
+                  console.error("주차별 텍스트 삭제 실패:", error);
+                  setDeleteError("주차별 텍스트를 삭제하지 못했습니다. 다시 시도해 주세요.");
                 }
               });
             }}

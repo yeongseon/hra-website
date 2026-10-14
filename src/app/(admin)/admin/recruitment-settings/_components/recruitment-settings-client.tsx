@@ -359,7 +359,7 @@ export function RecruitmentSettingsClient() {
             </div>
             <Button
               type="button"
-              onClick={() => startSavingInfoTransition(() => { void handleSubmitInfo(); })}
+              onClick={() => startSavingInfoTransition(handleSubmitInfo)}
               disabled={isLoading || isSavingInfo}
               className="shrink-0 bg-[#1a1a1a] text-white hover:bg-[#333333]"
             >
@@ -473,7 +473,7 @@ export function RecruitmentSettingsClient() {
             </div>
             <Button
               type="button"
-              onClick={() => startSavingPosterTransition(() => { void handleSubmitPoster(); })}
+              onClick={() => startSavingPosterTransition(handleSubmitPoster)}
               disabled={isLoading || isSavingPoster}
               className="shrink-0 bg-[#1a1a1a] text-white hover:bg-[#333333]"
             >
@@ -519,7 +519,7 @@ export function RecruitmentSettingsClient() {
             </div>
             <Button
               type="button"
-              onClick={() => startSavingDetailsTransition(() => { void handleSubmitDetails(); })}
+              onClick={() => startSavingDetailsTransition(handleSubmitDetails)}
               disabled={isLoading || isSavingDetails}
               className="shrink-0 bg-[#1a1a1a] text-white hover:bg-[#333333]"
             >
