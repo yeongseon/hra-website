@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { Pin } from "lucide-react";
 import { NoticeSearch } from "./_components/notice-search";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
+import { parseListPage } from "@/lib/query-params";
 
 export const metadata: Metadata = {
   title: "공지사항",
@@ -29,10 +30,14 @@ export default async function NoticesPage({
 }) {
   const params = await searchParams;
   const query = (params.q ?? "").trim();
-  const currentPage = Number(params.page ?? "1");
   const ITEMS_PER_PAGE = 15;
-
-  let noticeList = await db
+  // 검색은 SQL에서 적용해 전체 행을 서버 메모리로 읽지 않는다.
+  const filter = query
+    ? and(eq(notices.status, "PUBLISHED"), sql`strpos(lower(${notices.title}), lower(${query})) > 0`)
+    : eq(notices.status, "PUBLISHED");
+  const [{ total: totalCount }] = await db.select({ total: count() }).from(notices).where(filter);
+  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
+  const currentNotices = await db
     .select({
       id: notices.id,
       title: notices.title,
@@ -41,17 +46,10 @@ export default async function NoticesPage({
       viewCount: notices.viewCount,
     })
     .from(notices)
-    .where(eq(notices.status, "PUBLISHED"))
-    .orderBy(desc(notices.pinned), desc(notices.createdAt));
-
-  if (query) {
-    const normalizedQuery = query.toLowerCase();
-    noticeList = noticeList.filter((notice) => notice.title.toLowerCase().includes(normalizedQuery));
-  }
-  const totalCount = noticeList.length;
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentNotices = noticeList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    .where(filter)
+    .orderBy(desc(notices.pinned), desc(notices.createdAt), desc(notices.id))
+    .limit(ITEMS_PER_PAGE)
+    .offset(startIndex);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
@@ -71,7 +69,7 @@ export default async function NoticesPage({
         <NoticeSearch defaultValue={query} />
       </section>
 
-      {noticeList.length === 0 ? (
+      {totalCount === 0 ? (
         <Card className="border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)] rounded-2xl py-10">
           <CardContent className="text-center text-base text-[#666666]">
             {query ? "검색 결과가 없습니다" : "공지사항이 없습니다"}

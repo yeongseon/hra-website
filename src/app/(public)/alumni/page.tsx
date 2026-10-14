@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { desc } from "drizzle-orm";
+import { count, desc } from "drizzle-orm";
 import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
+import { parseListPage } from "@/lib/query-params";
 
 export const dynamic = "force-dynamic";
 
@@ -34,23 +35,18 @@ export default async function AlumniPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const allDbStories = await db
+  // 전체 행 대신 개수와 현재 페이지의 행만 조회한다.
+  const [{ total: totalCount }] = await db.select({ total: count() }).from(alumniStoriesTable);
+  const ITEMS_PER_PAGE = 15;
+  const params = await searchParams;
+  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
+  const currentDbStories = await db
     .select()
     .from(alumniStoriesTable)
     // 고정된 항목 먼저, 그 다음 작성일 최신순
-    .orderBy(desc(alumniStoriesTable.pinned), desc(alumniStoriesTable.createdAt));
-
-  const totalCount = allDbStories.length;
-  const ITEMS_PER_PAGE = 15;
-  const params = await searchParams;
-  const currentPage = Number(params.page ?? "1");
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  const currentDbStories = allDbStories.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-  );
+    .orderBy(desc(alumniStoriesTable.pinned), desc(alumniStoriesTable.createdAt), desc(alumniStoriesTable.id))
+    .limit(ITEMS_PER_PAGE)
+    .offset(startIndex);
 
   const stories: AlumniStoryViewModel[] = currentDbStories.map((story, index) => ({
     id: story.id,
@@ -77,7 +73,7 @@ export default async function AlumniPage({
         </p>
       </section>
 
-      {stories.length === 0 ? (
+      {totalCount === 0 ? (
         <section className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-[#D9D9D9] bg-white p-12 text-center shadow-[var(--shadow-soft)]">
           <p className="text-lg font-semibold text-[#1a1a1a]">아직 등록된 수료생 이야기가 없습니다.</p>
           <p className="text-sm text-[#666666]">수료생 이야기가 등록되면 이곳에 표시됩니다.</p>

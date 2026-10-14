@@ -19,6 +19,7 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { scheduleEvents, scheduleSessions } from "@/lib/db/schema";
+import { parseCalendarMonth } from "@/lib/query-params";
 
 // ============================================================
 // Zod 스키마 정의
@@ -37,9 +38,12 @@ const sessionSchema = z.object({
 
 // 이벤트 폼 전체 유효성 검사
 const scheduleEventFormSchema = z.object({
-  eventDate: z.string().trim().min(1, "날짜를 입력해주세요."),       // "YYYY-MM-DD"
-  startTime: z.string().trim().min(1, "시작 시간을 입력해주세요."),  // "HH:MM"
-  endTime: z.string().trim().optional().nullable(),                   // "HH:MM" (선택)
+  // Date.UTC는 00~99년을 1900년대로 해석하므로 운영 가능한 연도도 제한한다.
+  eventDate: z.iso.date("올바른 날짜를 입력해주세요.")
+    .refine((value) => Number(value.slice(0, 4)) >= 1900 && Number(value.slice(0, 4)) <= 2100,
+      "올바른 날짜를 입력해주세요."),
+  startTime: z.iso.time({ precision: -1, error: "올바른 시작 시간을 입력해주세요." }), // "HH:MM"
+  endTime: z.iso.time({ precision: -1, error: "올바른 종료 시간을 입력해주세요." }).optional().nullable(),
   eventType: z.enum(["CLASS", "EVENT"]),
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(200, "제목은 200자 이하여야 합니다."),
   cohortId: z.string().uuid().optional().nullable(),
@@ -122,11 +126,13 @@ function parseFormData(formData: FormData) {
  * 메인 페이지 캘린더 섹션에서 사용
  */
 export async function getScheduleEvents(year: number, month: number) {
+  // 서버 액션은 클라이언트에서 직접 호출할 수 있으므로 조회 인자도 범위 검증한다.
+  const valid = parseCalendarMonth(year, month);
   // 해당 월의 시작일(1일 00:00)과 마지막날(말일 23:59) 계산
   // 일정은 buildEventDate 로 UTC 칸에 한국시간 숫자를 그대로 저장하므로,
   // 조회 범위도 Date.UTC 로 만들어 서버 타임존(dev=KST, prod=UTC)에 영향받지 않게 한다.
-  const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+  const startDate = new Date(Date.UTC(valid.year, valid.month - 1, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(valid.year, valid.month, 0, 23, 59, 59));
 
   const events = await db.query.scheduleEvents.findMany({
     where: and(
