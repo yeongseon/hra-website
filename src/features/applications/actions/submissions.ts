@@ -21,6 +21,7 @@ import { formatKstCsvDateTime, toKstDateInput } from "@/lib/date-time";
 import { reserveApplicationSubmission } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 import { applicationInputLimits } from "@/features/applications/input-limits";
+import { parseCheckboxAnswerValue } from "@/features/applications/answer-format";
 
 /**
  * CSV/Excel 에서 셀 값이 수식으로 해석되는 것을 막기 위한 방어 함수입니다.
@@ -368,12 +369,8 @@ export async function exportSubmissionsToCsv(formId: string) {
         const answer = sub.answers.find(ans => ans.questionId === q.id);
         if (!answer) return "";
 
-        try {
-          const parsed = JSON.parse(answer.value);
-          return Array.isArray(parsed) ? parsed.join(", ") : answer.value;
-        } catch {
-          return answer.value;
-        }
+        const choices = parseCheckboxAnswerValue(answer.value, q.type);
+        return choices ? choices.join(", ") : answer.value;
       });
 
       return [...basicInfo, ...questionAnswers];

@@ -19,20 +19,12 @@ import {
 import { DeleteSubmissionButton } from "./_components/delete-submission-button";
 import { StatusChangeButton } from "./_components/status-change-button";
 import { formatKstDateTimeWithSeconds } from "@/lib/date-time";
+import { parseCheckboxAnswerValue } from "@/features/applications/answer-format";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string; submissionId: string }>;
-};
-
-const parseChoiceAnswerValue = (rawValue: string): string[] | null => {
-  try {
-    const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : null;
-  } catch {
-    return null;
-  }
 };
 
 export default async function AdminSubmissionDetailPage({ params }: Props) {
@@ -177,7 +169,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                     <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
                       <div className="text-slate-800 whitespace-pre-wrap leading-relaxed">
                         {(() => {
-                          const choices = parseChoiceAnswerValue(ans.value);
+                          const choices = parseCheckboxAnswerValue(ans.value, ans.question?.type);
                           if (choices) {
                             return (
                               <ul className="list-disc list-inside space-y-1.5">

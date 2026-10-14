@@ -134,6 +134,14 @@ export async function updateUserGroup(
   `);
 
   if ((result.rowCount ?? 0) === 0) {
+    // 사전 확인 이후 대상이 삭제되었을 수 있으므로 마지막 관리자 오류와 구분합니다.
+    const [stillExists] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, parsed.data.userId))
+      .limit(1);
+    if (!stillExists) {
+      return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
+    }
     return {
       success: false,
       message: "마지막 관리자입니다. 다른 관리자를 먼저 지정한 뒤 역할을 변경하세요.",
@@ -198,6 +206,14 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   `);
 
   if ((result.rowCount ?? 0) === 0) {
+    // 삭제 경합으로 행이 사라졌다면 마지막 관리자 오류를 표시하지 않습니다.
+    const [stillExists] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, parsed.data.userId))
+      .limit(1);
+    if (!stillExists) {
+      return { success: false, message: "해당 사용자를 찾을 수 없습니다." };
+    }
     return {
       success: false,
       message: "마지막 관리자는 삭제할 수 없습니다. 다른 관리자를 먼저 지정하세요.",

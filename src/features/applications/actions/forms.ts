@@ -120,7 +120,7 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
   }
 
   try {
-    await db
+    const updated = await db
       .update(applicationForms)
       .set({
         title: parsed.data.title,
@@ -129,7 +129,12 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
         isPublished: parsed.data.isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, validId));
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (updated.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     revalidatePath(`/admin/application-forms/${validId}`);
@@ -167,13 +172,18 @@ export async function toggleFormPublishStatus(id: string, isPublished: boolean):
   const validId = parsedId.data;
 
   try {
-    await db
+    const updated = await db
       .update(applicationForms)
       .set({
         isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, validId));
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (updated.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     return {
@@ -209,7 +219,13 @@ export async function deleteForm(id: string): Promise<FormActionState> {
   const validId = parsedId.data;
 
   try {
-    await db.delete(applicationForms).where(eq(applicationForms.id, validId));
+    const deleted = await db.delete(applicationForms)
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (deleted.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     return {
