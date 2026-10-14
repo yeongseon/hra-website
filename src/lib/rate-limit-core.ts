@@ -118,8 +118,7 @@ export function extractClientIp(headers: Headers): string {
  * 이메일 정규화 (rate limit key 용).
  *
  * 로그인 폼에서 대소문자 · 양쪽 공백 차이가 있어도 동일 계정에 대한 시도로
- * 인식되도록 통일한다. authorize() 에서도 email 을 lowercase 로 조회하지 않아
- * 이 helper 를 별도로 사용해야 카운트가 나뉘지 않는다.
+ * 인식되도록 통일한다. authorize() 의 계정 조회도 같은 정규화 규칙을 쓴다.
  *
  * 반환값이 빈 문자열이면 이메일이 없는 것으로 간주하고 caller 는 IP 만으로
  * rate limit 을 걸어야 한다 (그렇지 않으면 빈 문자열 email 로 통합된
