@@ -22,7 +22,8 @@ export default defineConfig({
     ? undefined
     : {
         command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
-        url: baseURL,
+        // 격리 CI에는 운영 DB를 연결하지 않으므로 정적 로그인 화면으로 서버 준비 상태를 확인합니다.
+        url: `${baseURL}/login`,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
       },
