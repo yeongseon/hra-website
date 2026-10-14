@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   validateResourceUploadReference: vi.fn(),
   validateWeeklyTextImageReference: vi.fn(),
   validateAlumniImageReference: vi.fn(),
+  validateFacultyImageReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -29,6 +30,7 @@ vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExist
 vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
 vi.mock("@/lib/weekly-text-image-upload", () => ({ validateWeeklyTextImageReference: mocks.validateWeeklyTextImageReference }));
 vi.mock("@/lib/alumni-upload-server", () => ({ validateAlumniImageReference: mocks.validateAlumniImageReference }));
+vi.mock("@/lib/faculty-upload-server", () => ({ validateFacultyImageReference: mocks.validateFacultyImageReference }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -58,6 +60,7 @@ vi.mock("@/lib/db", () => ({
 import { createClassLog } from "@/features/class-logs/actions";
 import { createWeeklyText } from "@/features/weekly-texts/actions";
 import { createAlumniStory } from "@/features/alumni/actions";
+import { createFaculty } from "@/features/faculty/actions";
 
 const requestId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222222";
@@ -108,6 +111,7 @@ describe("게시글과 첨부 메타 생성", () => {
     mocks.validateResourceUploadReference.mockResolvedValue({ url: "https://blob/direct", fileName: "자료.pdf" });
     mocks.validateWeeklyTextImageReference.mockResolvedValue(true);
     mocks.validateAlumniImageReference.mockResolvedValue(true);
+    mocks.validateFacultyImageReference.mockResolvedValue(true);
   });
 
   it.each([
@@ -242,5 +246,31 @@ describe("게시글과 첨부 메타 생성", () => {
     expect(result?.success).toBe(false);
     expect(mocks.batch).not.toHaveBeenCalled();
     expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("교수진 생성은 검증된 직접 업로드 사진만 DB에 저장한다", async () => {
+    const form = new FormData();
+    form.set("name", "교수");
+    form.set("category", "CLASSICS");
+    form.set("order", "0");
+    form.set("uploadTargetId", requestId);
+    form.set("uploadedImageUrl", "https://blob/faculty");
+    await createFaculty(form);
+    expect(mocks.validateFacultyImageReference).toHaveBeenCalledWith(requestId, userId, "https://blob/faculty");
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ imageUrl: "https://blob/faculty" }));
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("교수진 생성은 위조된 사진 URL을 DB에 저장하지 않는다", async () => {
+    const form = new FormData();
+    form.set("name", "교수");
+    form.set("category", "CLASSICS");
+    form.set("order", "0");
+    form.set("uploadTargetId", requestId);
+    form.set("uploadedImageUrl", "https://evil.example/photo.png");
+    mocks.validateFacultyImageReference.mockResolvedValue(false);
+    const result = await createFaculty(form);
+    expect(result.success).toBe(false);
+    expect(mocks.insertValues).not.toHaveBeenCalled();
   });
 });

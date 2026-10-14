@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   recordOwnedBlob: vi.fn(),
   validateResourceUploadReference: vi.fn(),
   validateAlumniImageReference: vi.fn(),
+  validateFacultyImageReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -37,6 +38,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
 vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
 vi.mock("@/lib/alumni-upload-server", () => ({ validateAlumniImageReference: mocks.validateAlumniImageReference }));
+vi.mock("@/lib/faculty-upload-server", () => ({ validateFacultyImageReference: mocks.validateFacultyImageReference }));
 vi.mock("@/lib/db", () => ({
   db: {
     query: {
@@ -107,6 +109,7 @@ describe("기존 Blob 보존", () => {
     mocks.recordOwnedBlob.mockResolvedValue(undefined);
     mocks.validateResourceUploadReference.mockResolvedValue({ url: newUrl, fileName: "new.pdf" });
     mocks.validateAlumniImageReference.mockResolvedValue(true);
+    mocks.validateFacultyImageReference.mockResolvedValue(true);
     mocks.updateReturning.mockResolvedValue([{ id }]);
     mocks.insertValues.mockResolvedValue(undefined);
     mocks.updateWhere.mockImplementation(() =>
@@ -153,6 +156,27 @@ describe("기존 Blob 보존", () => {
     mocks.deleteWhere.mockRejectedValueOnce(new Error("DB 실패"));
     await expect(deleteFaculty(id)).rejects.toThrow("DB 실패");
     expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
+  });
+
+  it("교수진 수정은 검증된 직접 업로드 사진만 저장한다", async () => {
+    const formData = facultyForm();
+    formData.delete("image");
+    formData.set("uploadedImageUrl", newUrl);
+    formData.set("uploadTargetId", id);
+    await updateFaculty(id, formData);
+    expect(mocks.validateFacultyImageReference).toHaveBeenCalledWith(id, id, newUrl);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: newUrl }));
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("교수진 수정은 다른 대상의 사진 URL을 거부한다", async () => {
+    const formData = facultyForm();
+    formData.delete("image");
+    formData.set("uploadedImageUrl", newUrl);
+    formData.set("uploadTargetId", imageId);
+    const result = await updateFaculty(id, formData);
+    expect(result.success).toBe(false);
+    expect(mocks.updateWhere).not.toHaveBeenCalled();
   });
 
   it("갤러리와 개별 사진의 DB 삭제 실패 시 파일은 남는다", async () => {
