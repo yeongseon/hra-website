@@ -10,7 +10,7 @@
  *
  * 보안:
  *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
- *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일 확장자·시작 바이트·선언 MIME 검사 + 30MB 크기 제한
  *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
  */
 "use server";
@@ -28,6 +28,7 @@ import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import { buildImageAlt } from "@/lib/image-alt";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { validateDocumentUpload, validateImageUpload } from "@/lib/upload-file-validation";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -59,22 +60,7 @@ const weeklyTextFormSchema = z.object({
     }),
 });
 
-const allowedFileTypes = new Set([
-  "application/pdf",
-  "application/x-hwp",
-  "application/vnd.hancom.hwp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-
 const maxFileSize = 30 * 1024 * 1024;
-
-const allowedImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
 
 const maxImageSize = 10 * 1024 * 1024;
 
@@ -101,46 +87,45 @@ const parseCohortId = (value: FormDataEntryValue | null) => {
   return value;
 };
 
-const getValidatedFile = (value: FormDataEntryValue | null) => {
+const getValidatedFile = async (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
-    return { file: null } as const;
+    return { file: null, contentType: null } as const;
   }
 
-  if (!allowedFileTypes.has(value.type)) {
+  if (value.size > maxFileSize) {
+    return { error: "파일 크기는 30MB 이하여야 합니다." } as const;
+  }
+
+  const contentType = await validateDocumentUpload(value);
+  if (!contentType) {
     return {
       error: "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다.",
     } as const;
   }
 
-  if (value.size > maxFileSize) {
-    return {
-      error: "파일 크기는 30MB 이하여야 합니다.",
-    } as const;
-  }
-
-  return { file: value } as const;
+  return { file: value, contentType } as const;
 };
 
-const getValidatedImageFiles = (formData: FormData) => {
+const getValidatedImageFiles = async (formData: FormData) => {
   const files = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
+  const contentTypes: string[] = [];
   for (const file of files) {
-    if (!allowedImageTypes.has(file.type)) {
+    if (file.size > maxImageSize) {
+      return { error: "사진 파일은 10MB 이하여야 합니다." } as const;
+    }
+    const contentType = await validateImageUpload(file);
+    if (!contentType) {
       return {
         error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
       } as const;
     }
-
-    if (file.size > maxImageSize) {
-      return {
-        error: "사진 파일은 10MB 이하여야 합니다.",
-      } as const;
-    }
+    contentTypes.push(contentType);
   }
 
-  return { files } as const;
+  return { files, contentTypes } as const;
 };
 
 const revalidateWeeklyTextPaths = () => {
@@ -171,7 +156,7 @@ const createWeeklyTextRecord = async (formData: FormData, uploadedById: string):
     };
   }
 
-  const validatedFile = getValidatedFile(formData.get("file"));
+  const validatedFile = await getValidatedFile(formData.get("file"));
   if ("error" in validatedFile) {
     return {
       success: false,
@@ -179,7 +164,7 @@ const createWeeklyTextRecord = async (formData: FormData, uploadedById: string):
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -218,10 +203,12 @@ const createWeeklyTextRecord = async (formData: FormData, uploadedById: string):
       ...(documentFile ? [{
         pathname: `weekly-texts/${normalizeFileName(documentFile.name)}`,
         file: documentFile,
+        contentType: validatedFile.contentType,
       }] : []),
       ...validatedImages.files.map((file, index) => ({
         pathname: `weekly-texts/images/${id}-${index}-${normalizeFileName(file.name)}`,
         file,
+        contentType: validatedImages.contentTypes[index],
       })),
     ];
     const urls = await uploadBlobsForCreate(uploads, uploadedById);
@@ -366,7 +353,7 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
     }
 
     // 새 파일이 첨부된 경우에만 기존 파일을 교체
-    const validatedFile = getValidatedFile(formData.get("file"));
+    const validatedFile = await getValidatedFile(formData.get("file"));
     if ("error" in validatedFile) {
       return { success: false, error: validatedFile.error };
     }
@@ -381,7 +368,7 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
       const blob = await put(
         `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
         validatedFile.file,
-        { access: "public", addRandomSuffix: true },
+        { access: "public", addRandomSuffix: true, contentType: validatedFile.contentType },
       );
       uploadedNewBlobUrl = blob.url;
       fileUrl = blob.url;

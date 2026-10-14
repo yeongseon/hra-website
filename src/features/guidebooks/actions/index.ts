@@ -10,7 +10,7 @@
  *
  * 보안:
  *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
- *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일 확장자·시작 바이트·선언 MIME 검사 + 30MB 크기 제한
  *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
  */
 "use server";
@@ -24,6 +24,7 @@ import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
 import { recordOwnedBlob } from "@/lib/owned-blob";
+import { validateDocumentUpload } from "@/lib/upload-file-validation";
 
 export type GuidebookActionState = {
   success: boolean;
@@ -35,14 +36,6 @@ const guidebookIdSchema = z.uuid("유효하지 않은 가이드북 ID입니다."
 const guidebookFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
 });
-
-const allowedFileTypes = new Set([
-  "application/pdf",
-  "application/x-hwp",
-  "application/vnd.hancom.hwp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
 
 const maxFileSize = 30 * 1024 * 1024;
 
@@ -61,24 +54,23 @@ const normalizeFileName = (fileName: string) => {
   return sanitized || "guidebook";
 };
 
-const getValidatedFile = (value: FormDataEntryValue | null) => {
+const getValidatedFile = async (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
     return { error: "파일을 선택해주세요." } as const;
   }
 
-  if (!allowedFileTypes.has(value.type)) {
+  if (value.size > maxFileSize) {
+    return { error: "파일 크기는 30MB 이하여야 합니다." } as const;
+  }
+
+  const contentType = await validateDocumentUpload(value);
+  if (!contentType) {
     return {
       error: "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다.",
     } as const;
   }
 
-  if (value.size > maxFileSize) {
-    return {
-      error: "파일 크기는 30MB 이하여야 합니다.",
-    } as const;
-  }
-
-  return { file: value } as const;
+  return { file: value, contentType } as const;
 };
 
 const revalidateGuidebookPaths = () => {
@@ -100,7 +92,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     };
   }
 
-  const validatedFile = getValidatedFile(formData.get("file"));
+  const validatedFile = await getValidatedFile(formData.get("file"));
   if ("error" in validatedFile) {
     return {
       success: false,
@@ -118,6 +110,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
       access: "public",
       // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
       addRandomSuffix: true,
+      contentType: validatedFile.contentType,
     });
     await recordOwnedBlob(blob.url, session.user.id);
 
@@ -178,7 +171,7 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     if (hasNewFile) {
       // 새 파일 검증 및 업로드 후 DB 참조를 교체합니다. 이전 파일은 소유권이
       // 확인되지 않아 즉시 삭제하지 않습니다 (#93).
-      const validatedFile = getValidatedFile(fileEntry);
+      const validatedFile = await getValidatedFile(fileEntry);
       if ("error" in validatedFile) {
         return { success: false, error: validatedFile.error };
       }
@@ -191,6 +184,7 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
       const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
         access: "public",
         addRandomSuffix: true,
+        contentType: validatedFile.contentType,
       });
       await recordOwnedBlob(blob.url, session.user.id);
 
