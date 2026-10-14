@@ -249,7 +249,7 @@ className="text-sm md:text-lg"
 터미널에 아래 명령어를 입력하세요. `이메일`과 `비밀번호`는 본인이 사용할 것으로 바꿔주세요.
 
 ```bash
-ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin
+ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin -- --confirm-create
 ```
 
 그 다음 사이트 로그인 페이지에서 해당 이메일과 비밀번호로 로그인하면 돼요!
@@ -289,7 +289,7 @@ UPDATE users SET role = 'ADMIN' WHERE email = '내이메일@example.com';
 
 **Q: 다른 사람도 관리자로 만들 수 있나요?**
 → 네! 세 가지 방법이 있어요:
-1. **가장 쉬운 방법**: 위의 `seed-admin` 스크립트를 한 번 더 실행하기
+1. **스크립트**: 기존 계정 이메일을 지정하고 `npm run seed-admin -- --confirm-promote=대상이메일` 실행하기 (비밀번호도 교체됨)
 2. **관리자 페이지**: 회원 관리 메뉴에서 원하는 사람 옆의 "관리자로 변경" 버튼 클릭!
 3. **SQL 명령어**: 아직 관리자가 아무도 없을 때 직접 지정하기
 
@@ -336,7 +336,7 @@ UPDATE users SET role = 'ADMIN' WHERE email = '내이메일@example.com';
 | 2 | (선택) 카카오 로그인 키 만들기 | [Kakao Developers](https://developers.kakao.com/) — 소셜 로그인을 쓸 때만 필요해요 |
 | 3 | Vercel에 비밀 설정값 등록하기 | Vercel 사이트 → Settings → Environment Variables |
 | 4 | Vercel에서 사이트 다시 배포하기 | Vercel 사이트 → Deployments → 점 세 개(···) → Redeploy |
-| 5 | 첫 관리자 계정 만들기 | `npm run seed-admin` 스크립트를 사용하세요 |
+| 5 | 첫 관리자 계정 만들기 | `npm run seed-admin -- --confirm-create` 스크립트를 사용하세요 |
 | 6 | DB에 테이블 만들기 | 터미널에서 `npx drizzle-kit push` 입력 |
 | 7 | 첫 기수 만들기 | 관리자 페이지 → 기수 관리 |
 | 8 | 첫 공지사항 쓰기 | 관리자 페이지 → 공지사항 |

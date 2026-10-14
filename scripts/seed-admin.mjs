@@ -5,7 +5,8 @@
  * bcrypt로 비밀번호를 해싱하여 안전하게 저장합니다.
  *
  * 사용법:
- *   npm run seed-admin
+ *   npm run seed-admin -- --confirm-create
+ *   npm run seed-admin -- --confirm-promote=기존계정이메일
  *
  * 환경변수:
  *   DATABASE_URL - Neon Postgres 연결 문자열 (필수)
@@ -27,6 +28,13 @@ if (!DATABASE_URL) {
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@hra.ac.kr";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_NAME = process.env.ADMIN_NAME || "관리자";
+const args = new Set(process.argv.slice(2));
+
+// 확인 인자 없이 실행하면 DB 조회 전 중단해 잘못된 대상 연결도 피합니다.
+if (!args.has("--confirm-create") && !args.has(`--confirm-promote=${ADMIN_EMAIL}`)) {
+  console.error("❌ --confirm-create 또는 --confirm-promote=대상이메일 인자가 필요합니다.");
+  process.exit(1);
+}
 
 if (!ADMIN_PASSWORD) {
   console.error("❌ ADMIN_PASSWORD 환경변수가 설정되지 않았습니다.");
@@ -45,7 +53,7 @@ async function seedAdmin() {
   console.log(`   이름: ${ADMIN_NAME}`);
 
   // 기존 사용자 확인
-  const existing = await sql`SELECT id, role FROM users WHERE email = ${ADMIN_EMAIL}`;
+  const existing = await sql`SELECT id, role, session_version FROM users WHERE email = ${ADMIN_EMAIL}`;
 
   if (existing.length > 0) {
     if (existing[0].role === "ADMIN") {
@@ -54,18 +62,33 @@ async function seedAdmin() {
       process.exit(0);
     }
 
-    // 기존 MEMBER를 ADMIN으로 승격 + 비밀번호 설정
+    // 기존 계정 승격은 대상 이메일을 명시한 확인 인자가 있을 때만 허용합니다.
+    if (!args.has(`--confirm-promote=${ADMIN_EMAIL}`)) {
+      throw new Error(`기존 ${existing[0].role} 계정의 승격이 중단되었습니다. --confirm-promote=${ADMIN_EMAIL} 인자가 필요합니다.`);
+    }
+
+    // 역할·세션 버전을 함께 확인해 조회 후 다른 변경이 있으면 덮어쓰지 않습니다.
     const passwordHash = await hash(ADMIN_PASSWORD, 12);
-    await sql`
+    const promoted = await sql`
       UPDATE users
-      SET role = 'ADMIN', password_hash = ${passwordHash}, updated_at = NOW()
-      WHERE email = ${ADMIN_EMAIL}
+      SET role = 'ADMIN', password_hash = ${passwordHash},
+          session_version = session_version + 1, updated_at = NOW()
+      WHERE id = ${existing[0].id}
+        AND role = ${existing[0].role}
+        AND session_version = ${existing[0].session_version}
+      RETURNING id
     `;
+    if (promoted.length !== 1) {
+      throw new Error("계정 정보가 변경되어 승격을 중단했습니다. 다시 조회한 뒤 확인해 주세요.");
+    }
     console.log(`\n✅ 기존 계정을 관리자로 승격했습니다.`);
     process.exit(0);
   }
 
-  // 새 관리자 생성
+  // 새 관리자 생성도 명시적인 확인 인자가 있어야 실행합니다.
+  if (!args.has("--confirm-create")) {
+    throw new Error("새 관리자 계정 생성을 중단했습니다. --confirm-create 인자가 필요합니다.");
+  }
   const passwordHash = await hash(ADMIN_PASSWORD, 12);
   await sql`
     INSERT INTO users (name, email, password_hash, role, created_at, updated_at)
