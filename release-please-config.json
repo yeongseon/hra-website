@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "b6b5f7d1608d14e0f647b0929211ceec5db855b2",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore(release): release ${version}",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "changelog-path": "CHANGELOG.md",
+      "pull-request-title-pattern": "chore(release): release ${version}",
+      "changelog-sections": [
+        { "type": "feat", "section": "새 기능" },
+        { "type": "fix", "section": "버그 수정" },
+        { "type": "perf", "section": "성능 개선" },
+        { "type": "revert", "section": "되돌림" },
+        { "type": "docs", "section": "문서", "hidden": true },
+        { "type": "style", "section": "스타일", "hidden": true },
+        { "type": "refactor", "section": "리팩터링", "hidden": true },
+        { "type": "test", "section": "테스트", "hidden": true },
+        { "type": "build", "section": "빌드", "hidden": true },
+        { "type": "ci", "section": "자동화", "hidden": true },
+        { "type": "chore", "section": "유지보수", "hidden": true }
+      ]
+    }
+  }
+}
