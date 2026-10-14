@@ -34,6 +34,7 @@ import {
   resolveJwtSession,
 } from "@/lib/auth-session";
 import { createDrizzleSignInIO, handleOAuthSignIn } from "@/lib/auth-signin";
+import { findCredentialUser } from "@/lib/auth-credentials";
 import { releaseSuccessfulLogin, reserveLoginAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 
@@ -124,9 +125,7 @@ providers.push(
       const ip = extractClientIp(request.headers);
       const reservation = await reserveLoginAttempt(ip, credentials.email);
 
-      const user = await db.query.users.findFirst({
-        where: eq(users.email, credentials.email),
-      });
+      const user = await findCredentialUser(credentials.email);
 
       // Timing attack 방어 (#71): 이메일 존재 여부와 무관하게 항상 bcrypt.compare 를 실행하여
       // 응답 시간 차이로 이메일 enumeration 이 되지 않도록 한다.
@@ -193,6 +192,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    // OAuth 실패도 한국어 오류 안내를 제공하는 공개 로그인 화면으로 보냅니다.
+    error: "/login",
   },
   providers,
   callbacks: {

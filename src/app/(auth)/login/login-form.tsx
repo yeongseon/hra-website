@@ -12,6 +12,15 @@ interface LoginFormProps {
   };
 }
 
+/** Auth.js 오류 코드만 사용자에게 보여줄 한국어 안내로 변환합니다. */
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  OAuthAccountNotLinked:
+    "이 소셜 계정으로는 로그인할 수 없습니다. 기존에 사용하던 로그인 방법을 이용하거나 관리자에게 문의해 주세요.",
+  AccessDenied: "로그인이 허용되지 않았습니다. 다시 시도하거나 관리자에게 문의해 주세요.",
+  Configuration: "로그인 설정에 문제가 있습니다. 관리자에게 문의해 주세요.",
+  Verification: "로그인 링크가 만료되었거나 이미 사용되었습니다. 다시 시도해 주세요.",
+};
+
 /**
  * 일반 사용자 로그인 폼 — 소셜 로그인(카카오/구글)만 제공
  * 관리자 로그인은 /admin/login 에서 별도로 처리
@@ -26,6 +35,9 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
   // 로컬 계정 차단 / 다른 provider 매칭 실패 두 경우 모두 같은 코드로 통합해 문구를 일반화한다
   // (email enumeration 완화).
   const authError = searchParams.get("error");
+  const authErrorMessage = authError
+    ? LOGIN_ERROR_MESSAGES[authError] ?? "로그인 중 오류가 발생했습니다. 다시 시도해 주세요."
+    : null;
 
   const handleSocialLogin = async (provider: "google" | "kakao") => {
     setIsLoading(provider);
@@ -38,6 +50,7 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
     return (
       <Card className="border-slate-700 bg-slate-900">
         <CardContent className="p-8 text-center text-slate-400">
+          {authErrorMessage && <p role="alert" className="mb-3 text-amber-100">{authErrorMessage}</p>}
           현재 소셜 로그인이 설정되어 있지 않습니다.
         </CardContent>
       </Card>
@@ -55,13 +68,12 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {authError === "OAuthAccountNotLinked" && (
+        {authErrorMessage && (
           <div
             role="alert"
             className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
           >
-            이 소셜 계정으로는 로그인할 수 없습니다. 기존에 사용하던 로그인 방법을
-            이용하거나 관리자에게 문의해 주세요.
+            {authErrorMessage}
           </div>
         )}
 
