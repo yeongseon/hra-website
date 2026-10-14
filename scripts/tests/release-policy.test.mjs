@@ -14,6 +14,7 @@ test("릴리스 workflow는 명시적으로 활성화하고 별도 토큰만 사
   const workflow = readFileSync(new URL("../../.github/workflows/release-please.yml", import.meta.url), "utf8");
   assert.match(workflow, /vars\.RELEASE_PLEASE_ENABLED == 'true'/);
   assert.match(workflow, /token: \$\{\{ secrets\.RELEASE_PLEASE_TOKEN \}\}/);
+  assert.match(workflow, /if \[ -z "\$RELEASE_PLEASE_TOKEN" \]; then/);
   assert.doesNotMatch(workflow, /github\.token/);
 });
 function releasePr() {

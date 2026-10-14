@@ -23,6 +23,14 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: 릴리스 토큰 확인
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_PLEASE_TOKEN" ]; then
+            echo '::error::RELEASE_PLEASE_TOKEN이 설정되지 않았습니다.'
+            exit 1
+          fi
       # v4.4.1 (2026-10-13 확인). 버전 태그가 아니라 검증한 commit을 고정한다.
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071
         with:
