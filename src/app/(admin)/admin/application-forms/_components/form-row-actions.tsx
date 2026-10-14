@@ -44,13 +44,17 @@ export function FormRowActions({ id, isPublished }: FormRowActionsProps) {
 
   const handleDelete = () => {
     startTransition(async () => {
-      const result = await deleteForm(id);
-      if (result.success) {
-        toast.success(result.message);
-        setIsDeleteOpen(false);
-        router.refresh();
-      } else {
-        toast.error(result.message);
+      try {
+        const result = await deleteForm(id);
+        if (result.success) {
+          toast.success(result.message);
+          setIsDeleteOpen(false);
+          router.refresh();
+        } else {
+          toast.error(result.message);
+        }
+      } catch {
+        toast.error("양식 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     });
   };
@@ -83,7 +87,7 @@ export function FormRowActions({ id, isPublished }: FormRowActionsProps) {
           <DialogHeader>
             <DialogTitle>지원서 양식을 삭제할까요?</DialogTitle>
             <DialogDescription>
-              이 양식과 관련된 모든 질문 및 제출된 지원서 데이터가 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              제출된 지원서가 있는 양식은 삭제할 수 없습니다. 제출이 없는 양식의 질문은 함께 삭제됩니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
