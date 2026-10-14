@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   logServerError: vi.fn(),
   reserveApplicationSubmission: vi.fn(),
   persisted: false,
+  submissionStatus: "PENDING" as "PENDING" | "ACCEPTED" | "REJECTED",
   form: {
     title: "지원서",
     isPublished: true,
@@ -59,7 +60,7 @@ vi.mock("@/lib/db", () => ({
         applicantEmail: "applicant@example.com",
         applicantPhone: "010-0000-0000",
         submittedAt: new Date("2026-10-14T00:00:00Z"),
-        status: "PENDING",
+        status: mocks.submissionStatus,
         answers: [{ questionId: "22222222-2222-4222-8222-222222222222", value: "지원 동기 내용" }],
       }] },
     },
@@ -105,6 +106,7 @@ describe("지원서 제출 배치 (#97)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.persisted = false;
+    mocks.submissionStatus = "PENDING";
     mocks.form.isPublished = true;
     mocks.form.questions = [{ ...defaultQuestion, options: [] }];
     mocks.batch.mockResolvedValue([]);
@@ -223,6 +225,18 @@ describe("지원서 제출 배치 (#97)", () => {
     if (result.success) {
       expect(result.data).toContain('"지원 동기"');
       expect(result.data).toContain('"지원 동기 내용"');
+      expect(result.data).toContain('"2026-10-14 09:00:00"');
+      expect(result.data).toContain('"검토중"');
     }
+  });
+
+  it.each([
+    ["ACCEPTED", "합격"],
+    ["REJECTED", "불합격"],
+  ] as const)("관리자 CSV의 %s 상태를 %s으로 내보낸다", async (status, label) => {
+    mocks.submissionStatus = status;
+    const result = await exportSubmissionsToCsv("11111111-1111-4111-8111-111111111111");
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toContain(`"${label}"`);
   });
 });

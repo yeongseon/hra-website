@@ -19,16 +19,12 @@ import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { classLogs, cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { toKstDateInput } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type ClassLogEditPageProps = {
   params: Promise<{ id: string }>;
-};
-
-// 날짜를 HTML input[type="date"] 형식으로 변환 (YYYY-MM-DD)
-const toDateInputValue = (value: Date) => {
-  return value.toISOString().slice(0, 10);
 };
 
 export default async function ClassLogEditPage({ params }: ClassLogEditPageProps) {
@@ -120,7 +116,7 @@ export default async function ClassLogEditPage({ params }: ClassLogEditPageProps
         defaultValues={{
           title: log.title,
           content: log.content,
-          classDate: toDateInputValue(log.classDate),
+          classDate: toKstDateInput(log.classDate),
           cohortId: log.cohortId,
         }}
         submitLabel="수정 저장"

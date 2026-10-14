@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { PrintView } from "./_print-view";
@@ -12,12 +13,6 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function ClassLogPrintPage({ params }: Props) {
   await requireSharedResourceReader();

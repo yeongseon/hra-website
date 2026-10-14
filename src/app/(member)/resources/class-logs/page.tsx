@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, Eye, Lock } from "lucide-react";
 import { asc, desc, eq } from "drizzle-orm";
@@ -17,12 +18,6 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const stripMarkdown = (value: string) =>
   value

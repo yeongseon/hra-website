@@ -10,6 +10,7 @@ import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { computeRecruitmentStatus, getStoredDateKey } from "@/features/recruitment/status";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
+import { formatKstDate } from "@/lib/date-time";
 import { ProcessSteps } from "./_components/process-steps";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +29,7 @@ const statusMap = {
 
 const formatDate = (value: Date | null) => {
   if (!value) return null;
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
+  return formatKstDate(value);
 };
 
 export default async function RecruitmentPage() {

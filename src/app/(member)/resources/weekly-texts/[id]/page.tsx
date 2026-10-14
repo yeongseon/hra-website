@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Download, Printer } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
@@ -20,12 +21,6 @@ type WeeklyTextViewerPageProps = {
   params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const getWeeklyText = async (id: string) => {
   const session = await auth();

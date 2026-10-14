@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
+import { formatKstDate } from "@/lib/date-time";
 import { parseListPage } from "@/lib/query-params";
 
 export const metadata: Metadata = {
@@ -15,13 +16,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function NoticesPage({
   searchParams,
@@ -118,7 +112,7 @@ export default async function NoticesPage({
                       관리자
                     </div>
                     <div className="w-auto sm:w-28 text-left sm:text-center shrink-0">
-                      {formatDate(notice.createdAt)}
+                      {formatKstDate(notice.createdAt)}
                     </div>
                     <div className="w-16 text-center shrink-0 hidden md:block">
                       {notice.viewCount}

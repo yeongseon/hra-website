@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import { asc, desc } from "drizzle-orm";
 import { ResourcesTabNav } from "@/app/(admin)/admin/resources/_components/resources-tab-nav";
 import { TemplateRowActions } from "@/app/(admin)/admin/resources/templates/_components/template-row-actions";
@@ -19,12 +20,6 @@ import { reportTemplates } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const categoryLabel = (category: "template" | "guide") =>
   category === "template" ? "양식" : "가이드";

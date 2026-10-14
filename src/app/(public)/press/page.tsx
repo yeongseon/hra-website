@@ -11,6 +11,7 @@ import { asc, count, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
 import { parseListPage } from "@/lib/query-params";
+import { formatKstDate } from "@/lib/date-time";
 import { PressLink } from "./_components/press-link";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +23,7 @@ export const metadata: Metadata = {
 
 // 게시판에 표시할 날짜 형식 (예: 2025.04.26)
 const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(value)
+  formatKstDate(value)
     .replace(/\.\s?$/, "")
     .replace(/\.\s/g, ".");
 

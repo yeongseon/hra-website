@@ -28,16 +28,13 @@ import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { formatKstDate } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 const formatDate = (value: Date | null) => {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
+  return formatKstDate(value);
 };
 
 

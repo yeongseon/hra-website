@@ -253,6 +253,8 @@ export async function createScheduleEvent(
 
   const { sessions, startTime, endTime, ...eventData } = result.data;
   const eventDate = buildEventDate(eventData.eventDate, startTime);
+  // timestamp(시간대 없음) 컬럼에는 KST 달력의 벽시계 값을 ISO 문자열로 통일해 전달한다.
+  const eventDateSql = eventDate.toISOString();
   const hasSessions = eventData.eventType === "CLASS" && sessions.length > 0;
 
   if (!hasSessions) {
@@ -285,7 +287,7 @@ export async function createScheduleEvent(
         INSERT INTO schedule_events (
           event_date, end_time, event_type, title, cohort_id, week_number, description, is_public
         ) VALUES (
-          ${eventDate},
+          ${eventDateSql}::timestamp,
           ${endTime ?? null},
           ${eventData.eventType}::schedule_event_type,
           ${eventData.title},
@@ -346,6 +348,7 @@ export async function updateScheduleEvent(
 
   const { sessions, startTime, endTime, ...eventData } = result.data;
   const eventDate = buildEventDate(eventData.eventDate, startTime);
+  const eventDateSql = eventDate.toISOString();
   const hasSessions = eventData.eventType === "CLASS" && sessions.length > 0;
 
   if (!hasSessions) {
@@ -354,7 +357,7 @@ export async function updateScheduleEvent(
     await db.execute(sql`
       WITH updated_event AS (
         UPDATE schedule_events SET
-          event_date = ${eventDate},
+          event_date = ${eventDateSql}::timestamp,
           end_time = ${endTime ?? null},
           event_type = ${eventData.eventType}::schedule_event_type,
           title = ${eventData.title},
@@ -387,7 +390,7 @@ export async function updateScheduleEvent(
     await db.execute(sql`
       WITH updated_event AS (
         UPDATE schedule_events SET
-          event_date = ${eventDate},
+          event_date = ${eventDateSql}::timestamp,
           end_time = ${endTime ?? null},
           event_type = ${eventData.eventType}::schedule_event_type,
           title = ${eventData.title},

@@ -17,6 +17,7 @@ import {
   rateLimitEvents,
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { formatKstCsvDateTime, toKstDateInput } from "@/lib/date-time";
 import { reserveApplicationSubmission } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 import { applicationInputLimits } from "@/features/applications/input-limits";
@@ -30,6 +31,13 @@ function sanitizeCsvCell(val: unknown): string {
 
   return `"${sanitizedValue.replace(/"/g, '""')}"`;
 }
+
+// 관리자 화면과 CSV에서 동일한 한국어 상태값을 사용합니다.
+const csvStatusLabels = {
+  PENDING: "검토중",
+  ACCEPTED: "합격",
+  REJECTED: "불합격",
+} as const;
 
 /**
  * Postgres unique 제약 위반(에러코드 23505) 감지 헬퍼.
@@ -352,8 +360,8 @@ export async function exportSubmissionsToCsv(formId: string) {
         sub.applicantName,
         sub.applicantEmail,
         sub.applicantPhone || "",
-        sub.submittedAt.toISOString(),
-        sub.status,
+        formatKstCsvDateTime(sub.submittedAt),
+        csvStatusLabels[sub.status],
       ];
 
       const questionAnswers = form.questions.map(q => {
@@ -380,7 +388,7 @@ export async function exportSubmissionsToCsv(formId: string) {
     // Excel에서 한글 깨짐 방지를 위한 BOM(Byte Order Mark) 추가
     return {
       success: true,
-      filename: `${form.title}_제출내역_${new Date().toISOString().split('T')[0]}.csv`,
+      filename: `${form.title}_제출내역_${toKstDateInput(new Date())}.csv`,
       data: "\ufeff" + csvContent,
     };
   } catch (error) {
