@@ -28,7 +28,7 @@ type Props = {
 };
 
 export default async function WeeklyTextEditPage({ params }: Props) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -111,6 +111,7 @@ export default async function WeeklyTextEditPage({ params }: Props) {
       </div>
       <WeeklyTextEditForm
         action={action}
+        userId={session.user.id}
         cohorts={cohortRows}
         defaultValues={{
           title: row.title,

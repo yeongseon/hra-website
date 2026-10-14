@@ -89,7 +89,7 @@ export default async function WeeklyTextsPage() {
 
       <section className="mb-10 sm:mb-12">
         {canUpload ? (
-          <MemberUploadForm action={createWeeklyTextAsMember} cohorts={cohortRows} userCohortId={userCohortId} />
+          <MemberUploadForm action={createWeeklyTextAsMember} cohorts={cohortRows} userCohortId={userCohortId} userId={session.user.id} />
         ) : (
           <Card className="rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">
             <CardHeader className="border-b border-[#D9D9D9] py-6">

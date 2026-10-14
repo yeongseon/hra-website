@@ -19,11 +19,13 @@ import { MarkdownEditor } from "@/components/admin/markdown-editor";
 import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { cn } from "@/lib/utils";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
 
 type MemberUploadFormProps = {
   action: (formData: FormData) => Promise<WeeklyTextActionState>;
   cohorts: Array<{ id: string; name: string }>;
   userCohortId?: string | null; // MEMBER일 때 기수 드롭다운 고정에 사용
+  userId: string;
 };
 
 const initialState: WeeklyTextActionState = {
@@ -42,7 +44,7 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
+export function MemberUploadForm({ action, cohorts, userCohortId, userId }: MemberUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const requestIdRef = useRef<string | null>(null);
@@ -77,7 +79,9 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
     async (_previous: WeeklyTextActionState, formData: FormData) => {
       requestIdRef.current ??= crypto.randomUUID();
       formData.set("requestId", requestIdRef.current);
-      const result = await action(formData);
+      const prepared = await prepareResourceUpload(formData, "weekly-texts", userId, false);
+      if ("error" in prepared) return { success: false, error: prepared.error };
+      const result = await action(prepared.formData);
       if (result.success) requestIdRef.current = null;
       return result;
     },

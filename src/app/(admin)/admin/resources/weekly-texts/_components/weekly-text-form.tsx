@@ -19,10 +19,13 @@ import { Textarea } from "@/components/ui/textarea";
 import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
 import { cn } from "@/lib/utils";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
+import { prepareWeeklyTextImages } from "@/lib/weekly-text-image-upload-client";
 
 type WeeklyTextFormProps = {
   action: (formData: FormData) => Promise<WeeklyTextActionState>;
   cohorts: Array<{ id: string; name: string }>;
+  userId: string;
 };
 
 const initialState: WeeklyTextActionState = {
@@ -41,7 +44,7 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
+export function WeeklyTextForm({ action, cohorts, userId }: WeeklyTextFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const requestIdRef = useRef<string | null>(null);
@@ -76,7 +79,11 @@ export function WeeklyTextForm({ action, cohorts }: WeeklyTextFormProps) {
     async (_previous: WeeklyTextActionState, formData: FormData) => {
       requestIdRef.current ??= crypto.randomUUID();
       formData.set("requestId", requestIdRef.current);
-      const result = await action(formData);
+      const prepared = await prepareResourceUpload(formData, "weekly-texts", userId, false);
+      if ("error" in prepared) return { success: false, error: prepared.error };
+      const images = await prepareWeeklyTextImages(prepared.formData, requestIdRef.current, userId);
+      if ("error" in images) return { success: false, error: images.error };
+      const result = await action(images.formData);
       if (result.success) requestIdRef.current = null;
       return result;
     },

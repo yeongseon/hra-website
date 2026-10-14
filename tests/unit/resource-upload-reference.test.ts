@@ -34,6 +34,15 @@ describe("직접 업로드 완료 검증", () => {
     expect(mocks.insertValues).toHaveBeenCalledWith({ url, uploadedById: userId });
   });
 
+  it("주차별 텍스트는 30MB까지 허용하고 30MB 초과는 거부한다", async () => {
+    const weeklyPath = resourceUploadPath("weekly-texts", userId, uploadId, fileName);
+    const weeklyUrl = `https://${projectBlobHost}/${weeklyPath}`;
+    mocks.head.mockResolvedValue({ url: weeklyUrl, pathname: weeklyPath, size: 30 * 1024 * 1024, contentType: "application/pdf" });
+    expect(await validateResourceUploadReference("weekly-texts", userId, weeklyUrl, fileName)).toEqual({ url: weeklyUrl, fileName });
+    mocks.head.mockResolvedValue({ url: weeklyUrl, pathname: weeklyPath, size: 30 * 1024 * 1024 + 1, contentType: "application/pdf" });
+    expect("error" in await validateResourceUploadReference("weekly-texts", userId, weeklyUrl, fileName)).toBe(true);
+  });
+
   it("위조 URL·다른 사용자 경로·초과 크기·MIME 불일치·잘못된 시작 바이트를 거부한다", async () => {
     expect("error" in await validateResourceUploadReference("class-materials", userId, "https://evil.example/file.pdf", fileName)).toBe(true);
     expect("error" in await validateResourceUploadReference("class-materials", uploadId, url, fileName)).toBe(true);

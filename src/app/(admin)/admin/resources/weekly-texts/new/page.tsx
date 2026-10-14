@@ -12,7 +12,7 @@ import { logServerError } from "@/lib/errors";
 export const dynamic = "force-dynamic";
 
 export default async function NewWeeklyTextPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   let cohortRows: Array<{ id: string; name: string }> = [];
 
@@ -36,7 +36,7 @@ export default async function NewWeeklyTextPage() {
 
       <ResourcesTabNav />
 
-      <WeeklyTextForm action={createWeeklyText} cohorts={cohortRows} />
+      <WeeklyTextForm action={createWeeklyText} cohorts={cohortRows} userId={session.user.id} />
     </section>
   );
 }
