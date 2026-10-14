@@ -38,9 +38,9 @@ export async function reorderByCase<T extends PgTable>(params: {
     return { affected: 0 };
   }
 
-  // CASE WHEN <id> THEN <value> 조각들 — 각 값은 파라미터로 바인딩됨
+  // CASE WHEN <id> THEN <value> 조각들 — 정수 값의 타입을 명시해 CASE 결과가 text로 해석되지 않게 함
   const cases = assignments.map(
-    (a) => sql`WHEN ${idColumn} = ${a.id}::uuid THEN ${a.value}`
+    (a) => sql`WHEN ${idColumn} = ${a.id}::uuid THEN ${a.value}::integer`
   );
   const ids = assignments.map((a) => a.id);
 
