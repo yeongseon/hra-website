@@ -16,6 +16,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/admin", () => ({ requireAdmin: async () => ({ user: { id: "22222222-2222-4222-8222-222222222222" } }) }));
 vi.mock("@/lib/errors", () => ({ logServerError: vi.fn() }));
+vi.mock("@/lib/db/submission-delete-guards", () => ({ hasSubmissionDeleteGuards: async () => true }));
 vi.mock("@/lib/db", () => ({
   db: {
     update: () => ({ set: () => ({ where: () => ({ returning: async () => [] }) }) }),

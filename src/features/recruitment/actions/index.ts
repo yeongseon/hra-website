@@ -14,9 +14,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
-import { cohorts } from "@/lib/db/schema";
+import { applicationForms, applicationSubmissions, cohorts, legacyApplications } from "@/lib/db/schema";
+import { isConstraintViolation } from "@/lib/db/constraint-errors";
+import { hasSubmissionDeleteGuards } from "@/lib/db/submission-delete-guards";
+import { logServerError } from "@/lib/errors";
+import { recordOwnedBlob } from "@/lib/owned-blob";
 
 
 /**
@@ -144,7 +147,7 @@ function normalizeFileName(fileName: string) {
   return sanitized || "cohort-image";
 }
 
-async function uploadCohortImage(fileEntry: FormDataEntryValue | null) {
+async function uploadCohortImage(fileEntry: FormDataEntryValue | null, uploadedById: string) {
   if (!(fileEntry instanceof File) || fileEntry.size === 0) {
     return { imageUrl: null, error: null } as const;
   }
@@ -163,6 +166,7 @@ async function uploadCohortImage(fileEntry: FormDataEntryValue | null) {
     access: "public",
     addRandomSuffix: true,
   });
+  await recordOwnedBlob(blob.url, uploadedById);
 
   return { imageUrl: blob.url, error: null } as const;
 }
@@ -180,7 +184,7 @@ async function uploadCohortImage(fileEntry: FormDataEntryValue | null) {
  * 반환값: { success, message, fieldErrors? } 형태의 상태 정보
  */
 export async function createCohort(formData: FormData): Promise<CohortActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = parseCohortFormData(formData);
   if (!parsed.success) {
@@ -192,7 +196,7 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
     };
   }
 
-  const uploadedImage = await uploadCohortImage(formData.get("image"));
+  const uploadedImage = await uploadCohortImage(formData.get("image"), session.user.id);
   if (uploadedImage.error) {
     return {
       success: false,
@@ -230,7 +234,7 @@ export async function createCohort(formData: FormData): Promise<CohortActionStat
  * 매개변수: id (기수의 고유 ID), formData (수정할 정보)
  */
 export async function updateCohort(id: string, formData: FormData): Promise<CohortActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) {
@@ -264,7 +268,7 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
   }
 
   const shouldRemoveImage = formData.get("removeImage") === "true";
-  const uploadedImage = await uploadCohortImage(formData.get("image"));
+  const uploadedImage = await uploadCohortImage(formData.get("image"), session.user.id);
   if (uploadedImage.error) {
     return {
       success: false,
@@ -275,18 +279,10 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
 
   let nextImageUrl = existingCohort.imageUrl;
 
-  let imageToDelete: string | null = null;
-
   if (uploadedImage.imageUrl) {
     nextImageUrl = uploadedImage.imageUrl;
-    if (existingCohort.imageUrl) {
-      imageToDelete = existingCohort.imageUrl;
-    }
   } else if (shouldRemoveImage) {
     nextImageUrl = null;
-    if (existingCohort.imageUrl) {
-      imageToDelete = existingCohort.imageUrl;
-    }
   }
 
   await db
@@ -303,9 +299,8 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
     })
     .where(eq(cohorts.id, parsedId.data));
 
-  if (imageToDelete) {
-    await deleteBlobIfExists(imageToDelete);
-  }
+  // 이전 이미지도 즉시 삭제하지 않습니다. 소유권 원장과 현재 공유 참조를 확인하는
+  // 유지보수 정리 작업에 맡겨 다른 콘텐츠가 같은 URL을 쓰는 경우를 보존합니다 (#88).
 
   revalidatePath("/admin/recruitment");
   revalidatePath("/cohorts");
@@ -313,29 +308,48 @@ export async function updateCohort(id: string, formData: FormData): Promise<Coho
   redirect("/admin/recruitment");
 }
 
-/**
- * 기수 삭제 서버 액션
- * 역할: 관리자가 기수를 데이터베이스에서 삭제할 때 호출되는 함수
- * 
- * 단계:
- * 1. 관리자 권한 확인
- * 2. 기수 ID 유효성 확인
- * 3. 데이터베이스에서 기수 삭제
- * 4. 페이지 새로고침
- * 
- * 매개변수: id (삭제할 기수의 고유 ID)
- */
-export async function deleteCohort(id: string) {
+/** 제출 데이터가 있는 기수의 삭제를 거절하고, 성공 시 등록된 이미지는 정리 원장에 남깁니다. */
+export async function deleteCohort(id: string): Promise<CohortActionState> {
   await requireAdmin();
 
-  const parsedId = z.uuid().safeParse(id);
+  const parsedId = z.uuid("잘못된 기수 ID입니다.").safeParse(id);
   if (!parsedId.success) {
-    return;
+    return { success: false, message: "잘못된 기수 ID입니다." };
   }
 
-  await db.delete(cohorts).where(eq(cohorts.id, parsedId.data));
-  revalidatePath("/admin/recruitment");
-  revalidatePath("/cohorts");
-  revalidatePath("/recruitment");
+  try {
+    if (!await hasSubmissionDeleteGuards()) {
+      return { success: false, message: "제출 보존 설정을 확인할 수 없어 기수를 삭제할 수 없습니다." };
+    }
+    // 사전 검사는 관리자 안내용입니다. 검사 직후 제출과의 경합은 RESTRICT FK가 최종 차단합니다.
+    const [legacy, submission] = await Promise.all([
+      db.select({ id: legacyApplications.id }).from(legacyApplications)
+        .where(eq(legacyApplications.cohortId, parsedId.data)).limit(1),
+      db.select({ id: applicationSubmissions.id }).from(applicationSubmissions)
+        .innerJoin(applicationForms, eq(applicationSubmissions.formId, applicationForms.id))
+        .where(eq(applicationForms.cohortId, parsedId.data)).limit(1),
+    ]);
+    if (legacy.length > 0 || submission.length > 0) {
+      return { success: false, message: "지원서가 연결된 기수는 삭제할 수 없습니다." };
+    }
+
+    const [deleted] = await db.delete(cohorts).where(eq(cohorts.id, parsedId.data))
+      .returning({ id: cohorts.id });
+    if (!deleted) return { success: false, message: "기수를 찾을 수 없습니다." };
+
+    // 업로드 소유권 원장의 파일은 공유 참조 검사와 쓰기 중단 조건을 갖춘 정리 작업에서만 삭제합니다.
+    // 기존 미등록 이미지의 소유권을 URL만 보고 추정하지 않습니다 (#88).
+    revalidatePath("/admin/recruitment");
+    revalidatePath("/cohorts");
+    revalidatePath("/recruitment");
+    return { success: true, message: "기수가 삭제되었습니다." };
+  } catch (error) {
+    if (isConstraintViolation(error, "23503", "applications_cohort_id_cohorts_id_fk") ||
+        isConstraintViolation(error, "23503", "application_submissions_form_id_application_forms_id_fk")) {
+      return { success: false, message: "지원서가 연결된 기수는 삭제할 수 없습니다." };
+    }
+    logServerError("recruitment/deleteCohort", error, { id: parsedId.data });
+    return { success: false, message: "연결된 데이터가 있거나 기수를 삭제할 수 없습니다. 다시 확인해주세요." };
+  }
 }
 

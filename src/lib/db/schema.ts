@@ -360,7 +360,7 @@ export const legacyApplications = pgTable("applications", {
   id: uuid("id").primaryKey().defaultRandom(), // 지원서 고유 ID (자동 생성)
   cohortId: uuid("cohort_id")
     .notNull()
-    .references(() => cohorts.id, { onDelete: "cascade" }), // 어느 기수에 지원했는지 (기수 삭제되면 지원서도 삭제됨)
+    .references(() => cohorts.id, { onDelete: "restrict" }), // 과거 지원서가 있으면 기수 삭제를 DB에서 차단합니다 (#193).
   applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름 (최대 100자)
   applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일 (최대 255자)
   applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 전화번호 (선택사항)
@@ -784,7 +784,7 @@ export const applicationSubmissions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     formId: uuid("form_id")
       .notNull()
-      .references(() => applicationForms.id, { onDelete: "cascade" }),
+      .references(() => applicationForms.id, { onDelete: "restrict" }), // 제출이 있는 양식 삭제를 DB에서 차단합니다 (#193).
     applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름
     applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일
     applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 연락처
