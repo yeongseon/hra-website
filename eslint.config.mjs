@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "site/**",
     ".playwright-mcp/**",
     "screenshots/**",
+    // Git에서 제외한 로컬 일회성 생성 스크립트는 전체 린트 대상에서도 제외합니다.
+    "update-curriculum.js",
   ]),
 ]);
 
