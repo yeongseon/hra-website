@@ -1,14 +1,5 @@
 /**
- * 자료실 서버 페이지가 DB 조회 전에 로그인·승인 역할을 확인한다 (#100).
- * 개별 기수 자료도 승인 회원에게 열려 있으므로 여기서는 기수로 제한하지 않는다.
+ * 기존 자료실 인가 이름을 공통 회원 인가 헬퍼에 연결합니다 (#100, #123).
+ * 자료실 페이지는 호출 이름을 유지하면서 동일한 승인 역할 정책을 사용합니다.
  */
-import { redirect } from "next/navigation";
-import { canReadSharedResource } from "@/features/resources/access";
-import { auth } from "@/lib/auth";
-
-export async function requireSharedResourceReader() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  if (!canReadSharedResource(session.user.role)) redirect("/pending");
-  return session;
-}
+export { requireMember as requireSharedResourceReader } from "@/lib/member";

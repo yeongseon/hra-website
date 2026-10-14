@@ -3,7 +3,7 @@
  * 소셜 로그인 내부 주소는 실제 연락처로 오인하지 않도록 표시하지 않는다.
  */
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireMember } from "@/lib/member";
 import { getDisplayEmail } from "@/lib/auth-email";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,15 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function MyPage() {
-  const session = await auth();
-
-  if (!session?.user) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center text-[#1a1a1a]">
-        <p>로그인이 필요합니다.</p>
-      </div>
-    );
-  }
+  const session = await requireMember();
 
   const { user } = session;
   const displayEmail = getDisplayEmail(user.email);

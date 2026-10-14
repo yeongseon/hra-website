@@ -12,6 +12,7 @@
 
 import { notFound } from "next/navigation";
 import { resolveTemplate } from "@/lib/markdown/resolve";
+import { requireMember } from "@/lib/member";
 import { PrintView } from "./_print-view";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export default async function MemberTemplatePrintPage({ params }: Props) {
+  await requireMember();
   const { slug } = await params;
   const template = await resolveTemplate(slug);
 

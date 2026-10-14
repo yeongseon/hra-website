@@ -19,7 +19,7 @@ import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
-import { auth } from "@/lib/auth";
+import { requireMember } from "@/lib/member";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +30,9 @@ type Props = {
 
 // 페이지와 메타데이터 모두 동일한 인가 경로를 통과합니다. 전역 캐시는 사용하지 않습니다.
 async function getVisibleMaterial(id: string) {
+  const session = await requireMember();
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) return null;
-  const session = await auth();
   if (!session?.user?.id) return null;
 
   const [material] = await db

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ClassMaterialUploadForm } from "@/app/(member)/resources/class-materials/_components/class-material-upload-form";
 import { createClassMaterial } from "@/features/class-materials/actions";
-import { auth } from "@/lib/auth";
+import { requireMember } from "@/lib/member";
 
 export const metadata: Metadata = {
   title: "강의 자료 업로드",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClassMaterialsUploadPage() {
-  const session = await auth();
+  const session = await requireMember();
   const role = session?.user?.role;
 
   if (role !== "ADMIN" && role !== "FACULTY") {
