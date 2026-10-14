@@ -149,6 +149,7 @@ export async function createClassMaterial(
     const safeFileName = normalizeFileName(validatedFile.file.name);
     const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, {
       access: "public",
+      addRandomSuffix: true,
     });
     uploadedBlobUrl = blob.url;
     await recordOwnedBlob(blob.url, session.user.id);
@@ -245,7 +246,7 @@ export async function updateClassMaterial(id: string, formData: FormData): Promi
       }
 
       const safeFileName = normalizeFileName(validatedFile.file.name);
-      const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, { access: "public" });
+      const blob = await put(`class-materials/${Date.now()}-${safeFileName}`, validatedFile.file, { access: "public", addRandomSuffix: true });
       await recordOwnedBlob(blob.url, session.user.id);
 
       const [updated] = await db

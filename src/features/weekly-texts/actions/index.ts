@@ -218,7 +218,6 @@ const createWeeklyTextRecord = async (formData: FormData, uploadedById: string):
       ...(documentFile ? [{
         pathname: `weekly-texts/${normalizeFileName(documentFile.name)}`,
         file: documentFile,
-        addRandomSuffix: true,
       }] : []),
       ...validatedImages.files.map((file, index) => ({
         pathname: `weekly-texts/images/${id}-${index}-${normalizeFileName(file.name)}`,
