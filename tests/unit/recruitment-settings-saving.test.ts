@@ -44,7 +44,7 @@ describe("모집 설정 저장", () => {
     let finishSave: ((value: { success: boolean; message: string }) => void) | undefined;
     mocks.updateRecruitmentInfo.mockReturnValue(new Promise((resolve) => { finishSave = resolve; }));
 
-    render(createElement(RecruitmentSettingsClient));
+    render(createElement(RecruitmentSettingsClient, { userId: "22222222-2222-4222-8222-222222222222" }));
     await waitFor(() => expect(mocks.getRecruitmentSettings).toHaveBeenCalled());
 
     const saveButton = screen.getAllByRole("button", { name: "저장" })[0];

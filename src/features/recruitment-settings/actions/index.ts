@@ -10,6 +10,7 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { prepareStoredPoster } from "@/lib/poster-upload-server";
 
 const maxPosterFileSize = 10 * 1024 * 1024;
 const posterInputModeSchema = z.enum(["url", "file"]);
@@ -114,10 +115,23 @@ function validatePosterFile(fileEntry: FormDataEntryValue | null) {
     };
   }
 
+  // 구형 서버 경유 요청은 플랫폼 본문 한도 아래로 제한합니다.
+  if (fileEntry.size > 3 * 1024 * 1024) {
+    return { success: false as const, message: "포스터를 다시 선택해 업로드해주세요.", fieldErrors: { posterFile: "포스터를 다시 선택해 업로드해주세요." } };
+  }
+
   return {
     success: true as const,
     file: fileEntry,
   };
+}
+
+/** 브라우저가 전달한 포스터 URL은 저장 전에 Blob 실물과 소유자를 다시 검증합니다. */
+async function getDirectPosterUrl(formData: FormData, userId: string): Promise<string | null> {
+  const value = formData.get("uploadedPosterUrl");
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length > 2_000) throw new Error("업로드한 포스터 정보가 올바르지 않습니다.");
+  return prepareStoredPoster(value, userId);
 }
 
 async function uploadPosterFile(file: File) {
@@ -174,7 +188,7 @@ export async function getRecruitmentSettings() {
 export async function updateRecruitmentSettings(
   formData: FormData
 ): Promise<RecruitmentSettingsActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = recruitmentSettingsSchema.safeParse({
     posterInputMode: normalizeText(formData.get("posterInputMode")),
@@ -217,17 +231,22 @@ export async function updateRecruitmentSettings(
     .limit(1);
 
   let nextPosterImageUrl: string | null = existingSettings?.posterImageUrl ?? null;
-  // 이 요청에서 새로 업로드된 Blob URL 을 추적한다.
-  // DB write 가 실패했을 때 새 Blob 은 아무 곳에서도 참조되지 않으므로 되지워 orphan 을 방지한다.
+  // 구형 서버 업로드만 즉시 정리합니다. 직접 업로드와 변환 결과는 소유권 원장에
+  // 남겨 DB 커밋 후 응답이 유실된 경우에도 참조 중인 Blob을 보존합니다.
   let newlyUploadedBlobUrl: string | null = null;
 
   if (removePoster) {
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
-    if (validatedPosterFile.file) {
+    if (formData.has("uploadedPosterUrl") || validatedPosterFile.file) {
       // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
       try {
-        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+        if (formData.has("uploadedPosterUrl")) {
+          nextPosterImageUrl = await getDirectPosterUrl(formData, session.user.id);
+        } else if (validatedPosterFile.file) {
+          newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+          nextPosterImageUrl = newlyUploadedBlobUrl;
+        }
       } catch (error) {
         logServerError("recruitment-settings/poster-upload", error);
         return {
@@ -236,7 +255,6 @@ export async function updateRecruitmentSettings(
           fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
         };
       }
-      nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
     nextPosterImageUrl = parsed.data.posterImageUrl ?? null;
@@ -354,7 +372,7 @@ export async function updateRecruitmentInfo(
 export async function updateRecruitmentPoster(
   formData: FormData
 ): Promise<RecruitmentSettingsActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const posterSchema = z.object({
     posterInputMode: posterInputModeSchema,
@@ -395,16 +413,22 @@ export async function updateRecruitmentPoster(
     .limit(1);
 
   let nextPosterImageUrl: string | null = existing?.posterImageUrl ?? null;
-  // 이 요청에서 새로 업로드된 Blob URL 을 추적한다 (DB write 실패 시 되지워 orphan 을 방지).
+  // 직접 업로드 결과는 소유권 원장에서 미참조 여부를 확인한 뒤 정리합니다.
+  // 구형 서버 업로드만 DB 실패 시 즉시 정리합니다.
   let newlyUploadedBlobUrl: string | null = null;
 
   if (removePoster) {
     nextPosterImageUrl = null;
   } else if (parsed.data.posterInputMode === "file") {
-    if (validatedPosterFile.file) {
+    if (formData.has("uploadedPosterUrl") || validatedPosterFile.file) {
       // 업로드 실패는 예외로 흘려보내지 않고 폼 메시지로 돌려준다 (그렇지 않으면 오류 화면으로 넘어간다).
       try {
-        newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+        if (formData.has("uploadedPosterUrl")) {
+          nextPosterImageUrl = await getDirectPosterUrl(formData, session.user.id);
+        } else if (validatedPosterFile.file) {
+          newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
+          nextPosterImageUrl = newlyUploadedBlobUrl;
+        }
       } catch (error) {
         logServerError("recruitment-settings/poster-upload", error);
         return {
@@ -413,7 +437,6 @@ export async function updateRecruitmentPoster(
           fieldErrors: { posterFile: "포스터 업로드에 실패했습니다." },
         };
       }
-      nextPosterImageUrl = newlyUploadedBlobUrl;
     }
   } else {
     nextPosterImageUrl = parsed.data.posterImageUrl ?? null;

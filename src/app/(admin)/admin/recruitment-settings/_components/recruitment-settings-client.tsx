@@ -30,6 +30,7 @@ import {
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
 import { computeRecruitmentStatus } from "@/features/recruitment/status";
+import { preparePosterUpload } from "@/lib/poster-upload-client";
 
 // 모집 안내 기본 템플릿 (마크다운). "기본 템플릿 적용" 버튼에서 사용합니다.
 const DEFAULT_MARKDOWN_TEMPLATE = `## 지원 자격
@@ -110,7 +111,7 @@ function SectionMessage({ state }: { state: RecruitmentSettingsActionState | nul
   );
 }
 
-export function RecruitmentSettingsClient() {
+export function RecruitmentSettingsClient({ userId }: { userId: string }) {
   const [formValues, setFormValues] = useState<FormValues>(emptyFormValues);
   const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);
   const [currentPosterImageUrl, setCurrentPosterImageUrl] = useState<string>("");
@@ -224,7 +225,12 @@ export function RecruitmentSettingsClient() {
     if (fileInputRef.current?.files?.[0]) {
       fd.set("posterFile", fileInputRef.current.files[0]);
     }
-    const result = await updateRecruitmentPoster(fd);
+    const prepared = await preparePosterUpload(fd, userId);
+    if ("error" in prepared) {
+      setPosterMessage({ success: false, message: prepared.error, fieldErrors: { posterFile: prepared.error } });
+      return;
+    }
+    const result = await updateRecruitmentPoster(prepared.formData);
     setPosterMessage(result);
     if (result.success) {
       const settings = await getRecruitmentSettings();
