@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@neondatabase/serverless", () => ({ neon: mocks.neon }));
-vi.mock("@vercel/blob", () => ({ del: mocks.del }));
+vi.mock("@vercel/blob", () => ({ del: mocks.del, BlobNotFoundError: class BlobNotFoundError extends Error {} }));
 
 const originalArgv = process.argv;
 const originalEnv = {
@@ -89,5 +89,19 @@ describe("본문 이미지 정리 명령", () => {
 
     expect(mocks.query).toHaveBeenCalledTimes(2);
     expect(process.exitCode).toBe(1);
+  });
+
+  it("업로드되지 않은 예약 URL도 정리 완료로 표시한다", async () => {
+    const { BlobNotFoundError } = await import("@vercel/blob");
+    mocks.query
+      .mockResolvedValueOnce([{ id, url }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mocks.del.mockRejectedValueOnce(new BlobNotFoundError());
+
+    await runCleanup();
+
+    expect(mocks.query).toHaveBeenCalledTimes(3);
+    expect(process.exitCode).not.toBe(1);
   });
 });

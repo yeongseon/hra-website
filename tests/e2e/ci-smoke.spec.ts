@@ -13,7 +13,8 @@ test("로그인 화면이 정상 응답한다", async ({ page }) => {
 test("OAuth 설정 오류를 한국어로 안내한다", async ({ page }) => {
   await page.goto("/api/auth/error?error=Configuration");
   await expect(page).toHaveURL(/\/login\?error=Configuration/);
-  await expect(page.getByRole("alert")).toContainText("로그인 설정에 문제가 있습니다");
+  await expect(page.getByRole("alert").filter({ hasText: "로그인 설정에 문제가 있습니다" }))
+    .toContainText("로그인 설정에 문제가 있습니다");
 });
 
 test("관리자 로그인 화면이 정상 응답한다", async ({ page }) => {

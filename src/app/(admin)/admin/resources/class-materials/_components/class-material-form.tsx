@@ -15,9 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ClassMaterialActionState } from "@/features/class-materials/actions";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
 
 type ClassMaterialFormProps = {
   action: (formData: FormData) => Promise<ClassMaterialActionState>;
+  userId: string;
   /** 수정 모드일 때 기존 값으로 폼 초기화 */
   defaultValues?: {
     title: string;
@@ -48,12 +50,15 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ].join(",");
 
-export function ClassMaterialForm({ action, defaultValues }: ClassMaterialFormProps) {
+export function ClassMaterialForm({ action, defaultValues, userId }: ClassMaterialFormProps) {
   const isEdit = Boolean(defaultValues);
   const router = useRouter();
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: ClassMaterialActionState, formData: FormData) => action(formData),
+    async (_previous: ClassMaterialActionState, formData: FormData) => {
+      const prepared = await prepareResourceUpload(formData, "class-materials", userId, !isEdit);
+      return "error" in prepared ? { success: false, error: prepared.error } : action(prepared.formData);
+    },
     initialState,
   );
 

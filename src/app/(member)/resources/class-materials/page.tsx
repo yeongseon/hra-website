@@ -42,7 +42,7 @@ export default async function ClassMaterialsUploadPage() {
         </p>
       </section>
 
-      <ClassMaterialUploadForm action={createClassMaterial} />
+      <ClassMaterialUploadForm action={createClassMaterial} userId={session.user.id} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   logServerError: vi.fn(),
   redirect: vi.fn(),
   recordOwnedBlob: vi.fn(),
+  validateResourceUploadReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -33,6 +34,7 @@ vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError, redactBlo
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
+vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
 vi.mock("@/lib/db", () => ({
   db: {
     query: {
@@ -74,7 +76,8 @@ function facultyForm() {
 function fileForm(kind: "guidebook" | "classMaterial") {
   const formData = new FormData();
   formData.set("title", "새 자료");
-  formData.set("file", new File(["%PDF-1.7"], "new.pdf", { type: "application/pdf" }));
+  formData.set("uploadedFileUrl", newUrl);
+  formData.set("uploadedFileName", "new.pdf");
   if (kind === "classMaterial") {
     formData.set("weekNumber", "");
     formData.set("lectureTitle", "");
@@ -100,6 +103,7 @@ describe("기존 Blob 보존", () => {
     mocks.selectWhere.mockResolvedValue([{ imageUrl: oldUrl }]);
     mocks.put.mockResolvedValue({ url: newUrl });
     mocks.recordOwnedBlob.mockResolvedValue(undefined);
+    mocks.validateResourceUploadReference.mockResolvedValue({ url: newUrl, fileName: "new.pdf" });
     mocks.updateReturning.mockResolvedValue([{ id }]);
     mocks.insertValues.mockResolvedValue(undefined);
     mocks.updateWhere.mockImplementation(() =>
@@ -176,7 +180,7 @@ describe("기존 Blob 보존", () => {
 
     expect(guidebook.success).toBe(false);
     expect(classMaterial.success).toBe(false);
-    expect(mocks.recordOwnedBlob).toHaveBeenCalledTimes(2);
+    expect(mocks.validateResourceUploadReference).toHaveBeenCalledTimes(2);
     expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
   });
 
