@@ -3,7 +3,7 @@
  */
 "use server";
 
-import { and, count, eq, gte, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod/v4";
@@ -14,9 +14,10 @@ import {
   applicationForms,
   applicationSubmissions,
   applicationAnswers,
+  rateLimitEvents,
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import { checkApplicationSubmissionHourlyLimit } from "@/lib/rate-limit";
+import { reserveApplicationSubmission } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 import { applicationInputLimits } from "@/features/applications/input-limits";
 
@@ -129,34 +130,8 @@ export async function submitApplicationForm(
   const { applicantName, applicantEmail, applicantPhone } = basicInfo.data;
 
   try {
-    // IP 기반 rate limit — 두 층 병행 (#69):
-    //   (a) 24시간 10회 (총량): 장기 abuse 방어. 인라인 카운트 유지.
-    //   (b) 시간당 5회 (스퍼트): 봇의 짧은 시간창 폭주 방어. 헬퍼로 분리.
-    // 카운트-후-삽입 사이에는 짧은 TOCTOU 창이 있으나,
-    // 동일 (form_id, email) 중복은 아래 unique 제약이 원자적으로 차단하므로
-    // 실 익스플로잇 영향은 제한적. 더 엄격한 제한이 필요하면 Upstash Ratelimit 도입.
     const hdrs = await headers();
     const ip = extractClientIp(hdrs);
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const [ipSubmissionCount] = await db
-      .select({ c: count() })
-      .from(applicationSubmissionsLog)
-      .where(
-        and(
-          eq(applicationSubmissionsLog.ip, ip),
-          gte(applicationSubmissionsLog.createdAt, since)
-        )
-      );
-
-    if ((ipSubmissionCount?.c ?? 0) >= 10) {
-      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
-    }
-
-    const hourly = await checkApplicationSubmissionHourlyLimit(ip);
-    if (hourly.blocked) {
-      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
-    }
 
     // 1. 양식 및 질문 정보 조회
     const form = await db.query.applicationForms.findFirst({
@@ -249,6 +224,12 @@ export async function submitApplicationForm(
       }
     }
 
+    // 검증된 요청만 IP·이메일 제한 축을 원자적으로 예약합니다.
+    const reservation = await reserveApplicationSubmission(ip, applicantEmail);
+    if (reservation.blocked || !reservation.reservationId) {
+      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
+    }
+
     // 3. 읽은 질문 버전을 양식 행 잠금과 함께 확인한 뒤 마스터·답변을 원자적 배치에 넣는다.
     //    저장 중 변경된 질문의 옛 답변은 거부하고, UNIQUE는 동시 중복 제출을 차단한다.
     const submissionId = crypto.randomUUID();
@@ -266,6 +247,10 @@ export async function submitApplicationForm(
         applicantEmail,
         applicantPhone,
       });
+      // 예약을 지원서와 연결해 관리자 삭제 시 제한 로그도 FK 연쇄 삭제합니다.
+      const attachReservation = db.update(rateLimitEvents)
+        .set({ submissionId })
+        .where(eq(rateLimitEvents.reservationId, reservation.reservationId));
       if (answers.length > 0) {
         await db.batch([
           verifyRevision,
@@ -275,9 +260,10 @@ export async function submitApplicationForm(
             questionId: answer.questionId,
             value: answer.value,
           }))),
+          attachReservation,
         ]);
       } else {
-        await db.batch([verifyRevision, insertSubmission]);
+        await db.batch([verifyRevision, insertSubmission, attachReservation]);
       }
     } catch (error) {
       if (isFormRevisionError(error)) {
@@ -305,17 +291,6 @@ export async function submitApplicationForm(
         logServerError("application-submission/verify-commit", verificationError, { submissionId, formId: validFormId });
         return { success: false, message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
       }
-    }
-
-    // 4. rate limit 카운트용 로그 적재.
-    //    실패해도 제출 자체는 성공 처리합니다(다음 요청의 카운트가 1만큼 적게 잡힐 뿐).
-    try {
-      await db.insert(applicationSubmissionsLog).values({
-        ip,
-        email: applicantEmail,
-      });
-    } catch (error) {
-      logServerError("application-submission/insert-log", error);
     }
 
     revalidatePath(`/admin/application-forms/${validFormId}/submissions`);
@@ -452,12 +427,14 @@ export async function deleteApplicationSubmission(
   }
 
   // 존재 검증 + 성공 후 재검증할 목록 경로용 formId 확보.
-  // PII 컬럼(이름/이메일)은 로그 정책상 조회하지 않습니다.
+  // 과거 제한 로그에는 지원서 FK가 없으므로 이메일로 찾아 함께 삭제합니다.
+  // 이메일 값은 메모리의 삭제 조건에만 사용하고 감사 로그에는 남기지 않습니다.
   const target = await db.query.applicationSubmissions.findFirst({
     where: eq(applicationSubmissions.id, parsedId.data),
     columns: {
       id: true,
       formId: true,
+      applicantEmail: true,
     },
   });
 
@@ -467,10 +444,13 @@ export async function deleteApplicationSubmission(
 
   try {
     // returning 으로 실제 삭제된 행 확인 → 동시 삭제 시 감사 로그 왜곡 방지
-    const deleted = await db
-      .delete(applicationSubmissions)
-      .where(eq(applicationSubmissions.id, parsedId.data))
-      .returning({ id: applicationSubmissions.id });
+    const [, deleted] = await db.batch([
+      db.delete(applicationSubmissionsLog)
+        .where(eq(applicationSubmissionsLog.email, target.applicantEmail)),
+      db.delete(applicationSubmissions)
+        .where(eq(applicationSubmissions.id, parsedId.data))
+        .returning({ id: applicationSubmissions.id }),
+    ]);
 
     if (deleted.length === 0) {
       // 다른 세션이 이미 지운 경우 — 이 트랜잭션은 삭제자가 아니므로 감사 로그를 남기지 않는다

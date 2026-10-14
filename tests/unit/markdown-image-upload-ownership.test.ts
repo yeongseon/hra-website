@@ -12,8 +12,7 @@ const mocks = vi.hoisted(() => ({
   values: vi.fn(),
   deleteBlobIfExists: vi.fn(),
   logServerError: vi.fn(),
-  checkUploadRateLimit: vi.fn(),
-  recordUploadAttempt: vi.fn(),
+  reserveUploadAttempt: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
@@ -22,8 +21,7 @@ vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExist
 vi.mock("@/lib/db", () => ({ db: { insert: () => ({ values: mocks.values }) } }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("@/lib/rate-limit", () => ({
-  checkUploadRateLimit: mocks.checkUploadRateLimit,
-  recordUploadAttempt: mocks.recordUploadAttempt,
+  reserveUploadAttempt: mocks.reserveUploadAttempt,
 }));
 vi.mock("@/lib/rate-limit-core", () => ({ extractClientIp: () => "127.0.0.1" }));
 
@@ -48,8 +46,7 @@ describe("본문 이미지 업로드 소유권", () => {
     mocks.auth.mockResolvedValue({ user: { id: userId, role: "ADMIN" } });
     mocks.put.mockResolvedValue({ url: blobUrl });
     mocks.values.mockResolvedValue(undefined);
-    mocks.checkUploadRateLimit.mockResolvedValue({ blocked: false, retryAfterSec: 0 });
-    mocks.recordUploadAttempt.mockResolvedValue(undefined);
+    mocks.reserveUploadAttempt.mockResolvedValue({ blocked: false, retryAfterSec: 0, reservationId: "test" });
     mocks.deleteBlobIfExists.mockResolvedValue(undefined);
   });
 

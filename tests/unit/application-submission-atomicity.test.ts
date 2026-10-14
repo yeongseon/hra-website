@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   insertValues: vi.fn(),
   revalidatePath: vi.fn(),
   logServerError: vi.fn(),
+  reserveApplicationSubmission: vi.fn(),
   persisted: false,
   form: {
     title: "지원서",
@@ -46,7 +47,7 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/admin", () => ({ requireAdmin: vi.fn() }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("@/lib/rate-limit", () => ({
-  checkApplicationSubmissionHourlyLimit: async () => ({ blocked: false }),
+  reserveApplicationSubmission: mocks.reserveApplicationSubmission,
 }));
 vi.mock("@/lib/rate-limit-core", () => ({ extractClientIp: () => "127.0.0.1" }));
 vi.mock("@/lib/db", () => ({
@@ -80,6 +81,9 @@ vi.mock("@/lib/db", () => ({
         };
       },
     }),
+    update: (table: unknown) => ({
+      set: (values: unknown) => ({ where: () => ({ table, values }) }),
+    }),
     batch: mocks.batch,
     execute: () => ({ kind: "revision-check" }),
   },
@@ -104,6 +108,11 @@ describe("지원서 제출 배치 (#97)", () => {
     mocks.form.isPublished = true;
     mocks.form.questions = [{ ...defaultQuestion, options: [] }];
     mocks.batch.mockResolvedValue([]);
+    mocks.reserveApplicationSubmission.mockResolvedValue({
+      blocked: false,
+      retryAfterSec: 0,
+      reservationId: "33333333-3333-4333-8333-333333333333",
+    });
   });
 
   it("비공개 양식은 일정과 무관하게 서버 제출을 거부한다 (#104)", async () => {
@@ -174,7 +183,7 @@ describe("지원서 제출 배치 (#97)", () => {
     const failed = await submitApplicationForm({ success: false, message: "" }, submission());
     expect(failed.success).toBe(false);
     expect(mocks.batch).toHaveBeenCalledTimes(1);
-    expect(mocks.batch.mock.calls[0][0]).toHaveLength(3);
+    expect(mocks.batch.mock.calls[0][0]).toHaveLength(4);
 
     const retried = await submitApplicationForm({ success: false, message: "" }, submission());
     expect(retried.success).toBe(true);

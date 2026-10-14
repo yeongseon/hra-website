@@ -10,10 +10,7 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { markdownImageAssets } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import {
-  checkUploadRateLimit,
-  recordUploadAttempt,
-} from "@/lib/rate-limit";
+import { reserveUploadAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 
 // 매직 바이트 (파일 헤더의 고유 시그니처) 로 실제 이미지 타입을 판별.
@@ -73,20 +70,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limit (#69): 인증·역할 검사 통과 후 IP 기준 60초 / 30회.
-    // 인증 이후에 두는 이유: 미인증 요청까지 카운트하면 세션 만료 반복과 실제
-    // abuse 를 구분할 수 없다. formData() 이전에 두는 이유: 파일 전체를
-    // 메모리로 로드하기 전에 차단해 리소스 소비를 최소화.
-    // 실패 검증 (매직바이트, put 오류) 도 카운트해야 잘못된 파일 스팸으로
-    // sliding window 를 우회하는 걸 막을 수 있어 record 를 검증 전에 호출한다.
-    // 차단된 (429) 시도 역시 record 해 sliding window 를 정상적으로 소진하도록
-    // 유지 — 기록하지 않으면 공격자가 무한 요청으로 로그를 우회할 수 있고,
-    // Retry-After 로 사용자에게 안내한 대기시간이 실제 만료되지 않는다.
-    // (recordLoginAttempt 와 동일 정책; 소스 auth.ts:credentials.authorize.)
+    // 인증 후, 파일을 읽기 전에 IP 제한을 원자적으로 예약합니다 (#121).
+    // 실패한 파일 검증도 허용된 요청 수에 포함하고, 차단된 요청은 새 이벤트를
+    // 남기지 않아 대기 시간이 공격자의 추가 요청으로 무한히 연장되지 않습니다.
     const ip = extractClientIp(request.headers);
-    const { blocked, retryAfterSec } = await checkUploadRateLimit(ip);
+    const { blocked, retryAfterSec } = await reserveUploadAttempt(ip);
     if (blocked) {
-      await recordUploadAttempt(ip);
       return NextResponse.json(
         { error: "업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
         {
@@ -95,8 +84,6 @@ export async function POST(request: NextRequest) {
         },
       );
     }
-    await recordUploadAttempt(ip);
-
     const formData = await request.formData();
     const file = formData.get("file");
 

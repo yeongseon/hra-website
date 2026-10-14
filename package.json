@@ -21,6 +21,7 @@
     "db:migrate-user-session-version": "node --env-file=.env scripts/migrate-add-user-session-version.mjs",
     "db:migrate-add-application-unique": "node --env-file=.env scripts/migrate-add-application-submissions-unique.mjs",
     "db:migrate-add-rate-limit-tables": "node --env-file=.env scripts/migrate-add-rate-limit-tables.mjs",
+    "db:migrate-rate-limit-reservations": "node --env-file=.env scripts/migrate-rate-limit-reservations.mjs",
     "db:migrate-add-markdown-image-assets": "node --env-file=.env scripts/migrate-add-markdown-image-assets.mjs",
     "blob:cleanup-markdown-images": "node --env-file=.env scripts/cleanup-markdown-image-assets.mjs",
     "db:migrate-atomic-application-questions": "node --env-file=.env scripts/migrate-atomic-application-questions.mjs",

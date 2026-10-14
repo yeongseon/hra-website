@@ -37,11 +37,11 @@ describe("정책 상수 - 이슈 #69 사양 회귀", () => {
     expect(UPLOAD_RATE_LIMIT.maxAttempts).toBe(30);
   });
 
-  it("APPLICATION_SUBMISSION_HOURLY_RATE_LIMIT = 1시간 / 5회 (Phase 1 사양)", () => {
+  it("APPLICATION_SUBMISSION_HOURLY_RATE_LIMIT = 1시간 / 50회 (#121)", () => {
     expect(APPLICATION_SUBMISSION_HOURLY_RATE_LIMIT.windowMs).toBe(
       60 * 60 * 1000,
     );
-    expect(APPLICATION_SUBMISSION_HOURLY_RATE_LIMIT.maxAttempts).toBe(5);
+    expect(APPLICATION_SUBMISSION_HOURLY_RATE_LIMIT.maxAttempts).toBe(50);
   });
 });
 
@@ -66,9 +66,10 @@ describe("extractClientIp", () => {
     expect(extractClientIp(h)).toBe("192.0.2.10");
   });
 
-  it("모든 표준 헤더 없으면 x-vercel-forwarded-for 로 fallback", () => {
+  it("Vercel 전용 헤더를 우선 사용한다", () => {
     const h = new Headers({
       "x-vercel-forwarded-for": "203.0.113.42, 10.1.1.1",
+      "x-forwarded-for": "192.0.2.1",
     });
     expect(extractClientIp(h)).toBe("203.0.113.42");
   });
@@ -98,6 +99,26 @@ describe("extractClientIp", () => {
   it("UNKNOWN_IP 는 DB varchar(45) 에 저장 가능한 짧은 문자열이다", () => {
     expect(UNKNOWN_IP.length).toBeLessThanOrEqual(45);
     expect(typeof UNKNOWN_IP).toBe("string");
+  });
+
+  it("Vercel에서는 전용 헤더가 없거나 유효하지 않으면 다른 헤더를 신뢰하지 않는다", () => {
+    const previous = process.env.VERCEL;
+    process.env.VERCEL = "1";
+    try {
+      expect(extractClientIp(new Headers({ "x-forwarded-for": "203.0.113.1" }))).toBe(UNKNOWN_IP);
+      expect(extractClientIp(new Headers({
+        "x-vercel-forwarded-for": "invalid-value",
+        "x-forwarded-for": "203.0.113.1",
+      }))).toBe(UNKNOWN_IP);
+    } finally {
+      if (previous === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = previous;
+    }
+  });
+
+  it("45자를 넘거나 IP 형식이 아닌 값은 저장 키로 사용하지 않는다", () => {
+    expect(extractClientIp(new Headers({ "x-forwarded-for": "a".repeat(46) }))).toBe(UNKNOWN_IP);
+    expect(extractClientIp(new Headers({ "x-forwarded-for": "not-an-ip" }))).toBe(UNKNOWN_IP);
   });
 });
 
