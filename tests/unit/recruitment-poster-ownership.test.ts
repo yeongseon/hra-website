@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   insertValues: vi.fn(),
   deleteBlobIfExists: vi.fn(),
   revalidatePath: vi.fn(),
+  prepareStoredPoster: vi.fn(),
 }));
 
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
@@ -29,6 +30,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("@/lib/poster-upload-server", () => ({ prepareStoredPoster: mocks.prepareStoredPoster }));
 
 import {
   updateRecruitmentPoster,
@@ -50,6 +52,8 @@ function posterForm() {
 describe("모집 포스터 입력 URL 소유권", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.requireAdmin.mockResolvedValue({ user: { id: "22222222-2222-4222-8222-222222222222", role: "ADMIN" } });
+    mocks.prepareStoredPoster.mockResolvedValue("https://example.public.blob.vercel-storage.com/recruitment/poster.webp");
     mocks.limit.mockResolvedValue([{
       id: "11111111-1111-4111-8111-111111111111",
       posterImageUrl: oldUrl,
@@ -81,5 +85,36 @@ describe("모집 포스터 입력 URL 소유권", () => {
     expect(mocks.upsert.mock.calls[0][0].set).not.toHaveProperty("detailsMarkdown");
     expect(mocks.upsert.mock.calls[1][0].set).toHaveProperty("detailsMarkdown", "모집 안내");
     expect(mocks.upsert.mock.calls[1][0].set).not.toHaveProperty("googleFormUrl");
+  });
+
+  it.each([
+    ["전체 설정", updateRecruitmentSettings],
+    ["포스터 섹션", updateRecruitmentPoster],
+  ])("%s는 검증·변환된 직접 업로드 포스터 URL을 저장한다", async (_label, action) => {
+    const formData = new FormData();
+    formData.set("posterInputMode", "file");
+    formData.set("uploadedPosterUrl", "https://example.public.blob.vercel-storage.com/poster-uploads/original.png");
+    expect((await action(formData)).success).toBe(true);
+    expect(mocks.prepareStoredPoster).toHaveBeenCalledWith(formData.get("uploadedPosterUrl"), "22222222-2222-4222-8222-222222222222");
+    expect(mocks.upsert.mock.calls[0][0].set.posterImageUrl).toBe("https://example.public.blob.vercel-storage.com/recruitment/poster.webp");
+    expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
+  });
+
+  it("검증 실패한 직접 업로드 URL은 설정에 저장하지 않는다", async () => {
+    mocks.prepareStoredPoster.mockRejectedValue(new Error("위조된 URL"));
+    const formData = new FormData();
+    formData.set("posterInputMode", "file");
+    formData.set("uploadedPosterUrl", "https://evil.example/poster.png");
+    expect((await updateRecruitmentPoster(formData)).success).toBe(false);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it("직접 업로드 후 DB 응답이 실패해도 참조 가능성이 있는 Blob을 즉시 삭제하지 않는다", async () => {
+    mocks.upsert.mockRejectedValueOnce(new Error("DB 응답 실패"));
+    const formData = new FormData();
+    formData.set("posterInputMode", "file");
+    formData.set("uploadedPosterUrl", "https://example.public.blob.vercel-storage.com/poster-uploads/original.png");
+    await expect(updateRecruitmentPoster(formData)).rejects.toThrow("DB 응답 실패");
+    expect(mocks.deleteBlobIfExists).not.toHaveBeenCalled();
   });
 });

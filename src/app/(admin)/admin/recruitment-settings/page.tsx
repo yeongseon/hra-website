@@ -8,6 +8,6 @@ import { RecruitmentSettingsClient } from "./_components/recruitment-settings-cl
 export const dynamic = "force-dynamic";
 
 export default async function AdminRecruitmentSettingsPage() {
-  await requireAdmin();
-  return <RecruitmentSettingsClient />;
+  const session = await requireAdmin();
+  return <RecruitmentSettingsClient userId={session.user.id} />;
 }
