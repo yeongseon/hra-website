@@ -1,5 +1,5 @@
 /**
- * 강의 자료·가이드북 브라우저 직접 업로드 토큰과 완료 콜백입니다 (#102).
+ * 자료실 문서의 브라우저 직접 업로드 토큰과 완료 콜백입니다 (#102).
  * 토큰은 현재 로그인 역할, 대상, 파일 이름·종류·크기·경로를 확인한 뒤 발급합니다.
  * Vercel이 서명한 완료 콜백은 취소·DB 저장 실패 파일을 원장에 남깁니다.
  */
@@ -7,6 +7,9 @@ import { head } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { projectBlobHost } from "@/lib/blob-host";
 import { logServerError } from "@/lib/errors";
 import { isProjectBlobUrl } from "@/lib/resource-download";
@@ -19,7 +22,7 @@ import {
 import { recordResourceUpload } from "@/lib/resource-upload-server";
 
 const requestSchema = z.object({
-  kind: z.enum(["class-materials", "guidebooks"]),
+  kind: z.enum(["class-materials", "guidebooks", "weekly-texts"]),
   fileName: z.string().min(1).max(255),
   size: z.number().int().positive(),
   contentType: z.string(),
@@ -43,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
         const session = await auth();
         const userId = session?.user?.id;
         const role = session?.user?.role;
-        if (!userId || (role !== "ADMIN" && role !== "FACULTY")) {
+        if (!userId || (role !== "ADMIN" && role !== "FACULTY" && role !== "MEMBER")) {
           throw new Error("업로드 권한이 없습니다.");
         }
 
@@ -51,6 +54,12 @@ export async function POST(request: Request): Promise<Response> {
         if (!parsed.success || !isResourceUploadKind(parsed.data.kind)) throw new Error("파일 정보가 올바르지 않습니다.");
         const { kind, fileName, size, contentType, uploadId } = parsed.data;
         if (kind === "guidebooks" && role !== "ADMIN") throw new Error("업로드 권한이 없습니다.");
+        if (kind === "class-materials" && role === "MEMBER") throw new Error("업로드 권한이 없습니다.");
+        if (kind === "weekly-texts" && role === "MEMBER") {
+          // 회원은 현재 DB에 기수가 배정된 경우에만 자신의 텍스트를 올립니다.
+          const [user] = await db.select({ cohortId: users.cohortId }).from(users).where(eq(users.id, userId)).limit(1);
+          if (!user?.cohortId) throw new Error("기수가 배정되지 않은 회원은 업로드할 수 없습니다.");
+        }
         const rule = resourceUploadRule(kind, fileName);
         if (!rule || size > maxResourceUploadBytes[kind] ||
             (contentType && !rule.acceptedTypes.includes(contentType.toLowerCase())) ||

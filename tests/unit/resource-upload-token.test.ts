@@ -1,11 +1,12 @@
 /** #102 직접 업로드 토큰 발급의 권한·대상·형식·크기 경계를 확인합니다. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), handleUpload: vi.fn(), head: vi.fn(), recordResourceUpload: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), handleUpload: vi.fn(), head: vi.fn(), recordResourceUpload: vi.fn(), userLimit: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
 vi.mock("@vercel/blob/client", () => ({ handleUpload: mocks.handleUpload }));
 vi.mock("@vercel/blob", () => ({ head: mocks.head }));
 vi.mock("@/lib/resource-upload-server", () => ({ recordResourceUpload: mocks.recordResourceUpload }));
+vi.mock("@/lib/db", () => ({ db: { select: () => ({ from: () => ({ where: () => ({ limit: mocks.userLimit }) }) }) } }));
 vi.mock("@/lib/errors", () => ({ logServerError: vi.fn() }));
 
 import { POST } from "@/app/api/resource-uploads/route";
@@ -32,6 +33,7 @@ describe("자료실 직접 업로드 토큰", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.auth.mockResolvedValue({ user: { id: userId, role: "ADMIN" } });
+    mocks.userLimit.mockResolvedValue([{ cohortId: uploadId }]);
   });
 
   it("정확히 30MB 가이드북에 제한된 토큰만 발급한다", async () => {
@@ -65,6 +67,16 @@ describe("자료실 직접 업로드 토큰", () => {
     expect((await issueToken({ ...input, kind: "class-materials" })).status).toBe(200);
     mocks.auth.mockResolvedValue(null);
     expect((await issueToken({ ...input, kind: "class-materials" })).status).toBe(400);
+  });
+
+  it("기수가 배정된 회원에게만 30MB 주차별 텍스트 문서 토큰을 발급한다", async () => {
+    const input = { kind: "weekly-texts" as const, fileName: "읽기자료.pdf", size: 30 * 1024 * 1024, contentType: "application/pdf", uploadId };
+    mocks.auth.mockResolvedValue({ user: { id: userId, role: "MEMBER" } });
+    expect((await issueToken(input)).status).toBe(200);
+    expect((await issueToken({ ...input, size: input.size + 1 })).status).toBe(400);
+    expect((await issueToken({ ...input, fileName: "자료.pptx" })).status).toBe(400);
+    mocks.userLimit.mockResolvedValue([]);
+    expect((await issueToken(input)).status).toBe(400);
   });
 
   it("완료 콜백의 URL·경로 위조를 거부하고 실제 Blob만 원장에 남긴다", async () => {

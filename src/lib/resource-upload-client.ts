@@ -1,5 +1,5 @@
 /**
- * 브라우저에서 문서를 Blob으로 직접 전송합니다 (#102).
+ * 브라우저에서 자료실 문서를 Blob으로 직접 전송합니다 (#102).
  * Server Action에는 작은 텍스트 값과 완료 URL만 보내 Vercel 함수 본문 제한을 피합니다.
  */
 import { upload } from "@vercel/blob/client";
@@ -25,12 +25,12 @@ export async function prepareResourceUpload(
 
   const rule = resourceUploadRule(kind, file.name);
   if (!rule || (file.type && !rule.acceptedTypes.includes(file.type.toLowerCase()))) {
-    return { error: kind === "guidebooks"
+    return { error: kind !== "class-materials"
       ? "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다."
       : "PDF, HWP, DOC, DOCX, PPT, PPTX 파일만 업로드할 수 있습니다." };
   }
   if (file.size > maxResourceUploadBytes[kind]) {
-    return { error: kind === "guidebooks" ? "파일 크기는 30MB 이하여야 합니다." : "파일 크기는 50MB 이하여야 합니다." };
+    return { error: kind === "class-materials" ? "파일 크기는 50MB 이하여야 합니다." : "파일 크기는 30MB 이하여야 합니다." };
   }
 
   const uploadId = crypto.randomUUID();

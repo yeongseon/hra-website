@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   logServerError: vi.fn(),
   existing: false,
+  validateResourceUploadReference: vi.fn(),
+  validateWeeklyTextImageReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -23,6 +25,8 @@ vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
 vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExists }));
+vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
+vi.mock("@/lib/weekly-text-image-upload", () => ({ validateWeeklyTextImageReference: mocks.validateWeeklyTextImageReference }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -99,6 +103,8 @@ describe("게시글과 첨부 메타 생성", () => {
     mocks.recordOwnedBlob.mockResolvedValue(undefined);
     mocks.deleteBlobIfExists.mockResolvedValue(undefined);
     mocks.batch.mockResolvedValue([]);
+    mocks.validateResourceUploadReference.mockResolvedValue({ url: "https://blob/direct", fileName: "자료.pdf" });
+    mocks.validateWeeklyTextImageReference.mockResolvedValue(true);
   });
 
   it.each([
@@ -162,5 +168,55 @@ describe("게시글과 첨부 메타 생성", () => {
     const result = await createWeeklyText(form);
     expect(result.success).toBe(false);
     expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("주차별 텍스트의 검증된 직접 업로드 URL만 DB에 저장한다", async () => {
+    const form = new FormData();
+    form.set("requestId", requestId);
+    form.set("title", "주차별 텍스트");
+    form.set("uploadedFileUrl", "https://blob/direct");
+    form.set("uploadedFileName", "자료.pdf");
+    const result = await createWeeklyText(form);
+    expect(result.success).toBe(true);
+    expect(mocks.validateResourceUploadReference).toHaveBeenCalledWith("weekly-texts", userId, "https://blob/direct", "자료.pdf");
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ fileUrl: "https://blob/direct", fileName: "자료.pdf" }));
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("주차별 텍스트의 위조된 완료 URL은 DB에 저장하지 않는다", async () => {
+    const form = new FormData();
+    form.set("requestId", requestId);
+    form.set("title", "주차별 텍스트");
+    form.set("uploadedFileUrl", "https://evil.example/file.pdf");
+    form.set("uploadedFileName", "자료.pdf");
+    mocks.validateResourceUploadReference.mockResolvedValue({ error: "위조된 URL" });
+    const result = await createWeeklyText(form);
+    expect(result.success).toBe(false);
+    expect(mocks.insertValues).not.toHaveBeenCalled();
+  });
+
+  it("주차별 텍스트의 검증된 직접 업로드 사진을 첨부 행으로 저장한다", async () => {
+    const form = new FormData();
+    form.set("requestId", requestId);
+    form.set("title", "주차별 텍스트");
+    form.set("body", "본문");
+    form.set("uploadedImageUrls", JSON.stringify(["https://blob/photo"]));
+    const result = await createWeeklyText(form);
+    expect(result.success).toBe(true);
+    expect(mocks.validateWeeklyTextImageReference).toHaveBeenCalledWith(requestId, userId, "https://blob/photo");
+    expect(mocks.batch).toHaveBeenCalledOnce();
+    expect(mocks.batch.mock.calls[0]?.[0][1].values[0].url).toBe("https://blob/photo");
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("주차별 텍스트의 위조된 사진 URL은 첨부 행에 저장하지 않는다", async () => {
+    const form = new FormData();
+    form.set("requestId", requestId);
+    form.set("title", "주차별 텍스트");
+    form.set("body", "본문");
+    form.set("uploadedImageUrls", JSON.stringify(["https://evil.example/photo.png"]));
+    mocks.validateWeeklyTextImageReference.mockResolvedValue(false);
+    expect((await createWeeklyText(form)).success).toBe(false);
+    expect(mocks.insertValues).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,8 @@
 /**
- * 강의 자료·가이드북 직접 업로드의 공통 계약입니다 (#102).
+ * 강의 자료·가이드북·주차별 텍스트 문서 직접 업로드의 공통 계약입니다 (#102).
  * 브라우저와 서버가 같은 확장자·MIME·용량·경로 규칙을 사용합니다.
  */
-export type ResourceUploadKind = "class-materials" | "guidebooks";
+export type ResourceUploadKind = "class-materials" | "guidebooks" | "weekly-texts";
 
 type UploadRule = {
   contentType: string;
@@ -22,10 +22,11 @@ const rules: Record<string, UploadRule> = {
 export const maxResourceUploadBytes: Record<ResourceUploadKind, number> = {
   "class-materials": 50 * 1024 * 1024,
   guidebooks: 30 * 1024 * 1024,
+  "weekly-texts": 30 * 1024 * 1024,
 };
 
 export function isResourceUploadKind(value: unknown): value is ResourceUploadKind {
-  return value === "class-materials" || value === "guidebooks";
+  return value === "class-materials" || value === "guidebooks" || value === "weekly-texts";
 }
 
 /** Blob 경로에 사용자 원본 파일명을 직접 넣지 않고 안전한 ASCII 이름만 사용합니다. */
@@ -37,7 +38,7 @@ export function resourceUploadFileName(fileName: string): string {
 export function resourceUploadRule(kind: ResourceUploadKind, fileName: string): UploadRule | null {
   if (fileName.length < 1 || fileName.length > 255 || /[\x00-\x1f\x7f/\\]/.test(fileName)) return null;
   const extension = fileName.split(".").at(-1)?.toLowerCase() ?? "";
-  if (kind === "guidebooks" && (extension === "ppt" || extension === "pptx")) return null;
+  if (kind !== "class-materials" && (extension === "ppt" || extension === "pptx")) return null;
   return rules[extension] ?? null;
 }
 

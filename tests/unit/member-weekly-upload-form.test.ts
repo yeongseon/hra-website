@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router }));
 vi.mock("@/components/admin/markdown-editor", () => ({ MarkdownEditor: () => null }));
+vi.mock("@/lib/resource-upload-client", () => ({ prepareResourceUpload: async (formData: FormData) => ({ formData }) }));
 
 import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
 
@@ -37,6 +38,7 @@ describe("회원 주차별 텍스트 연속 업로드", () => {
       action,
       cohorts: [{ id: "11111111-1111-4111-8111-111111111111", name: "20기" }],
       userCohortId: "11111111-1111-4111-8111-111111111111",
+      userId: "22222222-2222-4222-8222-222222222222",
     }));
     const form = container.querySelector("form");
     const title = container.querySelector<HTMLInputElement>('input[name="title"]');

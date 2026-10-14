@@ -25,9 +25,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { WeeklyTextActionState } from "@/features/weekly-texts/actions";
 import { WEEKLY_TEXT_TYPE_VALUES } from "@/features/weekly-texts/constants";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
 
 type Props = {
   action: (formData: FormData) => Promise<WeeklyTextActionState>;
+  userId: string;
   cohorts: Array<{ id: string; name: string }>;
   defaultValues: {
     title: string;
@@ -54,11 +56,14 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function WeeklyTextEditForm({ action, cohorts, defaultValues }: Props) {
+export function WeeklyTextEditForm({ action, cohorts, defaultValues, userId }: Props) {
   const router = useRouter();
 
   const [state, formAction, isSubmitting] = useActionState(
-    async (_prev: WeeklyTextActionState, formData: FormData) => action(formData),
+    async (_prev: WeeklyTextActionState, formData: FormData) => {
+      const prepared = await prepareResourceUpload(formData, "weekly-texts", userId, false);
+      return "error" in prepared ? { success: false, error: prepared.error } : action(prepared.formData);
+    },
     initialState,
   );
 
