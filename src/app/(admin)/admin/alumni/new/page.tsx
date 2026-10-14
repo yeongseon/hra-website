@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 export const dynamic = "force-dynamic";
 
 export default async function NewAlumniStoryPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   return (
     <AlumniStoryForm
@@ -13,6 +13,7 @@ export default async function NewAlumniStoryPage() {
       description="새로운 수료생 이야기를 입력하세요."
       submitLabel="수료생 이야기 추가"
       action={createAlumniStory}
+      userId={session.user.id}
     />
   );
 }

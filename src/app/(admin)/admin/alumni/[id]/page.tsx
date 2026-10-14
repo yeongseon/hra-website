@@ -14,7 +14,7 @@ type EditAlumniStoryPageProps = {
 };
 
 export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPageProps) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -42,6 +42,8 @@ export default async function EditAlumniStoryPage({ params }: EditAlumniStoryPag
       description={`${story.name} 수료생 이야기를 수정합니다.`}
       submitLabel="변경사항 저장"
       action={updateAction}
+      userId={session.user.id}
+      storyId={parsedId.data}
       defaultValues={{
         name: story.name,
         title: story.title,

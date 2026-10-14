@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   recordOwnedBlob: vi.fn(),
   validateResourceUploadReference: vi.fn(),
+  validateAlumniImageReference: vi.fn(),
 }));
 
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
@@ -35,6 +36,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
 vi.mock("@/lib/resource-upload-server", () => ({ validateResourceUploadReference: mocks.validateResourceUploadReference }));
+vi.mock("@/lib/alumni-upload-server", () => ({ validateAlumniImageReference: mocks.validateAlumniImageReference }));
 vi.mock("@/lib/db", () => ({
   db: {
     query: {
@@ -104,6 +106,7 @@ describe("기존 Blob 보존", () => {
     mocks.put.mockResolvedValue({ url: newUrl });
     mocks.recordOwnedBlob.mockResolvedValue(undefined);
     mocks.validateResourceUploadReference.mockResolvedValue({ url: newUrl, fileName: "new.pdf" });
+    mocks.validateAlumniImageReference.mockResolvedValue(true);
     mocks.updateReturning.mockResolvedValue([{ id }]);
     mocks.insertValues.mockResolvedValue(undefined);
     mocks.updateWhere.mockImplementation(() =>
@@ -201,6 +204,27 @@ describe("기존 Blob 보존", () => {
     expect(mocks.insertValues).toHaveBeenCalledWith([
       expect.objectContaining({ alumniStoryId: id, url: newUrl, order: 0 }),
     ]);
+  });
+
+  it("수료생 이야기 수정은 검증된 직접 업로드 URL만 대표 사진과 첨부 행에 저장한다", async () => {
+    const formData = alumniForm();
+    formData.delete("images");
+    formData.set("uploadedImageUrls", JSON.stringify([newUrl]));
+    await updateAlumniStory(id, formData);
+    expect(mocks.validateAlumniImageReference).toHaveBeenCalledWith(id, id, newUrl);
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: newUrl }));
+    expect(mocks.insertValues).toHaveBeenCalledWith([expect.objectContaining({ url: newUrl })]);
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("수료생 이야기 수정은 위조된 직접 업로드 URL을 거부한다", async () => {
+    const formData = alumniForm();
+    formData.delete("images");
+    formData.set("uploadedImageUrls", JSON.stringify(["https://evil.example/photo.png"]));
+    mocks.validateAlumniImageReference.mockResolvedValue(false);
+    const result = await updateAlumniStory(id, formData);
+    expect(result.success).toBe(false);
+    expect(mocks.updateWhere).not.toHaveBeenCalled();
   });
 
   it("가이드북·강의자료·수료생 이야기 DB 삭제 실패 시 파일은 남는다", async () => {
