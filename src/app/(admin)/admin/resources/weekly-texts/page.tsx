@@ -100,7 +100,7 @@ export default async function AdminWeeklyTextsPage() {
                           </Link>
                         ) : (
                           <a
-                            href={row.fileUrl}
+                            href={`/api/resources/weekly-texts/${row.id}/download`}
                             download={row.fileName ?? undefined}
                             className="text-sm font-medium text-[#2563EB] hover:underline"
                           >

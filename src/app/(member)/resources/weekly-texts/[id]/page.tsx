@@ -167,7 +167,7 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
                   <div key={image.id} className="overflow-hidden rounded-2xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={image.url}
+                      src={`/api/resources/weekly-text-images/${image.id}/download`}
                       alt={image.alt?.trim() || `${text.title} 사진`}
                       className="h-44 w-full object-cover sm:h-52"
                     />

@@ -92,7 +92,7 @@ export default async function GuidebookViewerPage({ params }: Props) {
         // PDF: iframe으로 인라인 미리보기
         <div className="w-full rounded-lg border border-[#D9D9D9] overflow-hidden shadow-[var(--shadow-soft)]">
           <iframe
-            src={`${book.fileUrl}#toolbar=1&navpanes=0`}
+            src={`/api/resources/guidebooks/${book.id}/download?inline=1#toolbar=1&navpanes=0`}
             className="w-full"
             style={{ height: "80vh", minHeight: "600px" }}
             title={book.title}

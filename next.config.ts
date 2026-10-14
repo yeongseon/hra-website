@@ -28,7 +28,7 @@ const reportOnlyCsp = [
   `img-src 'self' data: blob: https://${projectBlobHost}`,
   "font-src 'self' data:",
   "connect-src 'self'",
-  "frame-src https://view.officeapps.live.com",
+  "frame-src 'self' https://view.officeapps.live.com",
 ].join("; ");
 
 const nextConfig: NextConfig = {
@@ -43,6 +43,14 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Content-Security-Policy", value: enforcedCsp },
           { key: "Content-Security-Policy-Report-Only", value: reportOnlyCsp },
+        ],
+      },
+      {
+        // PDF는 같은 출처의 자료실 페이지에만 임베드합니다.
+        source: "/api/resources/:kind/:id/download",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: enforcedCsp.replace("frame-ancestors 'none'", "frame-ancestors 'self'") },
         ],
       },
     ];

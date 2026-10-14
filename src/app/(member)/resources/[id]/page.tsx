@@ -159,7 +159,8 @@ export default async function ResourceDetailPage({ params }: ResourceDetailPageP
                 {images.map((image) => (
                   <div key={image.id} className="overflow-hidden rounded-xl border border-[#D9D9D9] bg-white shadow-[var(--shadow-soft)]">
                     <Image
-                      src={image.url}
+                      src={`/api/resources/class-log-images/${image.id}/download`}
+                      unoptimized
                       alt={image.alt?.trim() || `${log.title} 이미지`}
                       width={800}
                       height={520}
