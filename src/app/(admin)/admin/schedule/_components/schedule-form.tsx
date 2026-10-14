@@ -137,7 +137,7 @@ export function ScheduleForm({
 
   // 세션 슬롯 목록 상태
   const [sessions, setSessions] = useState<SessionSlot[]>(() => {
-    if (!defaultValues?.sessions || defaultValues.sessions.length === 0) {
+    if (!defaultValues) {
       // 신규 등록 기본값: 고전명작·영어·케이스스터디 3개 슬롯
       return [
         createEmptySession(0),
@@ -145,8 +145,8 @@ export function ScheduleForm({
         { ...createEmptySession(2), category: "CASE_STUDY" },
       ];
     }
-    // 수정 폼: 기존 세션 데이터로 초기화
-    return defaultValues.sessions.map((s, i) => ({
+    // 수정 폼: 세션이 없는 기존 일정은 빈 배열 그대로 유지한다.
+    return (defaultValues.sessions ?? []).map((s, i) => ({
       id: `session-existing-${i}`,
       category: s.category,
       facultyId: s.facultyId ?? null,
