@@ -40,6 +40,15 @@ const recruitmentSettingsSchema = z
     posterLayout: z.enum(["right", "left", "none"]).default("right"),
   })
   .superRefine((value, context) => {
+    if (value.recruitmentStartDate && value.deadlineDate &&
+        value.recruitmentStartDate > value.deadlineDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deadlineDate"],
+        message: "모집 종료일은 시작일 이후여야 합니다.",
+      });
+    }
+
     if (value.posterInputMode !== "url" || !value.posterImageUrl) {
       return;
     }
@@ -301,7 +310,11 @@ export async function updateRecruitmentInfo(
       .refine((v) => !v || v.startsWith("https://"), { message: "구글폼 URL은 https://로 시작해야 합니다." }),
     recruitmentStartDate: z.union([dateStringSchema, z.literal("")]).optional(),
     deadlineDate: z.union([dateStringSchema, z.literal("")]).optional(),
-  });
+  }).refine(
+    (value) => !value.recruitmentStartDate || !value.deadlineDate ||
+      value.recruitmentStartDate <= value.deadlineDate,
+    { path: ["deadlineDate"], message: "모집 종료일은 시작일 이후여야 합니다." },
+  );
 
   const parsed = infoSchema.safeParse({
     activeCohortId: normalizeText(formData.get("activeCohortId")) || undefined,

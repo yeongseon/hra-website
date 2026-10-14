@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
+import { computeRecruitmentStatus, getStoredDateKey } from "@/features/recruitment/status";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { ProcessSteps } from "./_components/process-steps";
 
@@ -25,27 +26,10 @@ const statusMap = {
   CLOSED: { label: "마감", className: "border-gray-300 bg-gray-50 text-gray-600" },
 } as const;
 
-// 모집 시작일·종료일 기준으로 현재 상태를 동적 계산 (DB 저장값 미사용 — 날짜만 지나도 자동 반영)
-function computeRecruitmentStatus(
-  startDate: Date | null,
-  deadlineDate: Date | null
-): "UPCOMING" | "OPEN" | "CLOSED" {
-  const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  if (deadlineDate) {
-    const dlDay = new Date(Date.UTC(deadlineDate.getUTCFullYear(), deadlineDate.getUTCMonth(), deadlineDate.getUTCDate()));
-    if (todayUTC > dlDay) return "CLOSED";
-  }
-  if (startDate) {
-    const sdDay = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
-    if (todayUTC >= sdDay) return "OPEN";
-  }
-  return "UPCOMING";
-}
-
 const formatDate = (value: Date | null) => {
   if (!value) return null;
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -67,8 +51,8 @@ export default async function RecruitmentPage() {
     : null;
 
   const recruitmentStatus = computeRecruitmentStatus(
-    settings?.recruitmentStartDate ?? null,
-    settings?.deadlineDate ?? null
+    getStoredDateKey(settings?.recruitmentStartDate ?? null),
+    getStoredDateKey(settings?.deadlineDate ?? null),
   );
   const status = statusMap[recruitmentStatus] ?? statusMap.UPCOMING;
   const startDate = formatDate(settings?.recruitmentStartDate ?? null);

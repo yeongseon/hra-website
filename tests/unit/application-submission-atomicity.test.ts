@@ -84,7 +84,15 @@ describe("지원서 제출 배치 (#97)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.persisted = false;
+    mocks.form.isPublished = true;
     mocks.batch.mockResolvedValue([]);
+  });
+
+  it("비공개 양식은 일정과 무관하게 서버 제출을 거부한다 (#104)", async () => {
+    mocks.form.isPublished = false;
+    const result = await submitApplicationForm({ success: false, message: "" }, submission());
+    expect(result).toEqual({ success: false, message: "현재 접수 가능한 지원서가 아닙니다." });
+    expect(mocks.batch).not.toHaveBeenCalled();
   });
 
   it("답변 INSERT 실패는 실패로 응답하고 같은 이메일 재시도를 허용한다", async () => {

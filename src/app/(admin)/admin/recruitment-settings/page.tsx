@@ -29,6 +29,7 @@ import {
   updateRecruitmentDetails,
   type RecruitmentSettingsActionState,
 } from "@/features/recruitment-settings/actions";
+import { computeRecruitmentStatus } from "@/features/recruitment/status";
 
 // 모집 안내 기본 템플릿 (마크다운). "기본 템플릿 적용" 버튼에서 사용합니다.
 const DEFAULT_MARKDOWN_TEMPLATE = `## 지원 자격
@@ -73,15 +74,6 @@ const emptyFormValues: FormValues = {
   detailsMarkdown: "",
   posterLayout: "right",
 };
-
-// 시작일·종료일 기준으로 모집 상태를 자동 계산 (YYYY-MM-DD 문자열 비교)
-function computeRecruitmentStatus(startDate: string, endDate: string): "UPCOMING" | "OPEN" | "CLOSED" {
-  const now = new Date();
-  const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
-  if (endDate && todayStr > endDate) return "CLOSED";
-  if (startDate && todayStr >= startDate) return "OPEN";
-  return "UPCOMING";
-}
 
 const statusConfig = {
   UPCOMING: { label: "예정", className: "bg-blue-50 text-blue-700 border-blue-300" },
@@ -305,7 +297,10 @@ export default function AdminRecruitmentSettingsPage() {
 
             {/* 모집 상태 — 시작일·종료일 기준 자동 계산 */}
             {(() => {
-              const status = computeRecruitmentStatus(formValues.recruitmentStartDate, formValues.deadlineDate);
+              const status = computeRecruitmentStatus(
+                formValues.recruitmentStartDate || null,
+                formValues.deadlineDate || null,
+              );
               const info = statusConfig[status];
               return (
                 <div className="space-y-2">
