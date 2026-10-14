@@ -33,7 +33,7 @@ type EditGalleryPageProps = {
 export const dynamic = "force-dynamic";
 
 export default async function EditGalleryPage({ params }: EditGalleryPageProps) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
   const parsedId = z.uuid().safeParse(id);
@@ -125,7 +125,7 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
           <CardTitle className="text-xl text-slate-900">이미지 관리</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 py-6">
-          <GalleryImageForm action={addImageAction} />
+          <GalleryImageForm action={addImageAction} galleryId={gallery.id} userId={session.user.id} />
 
           {/* 이미지 ID 구성이 바뀌면 로컬 정렬 상태를 새 서버 목록으로 초기화합니다. */}
           <GalleryImageSortableGrid

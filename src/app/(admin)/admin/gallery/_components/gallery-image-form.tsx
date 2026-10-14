@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GalleryActionState } from "@/features/gallery/actions";
+import { prepareGalleryUploads } from "@/lib/gallery-upload-client";
 import { cn } from "@/lib/utils";
 
 const initialState: GalleryActionState = {
@@ -17,6 +18,8 @@ const initialState: GalleryActionState = {
 
 type GalleryImageFormProps = {
   action: (formData: FormData) => Promise<GalleryActionState>;
+  galleryId: string;
+  userId: string;
 };
 
 type PreviewItem = {
@@ -37,7 +40,7 @@ function formatFileSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-export function GalleryImageForm({ action }: GalleryImageFormProps) {
+export function GalleryImageForm({ action, galleryId, userId }: GalleryImageFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,7 +104,10 @@ export function GalleryImageForm({ action }: GalleryImageFormProps) {
   const [state, formAction, isPending] = useActionState(
     async (_prevState: GalleryActionState, formData: FormData) => {
       setSubmittedCount(selectedFiles.length);
-      const result = await action(formData);
+      const prepared = await prepareGalleryUploads(formData, galleryId, userId);
+      const result = "error" in prepared
+        ? { success: false, message: prepared.error }
+        : await action(prepared.formData);
 
       if (result.success) {
         formRef.current?.reset();

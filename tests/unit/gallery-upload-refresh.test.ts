@@ -10,12 +10,14 @@ const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
   findFirst: vi.fn(),
   routerRefresh: vi.fn(),
+  prepareGalleryUploads: vi.fn(),
 }));
 
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/lib/db", () => ({ db: { query: { galleries: { findFirst: mocks.findFirst } } } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.routerRefresh }) }));
 vi.mock("next/image", () => ({ default: ({ alt }: { alt: string }) => createElement("span", { "data-image-alt": alt }) }));
+vi.mock("@/lib/gallery-upload-client", () => ({ prepareGalleryUploads: mocks.prepareGalleryUploads }));
 vi.mock("@/features/gallery/actions", () => ({
   addGalleryImages: vi.fn(),
   updateGallery: vi.fn(),
@@ -47,6 +49,7 @@ describe("갤러리 업로드 후 이미지 목록", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.requireAdmin.mockResolvedValue({ user: { id: galleryId } });
+    mocks.prepareGalleryUploads.mockImplementation(async (formData: FormData) => ({ formData }));
   });
 
   afterEach(() => {
@@ -79,7 +82,7 @@ describe("갤러리 업로드 후 이미지 목록", () => {
       files = emptyFiles;
     });
     const action = vi.fn().mockResolvedValue({ success: true, message: "업로드 완료" });
-    const view = render(createElement(GalleryImageForm, { action }));
+    const view = render(createElement(GalleryImageForm, { action, galleryId, userId: galleryId }));
     const form = view.container.querySelector("form");
     if (!form) throw new Error("업로드 폼을 찾지 못했습니다.");
 
