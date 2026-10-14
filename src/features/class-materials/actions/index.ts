@@ -231,7 +231,8 @@ export async function updateClassMaterial(id: string, formData: FormData): Promi
       weekNumber: parsed.data.weekNumber === "" || parsed.data.weekNumber === undefined ? null : parsed.data.weekNumber,
       lectureTitle: parsed.data.lectureTitle === "" || parsed.data.lectureTitle === undefined ? null : parsed.data.lectureTitle,
       audience: parsed.data.audience,
-      classDate: classDateObj,
+      // 관리자 폼에는 날짜 입력이 없으므로 필드가 빠졌다면 기존 날짜를 보존합니다.
+      classDate: formData.has("classDate") ? classDateObj : target.classDate,
     };
 
     const fileEntry = formData.get("file");
