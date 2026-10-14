@@ -66,7 +66,7 @@ git switch -c fix/issue-번호-짧은설명
 
 ## 3. 검증과 리뷰
 
-현재 [CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 PR과 `main` 푸시에서 **lint → typecheck → Vitest → build**를 실행합니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
+현재 [CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 PR과 `main` 푸시에서 **lint → typecheck → 격리 PostgreSQL을 쓰는 Vitest → build → Playwright 브라우저 스모크**를 실행합니다. 브라우저 스모크는 로그인 화면과 보호 경로를 확인하며, 운영 DB·Blob 자격 증명을 사용하지 않습니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
 
 ```bash
 npm run lint
