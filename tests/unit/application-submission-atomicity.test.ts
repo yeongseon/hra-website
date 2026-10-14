@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   logServerError: vi.fn(),
   reserveApplicationSubmission: vi.fn(),
   persisted: false,
+  answerValue: "지원 동기 내용",
   submissionStatus: "PENDING" as "PENDING" | "ACCEPTED" | "REJECTED",
   form: {
     title: "지원서",
@@ -61,7 +62,7 @@ vi.mock("@/lib/db", () => ({
         applicantPhone: "010-0000-0000",
         submittedAt: new Date("2026-10-14T00:00:00Z"),
         status: mocks.submissionStatus,
-        answers: [{ questionId: "22222222-2222-4222-8222-222222222222", value: "지원 동기 내용" }],
+        answers: [{ questionId: "22222222-2222-4222-8222-222222222222", value: mocks.answerValue }],
       }] },
     },
     select: () => ({
@@ -106,6 +107,7 @@ describe("지원서 제출 배치 (#97)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.persisted = false;
+    mocks.answerValue = "지원 동기 내용";
     mocks.submissionStatus = "PENDING";
     mocks.form.isPublished = true;
     mocks.form.questions = [{ ...defaultQuestion, options: [] }];
@@ -228,6 +230,13 @@ describe("지원서 제출 배치 (#97)", () => {
       expect(result.data).toContain('"2026-10-14 09:00:00"');
       expect(result.data).toContain('"검토중"');
     }
+  });
+
+  it("자유 입력 답변이 JSON 배열처럼 보여도 CSV에 원문을 남긴다", async () => {
+    mocks.answerValue = "[]";
+    const result = await exportSubmissionsToCsv("11111111-1111-4111-8111-111111111111");
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toContain('"[]"');
   });
 
   it.each([
