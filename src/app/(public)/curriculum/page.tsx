@@ -340,19 +340,10 @@ export default function CurriculumPage() {
                         ref={(el) => {
                           groupRefs.current[groupIdx] = el;
                         }}
-                        onMouseEnter={() => {
-                          setHoveredMonth(group.months[0].value);
-                          updateAnchor(groupIdx);
+                        onMouseLeave={(event) => {
+                          if (!event.currentTarget.contains(document.activeElement)) setHoveredMonth(null);
                         }}
-                        onMouseLeave={() => setHoveredMonth(null)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateAnchor(groupIdx);
-                          setTappedMonth((prev) =>
-                            prev === group.months[0].value ? null : group.months[0].value
-                          );
-                        }}
-                        className={`flex shrink-0 items-center rounded-full border transition-all duration-300 py-4 px-2 sm:py-5 sm:px-3 cursor-pointer ${
+                        className={`flex shrink-0 items-center rounded-full border transition-all duration-300 py-4 px-2 sm:py-5 sm:px-3 ${
                           isGroupActive
                             ? "bg-white border-white shadow-md scale-[1.02]"
                             : "bg-[#2563EB] border-white/40 hover:bg-[#1D4ED8]"
@@ -378,10 +369,32 @@ export default function CurriculumPage() {
                             >
                               <button
                                 type="button"
-                                tabIndex={-1}
-                                aria-pressed={isGroupActive}
-                                aria-label={`${month.label} 커리큘럼 상세 보기`}
-                                className={`transition-all duration-300 text-xs sm:text-sm focus:outline-none select-none leading-none pointer-events-none ${
+                                aria-pressed={displayMonth === month.value}
+                                aria-label={month.value === "9월-end"
+                                  ? "수료식·입학식 9월 커리큘럼 상세 보기"
+                                  : `${month.label} 커리큘럼 상세 보기`}
+                                aria-controls="curriculum-timeline-detail"
+                                onMouseEnter={() => {
+                                  setHoveredMonth(month.value);
+                                  updateAnchor(groupIdx);
+                                }}
+                                onFocus={() => {
+                                  setHoveredMonth(month.value);
+                                  updateAnchor(groupIdx);
+                                }}
+                                onBlur={() => setHoveredMonth(null)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  updateAnchor(groupIdx);
+                                  setTappedMonth((previous) => previous === month.value ? null : month.value);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Escape") {
+                                    setHoveredMonth(null);
+                                    setTappedMonth(null);
+                                  }
+                                }}
+                                className={`rounded-sm transition-all duration-300 text-xs sm:text-sm select-none leading-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white ${
                                   isGroupActive
                                     ? "font-bold text-[#2563EB] scale-125"
                                     : "font-medium text-white/60"
@@ -404,7 +417,9 @@ export default function CurriculumPage() {
                 document flow 에서 분리되므로 아래 7개 카드가 밀리지 않는다.
               */}
               <div
+                id="curriculum-timeline-detail"
                 aria-live="polite"
+                aria-hidden={!isVisible}
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   position: "absolute",

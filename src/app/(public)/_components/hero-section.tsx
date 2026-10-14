@@ -85,7 +85,9 @@ export function HeroSection() {
             ${isTypingComplete ? "text-[30px] sm:text-[42px] md:text-[56px] lg:text-[66px]" : "text-[30px] sm:text-[42px] md:text-[66px] lg:text-[80px]"}
           `}
         >
-          {renderHeading()}
+          {/* 서버 HTML과 스크린 리더에는 제목 전체를 제공하고, 타이핑 표현만 시각적으로 표시합니다. */}
+          <span className="sr-only">{fullHeadingText}</span>
+          <span aria-hidden="true">{renderHeading()}</span>
         </h1>
 
         {/*

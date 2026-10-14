@@ -34,7 +34,7 @@ export function FaqContent({ contactText, items }: FaqContentProps) {
         <p className="mt-5 text-base leading-relaxed text-[#666666] sm:text-lg">HRA에 대해 궁금한 점을 확인하세요</p>
       </section>
 
-      {/* 담당자 연락처 — 데스크톱은 마우스 hover, 모바일은 탭으로 툴팁 표시 */}
+      {/* 담당자 연락처 — 클릭·키보드로 열고 닫을 수 있는 툴팁 */}
       <div className="relative my-8 flex flex-col items-center">
         {/*
           바깥 영역 클릭 시 툴팁 닫기.
@@ -49,15 +49,10 @@ export function FaqContent({ contactText, items }: FaqContentProps) {
             aria-hidden="true"
           />
         )}
-        <div
-          className="group relative flex flex-col items-center"
-          // 마우스가 영역을 벗어나면 탭으로 열어둔 상태도 함께 해제해
-          // 데스크톱에서 툴팁이 계속 붙어 있는 것을 막는다.
-          onMouseLeave={() => setContactOpen(false)}
-        >
+        <div className="relative flex flex-col items-center">
           {/*
             툴팁 표시 조건
-            - contactOpen(탭) 이 true 이거나, 마우스 group-hover 일 때 나타난다.
+            - 버튼을 클릭하거나 키보드로 활성화하면 나타난다.
 
             툴팁 폭 처리
             - whitespace-nowrap 은 sm(640px) 이상에서만 적용한다.
@@ -66,11 +61,14 @@ export function FaqContent({ contactText, items }: FaqContentProps) {
             - break-keep 은 한글 단어 중간에서 줄바꿈되지 않게 한다.
           */}
           <div
+            id="faq-contact-tooltip"
+            role="tooltip"
+            aria-hidden={!contactOpen}
             className={cn(
               "absolute bottom-full left-1/2 mb-3 -translate-x-1/2 transition-all duration-300 ease-out",
               contactOpen
                 ? "pointer-events-auto translate-y-0 opacity-100"
-                : "pointer-events-none translate-y-1 opacity-0 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+                : "pointer-events-none translate-y-1 opacity-0"
             )}
             style={{ zIndex: 10 }}
           >
@@ -84,7 +82,11 @@ export function FaqContent({ contactText, items }: FaqContentProps) {
           <button
             type="button"
             onClick={() => setContactOpen((prev) => !prev)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setContactOpen(false);
+            }}
             aria-expanded={contactOpen}
+            aria-controls="faq-contact-tooltip"
             className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-blue-600 transition-colors hover:bg-blue-700"
             aria-label="담당자 연락처"
           >
