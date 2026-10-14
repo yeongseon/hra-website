@@ -18,6 +18,7 @@ import {
 import { logServerError } from "@/lib/errors";
 import { checkApplicationSubmissionHourlyLimit } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 /**
  * CSV/Excel 에서 셀 값이 수식으로 해석되는 것을 막기 위한 방어 함수입니다.
@@ -101,16 +102,31 @@ export async function submitApplicationForm(
   }
   const validFormId = parsedFormId.data;
 
-  const applicantName = (formData.get("applicantName") as string)?.trim();
-  const applicantEmail = (formData.get("applicantEmail") as string)?.trim().toLowerCase();
-  const applicantPhone = (formData.get("applicantPhone") as string)?.trim();
-
-  // 기본 정보 검증
-  if (!applicantName) return { success: false, message: "이름을 입력해주세요." };
-  if (!applicantEmail || !z.string().email().safeParse(applicantEmail).success) {
-    return { success: false, message: "올바른 이메일 주소를 입력해주세요." };
+  // FormData의 파일·누락 값도 빈 문자열로 취급해 항상 한국어 필드 오류를 반환합니다.
+  const textField = (name: string) => {
+    const value = formData.get(name);
+    return typeof value === "string" ? value : "";
+  };
+  const basicInfo = z.object({
+    applicantName: z.string().trim()
+      .min(1, "이름을 입력해주세요.")
+      .max(applicationInputLimits.applicantName, "이름은 100자 이하여야 합니다."),
+    applicantEmail: z.string().trim()
+      .max(applicationInputLimits.applicantEmail, "이메일 주소는 255자 이하여야 합니다.")
+      .email("올바른 이메일 주소를 입력해주세요.")
+      .transform((value) => value.toLowerCase()),
+    applicantPhone: z.string().trim()
+      .min(1, "연락처를 입력해주세요.")
+      .max(applicationInputLimits.applicantPhone, "연락처는 20자 이하여야 합니다."),
+  }).safeParse({
+    applicantName: textField("applicantName"),
+    applicantEmail: textField("applicantEmail"),
+    applicantPhone: textField("applicantPhone"),
+  });
+  if (!basicInfo.success) {
+    return { success: false, message: basicInfo.error.issues[0]?.message ?? "입력값을 확인해주세요." };
   }
-  if (!applicantPhone) return { success: false, message: "연락처를 입력해주세요." };
+  const { applicantName, applicantEmail, applicantPhone } = basicInfo.data;
 
   try {
     // IP 기반 rate limit — 두 층 병행 (#69):
@@ -173,25 +189,42 @@ export async function submitApplicationForm(
       let value = "";
 
       if (question.type === "CHECKBOX") {
-        if (rawValues.length > 0) {
+        // 같은 항목을 여러 번 보낸 조작 요청도 선택 한 번으로 정규화합니다.
+        const selectedValues = [...new Set(rawValues.map((item) => item.trim()).filter(Boolean))];
+        if (selectedValues.length > 0) {
+          if (selectedValues.some((item) => !z.string().max(applicationInputLimits.optionValue).safeParse(item).success)) {
+            return { success: false, message: `[${question.title}] 선택지는 1000자 이하여야 합니다.` };
+          }
           const allowedOptions = new Set(question.options.map(option => option.value));
-          if (rawValues.some(item => !allowedOptions.has(item))) {
+          if (selectedValues.some(item => !allowedOptions.has(item))) {
             return {
               success: false,
               message: `[${question.title}] 선택지가 올바르지 않습니다.`,
             };
           }
-          value = JSON.stringify(rawValues);
+          value = JSON.stringify(selectedValues);
+          if (!z.string().max(applicationInputLimits.checkboxAnswer).safeParse(value).success) {
+            return { success: false, message: `[${question.title}] 선택한 항목이 너무 많습니다.` };
+          }
         }
 
-        if (question.isRequired && rawValues.length === 0) {
+        if (question.isRequired && selectedValues.length === 0) {
           return { success: false, message: `[${question.title}] 항목은 필수입니다.` };
         }
       } else {
-        value = rawValues[0] ?? "";
+        value = rawValues[0]?.trim() ?? "";
 
         if (question.isRequired && !value) {
           return { success: false, message: `[${question.title}] 항목은 필수입니다.` };
+        }
+
+        const maxLength = question.type === "LONG_ANSWER"
+          ? applicationInputLimits.longAnswer
+          : question.type === "SHORT_ANSWER"
+            ? applicationInputLimits.shortAnswer
+            : applicationInputLimits.optionValue;
+        if (!z.string().max(maxLength).safeParse(value).success) {
+          return { success: false, message: `[${question.title}] 답변은 ${maxLength}자 이하여야 합니다.` };
         }
 
         if (

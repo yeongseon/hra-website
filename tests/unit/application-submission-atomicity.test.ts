@@ -3,6 +3,23 @@
  * 실제 DB 경합은 별도 격리 PostgreSQL 테스트에서 확인한다.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { applicationInputLimits } from "@/features/applications/input-limits";
+
+type MockQuestion = {
+  id: string;
+  title: string;
+  type: "SHORT_ANSWER" | "LONG_ANSWER" | "MULTIPLE_CHOICE" | "CHECKBOX" | "DROPDOWN";
+  isRequired: boolean;
+  options: { value: string }[];
+};
+
+const defaultQuestion: MockQuestion = {
+  id: "22222222-2222-4222-8222-222222222222",
+  title: "지원 동기",
+  type: "SHORT_ANSWER",
+  isRequired: true,
+  options: [],
+};
 
 const mocks = vi.hoisted(() => ({
   batch: vi.fn(),
@@ -20,7 +37,7 @@ const mocks = vi.hoisted(() => ({
       type: "SHORT_ANSWER",
       isRequired: true,
       options: [],
-    }],
+    }] as MockQuestion[],
   },
 }));
 
@@ -85,6 +102,7 @@ describe("지원서 제출 배치 (#97)", () => {
     vi.resetAllMocks();
     mocks.persisted = false;
     mocks.form.isPublished = true;
+    mocks.form.questions = [{ ...defaultQuestion, options: [] }];
     mocks.batch.mockResolvedValue([]);
   });
 
@@ -93,6 +111,62 @@ describe("지원서 제출 배치 (#97)", () => {
     const result = await submitApplicationForm({ success: false, message: "" }, submission());
     expect(result).toEqual({ success: false, message: "현재 접수 가능한 지원서가 아닙니다." });
     expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["applicantName", "가".repeat(applicationInputLimits.applicantName),
+      "가".repeat(applicationInputLimits.applicantName + 1), "이름은 100자 이하여야 합니다."],
+    ["applicantEmail", `${"a".repeat(243)}@example.com`,
+      `${"a".repeat(244)}@example.com`, "이메일 주소는 255자 이하여야 합니다."],
+    ["applicantPhone", "1".repeat(applicationInputLimits.applicantPhone),
+      "1".repeat(applicationInputLimits.applicantPhone + 1), "연락처는 20자 이하여야 합니다."],
+  ] as const)("%s은 DB 길이까지 허용하고 초과 입력은 저장하지 않는다", async (field, atLimit, tooLong, message) => {
+    const data = submission();
+    data.set(field, atLimit);
+    expect((await submitApplicationForm({ success: false, message: "" }, data)).success).toBe(true);
+    mocks.batch.mockClear();
+
+    data.set(field, tooLong);
+    expect(await submitApplicationForm({ success: false, message: "" }, data))
+      .toEqual({ success: false, message });
+    expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["SHORT_ANSWER", applicationInputLimits.shortAnswer],
+    ["LONG_ANSWER", applicationInputLimits.longAnswer],
+  ] as const)("%s 답변은 %i자까지 받고 초과하면 거부한다", async (type, maxLength) => {
+    mocks.form.questions = [{ ...defaultQuestion, type, options: [] }];
+    const data = submission();
+    data.set(`q-${defaultQuestion.id}`, "가".repeat(maxLength));
+    expect((await submitApplicationForm({ success: false, message: "" }, data)).success).toBe(true);
+    mocks.batch.mockClear();
+
+    data.set(`q-${defaultQuestion.id}`, "가".repeat(maxLength + 1));
+    expect(await submitApplicationForm({ success: false, message: "" }, data)).toEqual({
+      success: false,
+      message: `[지원 동기] 답변은 ${maxLength}자 이하여야 합니다.`,
+    });
+    expect(mocks.batch).not.toHaveBeenCalled();
+  });
+
+  it("공백만 있는 필수 답변은 거부하고 체크박스 중복 선택은 한 번만 저장한다", async () => {
+    const data = submission();
+    data.set(`q-${defaultQuestion.id}`, "   ");
+    expect(await submitApplicationForm({ success: false, message: "" }, data)).toEqual({
+      success: false,
+      message: "[지원 동기] 항목은 필수입니다.",
+    });
+    expect(mocks.batch).not.toHaveBeenCalled();
+
+    mocks.form.questions = [{ ...defaultQuestion, type: "CHECKBOX", options: [{ value: "선택 1" }, { value: "선택 2" }] }];
+    data.delete(`q-${defaultQuestion.id}`);
+    data.append(`q-${defaultQuestion.id}`, "선택 1");
+    data.append(`q-${defaultQuestion.id}`, "선택 1");
+    data.append(`q-${defaultQuestion.id}`, "선택 2");
+    expect((await submitApplicationForm({ success: false, message: "" }, data)).success).toBe(true);
+    const answers = mocks.insertValues.mock.calls.find(([, values]) => Array.isArray(values));
+    expect(answers?.[1]).toEqual([expect.objectContaining({ value: '["선택 1","선택 2"]' })]);
   });
 
   it("답변 INSERT 실패는 실패로 응답하고 같은 이메일 재시도를 허용한다", async () => {
