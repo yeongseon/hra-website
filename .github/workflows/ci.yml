@@ -12,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      # PR 코드와 브라우저 검사는 운영 서비스의 DB·Blob 자격 증명을 받지 않습니다.
+      # DB 접속이 필요한 SQL 회귀 테스트는 아래 임시 PostgreSQL 클러스터를 직접 띄웁니다.
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/isolated
+      AUTH_SECRET: ci-only-secret-for-isolated-smoke-tests
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
 
     steps:
       - uses: actions/checkout@v4
@@ -34,8 +35,24 @@ jobs:
       - name: TypeScript 타입 검사
         run: npm run typecheck
 
+      - name: 격리 PostgreSQL 준비
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          pg_bin="$(pg_config --bindir)"
+          test -x "$pg_bin/initdb"
+          test -x "$pg_bin/pg_ctl"
+          printf 'HRA_TEST_PG_BIN=%s\n' "$pg_bin" >> "$GITHUB_ENV"
+
       - name: 단위 테스트
         run: npm test
 
       - name: Next.js 빌드
         run: npm run build
+
+      - name: Chromium 설치
+        run: npx playwright install --with-deps chromium
+
+      - name: 브라우저 스모크 테스트
+        # DB가 필요한 공개 홈·자료 상세 테스트는 격리 CI와 분리합니다.
+        run: npm run test:e2e -- tests/e2e/ci-smoke.spec.ts
