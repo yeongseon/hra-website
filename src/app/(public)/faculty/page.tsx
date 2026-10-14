@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { asc } from "drizzle-orm";
-// 교수진은 카테고리 내에서 이름 가나다라순으로 표시합니다.
+// 교수진은 카테고리 내에서 관리자가 지정한 순서, 이름순으로 표시합니다.
 
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
@@ -37,7 +37,7 @@ export default async function FacultyPage() {
       order: faculty.order,
     })
     .from(faculty)
-    .orderBy(asc(faculty.name));
+    .orderBy(asc(faculty.order), asc(faculty.name));
 
   const displayFacultyByCategory: Record<FacultyCategory, FacultyMember[]> = {
     CLASSICS: allFaculty.filter((m) => m.category === "CLASSICS"),

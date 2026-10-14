@@ -17,13 +17,13 @@ beforeEach(() => {
   mocks.auth.mockReset();
 });
 
-async function renderMyPage(email: string) {
+async function renderMyPage(email: string, role: "MEMBER" | "FACULTY" = "MEMBER") {
   mocks.auth.mockResolvedValue({
     user: {
       id: "11111111-2222-3333-4444-555555555555",
       name: "테스트 회원",
       email,
-      role: "MEMBER",
+      role,
     },
     expires: new Date(Date.now() + 60_000).toISOString(),
   });
@@ -45,5 +45,12 @@ describe("마이페이지 이메일 표시", () => {
 
     expect(html).toContain("member@example.com");
     expect(html).not.toContain("이메일 미등록");
+  });
+
+  it("교수진 역할을 회원이 아닌 교수진으로 표시한다", async () => {
+    const html = await renderMyPage("faculty@example.com", "FACULTY");
+
+    expect(html).toContain("교수진");
+    expect(html).not.toContain(">회원<");
   });
 });

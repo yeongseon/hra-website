@@ -66,6 +66,7 @@ export type ResourceItem = {
 };
 
 interface ResourcesTabsProps {
+  initialCategory?: string;
   items: ResourceItem[];
   cohorts: { id: string; name: string }[];
   userCohortId: string | null;
@@ -88,12 +89,15 @@ const getCategoryColor = (category: ResourceCategory): string => {
   }
 };
 
-export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: ResourcesTabsProps) {
+export function ResourcesTabs({ initialCategory, items, cohorts, userCohortId, userRole }: ResourcesTabsProps) {
   // 기수 기본값: 전체
   const defaultCohort = ALL_COHORT;
 
   const [activeCohort, setActiveCohort] = useState<string>(defaultCohort);
-  const [activeCategory, setActiveCategory] = useState<ResourceCategory>("가이드북");
+  // 상세 화면에서 돌아온 카테고리만 허용하고, 잘못된 쿼리는 기본 탭으로 돌립니다.
+  const [activeCategory, setActiveCategory] = useState<ResourceCategory>(
+    CATEGORY_TABS.find((category) => category === initialCategory) ?? "가이드북",
+  );
   // 주차별 텍스트 서브필터 — 탭 전환 시 초기화하지 않고 유지
   const [activeTextType, setActiveTextType] = useState<WeeklyTextType | "전체">("전체");
   const [activeClassMaterialAudience, setActiveClassMaterialAudience] =
@@ -123,10 +127,11 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
 
   // 필터링 로직
   const filteredItems = items.filter((item) => {
-    // 기수 필터: 가이드북은 기수 무관 항상 표시
+    // 기수가 없는 공통 자료는 특정 기수를 선택해도 계속 표시합니다.
     const matchesCohort =
       activeCohort === ALL_COHORT ||
-      item.category === "가이드북" ||
+      (item.cohortId == null &&
+        (item.category === "가이드북" || item.category === "강의 자료" || item.category === "보고서 양식")) ||
       item.cohortId === activeCohort;
 
     // 카테고리 탭 필터
