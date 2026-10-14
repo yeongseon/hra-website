@@ -54,11 +54,11 @@ scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변�
 
 ## 5. 토큰과 CI 실행
 
-활성화 전 저장소 한정 `RELEASE_PLEASE_TOKEN`(GitHub App token 또는 최소 권한 PAT)을 설정한다. release-please에는 contents/issues/pull-requests 쓰기 권한이 필요하다. `GITHUB_TOKEN`으로 대체하지 않는다. 워크플로별 최소 권한을 사용하고 DB/Blob/배포 토큰은 전달하지 않는다.
+활성화 전 저장소 한정 `RELEASE_PLEASE_TOKEN`(최소 권한 fine-grained PAT)을 설정한다. release-please에는 contents/issues/pull-requests 쓰기 권한이 필요하다. `GITHUB_TOKEN`으로 대체하지 않는다. 워크플로별 최소 권한을 사용하고 DB/Blob/배포 토큰은 전달하지 않는다. GitHub App을 사용하려면 별도 단계에서 단기 설치 토큰을 발급하도록 workflow를 변경해야 한다.
 
 관리자 설정의 **Allow GitHub Actions to create and approve pull requests**가 허용되어 있어야 한다. 이 옵션은 자동 승인을 하라는 뜻이 아니며, workflow는 승인/병합을 수행하지 않는다.
 
-GitHub와 release-please의 공식 문서에 따르면 `GITHUB_TOKEN`이 만든 PR·태그의 후속 이벤트는 일반적인 workflow를 시작하지 않는다. 따라서 release PR의 CI가 실제로 실행되도록 GitHub App 또는 최소 권한 PAT를 사용하고, 첫 PR에서 실행 결과를 확인한다. 토큰 작성자의 PR에 별도 승인 정책이 적용되면 승인 후 CI를 확인한다.
+GitHub와 release-please의 공식 문서에 따르면 `GITHUB_TOKEN`이 만든 PR·태그의 후속 이벤트는 일반적인 workflow를 시작하지 않는다. 따라서 release PR의 CI가 실제로 실행되도록 현재 workflow에는 최소 권한 PAT를 사용하고, 첫 PR에서 실행 결과를 확인한다. 토큰 작성자의 PR에 별도 승인 정책이 적용되면 승인 후 CI를 확인한다.
 
 저장소 변수 `RELEASE_PLEASE_BOT_LOGIN`에 실제 PR 작성자 login을 정확히 지정한다. 토큰 자체를 변수나 문서에 기록하지 않는다. Actions PR 생성 허용·토큰·작성자 변수를 확인한 뒤에만 `RELEASE_PLEASE_ENABLED=true`로 전환한다.
 
