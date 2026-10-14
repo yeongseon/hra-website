@@ -33,12 +33,24 @@ if (args.length === 0) {
 }
 
 const sqlFile = fileURLToPath(new URL("./sql/rate-limit-reservations.sql", import.meta.url));
+// libpq의 PGDATABASE는 URL이 아니라 DB 이름입니다. 연결 문자열을 각 필드로 나눠
+// 비밀번호가 명령 인자나 연결 실패 메시지에 포함되지 않게 합니다.
+const pgEnvironment = {
+  ...process.env,
+  PGHOST: target.hostname,
+  PGPORT: target.port || "5432",
+  PGUSER: decodeURIComponent(target.username),
+  PGPASSWORD: decodeURIComponent(target.password),
+  PGDATABASE: decodeURIComponent(target.pathname.replace(/^\//, "")),
+  PGSSLMODE: target.searchParams.get("sslmode") || "require",
+  PGCHANNELBINDING: target.searchParams.get("channel_binding") || "prefer",
+};
 const result = spawnSync(
   process.env.HRA_PSQL_BIN || "psql",
   ["-X", "-v", "ON_ERROR_STOP=1", "-f", sqlFile],
   {
     stdio: "inherit",
-    env: { ...process.env, PGDATABASE: connection },
+    env: pgEnvironment,
   },
 );
 if (result.error) {
