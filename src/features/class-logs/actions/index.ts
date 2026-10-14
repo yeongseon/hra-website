@@ -32,6 +32,7 @@ import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
 import { buildImageAlt } from "@/lib/image-alt";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { validateImageUpload } from "@/lib/upload-file-validation";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
@@ -65,13 +66,6 @@ export type ClassLogActionState = {
   success: boolean;
   error?: string;
 };
-
-const allowedImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
 
 const maxImageSize = 10 * 1024 * 1024;
 
@@ -134,26 +128,26 @@ const normalizeFileName = (fileName: string) => {
   return sanitized || "class-log-image";
 };
 
-const getValidatedImageFiles = (formData: FormData) => {
+const getValidatedImageFiles = async (formData: FormData) => {
   const files = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
+  const contentTypes: string[] = [];
   for (const file of files) {
-    if (!allowedImageTypes.has(file.type)) {
+    if (file.size > maxImageSize) {
+      return { error: "사진 파일은 10MB 이하여야 합니다." } as const;
+    }
+    const contentType = await validateImageUpload(file);
+    if (!contentType) {
       return {
         error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
       } as const;
     }
-
-    if (file.size > maxImageSize) {
-      return {
-        error: "사진 파일은 10MB 이하여야 합니다.",
-      } as const;
-    }
+    contentTypes.push(contentType);
   }
 
-  return { files } as const;
+  return { files, contentTypes } as const;
 };
 
 /** 첨부 업로드 후 글과 이미지 메타를 한 DB 배치에 저장합니다. */
@@ -161,6 +155,7 @@ async function createClassLogRecord(
   id: string,
   values: { title: string; content: string; classDate: Date; cohortId: string | null; authorId: string },
   files: File[],
+  contentTypes: string[],
 ): Promise<void> {
   // 동일한 폼의 재제출이면 업로드 전에 기존 글을 확인합니다.
   const [alreadyCreated] = await db.select({ id: classLogs.id }).from(classLogs).where(eq(classLogs.id, id)).limit(1);
@@ -170,6 +165,7 @@ async function createClassLogRecord(
     files.map((file, index) => ({
       pathname: `class-logs/${id}-${index}-${normalizeFileName(file.name)}`,
       file,
+      contentType: contentTypes[index],
     })),
     values.authorId,
   );
@@ -258,7 +254,7 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
     return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return { success: false, error: validatedImages.error };
   }
@@ -275,7 +271,7 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }, validatedImages.files);
+    }, validatedImages.files, validatedImages.contentTypes);
 
     revalidateClassLogPaths();
     revalidatePath("/resources/class-logs");
@@ -332,7 +328,7 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -352,7 +348,7 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }, validatedImages.files);
+    }, validatedImages.files, validatedImages.contentTypes);
 
     revalidateClassLogPaths();
 
@@ -425,7 +421,7 @@ export async function updateClassLog(
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -485,7 +481,7 @@ export async function updateClassLog(
           const blob = await put(
             `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
             file,
-            { access: "public", addRandomSuffix: true },
+            { access: "public", addRandomSuffix: true, contentType: validatedImages.contentTypes[i] },
           );
           uploadedUrls.push(blob.url);
           newRows.push({

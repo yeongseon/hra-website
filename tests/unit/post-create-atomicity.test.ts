@@ -57,7 +57,7 @@ const requestId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222222";
 
 function image() {
-  return new File(["image"], "photo.png", { type: "image/png" });
+  return new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "photo.png", { type: "image/png" });
 }
 
 function classLogForm() {
@@ -126,6 +126,7 @@ describe("게시글과 첨부 메타 생성", () => {
     expect(retried.success).toBe(true);
     expect(mocks.batch).toHaveBeenCalledTimes(1);
     expect(mocks.batch.mock.calls[0]?.[0][0].values.id).toBe(requestId);
+    expect(mocks.put).toHaveBeenLastCalledWith(expect.any(String), expect.any(File), expect.objectContaining({ contentType: "image/png" }));
   });
 
   it("같은 요청 키의 재제출은 Blob 업로드와 DB INSERT를 다시 하지 않는다", async () => {
@@ -150,6 +151,14 @@ describe("게시글과 첨부 메타 생성", () => {
   it("날짜 검증 실패는 파일을 올리지 않는다", async () => {
     const form = weeklyTextForm();
     form.set("classDate", "잘못된 날짜");
+    const result = await createWeeklyText(form);
+    expect(result.success).toBe(false);
+    expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it("선언 MIME만 PDF인 가짜 문서는 Blob에 올리지 않는다", async () => {
+    const form = weeklyTextForm();
+    form.set("file", new File(["<html>"], "가짜.pdf", { type: "application/pdf" }));
     const result = await createWeeklyText(form);
     expect(result.success).toBe(false);
     expect(mocks.put).not.toHaveBeenCalled();

@@ -74,7 +74,7 @@ function facultyForm() {
 function fileForm(kind: "guidebook" | "classMaterial") {
   const formData = new FormData();
   formData.set("title", "새 자료");
-  formData.set("file", new File(["pdf"], "new.pdf", { type: "application/pdf" }));
+  formData.set("file", new File(["%PDF-1.7"], "new.pdf", { type: "application/pdf" }));
   if (kind === "classMaterial") {
     formData.set("weekNumber", "");
     formData.set("lectureTitle", "");
