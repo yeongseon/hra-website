@@ -1095,6 +1095,9 @@ export function RichTextEditor({
   // 클립보드에서 이미지를 붙여넣었을 때 업로드
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLDivElement>) => {
+      // 텍스트나 HTML 이 함께 있으면 에디터의 기본 붙여넣기가 처리하도록 둡니다.
+      // 이 경우 이미지를 따로 업로드하면 같은 클립보드 내용이 중복 삽입됩니다.
+      if (e.clipboardData.getData("text/plain") || e.clipboardData.getData("text/html")) return;
       const imageItem = Array.from(e.clipboardData.items).find(
         (item) => item.kind === "file" && item.type.startsWith("image/")
       );

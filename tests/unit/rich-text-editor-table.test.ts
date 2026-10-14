@@ -11,7 +11,7 @@
 
 import { createElement } from "react";
 import type { Editor } from "@tiptap/core";
-import { act, cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 
@@ -33,6 +33,7 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 // 에디터에 마크다운을 넣어 열고, edit 로 편집한 뒤 저장될 값(hidden input)을 돌려준다.
@@ -178,5 +179,56 @@ describe("RichTextEditor — 표 셀 서식 보존", () => {
 
     expect(row).toContain(`가${privateUse}나`);
     expect(row).not.toContain("<br>");
+  });
+});
+
+describe("RichTextEditor — 이미지 붙여넣기", () => {
+  const file = new File(["image"], "clipboard.png", { type: "image/png" });
+
+  async function editorElement() {
+    const view = render(createElement(RichTextEditor, { name: "body", defaultValue: "" }));
+    await waitFor(() => {
+      if (!view.container.querySelector(".ProseMirror")) throw new Error("에디터가 아직 준비되지 않았습니다.");
+    });
+    const element = view.container.querySelector(".ProseMirror");
+    if (!element) throw new Error("에디터 영역을 찾지 못했습니다.");
+    return element;
+  }
+
+  function clipboardData(text: string, html = "") {
+    return {
+      items: [{ kind: "file", type: "image/png", getAsFile: () => file }],
+      getData: (format: string) => format === "text/plain" ? text : format === "text/html" ? html : "",
+    };
+  }
+
+  it("텍스트와 이미지가 함께 있으면 기본 텍스트 붙여넣기를 유지하고 이미지를 업로드하지 않는다", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
+    const element = await editorElement();
+
+    fireEvent.paste(element, { clipboardData: clipboardData("표 셀 텍스트") });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(element.textContent).toContain("표 셀 텍스트");
+  });
+
+  it("HTML 과 이미지가 함께 있으면 기본 HTML 붙여넣기를 유지한다", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
+    const element = await editorElement();
+
+    fireEvent.paste(element, { clipboardData: clipboardData("", "<table><tbody><tr><td>표 셀 텍스트</td></tr></tbody></table>") });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(element.textContent).toContain("표 셀 텍스트");
+  });
+
+  it("이미지만 있으면 이미지 업로드를 시작한다", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ url: "https://example.com/image.png" })));
+    const element = await editorElement();
+
+    const notCancelled = fireEvent.paste(element, { clipboardData: clipboardData("") });
+
+    expect(notCancelled).toBe(false);
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
   });
 });
