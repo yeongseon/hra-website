@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
 import { parseListPage } from "@/lib/query-params";
+import { alumniStorySummary } from "@/features/alumni/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,14 @@ export default async function AlumniPage({
   const params = await searchParams;
   const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
   const currentDbStories = await db
-    .select()
+    .select({
+      id: alumniStoriesTable.id,
+      name: alumniStoriesTable.name,
+      quote: alumniStoriesTable.quote,
+      summary: alumniStorySummary,
+      title: alumniStoriesTable.title,
+      imageUrl: alumniStoriesTable.imageUrl,
+    })
     .from(alumniStoriesTable)
     // 고정된 항목 먼저, 그 다음 작성일 최신순
     .orderBy(desc(alumniStoriesTable.pinned), desc(alumniStoriesTable.createdAt), desc(alumniStoriesTable.id))
@@ -52,7 +60,7 @@ export default async function AlumniPage({
     id: story.id,
     name: story.name,
     quote: story.quote,
-    story: story.content,
+    story: story.summary,
     title: story.title,
     imageUrl: story.imageUrl,
     gradient: gradients[(startIndex + index) % gradients.length],

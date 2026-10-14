@@ -11,7 +11,13 @@ const gradients = [
 
 export async function AlumniCarousel() {
   const featuredStories = await db
-    .select()
+    .select({
+      id: alumniStories.id,
+      name: alumniStories.name,
+      title: alumniStories.title,
+      quote: alumniStories.quote,
+      imageUrl: alumniStories.imageUrl,
+    })
     .from(alumniStories)
     .where(eq(alumniStories.isFeatured, true))
     .orderBy(asc(alumniStories.order));

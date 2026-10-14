@@ -250,7 +250,8 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
         title: parsed.data.title ?? null,
         quote: parsed.data.quote,
         content: parsed.data.content,
-        imageUrl: parsed.data.imageUrl || existing.imageUrl,
+        // 새 이미지의 첫 파일을 대표 사진으로 지정하고, 업로드가 없으면 기존 사진을 유지합니다.
+        imageUrl: uploadedUrls[0] || parsed.data.imageUrl || existing.imageUrl,
         isFeatured: parsed.data.isFeatured,
       })
       .where(and(

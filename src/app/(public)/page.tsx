@@ -4,6 +4,7 @@ import { Target, Briefcase, Heart } from "lucide-react";
 import { HeroSection } from "./_components/hero-section";
 import { StatsSection } from "./_components/stats-section";
 import { CalendarSection } from "./_components/calendar-section";
+import { AlumniCarousel } from "./_components/alumni-carousel";
 import { parseCalendarMonth } from "@/lib/query-params";
 
 export const metadata: Metadata = {
@@ -24,6 +25,9 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#1a1a1a] font-sans selection:bg-blue-100 selection:text-blue-900">
       <HeroSection />
+
+      {/* 관리자에게 메인 노출로 지정된 수료생 이야기만 표시합니다. */}
+      <AlumniCarousel />
 
       <section className="py-24 px-4 max-w-7xl mx-auto w-full">
         <div className="flex flex-col items-center text-center mb-16">
