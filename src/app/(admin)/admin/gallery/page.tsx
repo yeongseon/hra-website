@@ -24,14 +24,7 @@ import { GalleryDeleteButton } from "@/app/(admin)/admin/gallery/_components/gal
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { galleries } from "@/lib/db/schema";
-
-const formatCreatedDate = (date: Date) => {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-};
+import { formatKstDate } from "@/lib/date-time";
 
 const excerptDescription = (value: string | null, maxLength = 90) => {
   if (!value) {
@@ -120,7 +113,7 @@ export default async function AdminGalleryPage() {
                   <p>이미지 {imageCount}장</p>
                   <p className="inline-flex items-center gap-1">
                     <CalendarDays className="size-4" />
-                    {formatCreatedDate(album.createdAt)} 생성
+                    {formatKstDate(album.createdAt)} 생성
                   </p>
                 </CardContent>
 

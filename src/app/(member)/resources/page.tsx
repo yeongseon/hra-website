@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Info, Plus } from "lucide-react";
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
 import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
@@ -31,8 +31,14 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ResourcesPage() {
-  const session = await auth();
+type Props = {
+  searchParams: Promise<{ category?: string | string[] }>;
+};
+
+export default async function ResourcesPage({ searchParams }: Props) {
+  const requestedCategory = (await searchParams).category;
+  const initialCategory = typeof requestedCategory === "string" ? requestedCategory : undefined;
+  const session = await requireSharedResourceReader();
   const userRole = session?.user?.role;
 
   // ADMIN/FACULTY/MEMBER는 열람 권한이 있으므로 경고 불필요
@@ -153,7 +159,7 @@ export default async function ResourcesPage() {
       cohortId: text.cohortId,
       textType: text.textType ?? null,
       href: text.body ? `/resources/weekly-texts/${text.id}` : undefined,
-      downloadUrl: !text.body && text.fileUrl ? text.fileUrl : undefined,
+      downloadUrl: !text.body && text.fileUrl ? `/api/resources/weekly-texts/${text.id}/download` : undefined,
     })),
     ...allClassMaterials.map((material) => ({
       id: `cm-${material.id}`,
@@ -250,6 +256,8 @@ export default async function ResourcesPage() {
 
       {/* 자료실 탭 필터 + 목록 */}
       <ResourcesTabs
+        key={initialCategory}
+        initialCategory={initialCategory}
         items={items}
         cohorts={cohortRows}
         userCohortId={userCohortId}

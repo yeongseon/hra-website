@@ -36,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { saveFormQuestions } from "@/features/applications/actions/questions";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 type Option = {
   id?: string;
@@ -56,17 +57,20 @@ type Question = {
 type FormBuilderProps = {
   formId: string;
   formTitle?: string;
+  initialRevision: number;
   initialQuestions: Question[];
 };
 
-export function FormBuilder({ formId, formTitle, initialQuestions }: FormBuilderProps) {
+export function FormBuilder({ formId, formTitle, initialRevision, initialQuestions }: FormBuilderProps) {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>(
     initialQuestions.length > 0
-      ? initialQuestions.sort((a, b) => a.order - b.order)
+      ? [...initialQuestions].sort((a, b) => a.order - b.order)
       : []
   );
   const [isPending, startTransition] = useTransition();
+  // 저장 성공 시 서버가 확정한 버전과 새 질문 ID를 반영해 다음 저장의 충돌을 막는다.
+  const [revision, setRevision] = useState(initialRevision);
   // showPreview 초깃값이 false이므로 SSR 중에는 createPortal이 실행되지 않아 별도 mounted 가드 불필요
   const [showPreview, setShowPreview] = useState(false);
 
@@ -161,8 +165,15 @@ export function FormBuilder({ formId, formTitle, initialQuestions }: FormBuilder
     }
 
     startTransition(async () => {
-      const result = await saveFormQuestions(formId, questions);
+      const result = await saveFormQuestions(formId, questions, revision);
       if (result.success) {
+        if (result.revision !== undefined && result.questionIds) {
+          setRevision(result.revision);
+          setQuestions(current => current.map((question, index) => ({
+            ...question,
+            id: result.questionIds?.[index] ?? question.id,
+          })));
+        }
         toast.success(result.message);
         router.refresh();
       } else {
@@ -290,6 +301,7 @@ export function FormBuilder({ formId, formTitle, initialQuestions }: FormBuilder
                         <GripVertical className="size-4 text-slate-300" />
                         <Input 
                           value={opt.value}
+                          maxLength={applicationInputLimits.optionValue}
                           onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
                           placeholder={`옵션 ${optIndex + 1}`}
                           className="h-9 text-sm border-slate-200"

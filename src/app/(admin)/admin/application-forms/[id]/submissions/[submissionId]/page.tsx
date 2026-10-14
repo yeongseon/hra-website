@@ -18,30 +18,13 @@ import {
 } from "@/lib/db/schema";
 import { DeleteSubmissionButton } from "./_components/delete-submission-button";
 import { StatusChangeButton } from "./_components/status-change-button";
+import { formatKstDateTimeWithSeconds } from "@/lib/date-time";
+import { parseCheckboxAnswerValue } from "@/features/applications/answer-format";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string; submissionId: string }>;
-};
-
-const formatDateTime = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  }).format(value);
-
-const parseChoiceAnswerValue = (rawValue: string): string[] | null => {
-  try {
-    const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : null;
-  } catch {
-    return null;
-  }
 };
 
 export default async function AdminSubmissionDetailPage({ params }: Props) {
@@ -149,7 +132,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                 <Label className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">제출 일시</Label>
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <Calendar className="size-3.5" />
-                  {formatDateTime(submission.submittedAt)}
+                  {formatKstDateTimeWithSeconds(submission.submittedAt)}
                 </div>
               </div>
             </CardContent>
@@ -186,7 +169,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                     <div className="bg-slate-50/50 rounded-xl p-5 border border-slate-100">
                       <div className="text-slate-800 whitespace-pre-wrap leading-relaxed">
                         {(() => {
-                          const choices = parseChoiceAnswerValue(ans.value);
+                          const choices = parseCheckboxAnswerValue(ans.value, ans.question?.type);
                           if (choices) {
                             return (
                               <ul className="list-disc list-inside space-y-1.5">

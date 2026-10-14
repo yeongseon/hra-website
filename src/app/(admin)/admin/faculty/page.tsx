@@ -32,11 +32,11 @@ const categoryOrder = ["CLASSICS", "BUSINESS", "LECTURE"] as const;
 export default async function AdminFacultyPage() {
   await requireAdmin();
 
-  // 카테고리 내에서 이름 가나다라순 정렬
+  // 카테고리 내에서 관리자가 지정한 순서를 먼저 적용하고 이름순으로 정렬
   const facultyMembers = await db
     .select()
     .from(faculty)
-    .orderBy(asc(faculty.name));
+    .orderBy(asc(faculty.order), asc(faculty.name));
 
   const categorizedFacultyMembers = categoryOrder.map((category) => ({
     category,

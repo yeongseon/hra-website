@@ -25,7 +25,7 @@ type Props = {
 };
 
 export default async function EditGuidebookPage({ params }: Props) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -61,6 +61,7 @@ export default async function EditGuidebookPage({ params }: Props) {
 
       <GuidebookForm
         action={boundAction}
+        userId={session.user.id}
         defaultValues={{ title: guidebook.title, fileName: guidebook.fileName }}
       />
     </section>

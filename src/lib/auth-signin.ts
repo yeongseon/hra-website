@@ -18,11 +18,16 @@
  *   2) tests/unit/auth-decision-mirror-parity.test.ts (20 tests) — verify script mirror parity
  *   3) tests/unit/auth-signin-io.test.ts (신규, #81) — signIn 콜백의 IO 조합 자체
  *   4) DB UNIQUE (oauth_provider, oauth_provider_account_id) + CHECK 제약 — fail-closed 안전망
- *   5) scripts/verify-oauth-binding-security.mjs (36 assertions) — 프로덕션 DB 스모크
+ *   5) scripts/verify-oauth-binding-security.mjs (36 assertions) — 격리 DB 스모크
  */
 
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import {
+  getDisplayEmail,
+  getVerifiedKakaoEmail,
+  isOAuthPlaceholderEmail,
+} from "@/lib/auth-email";
 import { decideOAuthSignIn } from "@/lib/auth-session";
 import * as schema from "@/lib/db/schema";
 import { users } from "@/lib/db/schema";
@@ -33,11 +38,12 @@ type UserInsert = typeof users.$inferInsert;
 /**
  * SignIn 콜백이 필요로 하는 최소 DB IO 포트 (#81).
  *
- * signIn 콜백은 딱 4가지 IO 를 수행한다:
+ * signIn 콜백은 다음 IO 를 수행한다:
  *   1) (provider, providerAccountId) 튜플로 boundUser SELECT
  *   2) email 로 emailUser SELECT
  *   3) 신규 계정 INSERT (allow-new 결정)
  *   4) 기존 계정 프로필 UPDATE (allow-existing 결정)
+ *   5) 검증된 카카오 이메일로 내부 주소를 조건부 UPDATE
  *
  * 이 포트를 통해 handleOAuthSignIn 은 drizzle 객체를 직접 알지 못한다. 테스트는
  * vi.fn() 으로 각 메서드를 mock 하고 어떤 순서 / 어떤 인자로 호출되었는지 assert 한다.
@@ -53,14 +59,19 @@ export interface SignInIO {
     id: string,
     updates: { name?: string; image?: string },
   ): Promise<void>;
+  promotePlaceholderEmail(
+    id: string,
+    placeholderEmail: string,
+    verifiedEmail: string,
+  ): Promise<boolean>;
 }
 
 /**
  * 실제 Neon+Drizzle db 인스턴스를 SignInIO 로 감싸는 어댑터 (#81).
  *
- * 어댑터의 정확성은 `scripts/verify-oauth-binding-security.mjs` 가 프로덕션 DB
- * 위에서 스모크 검증한다. 이 어댑터는 두께가 매우 얇으므로 단위 테스트로는
- * 다루지 않는다 (테스트해도 drizzle 을 mock 하게 되어 실익이 없다).
+ * 바인딩 제약은 `scripts/verify-oauth-binding-security.mjs` 가 DB에서 검증한다.
+ * 이메일 승격은 기존 내부 주소 조건과 email UNIQUE 제약을 함께 사용한다.
+ * 단위 테스트는 이 어댑터의 호출 조건 및 결과에 따른 세션 값을 검증한다.
  */
 export function createDrizzleSignInIO(
   db: NeonHttpDatabase<typeof schema>,
@@ -85,6 +96,30 @@ export function createDrizzleSignInIO(
     async updateProfile(id, updates) {
       await db.update(users).set(updates).where(eq(users.id, id));
     },
+    async promotePlaceholderEmail(id, placeholderEmail, verifiedEmail) {
+      // 내부 주소를 가진 동일 사용자만 갱신한다. 중복 주소 경합은 로그인 실패로 번지지 않는다.
+      if (
+        !isOAuthPlaceholderEmail(placeholderEmail) ||
+        getDisplayEmail(verifiedEmail) === null
+      ) {
+        return false;
+      }
+
+      try {
+        const updated = await db
+          .update(users)
+          .set({ email: verifiedEmail })
+          .where(and(eq(users.id, id), eq(users.email, placeholderEmail)))
+          .returning({ id: users.id });
+        return updated.length === 1;
+      } catch (error) {
+        // 이메일 UNIQUE 위반만 건너뛰고, 연결 장애 등 다른 DB 오류는 그대로 전달한다.
+        if (error && typeof error === "object" && "code" in error && error.code === "23505") {
+          return false;
+        }
+        throw error;
+      }
+    },
   };
 }
 
@@ -92,7 +127,7 @@ export function createDrizzleSignInIO(
  * signIn 콜백이 받는 최소 입력 shape (#81).
  *
  * NextAuth v5 의 signIn callback param 은 { user, account, profile, credentials, ...} 이지만
- * 이 함수는 그중 user/account 만 사용한다. 나머지는 auth.ts 에서 필요 시 사용.
+ * 이 함수는 user/account와 카카오 이메일 검증 상태가 담긴 profile만 사용한다.
  * user 는 provider 가 반환한 raw 사용자 정보 (email/name/image 는 null 이거나 없을 수 있음).
  */
 export interface OAuthSignInInput {
@@ -105,6 +140,7 @@ export interface OAuthSignInInput {
     provider: string;
     providerAccountId: string;
   };
+  profile?: unknown;
 }
 
 /**
@@ -120,7 +156,8 @@ export interface OAuthSignInInput {
  * 부수효과:
  *   `input.user.email` 을 "세션이 가리켜야 할 DB row 의 email" 로 덮어쓴다.
  *     - allow-new: 방금 INSERT 한 email (kakao placeholder 포함).
- *     - allow-existing: boundUser 의 DB email. provider 가 지금 내려준 email 이 아니다.
+ *     - allow-existing: boundUser 의 DB email. 검증된 카카오 이메일로 내부 주소의
+ *       조건부 UPDATE가 성공한 경우에만 새 DB email을 사용한다.
  *   provider email 은 사용자가 provider 쪽에서 바꿀 수 있으므로, 그 값을 token.email 로
  *   흘려보내면 세션에 다른 사람의 email 이 표시되거나 (과거 구현처럼) 다른 row 로 조회될
  *   수 있다. 세션 조회 자체는 jwt 콜백이 binding 튜플로 수행한다 (pickJwtLookupCriteria).
@@ -129,7 +166,7 @@ export async function handleOAuthSignIn(
   input: OAuthSignInInput,
   io: SignInIO,
 ): Promise<boolean | string> {
-  const { user, account } = input;
+  const { user, account, profile } = input;
 
   const email =
     user.email ||
@@ -172,6 +209,28 @@ export async function handleOAuthSignIn(
 
     if (Object.keys(updates).length > 0) {
       await io.updateProfile(decision.userId, updates);
+    }
+
+    // 이메일 일치만으로 계정을 연결하지 않는다. 이미 인증된 바인딩 계정의 내부 주소만
+    // 승격하며, 주소 충돌·미검증·동시 갱신 실패는 기존 주소를 유지한다.
+    const verifiedEmail =
+      account.provider === "kakao"
+        ? getVerifiedKakaoEmail(profile, user.email)
+        : null;
+    if (
+      boundUser &&
+      isOAuthPlaceholderEmail(boundUser.email) &&
+      verifiedEmail &&
+      !emailUser
+    ) {
+      const promoted = await io.promotePlaceholderEmail(
+        decision.userId,
+        boundUser.email,
+        verifiedEmail,
+      );
+      if (promoted) {
+        boundUser.email = verifiedEmail;
+      }
     }
   }
 

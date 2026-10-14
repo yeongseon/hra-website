@@ -1,11 +1,16 @@
+/**
+ * 본문 편집기의 이미지 업로드 API입니다.
+ * 인증·요청 제한·파일 형식을 검사한 뒤 Blob에 저장하고 서버 소유권 원장에 기록합니다.
+ * 원장 기록에 실패하면 이번 요청에서 업로드한 파일만 정리합니다.
+ */
 import { put } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { deleteBlobIfExists } from "@/lib/blob-utils";
+import { db } from "@/lib/db";
+import { markdownImageAssets } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import {
-  checkUploadRateLimit,
-  recordUploadAttempt,
-} from "@/lib/rate-limit";
+import { reserveUploadAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 
 // 매직 바이트 (파일 헤더의 고유 시그니처) 로 실제 이미지 타입을 판별.
@@ -65,20 +70,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limit (#69): 인증·역할 검사 통과 후 IP 기준 60초 / 30회.
-    // 인증 이후에 두는 이유: 미인증 요청까지 카운트하면 세션 만료 반복과 실제
-    // abuse 를 구분할 수 없다. formData() 이전에 두는 이유: 파일 전체를
-    // 메모리로 로드하기 전에 차단해 리소스 소비를 최소화.
-    // 실패 검증 (매직바이트, put 오류) 도 카운트해야 잘못된 파일 스팸으로
-    // sliding window 를 우회하는 걸 막을 수 있어 record 를 검증 전에 호출한다.
-    // 차단된 (429) 시도 역시 record 해 sliding window 를 정상적으로 소진하도록
-    // 유지 — 기록하지 않으면 공격자가 무한 요청으로 로그를 우회할 수 있고,
-    // Retry-After 로 사용자에게 안내한 대기시간이 실제 만료되지 않는다.
-    // (recordLoginAttempt 와 동일 정책; 소스 auth.ts:credentials.authorize.)
+    // 인증 후, 파일을 읽기 전에 IP 제한을 원자적으로 예약합니다 (#121).
+    // 실패한 파일 검증도 허용된 요청 수에 포함하고, 차단된 요청은 새 이벤트를
+    // 남기지 않아 대기 시간이 공격자의 추가 요청으로 무한히 연장되지 않습니다.
     const ip = extractClientIp(request.headers);
-    const { blocked, retryAfterSec } = await checkUploadRateLimit(ip);
+    const { blocked, retryAfterSec } = await reserveUploadAttempt(ip);
     if (blocked) {
-      await recordUploadAttempt(ip);
       return NextResponse.json(
         { error: "업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
         {
@@ -87,8 +84,6 @@ export async function POST(request: NextRequest) {
         },
       );
     }
-    await recordUploadAttempt(ip);
-
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -119,7 +114,19 @@ export async function POST(request: NextRequest) {
 
     // Blob 파일명은 서버에서만 생성 (사용자 입력 배제 — path traversal 및 잘못된 확장자 차단)
     const fileName = `markdown-images/${Date.now()}-${Math.random().toString(36).slice(2)}.${detectedExt}`;
-    const blob = await put(fileName, file, { access: "public" });
+    const blob = await put(fileName, file, { access: "public", addRandomSuffix: true });
+
+    // 업로드 응답 전에 소유권을 기록합니다. 기록이 실패하면 이 요청에서 막 만든
+    // 파일만 되지우며, URL을 클라이언트에 돌려주지 않습니다. 기존 파일은 건드리지 않습니다.
+    try {
+      await db.insert(markdownImageAssets).values({
+        url: blob.url,
+        uploadedById: session.user.id,
+      });
+    } catch (error) {
+      await deleteBlobIfExists(blob.url);
+      throw error;
+    }
 
     return NextResponse.json({ url: blob.url });
   } catch (error) {

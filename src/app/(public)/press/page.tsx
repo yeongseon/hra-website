@@ -7,9 +7,11 @@
  */
 
 import type { Metadata } from "next";
-import { asc, desc } from "drizzle-orm";
+import { asc, count, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
+import { parseListPage } from "@/lib/query-params";
+import { formatKstDate } from "@/lib/date-time";
 import { PressLink } from "./_components/press-link";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +23,7 @@ export const metadata: Metadata = {
 
 // 게시판에 표시할 날짜 형식 (예: 2025.04.26)
 const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(value)
+  formatKstDate(value)
     .replace(/\.\s?$/, "")
     .replace(/\.\s/g, ".");
 
@@ -35,26 +32,18 @@ export default async function PressPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const articles = await db
+  // 페이지 범위를 전체 건수로 보정한 뒤 필요한 15행만 가져온다.
+  const [{ total: totalCount }] = await db.select({ total: count() }).from(pressArticles);
+  const ITEMS_PER_PAGE = 15;
+  const params = await searchParams;
+  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
+  const currentArticles = await db
     .select()
     .from(pressArticles)
     // 관리자가 드래그앤드롭으로 설정한 order 순서대로 표시, 동일 order는 게시일 최신순
-    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt));
-
-  // 게시판 번호는 최신순(상단)부터 큰 번호 부여
-  const totalCount = articles.length;
-  const ITEMS_PER_PAGE = 15;
-  const params = await searchParams;
-  const currentPage = Number(params.page ?? "1");
-
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  const currentArticles = articles.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-);
+    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt), desc(pressArticles.id))
+    .limit(ITEMS_PER_PAGE)
+    .offset(startIndex);
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
@@ -71,7 +60,7 @@ export default async function PressPage({
         </p>
       </section>
 
-      {articles.length === 0 ? (
+      {totalCount === 0 ? (
         <div className="rounded-lg border border-[#D9D9D9] bg-white px-6 py-16 text-center text-base text-[#666666]">
           등록된 언론보도가 없습니다
         </div>

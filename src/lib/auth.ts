@@ -23,7 +23,7 @@ import type { Provider } from "next-auth/providers";
 import { compare } from "bcryptjs";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import Kakao from "next-auth/providers/kakao";
+import { createKakaoProvider } from "@/lib/kakao-provider";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -34,7 +34,8 @@ import {
   resolveJwtSession,
 } from "@/lib/auth-session";
 import { createDrizzleSignInIO, handleOAuthSignIn } from "@/lib/auth-signin";
-import { checkLoginAttempts, recordLoginAttempt } from "@/lib/rate-limit";
+import { findCredentialUser } from "@/lib/auth-credentials";
+import { releaseSuccessfulLogin, reserveLoginAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 
 const MEMBER_ONLY_PREFIXES = ["/resources", "/member", "/mypage"] as const;
@@ -80,15 +81,15 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
   );
 }
 
-// 카카오 로그인: AUTH_KAKAO_ID, AUTH_KAKAO_SECRET 둘 다 있어야 활성화
-// scope에 profile_nickname, profile_image를 명시해야 카카오가 닉네임·프로필 사진 동의를 요청함
-// 기본 authorization URL의 scope가 비어있어서 nickname이 undefined로 오는 버그 수정
+// 카카오 로그인: ID와 SECRET이 모두 있어야 활성화한다.
+// 이메일 동의 항목을 카카오 콘솔에서 허용한 뒤에만 AUTH_KAKAO_EMAIL_SCOPE=true로 범위를 요청한다.
 if (process.env.AUTH_KAKAO_ID && process.env.AUTH_KAKAO_SECRET) {
   providers.push(
-    Kakao({
-      clientId: process.env.AUTH_KAKAO_ID,
-      clientSecret: process.env.AUTH_KAKAO_SECRET,
-    }),
+    createKakaoProvider(
+      process.env.AUTH_KAKAO_ID,
+      process.env.AUTH_KAKAO_SECRET,
+      process.env.AUTH_KAKAO_EMAIL_SCOPE === "true",
+    ),
   );
 }
 
@@ -119,14 +120,12 @@ providers.push(
         return null;
       }
 
-      // Rate limit 확인 (#69): 15분 / 실패 5회 초과 시 잠금.
-      // IP + email 두 축으로 credential stuffing / password spray 모두 방어.
+      // bcrypt 실행 전에 조합·IP·이메일 제한을 원자적으로 예약합니다 (#121).
+      // 동시 요청도 예약된 실패 시도를 보므로 상한을 넘어 인증할 수 없습니다.
       const ip = extractClientIp(request.headers);
-      const { blocked } = await checkLoginAttempts(ip, credentials.email);
+      const reservation = await reserveLoginAttempt(ip, credentials.email);
 
-      const user = await db.query.users.findFirst({
-        where: eq(users.email, credentials.email),
-      });
+      const user = await findCredentialUser(credentials.email);
 
       // Timing attack 방어 (#71): 이메일 존재 여부와 무관하게 항상 bcrypt.compare 를 실행하여
       // 응답 시간 차이로 이메일 enumeration 이 되지 않도록 한다.
@@ -137,13 +136,12 @@ providers.push(
 
       const authSucceeded = !!user && !!user.passwordHash && isValid;
 
-      // 시도 결과 기록 (#69): blocked 여부와 무관하게 매 시도를 기록해야
-      // sliding window 가 정확히 만료되고, 공격자가 요청 폭주로 로그를 우회하지 못한다.
-      // 성공 시도는 카운트 대상에서 제외되므로 (checkLoginAttempts 에서 success=false 필터)
-      // 정상 사용자의 이후 접속에 영향이 없다.
-      await recordLoginAttempt(ip, credentials.email, authSucceeded);
+      // 성공한 예약은 제거해 기존의 실패 시도 기반 잠금 정책을 유지합니다.
+      if (authSucceeded && !reservation.blocked) {
+        await releaseSuccessfulLogin(reservation.reservationId);
+      }
 
-      if (blocked || !authSucceeded) return null;
+      if (reservation.blocked || !authSucceeded) return null;
 
       return {
         id: user.id,
@@ -194,6 +192,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    // OAuth 실패도 한국어 오류 안내를 제공하는 공개 로그인 화면으로 보냅니다.
+    error: "/login",
   },
   providers,
   callbacks: {
@@ -214,10 +214,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * 결정 트리 및 불변식은 handleOAuthSignIn 문서와 decideOAuthSignIn 문서를 참조.
      * `signInIO` 는 위 모듈 스코프에서 초기화된 drizzle 어댑터이다.
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "credentials") return true;
       if (!account) return false;
-      return handleOAuthSignIn({ user, account }, signInIO);
+      return handleOAuthSignIn({ user, account, profile }, signInIO);
     },
 
     /**

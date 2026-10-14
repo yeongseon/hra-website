@@ -33,6 +33,7 @@ type ClassLogRowActionsProps = {
 export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -41,7 +42,10 @@ export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
         수정
       </Button>
 
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => {
+        setIsDeleteOpen(open);
+        if (open) setDeleteError(null);
+      }}>
         <DialogTrigger render={<Button variant="destructive" size="sm" />}>
           <Trash2 className="size-3.5" />
           삭제
@@ -53,6 +57,7 @@ export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
               삭제 후에는 복구할 수 없습니다. 계속 진행하려면 삭제 버튼을 눌러주세요.
             </DialogDescription>
           </DialogHeader>
+          {deleteError && <p role="alert" className="text-sm text-red-600">{deleteError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
               취소
@@ -62,11 +67,18 @@ export function ClassLogRowActions({ id }: ClassLogRowActionsProps) {
               disabled={isPending}
               onClick={() => {
                 startTransition(async () => {
-                  // ⚙️ 서버 액션 호출 - 수업일지 삭제 요청
-                  const result = await deleteClassLog(id);
-                  if (result.success) {
-                    setIsDeleteOpen(false);
-                    router.refresh(); // 페이지 새로고침 (목록 업데이트)
+                  setDeleteError(null);
+                  try {
+                    const result = await deleteClassLog(id);
+                    if (result.success) {
+                      setIsDeleteOpen(false);
+                      router.refresh();
+                    } else {
+                      setDeleteError(result.error ?? "수업일지를 삭제하지 못했습니다.");
+                    }
+                  } catch (error) {
+                    console.error("수업일지 삭제 실패:", error);
+                    setDeleteError("수업일지를 삭제하지 못했습니다. 다시 시도해 주세요.");
                   }
                 });
               }}

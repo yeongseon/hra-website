@@ -1,10 +1,10 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { PrintView } from "./_print-view";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { cohorts, weeklyTexts } from "@/lib/db/schema";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +13,7 @@ type Props = {
 };
 
 export default async function WeeklyTextPrintPage({ params }: Props) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  const role = session.user.role;
-  if (role !== "ADMIN" && role !== "FACULTY" && role !== "MEMBER") {
-    redirect("/resources");
-  }
+  await requireSharedResourceReader();
 
   const { id } = await params;
 

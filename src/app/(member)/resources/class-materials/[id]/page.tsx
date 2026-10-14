@@ -19,7 +19,7 @@ import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
-import { auth } from "@/lib/auth";
+import { requireMember } from "@/lib/member";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +30,9 @@ type Props = {
 
 // 페이지와 메타데이터 모두 동일한 인가 경로를 통과합니다. 전역 캐시는 사용하지 않습니다.
 async function getVisibleMaterial(id: string) {
+  const session = await requireMember();
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) return null;
-  const session = await auth();
   if (!session?.user?.id) return null;
 
   const [material] = await db
@@ -82,7 +82,7 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
           <ArrowLeft className="size-4" />
           목록으로
         </Button>
-        <a href={material.fileUrl} download={material.fileName}>
+        <a href={`/api/resources/class-materials/${material.id}/download`} download={material.fileName}>
           <Button className="bg-[#1a1a1a] text-white hover:bg-[#333333]">
             <Download className="size-4" />
             다운로드
@@ -132,7 +132,7 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
             이 파일 형식({ext.toUpperCase()})은 브라우저에서 미리볼 수 없습니다.
           </p>
           <p className="text-[#666666] text-sm">다운로드하여 확인해 주세요.</p>
-          <a href={material.fileUrl} download={material.fileName}>
+          <a href={`/api/resources/class-materials/${material.id}/download`} download={material.fileName}>
             <Button className="bg-[#2563EB] text-white hover:bg-blue-700">
               <Download className="size-4" />
               {material.fileName} 다운로드

@@ -72,7 +72,7 @@ release-please/Dependabot의 본문은 검증된 생성형 PR에 한해서만 �
 
 ## 3. 검증과 리뷰
 
-현재 [앱 CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 PR과 `main` 푸시에서 **lint → typecheck → Vitest → build**를 실행합니다. 별도 `형식·릴리스 계약 테스트`는 Node 기본 테스트 및 버전 정합성을 검사합니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
+현재 [앱 CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 PR과 `main` 푸시에서 **lint → typecheck → 격리 PostgreSQL을 쓰는 Vitest → build → Playwright 브라우저 스모크**를 실행합니다. 브라우저 스모크는 로그인 화면과 보호 경로를 확인하며 운영 DB·Blob 자격 증명을 사용하지 않습니다. 별도 `형식·릴리스 계약 테스트`는 Node 기본 테스트 및 버전 정합성을 검사합니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
 
 ```bash
 npm run lint

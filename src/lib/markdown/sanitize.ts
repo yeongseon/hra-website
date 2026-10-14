@@ -17,15 +17,12 @@
 
 import { defaultSchema } from "rehype-sanitize";
 import type { Options } from "rehype-sanitize";
+import { projectBlobHost } from "@/lib/blob-host";
 
 // 이미지 src로 허용할 도메인 화이트리스트
-// - blob.vercel-storage.com: Vercel Blob 업로드 이미지
+// - 프로젝트에 연결된 Vercel Blob 저장소만 허용
 // - hra-website-theta.vercel.app: 자체 도메인 절대 경로
-const allowedImageHosts = [
-  "blob.vercel-storage.com",
-  "vercel-storage.com",
-  "hra-website-theta.vercel.app",
-];
+const allowedImageHosts = [projectBlobHost, "hra-website-theta.vercel.app"];
 
 // rehype-sanitize 스키마
 // defaultSchema를 베이스로, 위험한 태그·속성을 추가로 차단한다.
@@ -66,10 +63,9 @@ export const sanitizeSchema: Options = {
     "*": (defaultSchema.attributes?.["*"] ?? []).filter(
       (attr) => attr !== "style",
     ),
-    // 외부 링크 보안 — target/rel만 허용
+    // 새 창 속성을 제거해 rel 없는 target="_blank" 링크가 만들어지지 않게 한다.
     a: [
       ...(defaultSchema.attributes?.a ?? []),
-      ["target", "_blank", "_self"],
       ["rel", "noopener", "noreferrer", "nofollow"],
     ],
     // <col width="N"> 또는 <col width="N%"> — colwidth 있는 표의 열 너비 지정
@@ -100,15 +96,18 @@ export const sanitizeSchema: Options = {
 // markdown-viewer에서 호출하여 차단 시 이미지 자체를 렌더링하지 않는다.
 export function isAllowedImageUrl(url: string): boolean {
   if (!url) return false;
-  // 동일 출처 상대 경로는 허용
-  if (url.startsWith("/")) return true;
+  // 브라우저가 외부 호스트로 해석하는 // 및 /\ 경로는 상대 경로로 취급하지 않는다.
+  if (url.startsWith("/")) return !/^\/[\/\\]/.test(url);
   try {
     const parsed = new URL(url);
     // https 프로토콜만 허용 (data: 차단 — Base64 폭주 방지)
     if (parsed.protocol !== "https:") return false;
-    // 호스트 화이트리스트 검사 (subdomain 포함)
-    return allowedImageHosts.some(
-      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
+    // 다른 Blob 저장소·하위 도메인·비표준 포트와 자격 증명이 포함된 URL은 차단한다.
+    return (
+      !parsed.port &&
+      !parsed.username &&
+      !parsed.password &&
+      allowedImageHosts.includes(parsed.hostname)
     );
   } catch {
     return false;

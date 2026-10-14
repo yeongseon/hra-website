@@ -120,7 +120,6 @@ function parseFormData(formData: FormData) {
 }
 
 function revalidateTemplatePaths(slug?: string) {
-  revalidatePath("/admin/templates");
   revalidatePath("/admin/resources/templates");
   revalidatePath("/member/templates");
   revalidatePath("/member/guides");
@@ -226,10 +225,13 @@ export async function updateReportTemplate(
   const previous = await db.query.reportTemplates.findFirst({
     where: eq(reportTemplates.id, parsedId.data),
   });
-  const oldSlug = previous?.slug;
+  if (!previous) {
+    return { success: false, message: "양식을 찾을 수 없습니다." };
+  }
+  const oldSlug = previous.slug;
 
   try {
-    await db
+    const updated = await db
       .update(reportTemplates)
       .set({
         slug: parsed.data.slug,
@@ -242,7 +244,11 @@ export async function updateReportTemplate(
         published: parsed.data.published,
         order: parsed.data.order,
       })
-      .where(eq(reportTemplates.id, parsedId.data));
+      .where(eq(reportTemplates.id, parsedId.data))
+      .returning({ id: reportTemplates.id });
+    if (updated.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
   } catch (error) {
     logServerError("report-templates/update", error, {
       id: parsedId.data,
@@ -255,7 +261,7 @@ export async function updateReportTemplate(
     };
   }
 
-  if (oldSlug && oldSlug !== parsed.data.slug) {
+  if (oldSlug !== parsed.data.slug) {
     revalidateTemplatePaths(oldSlug);
   }
   revalidateTemplatePaths(parsed.data.slug);

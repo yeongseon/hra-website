@@ -5,6 +5,7 @@
  * 기수 목록을 함께 조회하여 드롭다운에 동적으로 표시합니다.
  */
 import { desc } from "drizzle-orm";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,12 +50,6 @@ const roleBadgeMap = {
   },
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function AdminUsersPage() {
   const session = await requireAdmin();

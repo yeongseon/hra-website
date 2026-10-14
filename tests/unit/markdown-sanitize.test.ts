@@ -54,6 +54,12 @@ describe("sanitizeSchema", () => {
     expect(out).not.toContain("javascript:");
   });
 
+  it('rel 없는 새 창 링크에서 target="_blank"를 제거한다', async () => {
+    const out = await renderMarkdown('<a href="https://example.com" target="_blank">링크</a>');
+    expect(out).toContain('href="https://example.com"');
+    expect(out).not.toContain('target="_blank"');
+  });
+
   it("정상 표/링크/이미지는 유지한다", async () => {
     const out = await renderMarkdown(
       "| A | B |\n|---|---|\n| 1 | 2 |\n\n[링크](https://example.com)",
@@ -73,14 +79,24 @@ describe("sanitizeSchema", () => {
 });
 
 describe("isAllowedImageUrl", () => {
-  it("vercel-storage 도메인은 허용한다", () => {
+  it("프로젝트 Blob 저장소의 이미지는 허용한다", () => {
     expect(
-      isAllowedImageUrl("https://abc.public.blob.vercel-storage.com/x.png"),
+      isAllowedImageUrl("https://4sompt13gxwuz2x8.public.blob.vercel-storage.com/x.png"),
     ).toBe(true);
+  });
+
+  it("다른 Blob 저장소와 허용 호스트의 하위 도메인은 거부한다", () => {
+    expect(isAllowedImageUrl("https://other.public.blob.vercel-storage.com/x.png")).toBe(false);
+    expect(isAllowedImageUrl("https://sub.hra-website-theta.vercel.app/x.png")).toBe(false);
   });
 
   it("동일 출처 상대 경로는 허용한다", () => {
     expect(isAllowedImageUrl("/images/foo.png")).toBe(true);
+  });
+
+  it("외부 호스트로 해석되는 상대 경로는 거부한다", () => {
+    expect(isAllowedImageUrl("//evil.com/image.png")).toBe(false);
+    expect(isAllowedImageUrl("/\\evil.com/image.png")).toBe(false);
   });
 
   it("외부 임의 도메인은 거부한다", () => {

@@ -35,13 +35,20 @@ export function MemberClassLogUploadForm({
 }: MemberClassLogUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const requestIdRef = useRef<string | null>(null);
 
   // 보고서 양식 불러오기 상태
   const [templateBody, setTemplateBody] = useState<string | undefined>(undefined);
   const [isTemplateLoading, setIsTemplateLoading] = useState(false);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: ClassLogActionState, formData: FormData) => action(formData),
+    async (_previous: ClassLogActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
+      const result = await action(formData);
+      if (result.success) requestIdRef.current = null;
+      return result;
+    },
     initialState,
   );
 

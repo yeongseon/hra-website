@@ -3,7 +3,7 @@
  */
 "use server";
 
-import { and, count, eq, gte, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod/v4";
@@ -14,10 +14,14 @@ import {
   applicationForms,
   applicationSubmissions,
   applicationAnswers,
+  rateLimitEvents,
 } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
-import { checkApplicationSubmissionHourlyLimit } from "@/lib/rate-limit";
+import { formatKstCsvDateTime, toKstDateInput } from "@/lib/date-time";
+import { reserveApplicationSubmission } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
+import { applicationInputLimits } from "@/features/applications/input-limits";
+import { parseCheckboxAnswerValue } from "@/features/applications/answer-format";
 
 /**
  * CSV/Excel 에서 셀 값이 수식으로 해석되는 것을 막기 위한 방어 함수입니다.
@@ -29,6 +33,13 @@ function sanitizeCsvCell(val: unknown): string {
   return `"${sanitizedValue.replace(/"/g, '""')}"`;
 }
 
+// 관리자 화면과 CSV에서 동일한 한국어 상태값을 사용합니다.
+const csvStatusLabels = {
+  PENDING: "검토중",
+  ACCEPTED: "합격",
+  REJECTED: "불합격",
+} as const;
+
 /**
  * Postgres unique 제약 위반(에러코드 23505) 감지 헬퍼.
  * 동일 이메일이 같은 양식에 두 번 제출되려고 할 때 DB가 던지는 에러를 식별합니다.
@@ -38,21 +49,32 @@ function sanitizeCsvCell(val: unknown): string {
  *                      이를 통해 미래에 다른 unique 제약이 추가되어도 메시지를 오진하지 않습니다.
  */
 function isUniqueViolation(error: unknown, constraintName?: string): boolean {
-  if (
-    typeof error !== "object" ||
-    error === null ||
-    !("code" in error) ||
-    (error as { code: unknown }).code !== "23505"
-  ) {
-    return false;
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current && current.code === "23505" &&
+        (constraintName === undefined || ("constraint" in current && current.constraint === constraintName))) {
+      return true;
+    }
+    current = "cause" in current ? current.cause : undefined;
   }
-  if (constraintName === undefined) {
-    return true;
+  return false;
+}
+
+/** 제출 전에 양식이 변경되거나 닫힌 경우의 저장 함수 오류를 식별한다. */
+function isFormRevisionError(error: unknown): boolean {
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ("code" in current && current.code === "P0001" &&
+        "message" in current && typeof current.message === "string" &&
+        (current.message.includes("application_form_questions_stale") ||
+         current.message.includes("application_form_unavailable"))) return true;
+    current = "cause" in current ? current.cause : undefined;
   }
-  return (
-    "constraint" in error &&
-    (error as { constraint: unknown }).constraint === constraintName
-  );
+  return false;
 }
 
 export type SubmitActionState = {
@@ -90,46 +112,35 @@ export async function submitApplicationForm(
   }
   const validFormId = parsedFormId.data;
 
-  const applicantName = (formData.get("applicantName") as string)?.trim();
-  const applicantEmail = (formData.get("applicantEmail") as string)?.trim().toLowerCase();
-  const applicantPhone = (formData.get("applicantPhone") as string)?.trim();
-
-  // 기본 정보 검증
-  if (!applicantName) return { success: false, message: "이름을 입력해주세요." };
-  if (!applicantEmail || !z.string().email().safeParse(applicantEmail).success) {
-    return { success: false, message: "올바른 이메일 주소를 입력해주세요." };
+  // FormData의 파일·누락 값도 빈 문자열로 취급해 항상 한국어 필드 오류를 반환합니다.
+  const textField = (name: string) => {
+    const value = formData.get(name);
+    return typeof value === "string" ? value : "";
+  };
+  const basicInfo = z.object({
+    applicantName: z.string().trim()
+      .min(1, "이름을 입력해주세요.")
+      .max(applicationInputLimits.applicantName, "이름은 100자 이하여야 합니다."),
+    applicantEmail: z.string().trim()
+      .max(applicationInputLimits.applicantEmail, "이메일 주소는 255자 이하여야 합니다.")
+      .email("올바른 이메일 주소를 입력해주세요.")
+      .transform((value) => value.toLowerCase()),
+    applicantPhone: z.string().trim()
+      .min(1, "연락처를 입력해주세요.")
+      .max(applicationInputLimits.applicantPhone, "연락처는 20자 이하여야 합니다."),
+  }).safeParse({
+    applicantName: textField("applicantName"),
+    applicantEmail: textField("applicantEmail"),
+    applicantPhone: textField("applicantPhone"),
+  });
+  if (!basicInfo.success) {
+    return { success: false, message: basicInfo.error.issues[0]?.message ?? "입력값을 확인해주세요." };
   }
-  if (!applicantPhone) return { success: false, message: "연락처를 입력해주세요." };
+  const { applicantName, applicantEmail, applicantPhone } = basicInfo.data;
 
   try {
-    // IP 기반 rate limit — 두 층 병행 (#69):
-    //   (a) 24시간 10회 (총량): 장기 abuse 방어. 인라인 카운트 유지.
-    //   (b) 시간당 5회 (스퍼트): 봇의 짧은 시간창 폭주 방어. 헬퍼로 분리.
-    // neon-http 는 트랜잭션이 없어 카운트-후-삽입 사이에 짧은 TOCTOU 창이 있으나,
-    // 동일 (form_id, email) 중복은 아래 unique 제약이 원자적으로 차단하므로
-    // 실 익스플로잇 영향은 제한적. 더 엄격한 제한이 필요하면 Upstash Ratelimit 도입.
     const hdrs = await headers();
     const ip = extractClientIp(hdrs);
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const [ipSubmissionCount] = await db
-      .select({ c: count() })
-      .from(applicationSubmissionsLog)
-      .where(
-        and(
-          eq(applicationSubmissionsLog.ip, ip),
-          gte(applicationSubmissionsLog.createdAt, since)
-        )
-      );
-
-    if ((ipSubmissionCount?.c ?? 0) >= 10) {
-      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
-    }
-
-    const hourly = await checkApplicationSubmissionHourlyLimit(ip);
-    if (hourly.blocked) {
-      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
-    }
 
     // 1. 양식 및 질문 정보 조회
     const form = await db.query.applicationForms.findFirst({
@@ -162,25 +173,42 @@ export async function submitApplicationForm(
       let value = "";
 
       if (question.type === "CHECKBOX") {
-        if (rawValues.length > 0) {
+        // 같은 항목을 여러 번 보낸 조작 요청도 선택 한 번으로 정규화합니다.
+        const selectedValues = [...new Set(rawValues.map((item) => item.trim()).filter(Boolean))];
+        if (selectedValues.length > 0) {
+          if (selectedValues.some((item) => !z.string().max(applicationInputLimits.optionValue).safeParse(item).success)) {
+            return { success: false, message: `[${question.title}] 선택지는 1000자 이하여야 합니다.` };
+          }
           const allowedOptions = new Set(question.options.map(option => option.value));
-          if (rawValues.some(item => !allowedOptions.has(item))) {
+          if (selectedValues.some(item => !allowedOptions.has(item))) {
             return {
               success: false,
               message: `[${question.title}] 선택지가 올바르지 않습니다.`,
             };
           }
-          value = JSON.stringify(rawValues);
+          value = JSON.stringify(selectedValues);
+          if (!z.string().max(applicationInputLimits.checkboxAnswer).safeParse(value).success) {
+            return { success: false, message: `[${question.title}] 선택한 항목이 너무 많습니다.` };
+          }
         }
 
-        if (question.isRequired && rawValues.length === 0) {
+        if (question.isRequired && selectedValues.length === 0) {
           return { success: false, message: `[${question.title}] 항목은 필수입니다.` };
         }
       } else {
-        value = rawValues[0] ?? "";
+        value = rawValues[0]?.trim() ?? "";
 
         if (question.isRequired && !value) {
           return { success: false, message: `[${question.title}] 항목은 필수입니다.` };
+        }
+
+        const maxLength = question.type === "LONG_ANSWER"
+          ? applicationInputLimits.longAnswer
+          : question.type === "SHORT_ANSWER"
+            ? applicationInputLimits.shortAnswer
+            : applicationInputLimits.optionValue;
+        if (!z.string().max(maxLength).safeParse(value).success) {
+          return { success: false, message: `[${question.title}] 답변은 ${maxLength}자 이하여야 합니다.` };
         }
 
         if (
@@ -205,81 +233,73 @@ export async function submitApplicationForm(
       }
     }
 
-    // 3. 제출 마스터 생성.
-    //    schema의 unique(form_id, applicant_email) 제약 덕분에 동일 이메일이
-    //    같은 양식에 두 번 제출하려 하면 Postgres가 23505로 거부합니다.
-    //    이는 TOCTOU race를 DB 레벨에서 원자적으로 차단합니다.
-    let submissionId: string;
+    // 검증된 요청만 IP·이메일 제한 축을 원자적으로 예약합니다.
+    const reservation = await reserveApplicationSubmission(ip, applicantEmail);
+    if (reservation.blocked || !reservation.reservationId) {
+      return { success: false, message: "잠시 후 다시 시도해주세요. (요청이 너무 많습니다)" };
+    }
+
+    // 3. 읽은 질문 버전을 양식 행 잠금과 함께 확인한 뒤 마스터·답변을 원자적 배치에 넣는다.
+    //    저장 중 변경된 질문의 옛 답변은 거부하고, UNIQUE는 동시 중복 제출을 차단한다.
+    const submissionId = crypto.randomUUID();
     try {
-      const [submission] = await db
-        .insert(applicationSubmissions)
-        .values({
-          formId: validFormId,
-          applicantName,
-          applicantEmail,
-          applicantPhone,
-        })
-        .returning({ id: applicationSubmissions.id });
-      submissionId = submission.id;
+      const verifyRevision = db.execute(sql`
+        SELECT assert_application_form_questions_revision(
+          ${validFormId}::uuid,
+          ${form.questionsRevision}::integer
+        )
+      `);
+      const insertSubmission = db.insert(applicationSubmissions).values({
+        id: submissionId,
+        formId: validFormId,
+        applicantName,
+        applicantEmail,
+        applicantPhone,
+      });
+      // 예약을 지원서와 연결해 관리자 삭제 시 제한 로그도 FK 연쇄 삭제합니다.
+      const attachReservation = db.update(rateLimitEvents)
+        .set({ submissionId })
+        .where(eq(rateLimitEvents.reservationId, reservation.reservationId));
+      if (answers.length > 0) {
+        await db.batch([
+          verifyRevision,
+          insertSubmission,
+          db.insert(applicationAnswers).values(answers.map(answer => ({
+            submissionId,
+            questionId: answer.questionId,
+            value: answer.value,
+          }))),
+          attachReservation,
+        ]);
+      } else {
+        await db.batch([verifyRevision, insertSubmission, attachReservation]);
+      }
     } catch (error) {
+      if (isFormRevisionError(error)) {
+        return { success: false, message: "지원서가 변경되었습니다. 새로고침 후 다시 제출해주세요." };
+      }
       if (isUniqueViolation(error, "application_submissions_form_applicant_unique")) {
         return {
           success: false,
           message: "이미 같은 이메일로 이 지원서를 제출하셨습니다.",
         };
       }
-      throw error;
-    }
-
-    // 4. 질문별 답변 저장.
-    //    중요(원자성 보상): neon-http 드라이버는 트랜잭션을 미지원하므로 마스터-답변 두 단계
-    //    insert가 원자적이지 않습니다. 만약 답변 insert가 실패하면 이미 만들어진 마스터 행은
-    //    unique(form_id, email) 제약 때문에 사용자의 영구 재시도 차단을 유발합니다.
-    //    이를 막기 위해 답변 insert 실패 시 방금 만든 마스터 행을 best-effort로 삭제합니다.
-    if (answers.length > 0) {
+      // 응답만 유실된 경우에도 배치가 이미 커밋됐을 수 있다. 요청별 ID로 결과를 확인한다.
+      // 결과가 보이지 않으면 안전하게 재시도할 수 있고, 늦은 커밋은 UNIQUE가 중복을 막는다.
       try {
-        await db.insert(applicationAnswers).values(
-          answers.map(ans => ({
-            submissionId,
-            questionId: ans.questionId,
-            value: ans.value,
-          }))
-        );
-      } catch (answersError) {
-        // 보상 삭제: 마스터 행을 지워 unique 제약을 해제하고 사용자의 재시도를 허용합니다.
-        try {
-          await db
-            .delete(applicationSubmissions)
-            .where(eq(applicationSubmissions.id, submissionId));
-        } catch (cleanupError) {
-          // 마스터 삭제마저 실패하면 고아 행이 남아 사용자가 재시도 불가일 수 있습니다.
-          // 운영자가 수동으로 정리해야 하므로 식별자만 남깁니다.
-          // #70: applicantEmail 은 PII 이므로 로그에서 제외 — submissionId·formId 로 운영자가 역추적 가능.
-          logServerError("application-submission/cleanup-master", cleanupError, {
-            submissionId,
-            formId: validFormId,
-          });
+        const [persisted] = await db
+          .select({ id: applicationSubmissions.id })
+          .from(applicationSubmissions)
+          .where(eq(applicationSubmissions.id, submissionId))
+          .limit(1);
+        if (!persisted) {
+          logServerError("application-submission/atomic-insert", error, { submissionId, formId: validFormId });
+          return { success: false, message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
         }
-        logServerError("application-submission/insert-answers", answersError, {
-          submissionId,
-          formId: validFormId,
-        });
-        return {
-          success: false,
-          message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        };
+      } catch (verificationError) {
+        logServerError("application-submission/verify-commit", verificationError, { submissionId, formId: validFormId });
+        return { success: false, message: "제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
       }
-    }
-
-    // 5. rate limit 카운트용 로그 적재.
-    //    실패해도 제출 자체는 성공 처리합니다(다음 요청의 카운트가 1만큼 적게 잡힐 뿐).
-    try {
-      await db.insert(applicationSubmissionsLog).values({
-        ip,
-        email: applicantEmail,
-      });
-    } catch (error) {
-      logServerError("application-submission/insert-log", error);
     }
 
     revalidatePath(`/admin/application-forms/${validFormId}/submissions`);
@@ -341,20 +361,16 @@ export async function exportSubmissionsToCsv(formId: string) {
         sub.applicantName,
         sub.applicantEmail,
         sub.applicantPhone || "",
-        sub.submittedAt.toISOString(),
-        sub.status,
+        formatKstCsvDateTime(sub.submittedAt),
+        csvStatusLabels[sub.status],
       ];
 
       const questionAnswers = form.questions.map(q => {
         const answer = sub.answers.find(ans => ans.questionId === q.id);
         if (!answer) return "";
 
-        try {
-          const parsed = JSON.parse(answer.value);
-          return Array.isArray(parsed) ? parsed.join(", ") : answer.value;
-        } catch {
-          return answer.value;
-        }
+        const choices = parseCheckboxAnswerValue(answer.value, q.type);
+        return choices ? choices.join(", ") : answer.value;
       });
 
       return [...basicInfo, ...questionAnswers];
@@ -369,7 +385,7 @@ export async function exportSubmissionsToCsv(formId: string) {
     // Excel에서 한글 깨짐 방지를 위한 BOM(Byte Order Mark) 추가
     return {
       success: true,
-      filename: `${form.title}_제출내역_${new Date().toISOString().split('T')[0]}.csv`,
+      filename: `${form.title}_제출내역_${toKstDateInput(new Date())}.csv`,
       data: "\ufeff" + csvContent,
     };
   } catch (error) {
@@ -416,12 +432,14 @@ export async function deleteApplicationSubmission(
   }
 
   // 존재 검증 + 성공 후 재검증할 목록 경로용 formId 확보.
-  // PII 컬럼(이름/이메일)은 로그 정책상 조회하지 않습니다.
+  // 과거 제한 로그에는 지원서 FK가 없으므로 이메일로 찾아 함께 삭제합니다.
+  // 이메일 값은 메모리의 삭제 조건에만 사용하고 감사 로그에는 남기지 않습니다.
   const target = await db.query.applicationSubmissions.findFirst({
     where: eq(applicationSubmissions.id, parsedId.data),
     columns: {
       id: true,
       formId: true,
+      applicantEmail: true,
     },
   });
 
@@ -431,10 +449,13 @@ export async function deleteApplicationSubmission(
 
   try {
     // returning 으로 실제 삭제된 행 확인 → 동시 삭제 시 감사 로그 왜곡 방지
-    const deleted = await db
-      .delete(applicationSubmissions)
-      .where(eq(applicationSubmissions.id, parsedId.data))
-      .returning({ id: applicationSubmissions.id });
+    const [, deleted] = await db.batch([
+      db.delete(applicationSubmissionsLog)
+        .where(eq(applicationSubmissionsLog.email, target.applicantEmail)),
+      db.delete(applicationSubmissions)
+        .where(eq(applicationSubmissions.id, parsedId.data))
+        .returning({ id: applicationSubmissions.id }),
+    ]);
 
     if (deleted.length === 0) {
       // 다른 세션이 이미 지운 경우 — 이 트랜잭션은 삭제자가 아니므로 감사 로그를 남기지 않는다

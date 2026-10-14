@@ -10,6 +10,12 @@ import {
 const repository = "yeongseon/hra-website";
 const repo = { full_name: repository };
 const files = RELEASE_FILES.map((filename) => ({ filename, status: "modified" }));
+test("릴리스 workflow는 명시적으로 활성화하고 별도 토큰만 사용한다", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/release-please.yml", import.meta.url), "utf8");
+  assert.match(workflow, /vars\.RELEASE_PLEASE_ENABLED == 'true'/);
+  assert.match(workflow, /token: \$\{\{ secrets\.RELEASE_PLEASE_TOKEN \}\}/);
+  assert.doesNotMatch(workflow, /github\.token/);
+});
 function releasePr() {
   return {
     title: "chore(release): release 0.1.1", body: "release-please generated release notes",

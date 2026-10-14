@@ -19,16 +19,13 @@ import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, weeklyTexts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { toKstDateInput } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
-
-// 날짜를 HTML input[type="date"] 형식으로 변환 (YYYY-MM-DD)
-const toDateInputValue = (value: Date | null) =>
-  value ? value.toISOString().slice(0, 10) : "";
 
 export default async function WeeklyTextEditPage({ params }: Props) {
   await requireAdmin();
@@ -121,7 +118,7 @@ export default async function WeeklyTextEditPage({ params }: Props) {
           fileName: row.fileName ?? null,
           cohortId: row.cohortId ?? "",
           textType: row.textType ?? "",
-          classDate: toDateInputValue(row.classDate),
+          classDate: toKstDateInput(row.classDate),
           isMarkdown: !!row.body,
         }}
       />

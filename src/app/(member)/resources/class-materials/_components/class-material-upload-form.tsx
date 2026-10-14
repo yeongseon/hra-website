@@ -15,10 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ClassMaterialActionState } from "@/features/class-materials/actions";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
 import { cn } from "@/lib/utils";
 
 type ClassMaterialUploadFormProps = {
   action: (formData: FormData) => Promise<ClassMaterialActionState>;
+  userId: string;
 };
 
 const initialState: ClassMaterialActionState = {
@@ -41,12 +43,15 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ].join(",");
 
-export function ClassMaterialUploadForm({ action }: ClassMaterialUploadFormProps) {
+export function ClassMaterialUploadForm({ action, userId }: ClassMaterialUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: ClassMaterialActionState, formData: FormData) => action(formData),
+    async (_previous: ClassMaterialActionState, formData: FormData) => {
+      const prepared = await prepareResourceUpload(formData, "class-materials", userId, true);
+      return "error" in prepared ? { success: false, error: prepared.error } : action(prepared.formData);
+    },
     initialState,
   );
 

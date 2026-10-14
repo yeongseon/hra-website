@@ -1,13 +1,12 @@
 /**
  * 회원 전용 페이지 레이아웃
  * 서버 컴포넌트: 로그인한 사용자만 접근 가능한 모든 페이지(수업일지 등)의 기본 레이아웃입니다
- * - 로그인하지 않은 사용자는 자동으로 로그인 페이지로 이동됩니다
+ * - 로그인하지 않은 사용자는 로그인 페이지로, 승인 대기 사용자는 대기 페이지로 이동됩니다
  * - Header, Footer, 그리고 페이지 내용이 표시됩니다
  */
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireMember } from "@/lib/member";
 
 // 회원 전용 페이지는 사용자 세션에 따라 메뉴(자료실/관리자)가 달라지므로
 // 정적 캐시가 아닌 매 요청마다 렌더링하도록 강제합니다.
@@ -22,16 +21,8 @@ export default async function MemberLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // auth(): NextAuth가 제공하는 함수 - 현재 로그인한 사용자 정보를 서버에서 가져옴
-  // 서버에서 실행되므로 비밀번호 같은 민감한 정보도 안전하게 확인 가능
-  const session = await auth();
-
-  // 만약 로그인하지 않았다면 (session?.user가 없다면)
-  if (!session?.user) {
-    // redirect(): 사용자를 강제로 로그인 페이지로 이동시킴
-    // 이렇게 하면 회원 전용 페이지에 접근하려는 사람들이 로그인하도록 유도
-    redirect("/login");
-  }
+  // 레이아웃에서도 승인 역할을 검사해 승인 대기 사용자를 /pending 으로 이동시킨다.
+  const session = await requireMember();
 
   return (
     // 화면 전체를 차지하는 검은색 배경의 플렉스 컨테이너

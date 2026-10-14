@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireAdmin } from "@/lib/admin";
 import { DocsViewer, type DocsTabItem } from "./_components/docs-viewer";
 
 const DOCS_CONFIG: Array<Omit<DocsTabItem, "content"> & { fileName: string }> = [
@@ -17,7 +18,8 @@ function readDocFile(fileName: string) {
 
 export const dynamic = "force-dynamic";
 
-export default function AdminDocsPage() {
+export default async function AdminDocsPage() {
+  await requireAdmin();
   const docs = DOCS_CONFIG.map(({ fileName, ...item }) => ({
     ...item,
     content: readDocFile(fileName),

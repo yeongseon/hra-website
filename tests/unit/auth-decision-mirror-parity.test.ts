@@ -2,7 +2,7 @@
  * decideOAuthSignIn 미러 parity 테스트 (#67, #82)
  *
  * 목적:
- *   `scripts/verify-oauth-binding-security.mjs` 는 프로덕션 DB 를 대상으로 signIn
+ *   `scripts/verify-oauth-binding-security.mjs` 는 격리 DB 를 대상으로 signIn
  *   콜백의 결정 트리를 재현해 회귀를 감지한다. 그러나 verify 스크립트는 순수
  *   Node ESM (.mjs) 이므로 TypeScript 원본을 import 할 수 없어, 결정 트리
  *   함수를 별도로 미러링한다 (scripts/_lib/mirror-decide.mjs).

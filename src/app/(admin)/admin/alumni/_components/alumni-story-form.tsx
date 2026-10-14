@@ -1,7 +1,9 @@
+/** 수료생 이야기 등록·수정 폼입니다. 이미지는 Blob 업로드 서버 액션으로 전달합니다. */
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import Image from "next/image";
+import { useActionState, useRef } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +18,7 @@ type AlumniStoryFormValues = {
   title?: string | null;
   quote?: string | null;
   content?: string | null;
+  imageUrl?: string | null;
   isFeatured?: boolean;
 };
 
@@ -39,9 +42,13 @@ export function AlumniStoryForm({
   action,
   defaultValues,
 }: AlumniStoryFormProps) {
+  const requestIdRef = useRef<string | null>(null);
   const [state, formAction, isPending] = useActionState(
     async (_prevState: AlumniStoryActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
       const result = await action(formData);
+      if (result?.success) requestIdRef.current = null;
       return result ?? initialState;
     },
     initialState
@@ -117,6 +124,29 @@ export function AlumniStoryForm({
                   defaultValue={defaultValues?.content ?? ""}
                   placeholder="수료생의 상세한 성장 이야기를 작성해주세요."
                 />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="images" className="text-[#1a1a1a]">수료생 사진</Label>
+                {defaultValues?.imageUrl ? (
+                  <Image
+                    src={defaultValues.imageUrl}
+                    alt="현재 수료생 대표 사진"
+                    width={160}
+                    height={160}
+                    className="size-40 rounded-lg border border-[#D9D9D9] object-cover"
+                  />
+                ) : null}
+                <Input
+                  id="images"
+                  name="images"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="border-[#D9D9D9] text-[#1a1a1a]"
+                />
+                <p className="text-xs text-[#666666]">JPG, PNG, WEBP 파일을 올릴 수 있습니다. 각 파일은 5MB 이하이며, 첫 번째 이미지가 대표 사진입니다.</p>
+                {state.fieldErrors?.images ? <p className="text-sm text-red-700">{state.fieldErrors.images}</p> : null}
               </div>
 
               <div className="md:col-span-2">

@@ -1,9 +1,9 @@
 /**
- * OAuth binding 보안 운영 스모크 검증 스크립트 (#67)
+ * OAuth binding 보안 격리 DB 검증 스크립트 (#67, #120)
  *
  * 이 스크립트의 역할 (정확한 위치 정의):
- *   "이번 배포에서 실제 프로덕션 DB 위에서 signIn 콜백의 IO 조합이 예상대로 동작하는가"
- *   에 대한 **운영 스모크 체크**. CI 회귀 진리치가 아니다. 회귀 방지의 진짜 근거는:
+ *   별도 Neon 테스트 브랜치에서 signIn 콜백의 IO 조합이 예상대로 동작하는지 확인한다.
+ *   CI 회귀 진리치가 아니다. 회귀 방지의 근거는:
  *     - tests/unit/auth-jwt-session.test.ts (162 unit tests) - decideOAuthSignIn 결정 트리
  *     - DB 상의 UNIQUE/CHECK 제약 - fail-closed 안전망
  *   이 스크립트는 그 위에 얹는 "실제 DB IO 경계에서 잘 붙어 있는가" 확인용.
@@ -24,9 +24,9 @@
  *       과 이 미러의 결정 결과 equality 를 CI 에서 강제 검증한다 (#82).
  *   simulateSignIn 의 IO 조합 (SELECT/INSERT/UPDATE 결합) 은 이제 tests/unit/auth-signin-io.test.ts
  *   가 mock SignInIO 로 CI 에서 회귀 검증한다 (#81, `handleOAuthSignIn` 격리). 이 스크립트는
- *   프로덕션 DB 경계에서 실제 drizzle SQL 정합성만 확인한다.
+ *   격리 DB 경계에서 실제 SQL 정합성만 확인한다.
  *
- * 안전성 (프로덕션 DB 에 대해 실행 가능하도록 설계):
+ * 안전성 (별도 테스트 브랜치 DB 에서만 실행):
  *   실제 격리력의 핵심은 아래 두 요소의 조합이다.
  *     (1) 실행별 고유 NONCE prefix (Date.now() + crypto.randomUUID() slice) — 실행 간
  *         email 충돌 확률이 실무상 무시 가능. **이것이 격리력의 실제 근거다.**
@@ -45,23 +45,45 @@
  *     row 를 건드릴 위험은 실무상 무시 가능 수준.
  *
  * 사용법:
- *   npm run verify:oauth-binding-security
+ *   HRA_TEST_DATABASE_URL="테스트 브랜치 URL" npm run verify:oauth-binding-security -- --confirm-test-db
  *   # 또는 직접:
- *   node --env-file=.env scripts/verify-oauth-binding-security.mjs
+ *   HRA_TEST_DATABASE_URL="테스트 브랜치 URL" node --env-file=.env scripts/verify-oauth-binding-security.mjs --confirm-test-db
  *
  * 환경변수:
- *   DATABASE_URL - Neon Postgres 연결 문자열 (필수)
+ *   HRA_TEST_DATABASE_URL - 운영 DB 와 다른 Neon 테스트 브랜치 연결 문자열 (필수)
  */
 
 import { neon } from "@neondatabase/serverless";
 import { pureDecide } from "./_lib/mirror-decide.mjs";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error("❌ DATABASE_URL 환경변수가 설정되지 않았습니다.");
+const TEST_DATABASE_URL = process.env.HRA_TEST_DATABASE_URL;
+if (!TEST_DATABASE_URL || !process.argv.includes("--confirm-test-db")) {
+  console.error("❌ HRA_TEST_DATABASE_URL 과 --confirm-test-db 를 모두 지정해야 합니다.");
   process.exit(1);
 }
-const sql = neon(DATABASE_URL);
+
+// .env 의 운영 DB 와 같은 호스트·DB 이름은 테스트 브랜치로 보지 않고 중단합니다.
+const productionUrl = process.env.DATABASE_URL;
+let testUrl;
+let productionDatabaseUrl;
+try {
+  testUrl = new URL(TEST_DATABASE_URL);
+  productionDatabaseUrl = productionUrl ? new URL(productionUrl) : null;
+  if (!["postgres:", "postgresql:"].includes(testUrl.protocol)) throw new Error("잘못된 프로토콜");
+} catch {
+  // URL 파싱 오류 객체에는 비밀번호가 포함될 수 있어 원문을 출력하지 않습니다.
+  console.error("❌ 테스트 DB 연결 문자열의 형식을 확인해 주세요.");
+  process.exit(1);
+}
+if (productionDatabaseUrl) {
+  // Neon pooler 호스트도 같은 브랜치를 가리키므로 접두 호스트의 -pooler 를 무시합니다.
+  const branchHost = (url) => url.hostname.replace(/-pooler(?=\.)/, "");
+  if (branchHost(testUrl) === branchHost(productionDatabaseUrl) && testUrl.pathname === productionDatabaseUrl.pathname) {
+    console.error("❌ 운영 DATABASE_URL 과 같은 DB 에서는 검증 스크립트를 실행할 수 없습니다.");
+    process.exit(1);
+  }
+}
+const sql = neon(TEST_DATABASE_URL);
 
 // 이 실행 시점의 nonce. cleanup 필터 및 fixture email prefix 로 사용된다.
 const NONCE = `oauth-verify-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
@@ -695,7 +717,7 @@ async function cleanup() {
 
 async function main() {
   console.log(`🔬 OAuth binding 보안 회귀 검증 시작 (nonce=${NONCE})`);
-  console.log("   프로덕션 DB 를 사용합니다. 격리는 실행별 NONCE prefix + fixture ID 기반 cleanup 으로 보장됩니다.\n");
+  console.log("   별도 테스트 브랜치 DB 에서 실행합니다. fixture 는 종료 시 정리합니다.\n");
 
   // 시나리오 실행 도중 catch 로 잡히는 예외가 있었는지 별도 플래그로 추적한다.
   // 이유: catch 안에서 process.exitCode = 1 만 세팅하면 프로세스 종료 코드는 실패지만,

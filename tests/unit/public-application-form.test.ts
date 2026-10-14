@@ -27,6 +27,7 @@ vi.mock("@/features/applications/actions/submissions", () => ({
 }));
 
 import { PublicApplicationForm } from "@/app/(public)/recruitment/apply/[id]/_components/public-application-form";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 const FORM = { id: "00000000-0000-4000-8000-000000000000", title: "지원서", description: null };
 const QUESTIONS = [
@@ -82,6 +83,17 @@ describe("PublicApplicationForm — 제출 실패 후 입력 유지", () => {
       return element;
     };
     const form = field<HTMLFormElement>("form");
+
+    // 브라우저 입력 상한이 서버의 DB·답변 길이 상한과 일치해야 합니다 (#112).
+    for (const [selector, maxLength] of [
+      ['[name="applicantName"]', applicationInputLimits.applicantName],
+      ['[name="applicantEmail"]', applicationInputLimits.applicantEmail],
+      ['[name="applicantPhone"]', applicationInputLimits.applicantPhone],
+      ['[name="q-s"]', applicationInputLimits.shortAnswer],
+      ['textarea[name="q-l"]', applicationInputLimits.longAnswer],
+    ] as const) {
+      expect(field(selector).getAttribute("maxlength")).toBe(String(maxLength));
+    }
 
     fireEvent.change(field('[name="applicantName"]'), { target: { value: "홍길동" } });
     fireEvent.change(field('[name="applicantEmail"]'), { target: { value: "applicant@example.com" } });

@@ -15,13 +15,7 @@ import {
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
-
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
+import { formatKstDate } from "@/lib/date-time";
 
 // 마크다운 기호를 제거해 본문 미리보기용 평문으로 변환
 function stripMarkdown(md: string): string {
@@ -46,6 +40,7 @@ export default async function AdminNoticesPage() {
       id: notices.id,
       title: notices.title,
       content: notices.content,
+      status: notices.status,
       pinned: notices.pinned,
       createdAt: notices.createdAt,
     })
@@ -71,6 +66,7 @@ export default async function AdminNoticesPage() {
                   <TableHead className="w-10">고정</TableHead>
                   <TableHead>제목</TableHead>
                   <TableHead>내용</TableHead>
+                  <TableHead className="w-24">상태</TableHead>
                   <TableHead className="w-28">날짜</TableHead>
                   <TableHead className="w-28 text-right">관리</TableHead>
                 </TableRow>
@@ -78,7 +74,7 @@ export default async function AdminNoticesPage() {
               <TableBody>
                 {noticeList.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-slate-500">
+                    <TableCell colSpan={6} className="py-8 text-center text-slate-500">
                       등록된 공지사항이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -98,7 +94,10 @@ export default async function AdminNoticesPage() {
                           {stripMarkdown(notice.content)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-slate-600">{formatDate(notice.createdAt)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-slate-600">
+                        {notice.status === "PUBLISHED" ? "게시" : "임시저장"}
+                      </TableCell>
+                      <TableCell className="text-slate-600">{formatKstDate(notice.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <NoticeRowActions id={notice.id} />
                       </TableCell>

@@ -61,7 +61,7 @@ async function readFileSafe(filePath: string): Promise<string | null> {
 export async function readGuide(
   slug: string,
 ): Promise<ParsedMarkdown<GuideFrontmatter> | null> {
-  const fileName = guideSlugToFileName[slug];
+  const fileName = Object.hasOwn(guideSlugToFileName, slug) ? guideSlugToFileName[slug] : null;
   if (!fileName) return null;
 
   const filePath = path.join(contentRoot, "member", "guides", fileName);
@@ -78,7 +78,7 @@ export async function readGuide(
 export async function readTemplateFromContent(
   slug: string,
 ): Promise<ParsedMarkdown<TemplateFrontmatter> | null> {
-  const fileName = templateSlugToFileName[slug];
+  const fileName = Object.hasOwn(templateSlugToFileName, slug) ? templateSlugToFileName[slug] : null;
   if (!fileName) return null;
 
   const filePath = path.join(contentRoot, "member", "templates", fileName);

@@ -245,10 +245,7 @@ Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
 
 ### "relation [테이블명] does not exist" (테이블을 찾을 수 없어요)
 
-> 👉 데이터베이스에 테이블을 아직 안 만든 거예요. 터미널에서 이 명령어를 입력하세요:
-> ```bash
-> npx drizzle-kit push
-> ```
+> 👉 데이터베이스에 테이블을 아직 안 만들었을 수 있어요. [DB 변경 절차](developer/database-change-procedure.md)에서 대상 DB를 확인한 뒤 적용하세요.
 
 ### 500 에러 (페이지가 안 열려요)
 
@@ -311,11 +308,11 @@ Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
 
 | 순서 | 할 일 | 어떻게 확인하나요? |
 | --- | --- | --- |
-| 1 | 데이터베이스 테이블 만들기 | 터미널에서 `npx drizzle-kit push` 입력 → "Changes applied" 나오면 성공 |
+| 1 | 데이터베이스 테이블 만들기 | [DB 변경 절차](developer/database-change-procedure.md)에 따라 테이블·추가 SQL·카탈로그 확인 |
 | 2 | (선택) 소셜 로그인을 사용하려면 | 위 2번 섹션 참고 (설정값 4개 추가) |
 | 3 | 사이트 접속 확인 | Vercel이 준 주소로 접속 → 홈페이지가 보이면 성공 |
 | 4 | 관리자 이메일/비밀번호로 로그인 테스트 | 사이트에서 로그인 페이지 접속 → 관리자 계정으로 로그인 성공하면 OK |
-| 5 | 첫 관리자 만들기 | 터미널에서 `ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin` 입력 |
+| 5 | 첫 관리자 만들기 | 터미널에서 `ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin -- --confirm-create` 입력 |
 | 6 | 이미지 저장소 만들기 | 위 2번의 ③ 참고 → 갤러리에서 사진 올리기 성공하면 OK |
 | 7 | 첫 기수 만들기 | 관리자 페이지 → 기수 관리 → 새 기수 등록 |
 | 8 | 첫 공지사항 쓰기 | 관리자 페이지 → 공지사항 → 글 써보기 |
@@ -329,3 +326,9 @@ Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
 ---
 
 막히는 부분이 있으면 에러 메시지를 복사해서 팀원이나 관리자한테 보내주세요. 처음이라 어려운 게 당연해요. 화이팅! 💪
+
+## 문서 사이트(MkDocs) 배포
+
+문서는 `gh-pages` 브랜치에서 제공되며 앱의 Vercel 배포와 별개입니다.
+문서 변경을 검토한 뒤 `mkdocs build --strict`로 검사합니다.
+게시 권한이 있는 담당자는 `mkdocs gh-deploy --force`로 `gh-pages` 브랜치를 갱신합니다.

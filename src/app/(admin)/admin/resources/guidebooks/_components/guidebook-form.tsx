@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { GuidebookActionState } from "@/features/guidebooks/actions";
+import { prepareResourceUpload } from "@/lib/resource-upload-client";
 
 type GuidebookFormProps = {
   action: (formData: FormData) => Promise<GuidebookActionState>;
+  userId: string;
   /** 수정 모드일 때 기존 값으로 폼 초기화 */
   defaultValues?: {
     title: string;
@@ -34,12 +36,15 @@ const acceptValue = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-export function GuidebookForm({ action, defaultValues }: GuidebookFormProps) {
+export function GuidebookForm({ action, defaultValues, userId }: GuidebookFormProps) {
   const isEdit = Boolean(defaultValues);
   const router = useRouter();
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: GuidebookActionState, formData: FormData) => action(formData),
+    async (_previous: GuidebookActionState, formData: FormData) => {
+      const prepared = await prepareResourceUpload(formData, "guidebooks", userId, !isEdit);
+      return "error" in prepared ? { success: false, error: prepared.error } : action(prepared.formData);
+    },
     initialState,
   );
 

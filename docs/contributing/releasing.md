@@ -34,7 +34,7 @@ scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변�
 ## 3. 최초 도입과 버전 정본
 
 - 현재 package 버전 **0.1.0**을 `.release-please-manifest.json`의 기준으로 사용한다. 이미 공개한 릴리스가 있다는 뜻이 아니다.
-- 도입 직전 main `754582995ceb6e6294c01bac5f1dcb654256abb7`을 `bootstrap-sha`로 지정했다. 이 커밋까지의 과거 변경 이력은 재수집하지 않는다.
+- 도입 직전 main `b6b5f7d1608d14e0f647b0929211ceec5db855b2`을 `bootstrap-sha`로 지정했다. 이 커밋까지의 과거 변경 이력은 재수집하지 않는다.
 - 기존 `CHANGELOG.md`는 그대로 보존하고 이후 버전 항목을 release-please가 추가한다. 과거 PR/커밋/태그를 재작성하지 않는다.
 - 다음 실질 변경이 `fix:`면 보통 0.1.1, `feat:`면 0.2.0을 제안한다. 설정 도입 `ci:`/문서 `docs:`만으로 첫 release PR이 안 생겨도 정상이다.
 - 첫 성공적인 release PR 이후 `bootstrap-sha`는 필요 없어져 별도 작은 PR에서 제거할 수 있다. `last-release-sha`로 매번 고정하지 않는다.
@@ -44,7 +44,7 @@ scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변�
 ## 4. 릴리스 흐름
 
 1. 일반 PR의 제목/본문·앱 CI·리뷰를 확인하고 main에 squash merge한다.
-2. `Release Please` workflow가 변경을 분석하여 하나의 release PR을 생성/갱신한다. 이 workflow는 npm publish·DB migration·Vercel 배포 명령을 실행하지 않는다.
+2. 저장소 변수 `RELEASE_PLEASE_ENABLED=true`로 활성화한 뒤 `Release Please` workflow가 변경을 분석하여 하나의 release PR을 생성/갱신한다. 기본 상태에서는 job이 건너뛰어지며 npm publish·DB migration·Vercel 배포 명령은 실행하지 않는다.
 3. release PR의 버전, 포함된 변경, CHANGELOG, 네 버전값을 검토한다. 릴리스 설명에는 미구현 기능을 완료로 표시하지 않는다.
 4. `PR 형식`, `형식·릴리스 계약 테스트`, 기존 앱 CI 및 필요한 리뷰가 통과했는지 확인한다. 메타데이터 검사 성공은 앱 빌드 성공이 아니다.
 5. 사람이 release PR을 병합하면 다음 실행에서 GitHub Release와 태그를 생성한다. 자동 병합은 구성하지 않는다.
@@ -54,13 +54,13 @@ scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변�
 
 ## 5. 토큰과 CI 실행
 
-기본은 `GITHUB_TOKEN`; 필요하면 저장소 한정 `RELEASE_PLEASE_TOKEN`(GitHub App token 또는 최소 권한 PAT)을 설정할 수 있다. release-please에는 contents/issues/pull-requests 쓰기 권한이 필요하다. 워크플로별 최소 권한을 사용하고 DB/Blob/배포 토큰은 전달하지 않는다.
+활성화 전 저장소 한정 `RELEASE_PLEASE_TOKEN`(GitHub App token 또는 최소 권한 PAT)을 설정한다. release-please에는 contents/issues/pull-requests 쓰기 권한이 필요하다. `GITHUB_TOKEN`으로 대체하지 않는다. 워크플로별 최소 권한을 사용하고 DB/Blob/배포 토큰은 전달하지 않는다.
 
 관리자 설정의 **Allow GitHub Actions to create and approve pull requests**가 허용되어 있어야 한다. 이 옵션은 자동 승인을 하라는 뜻이 아니며, workflow는 승인/병합을 수행하지 않는다.
 
-2026-10-13에 확인한 GitHub 공식 문서에 따르면, GITHUB_TOKEN이 만드는 `pull_request`의 opened/synchronize/reopened 실행은 **승인이 필요한 상태**로 생성될 수 있다. PR에서 **Approve workflows to run**을 확인한다. edited/labeled 등 다른 이벤트는 같은 예외가 아니므로 제목/라벨 변경만으로 재검사가 시작됐다고 가정하지 않는다. release-please README의 이전 설명과 달리 무조건 "봇 PR CI는 절대 실행되지 않는다"고 단정하지 않는다.
+GitHub와 release-please의 공식 문서에 따르면 `GITHUB_TOKEN`이 만든 PR·태그의 후속 이벤트는 일반적인 workflow를 시작하지 않는다. 따라서 release PR의 CI가 실제로 실행되도록 GitHub App 또는 최소 권한 PAT를 사용하고, 첫 PR에서 실행 결과를 확인한다. 토큰 작성자의 PR에 별도 승인 정책이 적용되면 승인 후 CI를 확인한다.
 
-자동 승인을 없애고 자동 CI 실행을 원할 때는 GitHub App 또는 최소 권한 PAT를 검토한다. 토큰 작성자가 기본 `github-actions[bot]`가 아니라면 저장소 변수 `RELEASE_PLEASE_BOT_LOGIN`에 실제 PR 작성자 login을 정확히 지정한다. 토큰 자체를 변수나 문서에 기록하지 않는다. 변경한 토큰으로 처음 만든 PR의 실제 작성자와 CI 실행을 운영 검증한다.
+저장소 변수 `RELEASE_PLEASE_BOT_LOGIN`에 실제 PR 작성자 login을 정확히 지정한다. 토큰 자체를 변수나 문서에 기록하지 않는다. Actions PR 생성 허용·토큰·작성자 변수를 확인한 뒤에만 `RELEASE_PLEASE_ENABLED=true`로 전환한다.
 
 ## 6. 생성형 PR 예외와 재발 방지
 
@@ -89,9 +89,9 @@ node scripts/check-release-config.mjs
 
 실제 GitHub 점검은 gh CLI 로그인과 저장소 read 권한이 필요하다. Actions의 `이슈·PR 형식` 수동 실행도 일괄 점검을 제공한다. 위반 항목만 필요한 범위에서 고치고 의미·우선순위·담당자를 자동으로 바꾸지 않는다. 닫힌 이슈/PR은 형식 통일만을 이유로 재작성하지 않는다.
 
-- [ ] 도입 PR의 CI 및 AGENTS.md의 독립 리뷰 조건 확인
+- [ ] 도입 PR의 CI와 코드 리뷰 확인
 - [ ] Actions PR 생성 설정 확인
-- [ ] 토큰 사용 방식, 필요 시 작성자 변수와 CI 승인 방법 확인
+- [ ] `RELEASE_PLEASE_TOKEN`·작성자 변수·CI 승인 방법 확인 후 `RELEASE_PLEASE_ENABLED=true` 설정
 - [ ] squash 기본 메시지와 main 보호/필수 체크 설정 확인
 - [ ] 첫 release PR의 작성자·파일·버전·CI 실행 검증
 - [ ] release PR 병합 뒤 GitHub Release와 태그의 버전 일치 검증

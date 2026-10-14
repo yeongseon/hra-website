@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, ImageIcon, Lock } from "lucide-react";
 import { eq, sql } from "drizzle-orm";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberUploadForm } from "@/app/(member)/resources/weekly-texts/_components/member-upload-form";
 import { createWeeklyTextAsMember } from "@/features/weekly-texts/actions";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { cohorts, users } from "@/lib/db/schema";
@@ -19,15 +20,9 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function WeeklyTextsPage() {
-  const session = await auth();
+  const session = await requireSharedResourceReader();
   const role = session?.user?.role;
   // ADMIN, FACULTY, MEMBER 업로드 가능 (PENDING 불가)
   const canUpload = role === "ADMIN" || role === "FACULTY" || role === "MEMBER";
@@ -197,7 +192,7 @@ export default async function WeeklyTextsPage() {
                     </Card>
                   </Link>
                 ) : (
-                  <a href={text.fileUrl} download={text.fileName ?? undefined} className="block">
+                  <a href={`/api/resources/weekly-texts/${text.id}/download`} download={text.fileName ?? undefined} className="block">
                     <Card className="rounded-2xl border-[#D9D9D9] bg-white text-[#1a1a1a] shadow-[var(--shadow-soft)] transition hover:border-blue-400 hover:bg-gray-50">
                       <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="space-y-3">

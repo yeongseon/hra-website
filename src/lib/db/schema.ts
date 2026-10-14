@@ -360,7 +360,7 @@ export const legacyApplications = pgTable("applications", {
   id: uuid("id").primaryKey().defaultRandom(), // 지원서 고유 ID (자동 생성)
   cohortId: uuid("cohort_id")
     .notNull()
-    .references(() => cohorts.id, { onDelete: "cascade" }), // 어느 기수에 지원했는지 (기수 삭제되면 지원서도 삭제됨)
+    .references(() => cohorts.id, { onDelete: "restrict" }), // 과거 지원서가 있으면 기수 삭제를 DB에서 차단합니다 (#193).
   applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름 (최대 100자)
   applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일 (최대 255자)
   applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 전화번호 (선택사항)
@@ -499,6 +499,7 @@ export const faqContact = pgTable("faq_contact", {
 // 모집 안내 페이지의 설정 정보 (포스터, D-day, 현재 모집 기수 등)
 export const recruitmentSettings = pgTable("recruitment_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
+  singletonKey: integer("singleton_key").notNull().default(1), // 설정은 고정 키 1인 한 행만 허용
   // 현재 모집 기수 정보 (모집 설정 관리자 페이지 상단 섹션)
   activeCohortId: uuid("active_cohort_id").references(() => cohorts.id, { onDelete: "set null" }), // 현재 모집 중인 기수 (null이면 모집 없음)
   recruitmentStatus: recruitmentStatusEnum("recruitment_status").default("UPCOMING"), // 모집 상태: 예정/모집중/마감
@@ -516,7 +517,10 @@ export const recruitmentSettings = pgTable("recruitment_settings", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, table => ({
+  singletonUnique: unique("recruitment_settings_singleton_key_unique").on(table.singletonKey),
+  singletonCheck: check("recruitment_settings_singleton_key_check", sql`${table.singletonKey} = 1`),
+}));
 
 // ============================================================
 // Notice Attachments (공지사항 첨부파일 테이블)
@@ -714,6 +718,7 @@ export const applicationForms = pgTable("application_forms", {
   description: text("description"), // 양식 설명
   cohortId: uuid("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }), // 대상 기수
   isPublished: boolean("is_published").notNull().default(false), // 공개 여부
+  questionsRevision: integer("questions_revision").notNull().default(0), // 질문 일괄 저장 충돌 감지용 버전
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at")
     .notNull()
@@ -779,7 +784,7 @@ export const applicationSubmissions = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     formId: uuid("form_id")
       .notNull()
-      .references(() => applicationForms.id, { onDelete: "cascade" }),
+      .references(() => applicationForms.id, { onDelete: "restrict" }), // 제출이 있는 양식 삭제를 DB에서 차단합니다 (#193).
     applicantName: varchar("applicant_name", { length: 100 }).notNull(), // 지원자 이름
     applicantEmail: varchar("applicant_email", { length: 255 }).notNull(), // 지원자 이메일
     applicantPhone: varchar("applicant_phone", { length: 20 }), // 지원자 연락처
@@ -860,7 +865,7 @@ export const applicationSubmissionsLog = pgTable(
 // ============================================================
 
 /**
- * 로그인 시도 로그 테이블.
+ * 과거 로그인 시도 로그 테이블. #121부터 새 기록은 rateLimitEvents에 저장합니다.
  *
  * 목적:
  *   - Credentials brute-force / credential stuffing 방어.
@@ -886,9 +891,7 @@ export const applicationSubmissionsLog = pgTable(
  *   - 별도 (ip, email, attempted_at) composite 는 만들지 않음 — 대부분의 쿼리는
  *     OR (ip=? OR email=?) 형태이므로 위 두 인덱스가 union 스캔에 유리.
  *
- * 유지보수:
- *   - 이 테이블은 무한히 커지므로 별도 크론(예: 24시간 전 로그 삭제)이 필요.
- *   - Phase 2 에서 vercel cron / neon TTL 로직 도입 예정 (#69 후속).
+ * 유지보수: 과거 행은 일일 요청 제한 정리 작업이 48시간 후 삭제합니다.
  */
 export const loginAttempts = pgTable(
   "login_attempts",
@@ -906,7 +909,7 @@ export const loginAttempts = pgTable(
 );
 
 /**
- * 이미지 업로드 rate limit 로그 테이블 (#69).
+ * 과거 이미지 업로드 rate limit 로그 테이블 (#69).
  *
  * `/api/upload-image` 남용 방어 (Vercel Blob 실비 폭증 방지) 를 위한 IP 기준
  * sliding window 판정의 원천 데이터. 정책 상수 `UPLOAD_RATE_LIMIT` 참조.
@@ -915,8 +918,7 @@ export const loginAttempts = pgTable(
  *   업로드 이벤트에는 success/email 이 무의미하며, 감사·인덱스 크기·쿼리 계획
  *   명확성 확보를 위해 단일 목적 테이블로 분리한다.
  *
- * 유지보수:
- *   loginAttempts 와 동일한 무한 성장 특성. TTL 크론 필수 (Phase 2 후속 이슈).
+ * 유지보수: #121부터 새 기록은 rateLimitEvents에 저장하고 과거 행은 일일 정리합니다.
  */
 export const uploadRateLimitLog = pgTable(
   "upload_rate_limit_log",
@@ -928,6 +930,46 @@ export const uploadRateLimitLog = pgTable(
   (table) => [
     index("idx_upload_rate_limit_ip_attempted").on(table.ip, table.attemptedAt),
   ]
+);
+
+/**
+ * 요청 제한의 원자적 예약 이벤트 (#121).
+ * scope 별 키는 해시로 저장하며 원본 IP·이메일을 남기지 않습니다.
+ * 같은 예약의 여러 제한 축은 reservationId 로 묶이고, 성공한 지원서와 연결된
+ * 이벤트는 해당 지원서 삭제 시 함께 삭제됩니다. 오래된 이벤트는 일일 정리 작업이 지웁니다.
+ */
+export const rateLimitEvents = pgTable(
+  "rate_limit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reservationId: uuid("reservation_id").notNull(),
+    scope: varchar("scope", { length: 32 }).notNull(),
+    keyHash: varchar("key_hash", { length: 64 }).notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).defaultNow().notNull(),
+    submissionId: uuid("submission_id").references(() => applicationSubmissions.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("idx_rate_limit_scope_key_time").on(table.scope, table.keyHash, table.attemptedAt),
+    index("idx_rate_limit_attempted_at").on(table.attemptedAt),
+    index("idx_rate_limit_submission_id").on(table.submissionId),
+  ],
+);
+
+/**
+ * 서버가 새로 업로드한 이미지·문서 파일의 소유권 원장 (#88, #93).
+ * 본문에 적힌 URL이나 Blob 도메인만으로 이 테이블에 소유권을 소급 부여하지 않습니다.
+ * 콘텐츠 참조는 현재 저장된 본문을 기준으로 확인하며, 기존 미등록 파일은 자동 정리하지 않습니다.
+ */
+export const markdownImageAssets = pgTable(
+  "markdown_image_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    url: text("url").notNull().unique(),
+    uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [index("idx_markdown_image_assets_created_at").on(table.createdAt)],
 );
 
 // ============================================================

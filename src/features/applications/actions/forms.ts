@@ -8,8 +8,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
-import { applicationForms } from "@/lib/db/schema";
+import { applicationForms, applicationSubmissions } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { isConstraintViolation } from "@/lib/db/constraint-errors";
+import { hasSubmissionDeleteGuards } from "@/lib/db/submission-delete-guards";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(255, "제목은 255자 이하여야 합니다."),
@@ -120,7 +122,7 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
   }
 
   try {
-    await db
+    const updated = await db
       .update(applicationForms)
       .set({
         title: parsed.data.title,
@@ -129,7 +131,12 @@ export async function updateForm(id: string, formData: FormData): Promise<FormAc
         isPublished: parsed.data.isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, validId));
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (updated.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     revalidatePath(`/admin/application-forms/${validId}`);
@@ -167,13 +174,18 @@ export async function toggleFormPublishStatus(id: string, isPublished: boolean):
   const validId = parsedId.data;
 
   try {
-    await db
+    const updated = await db
       .update(applicationForms)
       .set({
         isPublished,
         updatedAt: new Date(),
       })
-      .where(eq(applicationForms.id, validId));
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (updated.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     return {
@@ -209,7 +221,23 @@ export async function deleteForm(id: string): Promise<FormActionState> {
   const validId = parsedId.data;
 
   try {
-    await db.delete(applicationForms).where(eq(applicationForms.id, validId));
+    if (!await hasSubmissionDeleteGuards()) {
+      return { success: false, message: "제출 보존 설정을 확인할 수 없어 양식을 삭제할 수 없습니다." };
+    }
+    // 사용자 안내를 위한 사전 검사입니다. 실제 동시 제출 차단은 DB의 RESTRICT FK가 담당합니다.
+    const [submission] = await db.select({ id: applicationSubmissions.id })
+      .from(applicationSubmissions).where(eq(applicationSubmissions.formId, validId)).limit(1);
+    if (submission) {
+      return { success: false, message: "제출된 지원서가 있는 양식은 삭제할 수 없습니다." };
+    }
+
+    const deleted = await db.delete(applicationForms)
+      .where(eq(applicationForms.id, validId))
+      .returning({ id: applicationForms.id });
+
+    if (deleted.length === 0) {
+      return { success: false, message: "양식을 찾을 수 없습니다." };
+    }
 
     revalidatePath("/admin/application-forms");
     return {
@@ -217,10 +245,13 @@ export async function deleteForm(id: string): Promise<FormActionState> {
       message: "양식이 삭제되었습니다.",
     };
   } catch (error) {
+    if (isConstraintViolation(error, "23503", "application_submissions_form_id_application_forms_id_fk")) {
+      return { success: false, message: "제출된 지원서가 있는 양식은 삭제할 수 없습니다." };
+    }
     logServerError("application-forms/delete", error, { id: validId });
     return {
       success: false,
-      message: "양식 삭제 중 오류가 발생했습니다.",
+      message: "연결된 데이터가 있거나 양식을 삭제할 수 없습니다. 다시 확인해주세요.",
     };
   }
 }

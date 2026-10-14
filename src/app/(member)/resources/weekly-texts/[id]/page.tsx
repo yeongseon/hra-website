@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Download, Printer } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { z } from "zod/v4";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { canReadSharedResource } from "@/features/resources/access";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { cohorts, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +21,10 @@ type WeeklyTextViewerPageProps = {
   params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const getWeeklyText = async (id: string) => {
+  const session = await auth();
+  if (!canReadSharedResource(session?.user?.role)) return null;
   const [text] = await db
     .select({
       id: weeklyTexts.id,
@@ -79,16 +78,7 @@ export async function generateMetadata({ params }: WeeklyTextViewerPageProps): P
 }
 
 export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerPageProps) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  const role = session.user.role;
-  if (role !== "ADMIN" && role !== "FACULTY" && role !== "MEMBER") {
-    redirect("/resources");
-  }
+  await requireSharedResourceReader();
 
   const { id } = await params;
 
@@ -159,7 +149,7 @@ export default async function WeeklyTextViewerPage({ params }: WeeklyTextViewerP
             <section className="space-y-3">
               <h2 className="text-base font-semibold text-[#1a1a1a]">첨부 문서</h2>
               <a
-                href={text.fileUrl}
+                href={`/api/resources/weekly-texts/${text.id}/download`}
                 download={text.fileName ?? undefined}
                 className="inline-flex items-center gap-2 rounded-full border border-[#D9D9D9] bg-white px-4 py-2 text-sm font-medium text-[#2563EB] transition-colors hover:border-[#2563EB] hover:bg-blue-50"
               >

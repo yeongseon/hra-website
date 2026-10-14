@@ -61,6 +61,7 @@ export function Header({ session }: HeaderProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openDesktopDropdown, setOpenDesktopDropdown] = useState<string | null>(null);
   const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
 
   const user = session?.user;
@@ -131,9 +132,30 @@ export function Header({ session }: HeaderProps) {
              
              if (item.subItems) {
                return (
-                 <div key={item.label} className="group relative py-6">
+                 <div
+                   key={item.label}
+                   className="group relative py-6"
+                   onMouseEnter={() => setOpenDesktopDropdown(item.label)}
+                   onMouseLeave={(event) => {
+                     if (!event.currentTarget.contains(document.activeElement)) setOpenDesktopDropdown(null);
+                   }}
+                   onFocusCapture={() => setOpenDesktopDropdown(item.label)}
+                   onBlurCapture={(event) => {
+                     if (!event.currentTarget.contains(event.relatedTarget)) setOpenDesktopDropdown(null);
+                   }}
+                   onKeyDown={(event) => {
+                     if (event.key === "Escape") {
+                       event.preventDefault();
+                       event.currentTarget.querySelector("button")?.focus();
+                       setOpenDesktopDropdown(null);
+                     }
+                   }}
+                 >
                    <button
                      type="button"
+                     aria-expanded={openDesktopDropdown === item.label}
+                     aria-controls={`desktop-menu-${item.label}`}
+                     onClick={() => setOpenDesktopDropdown(item.label)}
                      className={cn(
                        "flex items-center gap-1 text-sm font-medium tracking-wide transition-colors",
                         active ? "text-[#2563EB]" : "text-gray-600 group-hover:text-gray-900"
@@ -142,7 +164,15 @@ export function Header({ session }: HeaderProps) {
                      {item.label}
                      <ChevronDown className="size-4 transition-transform group-hover:rotate-180" />
                    </button>
-                    <div className="invisible absolute top-full left-0 mt-0 w-48 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:translate-y-1">
+                    <div
+                      id={`desktop-menu-${item.label}`}
+                      className={cn(
+                        "absolute top-full left-0 mt-0 w-48 transition-all duration-200",
+                        openDesktopDropdown === item.label
+                          ? "visible translate-y-1 opacity-100"
+                          : "invisible opacity-0"
+                      )}
+                    >
                        <div className="rounded-md border border-[#D9D9D9] bg-white py-1 shadow-[var(--shadow-soft)]">
                        {item.subItems.map((sub) => {
                          const subActive = pathname === sub.href || pathname.startsWith(sub.href + "/");
@@ -150,6 +180,7 @@ export function Header({ session }: HeaderProps) {
                            <Link
                              key={sub.href}
                              href={sub.href}
+                             onClick={() => setOpenDesktopDropdown(null)}
                              className={cn(
                                "block px-4 py-2 text-sm transition-colors",
                                 subActive ? "bg-blue-50 text-[#2563EB] font-semibold" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"

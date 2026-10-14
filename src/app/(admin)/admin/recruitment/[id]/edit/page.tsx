@@ -18,17 +18,12 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { cohorts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { toKstDateInput } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type EditCohortPageProps = {
   params: Promise<{ id: string }>;
-};
-
-// 날짜를 HTML input[type="date"] 형식으로 변환 (YYYY-MM-DD)
-const formatDateForInput = (date: Date | null) => {
-  if (!date) return "";
-  return date.toISOString().split("T")[0];
 };
 
 export default async function EditCohortPage({ params }: EditCohortPageProps) {
@@ -119,8 +114,8 @@ export default async function EditCohortPage({ params }: EditCohortPageProps) {
         name: cohort.name,
         description: cohort.description,
         imageUrl: cohort.imageUrl,
-        startDate: formatDateForInput(cohort.startDate),
-        endDate: formatDateForInput(cohort.endDate),
+        startDate: toKstDateInput(cohort.startDate),
+        endDate: toKstDateInput(cohort.endDate),
         isActive: cohort.isActive,
       }}
     />

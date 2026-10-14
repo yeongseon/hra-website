@@ -45,6 +45,8 @@ const acceptValue = [
 export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUploadFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const requestIdRef = useRef<string | null>(null);
+  const handledSuccessRef = useRef<WeeklyTextActionState | null>(null);
   const {
     body,
     cohortId,
@@ -72,19 +74,28 @@ export function MemberUploadForm({ action, cohorts, userCohortId }: MemberUpload
   ];
 
   const [submissionState, submissionAction, isSubmitting] = useActionState(
-    async (_previous: WeeklyTextActionState, formData: FormData) => action(formData),
+    async (_previous: WeeklyTextActionState, formData: FormData) => {
+      requestIdRef.current ??= crypto.randomUUID();
+      formData.set("requestId", requestIdRef.current);
+      const result = await action(formData);
+      if (result.success) requestIdRef.current = null;
+      return result;
+    },
     initialState,
   );
 
   useEffect(() => {
-    if (!submissionState.success) {
+    // 성공 상태는 다음 제출 전까지 유지됩니다. 같은 결과 객체의 재렌더에서는
+    // 폼 초기화·목록 새로고침을 반복하지 않고, 새 성공 결과는 다시 처리합니다.
+    if (!submissionState.success || handledSuccessRef.current === submissionState) {
       return;
     }
 
+    handledSuccessRef.current = submissionState;
     formRef.current?.reset();
     resetForm();
     router.refresh();
-  }, [resetForm, router, submissionState.success]);
+  }, [resetForm, router, submissionState]);
 
   return (
     <Card className="overflow-hidden rounded-[28px] border-[#D9D9D9] bg-white py-0 shadow-[var(--shadow-soft)]">

@@ -313,6 +313,7 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
             <Button
               variant="ghost"
               size="icon"
+              aria-label="이전 달 보기"
               onClick={goPrevMonth}
               disabled={isPending}
               className="text-[#1a1a1a] hover:bg-[#EFF6FF] disabled:opacity-40"
@@ -325,6 +326,7 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
             <Button
               variant="ghost"
               size="icon"
+              aria-label="다음 달 보기"
               onClick={goNextMonth}
               disabled={isPending}
               className="text-[#1a1a1a] hover:bg-[#EFF6FF] disabled:opacity-40"

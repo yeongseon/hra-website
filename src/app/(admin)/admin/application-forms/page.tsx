@@ -19,16 +19,10 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { applicationForms, cohorts, applicationSubmissions } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { formatKstDate } from "@/lib/date-time";
 import { FormRowActions } from "./_components/form-row-actions";
 
 export const dynamic = "force-dynamic";
-
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function AdminApplicationFormsPage() {
   await requireAdmin();
@@ -123,7 +117,7 @@ export default async function AdminApplicationFormsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-slate-600">{form.submissionCount}건</TableCell>
-                      <TableCell className="text-slate-500">{formatDate(form.createdAt)}</TableCell>
+                      <TableCell className="text-slate-500">{formatKstDate(form.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <FormRowActions id={form.id} isPublished={form.isPublished} />
                       </TableCell>

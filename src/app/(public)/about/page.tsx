@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { BenefitsSection } from "./_components/benefits-section";
 
 export const metadata: Metadata = {
@@ -44,9 +45,15 @@ export default function AboutPage() {
       {/* 2. 소개 섹션 (2단 레이아웃) */}
       <section className="mb-16 sm:mb-24 md:mb-32">
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          {/* 왼쪽: 이미지 영역 */}
-          <div className="rounded-2xl aspect-[4/3] bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center border border-blue-100/50 shadow-inner">
-            <span className="text-blue-600 font-medium text-lg">HRA 활동 사진</span>
+          {/* 기존 자리표시 문구 대신 저장소의 실제 HRA 단체 사진을 표시합니다. */}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-[var(--shadow-soft)]">
+            <Image
+              src="/images/cohort-17.jpeg"
+              alt="HRA 17기 구성원 단체 사진"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+            />
           </div>
           {/* 오른쪽: 텍스트 설명 */}
           <div className="space-y-6">

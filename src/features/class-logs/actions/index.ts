@@ -30,12 +30,16 @@ import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
+import { buildImageAlt } from "@/lib/image-alt";
+import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { validateImageUpload } from "@/lib/upload-file-validation";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
  * - UUID 형식(예: "550e8400-e29b-41d4-a716-446655440000")이어야 함
  */
-const classLogIdSchema = z.uuid();
+const classLogIdSchema = z.uuid("유효하지 않은 수업일지 ID입니다.");
+const createRequestIdSchema = z.uuid("유효하지 않은 요청 ID입니다.");
 
 /**
  * 수업일지 작성/수정 시 입력 데이터 검증 규칙
@@ -47,10 +51,10 @@ const classLogIdSchema = z.uuid();
  * - cohortId: 어느 반에 해당하는지 (선택사항, 없어도 됨)
  */
 const classLogFormSchema = z.object({
-  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300),
+  title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   content: z.string().trim().min(1, "내용을 입력해주세요."),
   classDate: z.string().trim().min(1, "수업 날짜를 입력해주세요."),
-  cohortId: z.union([z.uuid(), z.literal("")]).optional(),
+  cohortId: z.union([z.uuid("유효하지 않은 기수 ID입니다."), z.literal("")]).optional(),
 });
 
 /**
@@ -62,13 +66,6 @@ export type ClassLogActionState = {
   success: boolean;
   error?: string;
 };
-
-const allowedImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
 
 const maxImageSize = 10 * 1024 * 1024;
 
@@ -131,52 +128,78 @@ const normalizeFileName = (fileName: string) => {
   return sanitized || "class-log-image";
 };
 
-const getValidatedImageFiles = (formData: FormData) => {
+const getValidatedImageFiles = async (formData: FormData) => {
   const files = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
+  const contentTypes: string[] = [];
   for (const file of files) {
-    if (!allowedImageTypes.has(file.type)) {
+    if (file.size > maxImageSize) {
+      return { error: "사진 파일은 10MB 이하여야 합니다." } as const;
+    }
+    const contentType = await validateImageUpload(file);
+    if (!contentType) {
       return {
         error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
       } as const;
     }
-
-    if (file.size > maxImageSize) {
-      return {
-        error: "사진 파일은 10MB 이하여야 합니다.",
-      } as const;
-    }
+    contentTypes.push(contentType);
   }
 
-  return { files } as const;
+  return { files, contentTypes } as const;
 };
 
-const uploadClassLogImages = async (classLogId: string, title: string, files: File[]) => {
-  if (files.length === 0) {
-    return [];
-  }
+/** 첨부 업로드 후 글과 이미지 메타를 한 DB 배치에 저장합니다. */
+async function createClassLogRecord(
+  id: string,
+  values: { title: string; content: string; classDate: Date; cohortId: string | null; authorId: string },
+  files: File[],
+  contentTypes: string[],
+): Promise<void> {
+  // 동일한 폼의 재제출이면 업로드 전에 기존 글을 확인합니다.
+  const [alreadyCreated] = await db.select({ id: classLogs.id }).from(classLogs).where(eq(classLogs.id, id)).limit(1);
+  if (alreadyCreated) return;
 
-  const uploadedImages = await Promise.all(
-    files.map(async (file, index) => {
-      const blob = await put(`class-logs/${Date.now()}-${index}-${normalizeFileName(file.name)}`, file, {
-        access: "public",
-      });
-
-      return {
-        classLogId,
-        url: blob.url,
-        alt: `${title} 사진 ${index + 1}`,
-        order: index,
-      };
-    }),
+  const urls = await uploadBlobsForCreate(
+    files.map((file, index) => ({
+      pathname: `class-logs/${id}-${index}-${normalizeFileName(file.name)}`,
+      file,
+      contentType: contentTypes[index],
+    })),
+    values.authorId,
   );
 
-  await db.insert(classLogImages).values(uploadedImages);
-
-  return uploadedImages;
-};
+  try {
+    const insertLog = db.insert(classLogs).values({ id, ...values });
+    if (urls.length > 0) {
+      await db.batch([
+        insertLog,
+        db.insert(classLogImages).values(urls.map((url, index) => ({
+          classLogId: id,
+          url,
+          alt: buildImageAlt(values.title, index + 1),
+          order: index,
+        }))),
+      ]);
+    } else {
+      await insertLog;
+    }
+  } catch (error) {
+    // DB 결과를 다시 확인해 커밋 후 응답만 유실된 경우 참조 중인 Blob을 보존합니다.
+    const [existing] = await db.select({ id: classLogs.id }).from(classLogs).where(eq(classLogs.id, id)).limit(1);
+    if (!existing) {
+      await cleanupCreatedBlobs(urls);
+      throw error;
+    }
+    // 같은 키의 동시 제출은 다른 URL을 올릴 수 있으므로 이미 참조된 URL만 보존합니다.
+    const referenced = urls.length > 0
+      ? await db.select({ url: classLogImages.url }).from(classLogImages).where(eq(classLogImages.classLogId, id))
+      : [];
+    const referencedUrls = new Set(referenced.map((row) => row.url));
+    await cleanupCreatedBlobs(urls.filter((url) => !referencedUrls.has(url)));
+  }
+}
 
 /**
  * 📝 새로운 수업일지를 생성하는 서버 액션 (멤버용)
@@ -231,25 +254,24 @@ export async function createClassLogAsMember(formData: FormData): Promise<ClassL
     return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return { success: false, error: validatedImages.error };
   }
 
+  const requestId = createRequestIdSchema.safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, error: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const [createdLog] = await db.insert(classLogs).values({
+    await createClassLogRecord(requestId.data, {
       title: parsed.data.title,
       content: parsed.data.content,
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }).returning({ id: classLogs.id });
-
-    if (!createdLog) {
-      return { success: false, error: "수업일지 생성에 실패했습니다." };
-    }
-
-    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+    }, validatedImages.files, validatedImages.contentTypes);
 
     revalidateClassLogPaths();
     revalidatePath("/resources/class-logs");
@@ -306,7 +328,7 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -314,23 +336,19 @@ export async function createClassLog(formData: FormData): Promise<ClassLogAction
     };
   }
 
+  const requestId = createRequestIdSchema.safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, error: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const [createdLog] = await db.insert(classLogs).values({
+    await createClassLogRecord(requestId.data, {
       title: parsed.data.title,
       content: parsed.data.content,
       classDate,
       cohortId: parsed.data.cohortId || null,
       authorId: session.user.id,
-    }).returning({ id: classLogs.id });
-
-    if (!createdLog) {
-      return {
-        success: false,
-        error: "수업일지 생성에 실패했습니다.",
-      };
-    }
-
-    await uploadClassLogImages(createdLog.id, parsed.data.title, validatedImages.files);
+    }, validatedImages.files, validatedImages.contentTypes);
 
     revalidateClassLogPaths();
 
@@ -403,7 +421,7 @@ export async function updateClassLog(
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -463,13 +481,13 @@ export async function updateClassLog(
           const blob = await put(
             `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
             file,
-            { access: "public" },
+            { access: "public", addRandomSuffix: true, contentType: validatedImages.contentTypes[i] },
           );
           uploadedUrls.push(blob.url);
           newRows.push({
             classLogId: parsedId.data,
             url: blob.url,
-            alt: `${parsed.data.title} 사진 ${i + 1}`,
+            alt: buildImageAlt(parsed.data.title, i + 1),
             order: i,
           });
         }

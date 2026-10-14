@@ -20,6 +20,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { submitApplicationForm } from "@/features/applications/actions/submissions";
+import { applicationInputLimits } from "@/features/applications/input-limits";
 
 type Option = {
   id: string;
@@ -122,6 +123,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
                   id="applicantName" 
                   name="applicantName" 
                   placeholder="성함을 입력해주세요" 
+                  maxLength={applicationInputLimits.applicantName}
                   required 
                   className="h-11"
                 />
@@ -135,6 +137,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
                   name="applicantEmail" 
                   type="email" 
                   placeholder="example@email.com" 
+                  maxLength={applicationInputLimits.applicantEmail}
                   required 
                   className="h-11"
                 />
@@ -148,6 +151,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
                 id="applicantPhone"
                 name="applicantPhone"
                 placeholder="010-0000-0000"
+                maxLength={applicationInputLimits.applicantPhone}
                 required
                 className="h-11"
               />
@@ -182,6 +186,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
                     <Input 
                       name={`q-${q.id}`} 
                       placeholder="답변을 입력하세요" 
+                      maxLength={applicationInputLimits.shortAnswer}
                       required={q.isRequired} 
                       className="h-11"
                     />
@@ -192,6 +197,7 @@ export function PublicApplicationForm({ form, questions }: PublicApplicationForm
                     <Textarea 
                       name={`q-${q.id}`} 
                       placeholder="답변을 상세히 입력해주세요" 
+                      maxLength={applicationInputLimits.longAnswer}
                       required={q.isRequired} 
                       className="min-h-[160px] resize-none leading-relaxed"
                     />

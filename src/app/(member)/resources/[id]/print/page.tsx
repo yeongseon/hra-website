@@ -1,8 +1,9 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { PrintView } from "./_print-view";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { db } from "@/lib/db";
 import { classLogs, users } from "@/lib/db/schema";
 
@@ -12,19 +13,9 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function ClassLogPrintPage({ params }: Props) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
+  await requireSharedResourceReader();
 
   const { id } = await params;
 

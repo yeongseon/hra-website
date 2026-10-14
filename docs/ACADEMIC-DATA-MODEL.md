@@ -140,19 +140,18 @@
 
 ### G2: 수업 어드바이저(Advisor)와 출결 데이터 분리
 
-**확인된 사실:** 출결은 교수가 담당하지 않고 수업에는 Advisor라는 운영자가 있다. **추가 정책 확인(#143):** 한 수업에 Advisor 1명 또는 복수인지, 배정·대체·해제 담당, 출결 입력·정정·승인 최종 권한, ADMIN 긴급 처리 방식.
+**확인된 사실:** 출결은 교수가 담당하지 않는다. 수업 운영 인력은 **어드바이저 1명과 조교 2명**이고 **세 사람이 돌아가며 출결을 체크한다.** 인력은 **기수마다 다르고** 기수 안에서는 **고정 배정**이지만, **조교는 학기 중에 바뀔 수 있고** 향후 역할도 바뀔 수 있다. 이들을 관리하는 담당자는 홈페이지 관리자(`ADMIN`)와 **다른 사람**이며 `ADMIN` 은 홈페이지만 관리한다. **설계 반영:** 아래 배정 테이블은 수업일별이 아니라 **기수 단위 기간 배정**(`cohort_id`, `role`(ADVISOR/ASSISTANT), `starts_at`, `ends_at`)으로 바꾸고, 출결 권한은 해당 기수에 **현재 유효한** 배정을 가진 어드바이저·조교 모두에게 준다. 학기 중 교체에 대비해 같은 기수·역할의 배정 행을 여러 개 둘 수 있어야 하며, 과거 출결 기록의 입력자는 교체 후에도 보존한다. 배정·교체 권한은 `ADMIN` 이 아닌 별도 학사 운영 관리 권한에 둔다. **추가 정책 확인(#143):** 출결 정정·최종 승인 절차, 학사 운영 관리 권한의 범위와 부여 방식.
 
-- `class_advisor_assignments(id, schedule_event_id, advisor_user_id, assigned_by_user_id, assigned_at, revoked_at)` 제안: 해당 **CLASS 수업일**에 누가 어드바이저로 배정되었는지 관리한다. 세션 단위 배정은 실제 운영이 필요하다고 확인될 때만 확장한다.
-- 어드바이저는 최초에는 기존 로그인 사용자에 연결되는 **수업 단위 업무 역할**로 취급한다. 새 전역 `ADVISOR` enum 도입은 별도 운영 요구가 확인된 뒤 결정한다. 기존 `FACULTY` 역할은 출결 등록/정정 권한을 뜻하지 않는다.
-- `(schedule_event_id, advisor_user_id)`의 중복 활성 배정을 방지하는 DB 제약/인덱스, 배정 취소 후 권한 회수, 관리자 승인 이력을 설계한다. 수업당 Advisor 인원 제약은 #143 결정 후 확정한다.
-- `canManageAttendance(session, scheduleEventId)`: 유효한 인증 계정과 **해당 수업의 활성 Advisor 배정**을 재검증한다. ADMIN 감독·비상 수정 권한은 #143 정책으로 별도 처리하고, 비배정 Advisor 및 `FACULTY` 역할만 가진 사용자는 거부한다. PENDING·비로그인도 거부한다.
-- Advisor의 명부 접근은 **배정된 수업의 출결 대상 학생 최소 정보**로 제한한다. 과제 평가·개인 제출 파일·다른 수업 학적을 기본 열람 대상으로 삼지 않는다.
-- 교수/교수 프로필(`faculty`)과 Advisor 배정은 별도 정본이다. 양자를 동일한 ID나 로그인 역할로 통합하지 않는다.
+- `cohort_attendance_assignments(id, cohort_id, user_id, role, starts_at, ends_at, assigned_by_user_id)` 제안: 기수별 어드바이저·조교의 유효 기간과 교체 이력을 기록한다. 동일 계정·기수·역할의 유효 기간 중복을 방지하고, 종료 후 권한을 회수한다. 동시 배정 인원과 교체 승인 절차는 #143에서 확정한다.
+- 운영 인력은 검증된 로그인 사용자에 연결되는 **기수 단위 업무 역할**로 취급한다. 전역 `ADVISOR`/`ASSISTANT` enum 도입은 별도 운영 요구가 확인된 뒤 결정한다. 기존 `FACULTY` 및 홈페이지 `ADMIN` 역할만으로 출결 권한을 주지 않는다.
+- `canManageAttendance(session, scheduleEventId)`: 해당 CLASS 수업일의 기수와 **현재 유효한 어드바이저·조교 배정**을 함께 검증한다. 배정되지 않은 사용자, 다른 기수 배정자, `FACULTY`/`ADMIN` 역할만 가진 사용자, PENDING·비로그인은 거부한다. 정정·최종 승인과 별도 학사 운영 관리자 권한은 #143 정책으로 결정한다.
+- 어드바이저·조교의 명부 접근은 **해당 기수의 출결 대상 학생 최소 정보**로 제한한다. 과제 평가·개인 제출 파일·다른 기수 학적은 기본 열람 대상으로 삼지 않는다.
+- 교수/교수 프로필(`faculty`)과 운영 인력 배정은 별도 정본이다. 양자를 동일한 ID나 로그인 역할로 통합하지 않는다.
 
 관련 작업: [#165 수업 Advisor 배정 및 권한](https://github.com/yeongseon/hra-website/issues/165), [#159 출결 모델](https://github.com/yeongseon/hra-website/issues/159), [#160 출결 UI](https://github.com/yeongseon/hra-website/issues/160).
 
 - `attendance_records(enrollment_id, schedule_event_id, state, recorded_by_user_id, updated_at)` 제안: `UNIQUE(enrollment_id, schedule_event_id)`. 실제 기록 행 부재(`UNMARKED`/미입력에 해당)와 명시적 `ABSENT`/결석은 다르다. 학생의 기수는 수업 기수와 일치해야 한다. `recorded_by_user_id`가 교수의 `facultyId`와 같다고 추정하지 않는다.
-- `attendance_change_history(attendance_record_id, previous_state, next_state, changed_by_user_id, reason, changed_at)` 또는 공통 감사 로그: 최초 입력·정정·취소의 주체/사유/시간을 보존하고 담당 Advisor 배정 당시의 권한 여부를 검증한다. 세션별 출석 필요성은 미확정이다.
+- `attendance_change_history(attendance_record_id, previous_state, next_state, changed_by_user_id, reason, changed_at)` 또는 공통 감사 로그: 최초 입력·정정·취소의 주체/사유/시간을 보존하고 당시 어드바이저·조교 배정의 유효 여부를 검증한다. 세션별 출석 필요성은 미확정이다.
 - `academic_audit_logs(actor_user_id, resource_type, resource_id, action, before_summary, after_summary, reason, occurred_at)`: 내용 전문·민감 URL 금지, 보존 기간·열람권 분리.
 - `assignment_reviews`: 별도 정책에 따라 담당 교수/운영진 검토, 피드백, 과거 버전 추적 (G3). 이 권한을 출결 입력·정정 권한과 결합하지 않는다.
 - `completion_decisions`: 수료 조건 버전·운영진 승인·예외 사유·확정 시각 (G3).

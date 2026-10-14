@@ -14,7 +14,7 @@ export default async function FaqPage() {
 
   const contactText = contact
     ? `${contact.contactRole} ${contact.contactName} ${contact.contactPhone}`
-    : "모집위원장 홍길동 010-0000-0000";
+    : "담당자 연락처가 아직 등록되지 않았습니다.";
 
   // DB에서 FAQ 항목 조회 (순서 오름차순)
   const items = await db

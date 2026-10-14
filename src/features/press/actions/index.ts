@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { pressArticles } from "@/lib/db/schema";
@@ -14,11 +13,11 @@ import { logServerError } from "@/lib/errors";
 const pressArticleFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
   source: z.string().trim().min(1, "언론사명을 입력해주세요.").max(200, "언론사명은 200자 이하여야 합니다."),
-  url: z.url("올바른 기사 링크를 입력해주세요."),
+  url: z.httpUrl("올바른 기사 링크를 입력해주세요."),
   publishedAt: z.iso.date("올바른 게시일을 입력해주세요."),
   description: z.string().trim().max(5000, "요약은 5000자 이하여야 합니다.").optional(),
   imageUrl: z
-    .union([z.literal(""), z.url("올바른 썸네일 URL을 입력해주세요.")])
+    .union([z.literal(""), z.httpUrl("올바른 썸네일 URL을 입력해주세요.")])
     .optional(),
 });
 
@@ -141,15 +140,8 @@ export async function deletePressArticle(id: string): Promise<void> {
     return;
   }
 
-  const target = await db.query.pressArticles.findFirst({
-    where: eq(pressArticles.id, parsedId.data),
-    columns: {
-      imageUrl: true,
-    },
-  });
-
-  await deleteBlobIfExists(target?.imageUrl);
-
+  // imageUrl은 관리자가 입력한 참조 URL일 뿐 이 기사가 업로드한 파일의 소유권 증거가 아닙니다.
+  // 다른 콘텐츠가 공유하는 파일을 지우지 않도록 기사 레코드만 삭제합니다 (#88).
   await db.delete(pressArticles).where(eq(pressArticles.id, parsedId.data));
   revalidatePressPaths();
 }

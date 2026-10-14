@@ -89,6 +89,7 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
         <FormBuilder
           formId={parsedId.data}
           formTitle={form.title}
+          initialRevision={form.questionsRevision}
           initialQuestions={questionsData.map(q => ({
             ...q,
             options: q.options || [],

@@ -10,7 +10,7 @@
  *
  * 보안:
  *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
- *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일 확장자·시작 바이트·선언 MIME 검사 + 30MB 크기 제한
  *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
  */
 "use server";
@@ -26,6 +26,9 @@ import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { users, weeklyTextImages, weeklyTexts } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { buildImageAlt } from "@/lib/image-alt";
+import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { validateDocumentUpload, validateImageUpload } from "@/lib/upload-file-validation";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -33,10 +36,11 @@ export type WeeklyTextActionState = {
 };
 
 const weeklyTextIdSchema = z.uuid("유효하지 않은 주차별 텍스트 ID입니다.");
+const createRequestIdSchema = z.uuid("유효하지 않은 요청 ID입니다.");
 
 const weeklyTextFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
-  cohortId: z.union([z.uuid(), z.literal("")]).optional(),
+  cohortId: z.union([z.uuid("유효하지 않은 기수 ID입니다."), z.literal("")]).optional(),
   textType: z
     .enum(WEEKLY_TEXT_TYPE_VALUES)
     .nullable()
@@ -56,22 +60,7 @@ const weeklyTextFormSchema = z.object({
     }),
 });
 
-const allowedFileTypes = new Set([
-  "application/pdf",
-  "application/x-hwp",
-  "application/vnd.hancom.hwp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-
 const maxFileSize = 30 * 1024 * 1024;
-
-const allowedImageTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
 
 const maxImageSize = 10 * 1024 * 1024;
 
@@ -98,46 +87,45 @@ const parseCohortId = (value: FormDataEntryValue | null) => {
   return value;
 };
 
-const getValidatedFile = (value: FormDataEntryValue | null) => {
+const getValidatedFile = async (value: FormDataEntryValue | null) => {
   if (!(value instanceof File) || value.size === 0) {
-    return { file: null } as const;
+    return { file: null, contentType: null } as const;
   }
 
-  if (!allowedFileTypes.has(value.type)) {
+  if (value.size > maxFileSize) {
+    return { error: "파일 크기는 30MB 이하여야 합니다." } as const;
+  }
+
+  const contentType = await validateDocumentUpload(value);
+  if (!contentType) {
     return {
       error: "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다.",
     } as const;
   }
 
-  if (value.size > maxFileSize) {
-    return {
-      error: "파일 크기는 30MB 이하여야 합니다.",
-    } as const;
-  }
-
-  return { file: value } as const;
+  return { file: value, contentType } as const;
 };
 
-const getValidatedImageFiles = (formData: FormData) => {
+const getValidatedImageFiles = async (formData: FormData) => {
   const files = formData
     .getAll("images")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
+  const contentTypes: string[] = [];
   for (const file of files) {
-    if (!allowedImageTypes.has(file.type)) {
+    if (file.size > maxImageSize) {
+      return { error: "사진 파일은 10MB 이하여야 합니다." } as const;
+    }
+    const contentType = await validateImageUpload(file);
+    if (!contentType) {
       return {
         error: "사진은 JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.",
       } as const;
     }
-
-    if (file.size > maxImageSize) {
-      return {
-        error: "사진 파일은 10MB 이하여야 합니다.",
-      } as const;
-    }
+    contentTypes.push(contentType);
   }
 
-  return { files } as const;
+  return { files, contentTypes } as const;
 };
 
 const revalidateWeeklyTextPaths = () => {
@@ -146,32 +134,7 @@ const revalidateWeeklyTextPaths = () => {
   revalidatePath("/resources/weekly-texts");
 };
 
-const uploadWeeklyTextImages = async (weeklyTextId: string, title: string, files: File[]) => {
-  if (files.length === 0) {
-    return [];
-  }
-
-  const uploadedImages = await Promise.all(
-    files.map(async (file, index) => {
-      const blob = await put(`weekly-texts/images/${Date.now()}-${index}-${normalizeFileName(file.name)}`, file, {
-        access: "public",
-      });
-
-      return {
-        weeklyTextId,
-        url: blob.url,
-        alt: `${title} 사진 ${index + 1}`,
-        order: index,
-      };
-    }),
-  );
-
-  await db.insert(weeklyTextImages).values(uploadedImages);
-
-  return uploadedImages;
-};
-
-const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextActionState> => {
+const createWeeklyTextRecord = async (formData: FormData, uploadedById: string): Promise<WeeklyTextActionState> => {
   const rawTextType = formData.get("textType");
   const parsedTextType =
     typeof rawTextType === "string" && rawTextType !== "__none__" && rawTextType !== ""
@@ -193,7 +156,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     };
   }
 
-  const validatedFile = getValidatedFile(formData.get("file"));
+  const validatedFile = await getValidatedFile(formData.get("file"));
   if ("error" in validatedFile) {
     return {
       success: false,
@@ -201,7 +164,7 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     };
   }
 
-  const validatedImages = getValidatedImageFiles(formData);
+  const validatedImages = await getValidatedImageFiles(formData);
   if ("error" in validatedImages) {
     return {
       success: false,
@@ -216,41 +179,79 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
     };
   }
 
+  // 업로드 전에 날짜를 확인해야 잘못된 입력으로 미참조 파일이 남지 않습니다.
+  const classDateObj = parsed.data.classDate
+    ? new Date(`${parsed.data.classDate}T00:00:00`)
+    : null;
+  if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+    return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+  }
+
+  const requestId = createRequestIdSchema.safeParse(formData.get("requestId"));
+  if (!requestId.success) {
+    return { success: false, error: "페이지를 새로고침한 뒤 다시 제출해주세요." };
+  }
+
   try {
-    const blob = validatedFile.file
-      ? await put(`weekly-texts/${normalizeFileName(validatedFile.file.name)}`, validatedFile.file, {
-          access: "public",
-          // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
-          addRandomSuffix: true,
-        })
-      : null;
-
-    const classDateObj = parsed.data.classDate
-      ? new Date(`${parsed.data.classDate}T00:00:00`)
-      : null;
-
-    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
-      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    const id = requestId.data;
+    const [alreadyCreated] = await db.select({ id: weeklyTexts.id }).from(weeklyTexts).where(eq(weeklyTexts.id, id)).limit(1);
+    if (alreadyCreated) {
+      return { success: true };
     }
+    const documentFile = validatedFile.file;
+    const uploads = [
+      ...(documentFile ? [{
+        pathname: `weekly-texts/${normalizeFileName(documentFile.name)}`,
+        file: documentFile,
+        contentType: validatedFile.contentType,
+      }] : []),
+      ...validatedImages.files.map((file, index) => ({
+        pathname: `weekly-texts/images/${id}-${index}-${normalizeFileName(file.name)}`,
+        file,
+        contentType: validatedImages.contentTypes[index],
+      })),
+    ];
+    const urls = await uploadBlobsForCreate(uploads, uploadedById);
+    const imageUrls = urls.slice(documentFile ? 1 : 0);
 
-    const [createdWeeklyText] = await db.insert(weeklyTexts).values({
-      title: parsed.data.title,
-      fileUrl: blob?.url ?? "",
-      fileName: validatedFile.file?.name ?? null,
-      body: parsed.data.body ?? null,
-      cohortId: parsed.data.cohortId || null,
-      textType: parsed.data.textType ?? null,
-      classDate: classDateObj,
-    }).returning({ id: weeklyTexts.id });
-
-    if (!createdWeeklyText) {
-      return {
-        success: false,
-        error: "주차별 텍스트 저장에 실패했습니다.",
-      };
+    try {
+      const insertText = db.insert(weeklyTexts).values({
+        id,
+        title: parsed.data.title,
+        fileUrl: documentFile ? urls[0] : "",
+        fileName: documentFile?.name ?? null,
+        body: parsed.data.body ?? null,
+        cohortId: parsed.data.cohortId || null,
+        textType: parsed.data.textType ?? null,
+        classDate: classDateObj,
+      });
+      if (imageUrls.length > 0) {
+        await db.batch([
+          insertText,
+          db.insert(weeklyTextImages).values(imageUrls.map((url, index) => ({
+            weeklyTextId: id,
+            url,
+            alt: buildImageAlt(parsed.data.title, index + 1),
+            order: index,
+          }))),
+        ]);
+      } else {
+        await insertText;
+      }
+    } catch (error) {
+      // 배치 응답이 유실됐어도 실제 글이 남았다면 첨부 파일을 삭제하지 않습니다.
+      const [existing] = await db.select({ fileUrl: weeklyTexts.fileUrl }).from(weeklyTexts).where(eq(weeklyTexts.id, id)).limit(1);
+      if (!existing) {
+        await cleanupCreatedBlobs(urls);
+        throw error;
+      }
+      // 같은 요청이 동시에 도착해 생긴 미참조 업로드만 정리합니다.
+      const referencedImages = imageUrls.length > 0
+        ? await db.select({ url: weeklyTextImages.url }).from(weeklyTextImages).where(eq(weeklyTextImages.weeklyTextId, id))
+        : [];
+      const referencedUrls = new Set([existing.fileUrl, ...referencedImages.map((row) => row.url)]);
+      await cleanupCreatedBlobs(urls.filter((url) => !referencedUrls.has(url)));
     }
-
-    await uploadWeeklyTextImages(createdWeeklyText.id, parsed.data.title, validatedImages.files);
 
     revalidateWeeklyTextPaths();
 
@@ -272,9 +273,9 @@ const createWeeklyTextRecord = async (formData: FormData): Promise<WeeklyTextAct
 };
 
 export async function createWeeklyText(formData: FormData): Promise<WeeklyTextActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  return createWeeklyTextRecord(formData);
+  return createWeeklyTextRecord(formData, session.user.id);
 }
 
 export async function createWeeklyTextAsMember(
@@ -313,7 +314,7 @@ export async function createWeeklyTextAsMember(
     formData.set("cohortId", userRow.cohortId);
   }
 
-  return createWeeklyTextRecord(formData);
+  return createWeeklyTextRecord(formData, session.user.id);
 }
 
 export async function updateWeeklyText(id: string, formData: FormData): Promise<WeeklyTextActionState> {
@@ -352,7 +353,7 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
     }
 
     // 새 파일이 첨부된 경우에만 기존 파일을 교체
-    const validatedFile = getValidatedFile(formData.get("file"));
+    const validatedFile = await getValidatedFile(formData.get("file"));
     if ("error" in validatedFile) {
       return { success: false, error: validatedFile.error };
     }
@@ -367,7 +368,7 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
       const blob = await put(
         `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
         validatedFile.file,
-        { access: "public", addRandomSuffix: true },
+        { access: "public", addRandomSuffix: true, contentType: validatedFile.contentType },
       );
       uploadedNewBlobUrl = blob.url;
       fileUrl = blob.url;

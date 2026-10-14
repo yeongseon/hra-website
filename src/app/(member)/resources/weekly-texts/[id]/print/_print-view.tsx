@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 
 type Props = {
@@ -18,12 +19,6 @@ type Props = {
   body: string;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export function PrintView({ title, fileTitle, createdAt, cohortName, textType, body }: Props) {
   const printedRef = useRef(false);

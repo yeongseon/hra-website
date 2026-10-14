@@ -10,20 +10,19 @@
  *
  * 보안:
  *   - 모든 진입점에서 requireAdmin()으로 관리자 권한 확인
- *   - 파일 MIME 타입 화이트리스트 + 30MB 크기 제한
+ *   - 파일 확장자·시작 바이트·선언 MIME 검사 + 30MB 크기 제한
  *   - 파일명 sanitize (영숫자/.-_만 허용) — 경로 분리(/) 차단
  */
 "use server";
 
-import { put } from "@vercel/blob";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { guidebooks } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { validateResourceUploadReference } from "@/lib/resource-upload-server";
 
 export type GuidebookActionState = {
   success: boolean;
@@ -36,58 +35,13 @@ const guidebookFormSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요.").max(300, "제목은 300자 이하여야 합니다."),
 });
 
-const allowedFileTypes = new Set([
-  "application/pdf",
-  "application/x-hwp",
-  "application/vnd.hancom.hwp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-
-const maxFileSize = 30 * 1024 * 1024;
-
-const normalizeFileName = (fileName: string) => {
-  const trimmed = fileName.trim();
-  const sanitized = trimmed
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "");
-
-  // 한글로만 된 파일명은 위 정리 후 ".pdf" 처럼 확장자만 남는다. 이름 부분이 비면 기본 이름을 붙여
-  // 저장 경로가 점으로 시작하지 않게 한다 (확장자로 파일 형식을 추정하는 동작을 보존).
-  if (sanitized.startsWith(".")) {
-    return `guidebook${sanitized}`;
-  }
-
-  return sanitized || "guidebook";
-};
-
-const getValidatedFile = (value: FormDataEntryValue | null) => {
-  if (!(value instanceof File) || value.size === 0) {
-    return { error: "파일을 선택해주세요." } as const;
-  }
-
-  if (!allowedFileTypes.has(value.type)) {
-    return {
-      error: "PDF, HWP, DOC, DOCX 파일만 업로드할 수 있습니다.",
-    } as const;
-  }
-
-  if (value.size > maxFileSize) {
-    return {
-      error: "파일 크기는 30MB 이하여야 합니다.",
-    } as const;
-  }
-
-  return { file: value } as const;
-};
-
 const revalidateGuidebookPaths = () => {
   revalidatePath("/admin/resources/guidebooks");
   revalidatePath("/resources");
 };
 
 export async function createGuidebook(formData: FormData): Promise<GuidebookActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = guidebookFormSchema.safeParse({
     title: formData.get("title"),
@@ -100,30 +54,20 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
     };
   }
 
-  const validatedFile = getValidatedFile(formData.get("file"));
-  if ("error" in validatedFile) {
-    return {
-      success: false,
-      error: validatedFile.error,
-    };
-  }
-
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
+  const uploadedFileUrl = formData.get("uploadedFileUrl");
+  const uploadedFileName = formData.get("uploadedFileName");
+  if (typeof uploadedFileUrl !== "string" || typeof uploadedFileName !== "string") {
+    return { success: false, error: "파일을 다시 업로드해주세요." };
   }
 
   try {
-    const safeFileName = normalizeFileName(validatedFile.file.name);
-    const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
-      access: "public",
-      // addRandomSuffix: 같은 파일명(특히 한글이 제거되어 같아진 이름)끼리 경로가 겹치지 않게 한다 (#110).
-      addRandomSuffix: true,
-    });
+    const uploaded = await validateResourceUploadReference("guidebooks", session.user.id, uploadedFileUrl, uploadedFileName);
+    if ("error" in uploaded) return { success: false, error: uploaded.error };
 
     await db.insert(guidebooks).values({
       title: parsed.data.title,
-      fileUrl: blob.url,
-      fileName: validatedFile.file.name,
+      fileUrl: uploaded.url,
+      fileName: uploaded.fileName,
     });
 
     revalidateGuidebookPaths();
@@ -149,7 +93,7 @@ export async function createGuidebook(formData: FormData): Promise<GuidebookActi
  * 새 파일이 없으면 기존 파일을 그대로 유지한다.
  */
 export async function updateGuidebook(id: string, formData: FormData): Promise<GuidebookActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsedId = guidebookIdSchema.safeParse(id);
   if (!parsedId.success) {
@@ -172,37 +116,38 @@ export async function updateGuidebook(id: string, formData: FormData): Promise<G
     }
 
     const fileEntry = formData.get("file");
-    const hasNewFile = fileEntry instanceof File && fileEntry.size > 0;
+    if (fileEntry instanceof File && fileEntry.size > 0) {
+      return { success: false, error: "파일을 다시 업로드해주세요." };
+    }
+    const uploadedFileUrl = formData.get("uploadedFileUrl");
+    const uploadedFileName = formData.get("uploadedFileName");
+    const hasNewFile = typeof uploadedFileUrl === "string" && uploadedFileUrl.length > 0;
 
     if (hasNewFile) {
-      // 새 파일 검증 및 업로드 후 기존 파일 제거
-      const validatedFile = getValidatedFile(fileEntry);
-      if ("error" in validatedFile) {
-        return { success: false, error: validatedFile.error };
-      }
+      // 새 파일 검증 및 업로드 후 DB 참조를 교체합니다. 이전 파일은 소유권이
+      // 확인되지 않아 즉시 삭제하지 않습니다 (#93).
+      if (typeof uploadedFileName !== "string") return { success: false, error: "파일을 다시 업로드해주세요." };
+      const uploaded = await validateResourceUploadReference("guidebooks", session.user.id, uploadedFileUrl, uploadedFileName);
+      if ("error" in uploaded) return { success: false, error: uploaded.error };
 
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        return { success: false, error: "서버 설정 오류: BLOB_READ_WRITE_TOKEN이 없습니다." };
-      }
-
-      const safeFileName = normalizeFileName(validatedFile.file.name);
-      const blob = await put(`guidebooks/${safeFileName}`, validatedFile.file, {
-        access: "public",
-        addRandomSuffix: true,
-      });
-
-      await db
+      const [updated] = await db
         .update(guidebooks)
-        .set({ title: parsed.data.title, fileUrl: blob.url, fileName: validatedFile.file.name })
-        .where(eq(guidebooks.id, parsedId.data));
+        .set({ title: parsed.data.title, fileUrl: uploaded.url, fileName: uploaded.fileName })
+        .where(and(eq(guidebooks.id, parsedId.data), eq(guidebooks.fileUrl, target.fileUrl)))
+        .returning({ id: guidebooks.id });
 
-      await deleteBlobIfExists(target.fileUrl);
+      if (!updated) {
+        return { success: false, error: "가이드북 정보가 변경됐습니다. 새로고침 후 다시 시도해주세요." };
+      }
+
     } else {
       // 파일 교체 없이 제목만 수정
-      await db
+      const [updated] = await db
         .update(guidebooks)
         .set({ title: parsed.data.title })
-        .where(eq(guidebooks.id, parsedId.data));
+        .where(eq(guidebooks.id, parsedId.data))
+        .returning({ id: guidebooks.id });
+      if (!updated) return { success: false, error: "가이드북을 찾을 수 없습니다." };
     }
 
     revalidateGuidebookPaths();
@@ -240,8 +185,10 @@ export async function deleteGuidebook(id: string): Promise<GuidebookActionState>
       };
     }
 
-    await deleteBlobIfExists(target.fileUrl);
-    await db.delete(guidebooks).where(eq(guidebooks.id, parsedId.data));
+    const [deleted] = await db.delete(guidebooks)
+      .where(eq(guidebooks.id, parsedId.data))
+      .returning({ id: guidebooks.id });
+    if (!deleted) return { success: false, error: "가이드북을 찾을 수 없습니다." };
 
     revalidateGuidebookPaths();
 

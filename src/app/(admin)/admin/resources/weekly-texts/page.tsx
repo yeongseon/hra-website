@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +19,6 @@ import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function AdminWeeklyTextsPage() {
   await requireAdmin();

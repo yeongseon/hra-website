@@ -34,6 +34,7 @@ type RecruitmentRowActionsProps = {
 export function RecruitmentRowActions({ id }: RecruitmentRowActionsProps) {
   const router = useRouter();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -42,7 +43,10 @@ export function RecruitmentRowActions({ id }: RecruitmentRowActionsProps) {
         수정
       </Button>
 
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => {
+        setIsDeleteOpen(open);
+        if (!open) setDeleteError(null);
+      }}>
         <DialogTrigger render={<Button variant="destructive" size="sm" />}>
           <Trash2 className="size-3.5" />
           삭제
@@ -51,9 +55,10 @@ export function RecruitmentRowActions({ id }: RecruitmentRowActionsProps) {
           <DialogHeader>
             <DialogTitle>기수를 삭제할까요?</DialogTitle>
             <DialogDescription>
-              해당 기수의 지원서도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              지원서가 연결된 기수는 삭제할 수 없습니다. 삭제한 기수는 복구할 수 없습니다.
             </DialogDescription>
           </DialogHeader>
+          {deleteError ? <p role="alert" className="text-sm text-destructive">{deleteError}</p> : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
               취소
@@ -63,10 +68,18 @@ export function RecruitmentRowActions({ id }: RecruitmentRowActionsProps) {
               disabled={isPending}
             onClick={() => {
               startTransition(async () => {
-                // ⚙️ 서버 액션 호출 - 기수 삭제 (포함된 지원서도 함께 삭제됨)
-                await deleteCohort(id);
-                setIsDeleteOpen(false);
-                router.refresh(); // 페이지 새로고침 (목록 업데이트)
+                setDeleteError(null);
+                try {
+                  const result = await deleteCohort(id);
+                  if (!result.success) {
+                    setDeleteError(result.message);
+                    return;
+                  }
+                  setIsDeleteOpen(false);
+                  router.refresh();
+                } catch {
+                  setDeleteError("기수 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+                }
               });
             }}
             >

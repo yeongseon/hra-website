@@ -127,23 +127,30 @@
 터미널에서 아래 명령어를 입력하세요:
 
 ```bash
-ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="원하는비밀번호" npm run seed-admin
+ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="원하는비밀번호" npm run seed-admin -- --confirm-create
 ```
 
 - 이메일과 비밀번호를 원하는 값으로 바꿔서 입력하세요
-- 이미 존재하는 이메일이면 해당 계정을 관리자로 승격시켜줘요
+- 기존 이메일을 승격하려면 `--confirm-create` 대신 `--confirm-promote=대상이메일`을 지정하세요. 비밀번호가 교체되고 기존 세션은 무효화됩니다
 - 생성 후 로그인 페이지에서 이메일/비밀번호로 바로 로그인!
+
+OAuth 바인딩 검증은 운영 DB 에 테스트 계정을 만들지 않도록 별도 Neon 테스트 브랜치에서만 실행합니다.
+
+```bash
+HRA_TEST_DATABASE_URL="테스트 브랜치 연결 문자열" npm run verify:oauth-binding-security -- --confirm-test-db
+```
 
 ### 방법 2: 소셜 로그인 후 SQL로 승격하기
 
 **1단계:** 먼저 사이트에서 구글이나 카카오로 로그인해요.
 
-> 👉 처음 로그인하면 자동으로 일반 회원(MEMBER) 계정이 만들어져요.
+> 👉 처음 로그인하면 자동으로 승인 대기(PENDING) 계정이 만들어져요.
 
 **2단계:** [neon.tech](https://neon.tech/)에 로그인 → 왼쪽에서 프로젝트 선택 → **SQL Editor** 클릭 → 아래 명령어를 복사 붙여넣기 → **Run** 버튼 클릭
 
 ```sql
-UPDATE users SET role = 'ADMIN' WHERE email = '내이메일@example.com';
+UPDATE users SET role = 'ADMIN', session_version = session_version + 1
+WHERE email = '내이메일@example.com' AND role <> 'ADMIN';
 ```
 
 - `내이메일@example.com` 부분을 **본인이 로그인할 때 쓴 이메일**로 바꿔야 해요!
@@ -255,12 +262,7 @@ WHERE f.title = '3기 지원서';
 
 1. VS Code에서 `src/lib/db/schema.ts` 파일을 열어요
 2. 원하는 테이블에 새 항목을 추가해요 (잘 모르겠으면 관리자에게 물어보세요!)
-3. 터미널(검은 창)에서 아래 명령어를 입력해요
+3. [데이터베이스 변경 절차](developer/database-change-procedure.md)에 따라 별도 개발 DB에서 먼저 검증해요.
+4. 기존 DB는 변경 범위가 한정된 마이그레이션을 적용하고 카탈로그·기능을 확인해요.
 
-```bash
-npx drizzle-kit push
-```
-
-4. "Changes applied"라고 나오면 성공! 실제 데이터베이스에 반영된 거예요.
-
-> ⚠️ **주의**: 이미 있는 항목을 지우거나 종류를 바꾸면 기존 데이터가 사라질 수 있어요! 잘 모르겠으면 꼭 관리자에게 물어보세요.
+> ⚠️ **주의**: 운영 DB에 `drizzle-kit push`를 바로 실행하면 다른 스키마 차이까지 적용되거나 #91의 지연 검사 FK가 바뀔 수 있어요. 반드시 변경 절차를 따르세요.

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, Eye, Lock } from "lucide-react";
 import { asc, desc, eq } from "drizzle-orm";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberClassLogUploadForm } from "@/app/(member)/resources/class-logs/_components/member-class-log-upload-form";
 import { createClassLogAsMember } from "@/features/class-logs/actions";
-import { auth } from "@/lib/auth";
+import { requireSharedResourceReader } from "@/lib/resource-access";
 import { db } from "@/lib/db";
 import { cohortNumberDesc } from "@/lib/db/cohort-order";
 import { classLogs, cohorts, reportTemplates, users } from "@/lib/db/schema";
@@ -17,12 +18,6 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const stripMarkdown = (value: string) =>
   value
@@ -49,7 +44,7 @@ const getExcerpt = (value: string, length = 120) => {
 };
 
 export default async function ClassLogsPage() {
-  const session = await auth();
+  const session = await requireSharedResourceReader();
   const role = session?.user?.role;
   const canUpload = role === "ADMIN" || role === "FACULTY" || role === "MEMBER";
   const isAdminOrFaculty = role === "ADMIN" || role === "FACULTY";

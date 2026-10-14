@@ -92,8 +92,10 @@ src/
 > HRA 운영 사실(2026-10-13 확인): **교수는 출결을 담당하지 않는다. 각 수업에는 어드바이저(Advisor)라는 운영 담당자가 있다.**
 >
 > - `faculty` 및 `schedule_sessions.facultyId`는 수업 내용 담당 교수 정보를 나타내며, **출결 조회·입력·정정 인가의 근거가 아니다.** `FACULTY` 역할만으로 출결 관리 권한을 주지 않는다.
-> - 출결은 **수업별 유효 Advisor 배정**과 검증된 로그인 계정으로 인가한다. 기존 `users.role`에 ADVISOR enum은 아직 없으며, 수업별 업무 배정과 전역 사용자 역할 신설은 별도 결정이다.
-> - Advisor 배정·교체·정정/승인·ADMIN 예외 처리 상세는 [#143](https://github.com/yeongseon/hra-website/issues/143) 정책에 따르고, 구현은 [#165](https://github.com/yeongseon/hra-website/issues/165) 및 #159/#160을 통해 진행한다.
+> - 수업 운영 인력은 **어드바이저 1명과 조교 2명**이고 **세 사람이 돌아가며 출결을 체크한다.** 기수마다 다른 사람이 맡고 기수 안에서는 고정 배정이지만, 조교는 학기 중에 바뀔 수 있고 향후 역할도 바뀔 수 있다.
+> - 이들을 관리하는 담당자는 홈페이지 관리자(`ADMIN`)와 **다른 사람**이다. **`ADMIN` 은 홈페이지만 관리한다** — `ADMIN` 역할만으로 출결·학사 운영 권한을 부여하지 않는다. 학사 운영 관리 권한의 범위는 미정(#143).
+> - 출결은 **해당 기수의 유효한 어드바이저·조교 배정**과 검증된 로그인 계정으로 인가한다. 기존 `users.role`에 해당 전역 역할은 없으며, 기수별 업무 배정과 전역 사용자 역할 신설은 별도 결정이다.
+> - 운영 인력 배정·교체·출결 정정/승인·학사 운영 관리자의 권한은 [#143](https://github.com/yeongseon/hra-website/issues/143) 정책에 따르고, 구현은 [#165](https://github.com/yeongseon/hra-website/issues/165) 및 #159/#160을 통해 진행한다.
 > - 교수의 담당 수업/과제 검토 기능은 별도 #161/#162. 기존 일정/공동 자료를 개인별 출결 기록으로 재해석하지 않는다.
 > - 설계 정본: [학사관리 로드맵](docs/ACADEMIC-MANAGEMENT-ROADMAP.md), [데이터 모델](docs/ACADEMIC-DATA-MODEL.md). **현재 학사관리 출결 기능이 구현되었다는 뜻이 아니다.**
 
@@ -173,21 +175,22 @@ src/app/(admin)/admin/[feature]/
 ## 9. 테스트 전략
 
 - **프레임워크**: Vitest + Playwright
-- **우선순위**: Integration (서버 액션) > E2E (핵심 플로우 5~7개) > Unit (순수 함수)
-- **DB**: mock 대신 별도 test DB 사용
-- **Blob**: 대부분 mock, 실제 업로드 E2E 1개
+- **우선순위**: Integration (서버 액션) > E2E (핵심 플로우) > Unit (순수 함수)
+- **DB**: 단위 테스트는 필요한 경우 mock, DB 경합·제약은 격리 PostgreSQL 사용
+- **Blob**: 대부분 mock, 실제 업로드 검증은 별도 E2E에서 수행
 - **CI**: `lint → typecheck → vitest → playwright(smoke)`
 
 ## 10. 배포
 
 - **프로덕션**: Vercel (`https://hra-website-theta.vercel.app`)
 - **문서**: MkDocs GitHub Pages (`https://yeongseon.github.io/hra-website/`)
-- **DB 마이그레이션**: `npx drizzle-kit push`
+- **DB 변경**: [데이터베이스 변경 절차](docs/developer/database-change-procedure.md). 새 빈 개발 DB에만 `npm run db:push`를 사용하고 추가 SQL·카탈로그를 확인
 - **빌드 확인**: `npm run build` (변경 후 반드시 실행)
 
-## 11. 코드 리뷰 정책 (Oracle 필수)
+## 11. 코드 리뷰 정책 (OpenCode 작업의 Oracle 리뷰)
 
-이 저장소의 **모든 의미 있는 작업 단위**는 커밋/푸시 전에 반드시 Oracle 에이전트의 리뷰를 거쳐야 합니다.
+**OpenCode로 수행한 의미 있는 작업 단위**는 커밋/푸시 전에 Oracle 에이전트의 리뷰를 거칩니다.
+Claude 또는 Codex만 사용한 작업에는 이 Oracle 절차를 적용하지 않습니다. 이 경우에도 아래 빌드·테스트·CI 검증은 수행합니다.
 
 ### Oracle 리뷰 트리거 (필수)
 - 새로운 feature/페이지/서버 액션 추가
@@ -213,7 +216,7 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
 - **NIT**: 합리적인 지적은 반영, 거부 시 사유 명시
 - **APPROVE**: 커밋 진행
 
-> Oracle 결과를 받기 전에 커밋·푸시하는 것은 금지됩니다. 백그라운드로 호출했다면 결과 도착까지 응답을 종료하고 대기하세요.
+> OpenCode 작업은 Oracle 결과를 받기 전에 커밋·푸시하지 않습니다. 백그라운드로 호출했다면 결과를 확인한 뒤 진행합니다.
 
 ## 12. 작업자(특히 학생) 필수 체크리스트
 
@@ -238,7 +241,7 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
   - ❌ `searchParams: { q?: string }` (옛 Next 14 패턴, Next 16 빌드 실패)
 - [ ] `import { z } from "zod/v4"` 인가? (`"zod"` 단독은 금지)
 - [ ] 새 JSX 블록 `{조건 && (...)}` 추가 시 닫는 `)}` 짝이 맞는가?
-- [ ] 다중 파일 변경이라면 §11 의 Oracle 리뷰를 호출했는가?
+- [ ] OpenCode로 다중 파일을 변경했다면 §11 의 Oracle 리뷰를 호출했는가?
 - [ ] 이슈를 만들거나 고쳤다면 `npm run issues:check` 가 통과하는가? (§13)
 
 ### 빌드 실패 시 자주 보는 에러와 해결법
