@@ -20,7 +20,7 @@
  *   SignInIO 메서드를 vi.fn() 으로 만들고 기본은 findByBinding / findByEmail
  *   이 undefined 를 반환 (allow-new 흐름). 각 테스트에서 필요한 반환값만 오버라이드
  *   해서 시나리오를 조립한다. drizzle 자체는 mock 하지 않으며 어댑터의 SQL 정합성은
- *   scripts/verify-oauth-binding-security.mjs 프로덕션 스모크가 담당한다.
+ *   scripts/verify-oauth-binding-security.mjs 격리 DB 스모크가 담당한다.
  *
  * import 경로 주의: auth.ts 는 NextAuth() 를 최상단에서 실행하므로 vitest 에서
  * import 하면 next-auth 내부의 next/server 참조가 module resolution 을 깨뜨린다.

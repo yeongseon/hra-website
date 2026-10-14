@@ -23,7 +23,6 @@
     "db:migrate-add-rate-limit-tables": "node --env-file=.env scripts/migrate-add-rate-limit-tables.mjs",
     "db:migrate-add-markdown-image-assets": "node --env-file=.env scripts/migrate-add-markdown-image-assets.mjs",
     "blob:cleanup-markdown-images": "node --env-file=.env scripts/cleanup-markdown-image-assets.mjs",
-    "db:migrate-add-user-oauth-binding": "node --env-file=.env scripts/migrate-add-user-oauth-binding.mjs",
     "db:migrate-atomic-application-questions": "node --env-file=.env scripts/migrate-atomic-application-questions.mjs",
     "db:migrate-recruitment-singleton": "node --env-file=.env scripts/migrate-recruitment-singleton.mjs",
     "verify:oauth-binding-security": "node --env-file=.env scripts/verify-oauth-binding-security.mjs",

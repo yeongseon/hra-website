@@ -18,7 +18,7 @@
  *   2) tests/unit/auth-decision-mirror-parity.test.ts (20 tests) — verify script mirror parity
  *   3) tests/unit/auth-signin-io.test.ts (신규, #81) — signIn 콜백의 IO 조합 자체
  *   4) DB UNIQUE (oauth_provider, oauth_provider_account_id) + CHECK 제약 — fail-closed 안전망
- *   5) scripts/verify-oauth-binding-security.mjs (36 assertions) — 프로덕션 DB 스모크
+ *   5) scripts/verify-oauth-binding-security.mjs (36 assertions) — 격리 DB 스모크
  */
 
 import { and, eq } from "drizzle-orm";
