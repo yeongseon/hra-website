@@ -22,6 +22,11 @@ describe("캘린더 연·월", () => {
   it("서버 액션의 숫자 인자도 범위를 검증한다", () => {
     expect(parseCalendarMonth(Number.NaN, 13, now)).toEqual({ year: 2026, month: 10 });
   });
+
+  it("UTC 기준 전월 마지막 날에도 KST의 새 달을 기본값으로 사용한다", () => {
+    expect(parseCalendarMonth(undefined, undefined, new Date("2026-10-31T15:00:00.000Z")))
+      .toEqual({ year: 2026, month: 11 });
+  });
 });
 
 describe("목록 페이지", () => {

@@ -18,22 +18,13 @@ import {
 } from "@/lib/db/schema";
 import { DeleteSubmissionButton } from "./_components/delete-submission-button";
 import { StatusChangeButton } from "./_components/status-change-button";
+import { formatKstDateTimeWithSeconds } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string; submissionId: string }>;
 };
-
-const formatDateTime = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  }).format(value);
 
 const parseChoiceAnswerValue = (rawValue: string): string[] | null => {
   try {
@@ -149,7 +140,7 @@ export default async function AdminSubmissionDetailPage({ params }: Props) {
                 <Label className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">제출 일시</Label>
                 <div className="flex items-center gap-2 text-sm text-slate-500">
                   <Calendar className="size-3.5" />
-                  {formatDateTime(submission.submittedAt)}
+                  {formatKstDateTimeWithSeconds(submission.submittedAt)}
                 </div>
               </div>
             </CardContent>

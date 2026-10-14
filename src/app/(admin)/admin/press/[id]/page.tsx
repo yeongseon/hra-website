@@ -6,16 +6,13 @@ import { updatePressArticle } from "@/features/press/actions";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { pressArticles } from "@/lib/db/schema";
+import { toKstDateInput } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type EditPressArticlePageProps = {
   params: Promise<{ id: string }>;
 };
-
-function toDateInputValue(value: Date) {
-  return value.toISOString().slice(0, 10);
-}
 
 export default async function EditPressArticlePage({ params }: EditPressArticlePageProps) {
   await requireAdmin();
@@ -48,7 +45,7 @@ export default async function EditPressArticlePage({ params }: EditPressArticleP
         title: article.title,
         source: article.source,
         url: article.url,
-        publishedAt: toDateInputValue(article.publishedAt),
+      publishedAt: toKstDateInput(article.publishedAt),
         description: article.description,
         imageUrl: article.imageUrl,
       }}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Eye, User, Printer } from "lucide-react";
@@ -22,12 +23,6 @@ type ResourceDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 const getClassLogDetail = async (id: string) => {
   // 메타데이터 경로에서도 본문과 같은 역할 검사를 DB 조회보다 먼저 수행한다.

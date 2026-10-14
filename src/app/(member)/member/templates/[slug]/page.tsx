@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { resolveTemplate } from "@/lib/markdown/resolve";
 import { requireMember } from "@/lib/member";
+import { formatKstDate } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
@@ -83,21 +84,13 @@ export default async function MemberTemplateDetailPage({ params }: Props) {
           {template.createdAt ? (
             <span className="text-xs text-[#666666]">
               등록일:{" "}
-              {new Intl.DateTimeFormat("ko-KR", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              }).format(template.createdAt)}
+              {formatKstDate(template.createdAt)}
             </span>
           ) : null}
           {template.updatedAt ? (
             <span className="text-xs text-[#666666]">
               최종 수정:{" "}
-              {new Intl.DateTimeFormat("ko-KR", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              }).format(template.updatedAt)}
+              {formatKstDate(template.updatedAt)}
             </span>
           ) : null}
         </div>

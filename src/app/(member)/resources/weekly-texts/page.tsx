@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, ImageIcon, Lock } from "lucide-react";
 import { eq, sql } from "drizzle-orm";
@@ -19,12 +20,6 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export default async function WeeklyTextsPage() {
   const session = await requireSharedResourceReader();

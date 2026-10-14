@@ -5,6 +5,7 @@
 // 드롭 시 reorderPressArticles 서버 액션을 호출해 DB에 순서를 저장합니다.
 
 import { useRef, useState, useTransition } from "react";
+import { formatKstDate as formatDate } from "@/lib/date-time";
 import Link from "next/link";
 import { AlertCircle, GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,12 +36,6 @@ function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 export function PressSortableList({ initialItems }: Props) {
   const [items, setItems] = useState(initialItems);

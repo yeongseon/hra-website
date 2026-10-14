@@ -24,21 +24,13 @@ import {
   applicationSubmissions, 
 } from "@/lib/db/schema";
 import { CsvExportButton } from "./_components/csv-export-button";
+import { formatKstDateTime } from "@/lib/date-time";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
-
-const formatDateTime = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(value);
 
 export default async function AdminFormSubmissionsPage({ params }: Props) {
   await requireAdmin();
@@ -143,7 +135,7 @@ export default async function AdminFormSubmissionsPage({ params }: Props) {
                       <TableCell className="text-slate-500 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="size-3.5 text-slate-400" />
-                          {formatDateTime(sub.submittedAt)}
+                          {formatKstDateTime(sub.submittedAt)}
                         </div>
                       </TableCell>
                       <TableCell>

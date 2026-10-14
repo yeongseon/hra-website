@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
 import { db } from "@/lib/db";
 import { notices } from "@/lib/db/schema";
+import { formatKstDate } from "@/lib/date-time";
 import { logServerError } from "@/lib/errors";
 
 type NoticePageProps = {
@@ -16,13 +17,6 @@ type NoticePageProps = {
 };
 
 export const dynamic = "force-dynamic";
-
-const formatDate = (value: Date) =>
-  new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
 
 async function getPublishedNoticeById(id: string) {
   const parsedId = z.uuid().safeParse(id);
@@ -145,7 +139,7 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
             <span>작성자 : 관리자</span>
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-3.5" />
-              작성일 : {formatDate(notice.createdAt)}
+              작성일 : {formatKstDate(notice.createdAt)}
             </span>
             <span>조회수 : {notice.viewCount}</span>
           </div>

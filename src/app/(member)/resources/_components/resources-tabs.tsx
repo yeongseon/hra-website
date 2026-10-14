@@ -19,6 +19,7 @@ import Link from "next/link";
 import { Search, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatKstDate } from "@/lib/date-time";
 import {
   Select,
   SelectContent,
@@ -186,13 +187,6 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
     setSearchQuery(e.target.value);
     setCurrentPage(1);
   };
-
-  const formatDate = (date: Date) =>
-    new Intl.DateTimeFormat("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(date));
 
   return (
     <div className="space-y-6">
@@ -387,7 +381,7 @@ export function ResourcesTabs({ items, cohorts, userCohortId, userRole }: Resour
                     {item.author || "-"}
                   </td>
                   <td className="px-4 py-3.5 text-sm text-[#666666] whitespace-nowrap">
-                    {formatDate(item.date)}
+                    {formatKstDate(item.date)}
                   </td>
                 </tr>
               ))
