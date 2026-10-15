@@ -91,14 +91,14 @@
 ### STEP 6 — 동의항목 설정
 
 1. 좌측 메뉴 **제품 설정 → 카카오 로그인 → 동의항목** (URL: `/product/login/scope`)
-2. 다음 두 항목만 설정:
+2. 기본 로그인에 필요한 두 항목을 설정:
    | 항목 | 동의 단계 |
    |---|---|
    | **닉네임** (`profile_nickname`) | **필수 동의** |
    | **프로필 사진** (`profile_image`) | 선택 동의 |
-3. **이메일** (`account_email`)은 **건드리지 말 것**
-   - 일반 앱은 "필수 동의" 선택 시 거부됨 (비즈앱 심사 필요)
-   - 닉네임만으로도 로그인 정상 동작
+3. 실제 이메일을 마이페이지에 표시하려면 [카카오 이메일 동의 운영 절차](operations/kakao-email-consent.md)에 따라 `account_email` 사용 권한과 동의 항목을 먼저 확인합니다.
+   - 카카오에서 해당 항목을 허용하기 전에는 이메일 범위를 요청하지 않습니다. 기본 로그인은 닉네임만으로 유지됩니다.
+   - 동의 항목을 사용할 수 있게 된 뒤에만 Vercel Production의 `AUTH_KAKAO_EMAIL_SCOPE=true`를 설정하고 다시 배포합니다. 먼저 켜면 `invalid_scope`로 로그인이 실패할 수 있습니다.
 
 ### STEP 7 — Vercel 환경변수 등록
 
@@ -108,6 +108,7 @@ Vercel 대시보드 → HRA 프로젝트 → **Settings → Environment Variable
 |---|---|---|
 | `AUTH_KAKAO_ID` | STEP 2의 REST API 키 (32자) | Production / Preview / Development 모두 |
 | `AUTH_KAKAO_SECRET` | STEP 5의 클라이언트 시크릿 코드 | Production / Preview / Development 모두 |
+| `AUTH_KAKAO_EMAIL_SCOPE` | 이메일 동의 항목 허용 전에는 미설정 또는 `false`; 허용 후에만 `true` | Production |
 
 > ⚠️ 두 값 모두 매우 민감합니다. 채팅, 깃 저장소, 공개 문서 등에 절대 노출하지 마세요. 노출 시 즉시 카카오 콘솔에서 재발급(REST API 키는 "복제 키 생성" 후 옛 키 비활성, Client Secret은 "코드 재발급").
 
