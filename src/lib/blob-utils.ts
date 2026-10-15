@@ -6,6 +6,7 @@
 
 import { del } from "@vercel/blob";
 import { logServerError, redactBlobUrl } from "@/lib/errors";
+import { resourceBlobAccess } from "@/lib/resource-download";
 
 /**
  * 삭제 대상이 Blob 저장소 URL인지 판별한다.
@@ -37,7 +38,16 @@ export function isBlobUrl(url: string): boolean {
  */
 async function safelyDeleteBlobUrl(url: string): Promise<void> {
   try {
-    await del(url);
+    const access = resourceBlobAccess(url);
+    if (new URL(url).hostname.endsWith(".private.blob.vercel-storage.com")) {
+      // 비공개 자료는 설정된 정확한 저장소와 토큰이 일치할 때만 삭제합니다.
+      if (access !== "private" || !process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN) {
+        throw new Error("비공개 자료 저장소 삭제 설정이 없습니다.");
+      }
+      await del(url, { token: process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN });
+    } else {
+      await del(url);
+    }
   } catch (error) {
     logServerError("blob-utils/delete", error, { blobUrl: redactBlobUrl(url) });
   }

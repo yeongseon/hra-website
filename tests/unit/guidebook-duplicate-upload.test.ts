@@ -2,7 +2,7 @@
  * #110 같은 한글 파일명을 반복해도 직접 업로드 경로가 고유하고,
  * Server Action으로 대용량 File 객체를 다시 보내지 않는지 확인합니다.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock("@vercel/blob/client", () => ({ upload: mocks.upload }));
@@ -13,7 +13,10 @@ describe("가이드북 중복 파일명 업로드", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.upload.mockImplementation(async (pathname: string) => ({ url: `https://blob.example/${pathname}` }));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => Response.json({ access: "public" })));
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("같은 한글 PDF 이름 두 번을 다른 경로로 보내고 액션에서는 파일 본문을 제거한다", async () => {
     const paths: string[] = [];

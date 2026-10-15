@@ -32,6 +32,7 @@ import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
 import { buildImageAlt } from "@/lib/image-alt";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { resourceUploadStore } from "@/lib/resource-blob-store";
 import { validateImageUpload } from "@/lib/upload-file-validation";
 
 /**
@@ -168,6 +169,7 @@ async function createClassLogRecord(
       contentType: contentTypes[index],
     })),
     values.authorId,
+    true,
   );
 
   try {
@@ -478,10 +480,12 @@ export async function updateClassLog(
       try {
         for (let i = 0; i < validatedImages.files.length; i += 1) {
           const file = validatedImages.files[i];
+          const store = resourceUploadStore();
           const blob = await put(
             `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
             file,
-            { access: "public", addRandomSuffix: true, contentType: validatedImages.contentTypes[i] },
+            { access: store.access, addRandomSuffix: true, contentType: validatedImages.contentTypes[i],
+              ...(store.token ? { token: store.token } : {}) },
           );
           uploadedUrls.push(blob.url);
           newRows.push({

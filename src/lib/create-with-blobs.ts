@@ -6,6 +6,7 @@
 import { put } from "@vercel/blob";
 import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { recordOwnedBlob } from "@/lib/owned-blob";
+import { resourceUploadStore } from "@/lib/resource-blob-store";
 
 type Upload = {
   pathname: string;
@@ -22,11 +23,16 @@ export async function cleanupCreatedBlobs(urls: string[]): Promise<void> {
 export async function uploadBlobsForCreate(
   uploads: Upload[],
   uploadedById?: string,
+  protectedResource = false,
 ): Promise<string[]> {
+  const store = protectedResource ? resourceUploadStore() : null;
   const results = await Promise.allSettled(
     uploads.map(async ({ pathname, file, contentType }) => {
       // 같은 요청 키로 재시도하거나 동시 제출해도 기존 파일을 덮어쓰지 않습니다.
-      const blob = await put(pathname, file, { access: "public", addRandomSuffix: true, contentType });
+      const blob = await put(pathname, file, {
+        access: store?.access ?? "public", addRandomSuffix: true, contentType,
+        ...(store?.token ? { token: store.token } : {}),
+      });
       await recordOwnedBlob(blob.url, uploadedById);
       return blob.url;
     }),

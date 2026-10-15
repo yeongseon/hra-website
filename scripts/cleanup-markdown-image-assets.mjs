@@ -57,7 +57,17 @@ for (const candidate of candidates) {
   }
 
   try {
-    await del(candidate.url);
+    const url = new URL(candidate.url);
+    if (url.hostname.endsWith(".private.blob.vercel-storage.com")) {
+      // 비공개 자료는 지정된 저장소의 토큰으로만 삭제합니다. 설정이 없으면 보존합니다.
+      if (url.hostname !== process.env.RESOURCE_PRIVATE_BLOB_HOST ||
+          !process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN) {
+        throw new Error("PrivateBlobStoreNotConfigured");
+      }
+      await del(candidate.url, { token: process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN });
+    } else {
+      await del(candidate.url);
+    }
     await sql`
       UPDATE markdown_image_assets
       SET deleted_at = now()

@@ -3,9 +3,7 @@
  *
  * 역할: 강의 자료 파일을 사이트 내에서 열람하고 다운로드 버튼을 제공합니다.
  *   - PDF: 브라우저 기본 iframe 인라인 뷰어
- *   - PPTX/PPT/DOCX/DOC: 기존 공개 파일만 Microsoft Office Online 임베드
- *     (비공개 파일은 외부 서비스에 URL을 전달하지 않고 다운로드로 안내)
- *   - HWP: 온라인 뷰어 없음 → 다운로드 안내
+ *   - PPTX/PPT/DOCX/DOC/HWP: 외부 서비스에 파일 URL을 전달하지 않고 다운로드 안내
  *
  * 접근 권한: MEMBER는 학생용, FACULTY/ADMIN은 학생용·교수용 (조회 단계에서 제어)
  */
@@ -21,7 +19,6 @@ import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
 import { requireMember } from "@/lib/member";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
-import { isProjectBlobUrl } from "@/lib/resource-download";
 
 export const dynamic = "force-dynamic";
 
@@ -65,14 +62,6 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
   const ext = material.fileName.split(".").pop()?.toLowerCase() ?? "";
 
   const isPdf = ext === "pdf";
-  // Microsoft Office Online이 지원하는 형식
-  const isOfficeViewable = isProjectBlobUrl(material.fileUrl) && ["pptx", "ppt", "docx", "doc"].includes(ext);
-
-  // Office Online 임베드 URL — 파일 URL은 HTTPS 공개 URL이어야 함
-  const officeViewerUrl = isOfficeViewable
-    ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(material.fileUrl)}`
-    : null;
-
   const audienceLabel = material.audience === "FACULTY" ? "교수용" : "학생용";
 
   return (
@@ -114,20 +103,8 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
             title={material.title}
           />
         </div>
-      ) : officeViewerUrl ? (
-        // PPTX/PPT/DOCX/DOC: Microsoft Office Online 임베드 뷰어
-        <div className="w-full rounded-lg border border-[#D9D9D9] overflow-hidden shadow-[var(--shadow-soft)]">
-          <iframe
-            src={officeViewerUrl}
-            className="w-full"
-            style={{ height: "80vh", minHeight: "600px" }}
-            title={material.title}
-            // Office Online은 sandbox 제한 없이 동작해야 하므로 allow 설정
-            allow="fullscreen"
-          />
-        </div>
       ) : (
-        // HWP 등 온라인 뷰어 불가 형식: 다운로드 안내
+        // 문서 파일은 외부 뷰어에 URL을 전달하지 않고 인증된 다운로드로 안내합니다.
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-[#D9D9D9] bg-gray-50 py-20 text-center">
           <p className="text-[#666666] text-sm">
             이 파일 형식({ext.toUpperCase()})은 브라우저에서 미리볼 수 없습니다.

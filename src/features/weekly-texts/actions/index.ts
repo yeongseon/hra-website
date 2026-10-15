@@ -31,7 +31,8 @@ import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blo
 import { validateDocumentUpload, validateImageUpload } from "@/lib/upload-file-validation";
 import { validateResourceUploadReference } from "@/lib/resource-upload-server";
 import { validateWeeklyTextImageReference } from "@/lib/weekly-text-image-upload";
-import { isProjectBlobUrl } from "@/lib/resource-download";
+import { resourceBlobAccess } from "@/lib/resource-download";
+import { resourceUploadStore } from "@/lib/resource-blob-store";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -69,7 +70,7 @@ const maxImageSize = 10 * 1024 * 1024;
 
 // 직접 업로드 URL은 원장이 현재 참조를 확인한 후 정리합니다. 같은 URL이 다른
 // 콘텐츠에 재사용됐거나 DB 응답이 불확실할 때 즉시 삭제하면 정상 파일을 잃을 수 있습니다.
-const isDirectWeeklyUpload = (url: string) => isProjectBlobUrl(url) &&
+const isDirectWeeklyUpload = (url: string) => resourceBlobAccess(url) !== null &&
   (new URL(url).pathname.startsWith("/resource-uploads/weekly-texts/") ||
    new URL(url).pathname.startsWith("/weekly-text-images/"));
 
@@ -250,7 +251,7 @@ const createWeeklyTextRecord = async (formData: FormData, uploadedById: string):
         contentType: validatedImages.contentTypes[index],
       })),
     ];
-    const urls = await uploadBlobsForCreate(uploads, uploadedById);
+    const urls = await uploadBlobsForCreate(uploads, uploadedById, true);
     const imageUrls = [...directImageUrls, ...urls.slice(documentFile ? 1 : 0)];
 
     try {
@@ -419,10 +420,12 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
     if (validatedFile.file) {
       // 순서 원칙: 새 blob 업로드 → DB update → 옛 blob cleanup (best-effort).
       // 옛 blob 을 먼저 지우면 이후 단계 실패 시 되돌릴 수 없다.
+      const store = resourceUploadStore();
       const blob = await put(
         `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
         validatedFile.file,
-        { access: "public", addRandomSuffix: true, contentType: validatedFile.contentType },
+        { access: store.access, addRandomSuffix: true, contentType: validatedFile.contentType,
+          ...(store.token ? { token: store.token } : {}) },
       );
       uploadedNewBlobUrl = blob.url;
       fileUrl = blob.url;

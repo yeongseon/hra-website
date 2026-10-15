@@ -1,5 +1,6 @@
 /** 관리자 주차별 텍스트 사진을 브라우저에서 직접 전송합니다 (#102). */
 import { upload } from "@vercel/blob/client";
+import { resourceUploadAccess } from "@/lib/resource-upload-access-client";
 import { galleryImageRule, maxGalleryImageBytes } from "@/lib/gallery-upload-contract";
 import { weeklyTextImagePath } from "@/lib/weekly-text-image-upload-contract";
 
@@ -14,11 +15,17 @@ export async function prepareWeeklyTextImages(formData: FormData, requestId: str
   if (checked.some(({ file, rule }) => !rule || file.size > maxGalleryImageBytes)) {
     return { error: "사진은 10MB 이하의 JPG, PNG, WEBP, GIF 파일만 업로드할 수 있습니다." };
   }
+  let access: "public" | "private";
+  try {
+    access = await resourceUploadAccess("/api/weekly-text-image-uploads");
+  } catch {
+    return { error: "업로드 저장소를 사용할 수 없습니다. 다시 시도해주세요." };
+  }
   const results = await Promise.allSettled(checked.map(async ({ file, rule }) => {
     if (!rule) throw new Error("사진 형식이 올바르지 않습니다.");
     const uploadId = crypto.randomUUID();
     const blob = await upload(weeklyTextImagePath(requestId, userId, uploadId, rule.extension), file, {
-      access: "public", handleUploadUrl: "/api/weekly-text-image-uploads", contentType: rule.contentType,
+      access, handleUploadUrl: "/api/weekly-text-image-uploads", contentType: rule.contentType,
       multipart: file.size > 5 * 1024 * 1024,
       clientPayload: JSON.stringify({ requestId, uploadId, fileName: file.name, size: file.size, contentType: file.type }),
     });
