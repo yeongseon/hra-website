@@ -1,7 +1,7 @@
 /**
  * 자료실 DB가 참조하는 공개 Blob을 비공개 저장소로 이전합니다 (#101).
  * 기본 실행은 참조 개수만 읽습니다. --apply는 바이트를 비교한 뒤 DB 참조를 조건부로 바꾸고,
- * --delete-public은 쓰기 중단 상태에서 미참조 공개 원본만 삭제합니다.
+ * --delete-public은 새 업로드가 비공개로 전환된 상태에서 미참조 공개 원본만 삭제합니다.
  */
 import { createHash, randomUUID } from "node:crypto";
 import { del, get, head, put } from "@vercel/blob";
@@ -23,15 +23,14 @@ const deletePublic = args.includes("--delete-public");
 const privateHost = process.env.RESOURCE_PRIVATE_BLOB_HOST;
 const privateToken = process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN;
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL이 필요합니다.");
-if ((apply || deletePublic) && (!privateToken || !privateHost ||
-    !/^[a-z0-9-]+\.private\.blob\.vercel-storage\.com$/.test(privateHost))) {
+if (!privateHost || !/^[a-z0-9-]+\.private\.blob\.vercel-storage\.com$/.test(privateHost)) {
+  throw new Error("자료 참조 점검에는 RESOURCE_PRIVATE_BLOB_HOST가 필요합니다.");
+}
+if ((apply || deletePublic) && !privateToken) {
   throw new Error("비공개 저장소 연결이 필요합니다.");
 }
-if (apply && process.env.RESOURCE_PRIVATE_BLOB_ENABLED !== "true") {
+if ((apply || deletePublic) && process.env.RESOURCE_PRIVATE_BLOB_ENABLED !== "true") {
   throw new Error("새 업로드를 비공개 저장소로 전환한 뒤 이전해야 합니다.");
-}
-if (deletePublic && process.env.HRA_CONTENT_WRITES_STOPPED !== "1") {
-  throw new Error("공개 원본 삭제 전 콘텐츠 쓰기를 중단해야 합니다.");
 }
 
 const sql = neon(process.env.DATABASE_URL);
@@ -148,6 +147,13 @@ if (apply) {
   console.log(`바이트 검증·DB 조건부 이전 완료: ${completed}개`);
 } else if (deletePublic) {
   if (publicRows.length > 0) throw new Error("공개 자료 참조가 남아 원본을 삭제할 수 없습니다.");
+  // 기존 참조가 모두 살아 있는 비공개 사본을 가리키는지 먼저 확인합니다.
+  for (const row of privateRows) {
+    const stored = await head(row.url, { token: privateToken });
+    if (stored.url !== row.url || stored.size < 1) {
+      throw new Error("비공개 사본을 확인할 수 없어 공개 원본을 보존합니다.");
+    }
+  }
   const candidates = await sql`
     SELECT a.id, a.url FROM markdown_image_assets a
     WHERE a.deleted_at IS NULL
@@ -161,7 +167,8 @@ if (apply) {
     const current = await sql`SELECT 1 FROM markdown_image_references WHERE asset_id = ${candidate.id} LIMIT 1`;
     if (current.length > 0) continue;
     try {
-      await del(candidate.url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      const original = await head(candidate.url, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      await del(candidate.url, { token: process.env.BLOB_READ_WRITE_TOKEN, ifMatch: original.etag });
       await sql`UPDATE markdown_image_assets SET deleted_at = now()
         WHERE id = ${candidate.id} AND deleted_at IS NULL`;
       deleted += 1;
