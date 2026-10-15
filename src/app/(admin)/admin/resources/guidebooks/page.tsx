@@ -91,7 +91,7 @@ export default async function AdminGuidebooksPage() {
                       <TableCell className="max-w-[240px] truncate text-slate-700">{row.fileName}</TableCell>
                       <TableCell>
                         <a
-                          href={row.fileUrl}
+                          href={`/api/resources/guidebooks/${row.id}/download`}
                           download={row.fileName}
                           className="text-sm font-medium text-[#2563EB] hover:underline"
                         >

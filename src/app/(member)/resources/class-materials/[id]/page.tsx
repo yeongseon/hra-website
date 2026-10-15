@@ -3,8 +3,8 @@
  *
  * 역할: 강의 자료 파일을 사이트 내에서 열람하고 다운로드 버튼을 제공합니다.
  *   - PDF: 브라우저 기본 iframe 인라인 뷰어
- *   - PPTX/PPT/DOCX/DOC: Microsoft Office Online 임베드 뷰어
- *     (파일 URL이 공개(public)이어야 동작 — Vercel Blob은 access:"public"이므로 OK)
+ *   - PPTX/PPT/DOCX/DOC: 기존 공개 파일만 Microsoft Office Online 임베드
+ *     (비공개 파일은 외부 서비스에 URL을 전달하지 않고 다운로드로 안내)
  *   - HWP: 온라인 뷰어 없음 → 다운로드 안내
  *
  * 접근 권한: MEMBER는 학생용, FACULTY/ADMIN은 학생용·교수용 (조회 단계에서 제어)
@@ -21,6 +21,7 @@ import { db } from "@/lib/db";
 import { classMaterials } from "@/lib/db/schema";
 import { requireMember } from "@/lib/member";
 import { classMaterialReadFilter } from "@/features/class-materials/access";
+import { isProjectBlobUrl } from "@/lib/resource-download";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
 
   const isPdf = ext === "pdf";
   // Microsoft Office Online이 지원하는 형식
-  const isOfficeViewable = ["pptx", "ppt", "docx", "doc"].includes(ext);
+  const isOfficeViewable = isProjectBlobUrl(material.fileUrl) && ["pptx", "ppt", "docx", "doc"].includes(ext);
 
   // Office Online 임베드 URL — 파일 URL은 HTTPS 공개 URL이어야 함
   const officeViewerUrl = isOfficeViewable
@@ -107,7 +108,7 @@ export default async function ClassMaterialViewerPage({ params }: Props) {
         // PDF: 브라우저 기본 인라인 뷰어
         <div className="w-full rounded-lg border border-[#D9D9D9] overflow-hidden shadow-[var(--shadow-soft)]">
           <iframe
-            src={`${material.fileUrl}#toolbar=1&navpanes=0`}
+            src={`/api/resources/class-materials/${material.id}/download?inline=1#toolbar=1&navpanes=0`}
             className="w-full"
             style={{ height: "80vh", minHeight: "600px" }}
             title={material.title}

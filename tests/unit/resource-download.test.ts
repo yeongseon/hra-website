@@ -1,8 +1,8 @@
 /**
  * 자료실 다운로드 경로의 저장소 제한과 한글 파일명 응답을 검증합니다.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { attachmentDisposition, isProjectBlobUrl } from "@/lib/resource-download";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { attachmentDisposition, isProjectBlobUrl, resourceBlobAccess } from "@/lib/resource-download";
 import { projectBlobHost } from "@/lib/blob-host";
 
 const mocks = vi.hoisted(() => ({
@@ -33,6 +33,8 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("자료실 다운로드", () => {
   it("한글 원본 파일명과 첨부 응답으로 내용을 스트리밍한다", async () => {
     const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ kind: "guidebooks", id }) });
@@ -41,6 +43,45 @@ describe("자료실 다운로드", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(await response.text()).toBe("PDF");
     expect(mocks.get).toHaveBeenCalledWith(blobUrl, { access: "public" });
+  });
+
+  it("PDF 미리보기 요청만 인라인으로 전달하고 캐시를 막는다", async () => {
+    const response = await GET(new Request("http://localhost?inline=1"), { params: Promise.resolve({ kind: "guidebooks", id }) });
+    expect(response.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("이미지는 DB의 이미지 ID로만 읽고 실행 가능한 형식은 거부한다", async () => {
+    mocks.get.mockResolvedValueOnce({
+      statusCode: 200,
+      stream: new ReadableStream(),
+      blob: { contentType: "image/svg+xml" },
+    });
+    const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ kind: "weekly-text-images", id }) });
+    expect(response.status).toBe(404);
+    mocks.get.mockResolvedValueOnce({
+      statusCode: 200,
+      stream: new ReadableStream(),
+      blob: { contentType: "image/png" },
+    });
+    const imageResponse = await GET(new Request("http://localhost"), { params: Promise.resolve({ kind: "class-log-images", id }) });
+    expect(imageResponse.status).toBe(200);
+    expect(imageResponse.headers.get("content-disposition")).toBeNull();
+    expect(imageResponse.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("등록된 비공개 저장소만 서버 토큰으로 읽는다", async () => {
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_HOST", "private123.private.blob.vercel-storage.com");
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_TOKEN", "server-only-token");
+    const privateUrl = "https://private123.private.blob.vercel-storage.com/resources/test.pdf";
+    mocks.limit.mockResolvedValue([{ fileUrl: privateUrl, fileName: "수업 자료.pdf" }]);
+    const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ kind: "class-materials", id }) });
+    expect(response.status).toBe(200);
+    expect(mocks.get).toHaveBeenCalledWith(privateUrl, {
+      access: "private", token: "server-only-token", storeId: "private123", useCache: false,
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
   it("잘못된 종류·ID는 파일이나 DB를 조회하지 않는다", async () => {
@@ -71,6 +112,14 @@ describe("다운로드 입력 검증", () => {
     expect(isProjectBlobUrl(`http://${projectBlobHost}/file.pdf`)).toBe(false);
     expect(isProjectBlobUrl(`https://${projectBlobHost}.attacker.test/file.pdf`)).toBe(false);
     expect(isProjectBlobUrl(`https://${projectBlobHost}/file.pdf?redirect=1`)).toBe(false);
+  });
+
+  it("비공개 저장소는 지정된 정확한 호스트만 허용한다", () => {
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_HOST", "private123.private.blob.vercel-storage.com");
+    expect(resourceBlobAccess(blobUrl)).toBe("public");
+    expect(resourceBlobAccess("https://private123.private.blob.vercel-storage.com/file.pdf")).toBe("private");
+    expect(resourceBlobAccess("https://private123.private.blob.vercel-storage.com.attacker.test/file.pdf")).toBeNull();
+    expect(resourceBlobAccess("https://private123.private.blob.vercel-storage.com/file.pdf?x=1")).toBeNull();
   });
 
   it("파일명으로 응답 헤더를 삽입할 수 없다", () => {
