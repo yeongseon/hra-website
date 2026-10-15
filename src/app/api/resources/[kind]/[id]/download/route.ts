@@ -56,7 +56,7 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
 
   try {
     // 비공개 저장소의 URL은 DB에서만 읽으며, 서버 토큰은 브라우저로 보내지 않습니다.
-    const privateToken = process.env.RESOURCE_PRIVATE_BLOB_TOKEN;
+    const privateToken = process.env.RESOURCE_PRIVATE_READ_WRITE_TOKEN;
     if (access === "private" && !privateToken) {
       throw new Error("비공개 자료 저장소가 연결되지 않았습니다.");
     }

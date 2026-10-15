@@ -1,5 +1,5 @@
 /** #102 클라이언트가 보낸 완료 URL을 Blob 실물·경로·소유자와 비교합니다. */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ head: vi.fn(), insertValues: vi.fn(), findFirst: vi.fn(), fetch: vi.fn() }));
 vi.mock("@vercel/blob", () => ({ head: mocks.head }));
@@ -27,6 +27,8 @@ describe("직접 업로드 완료 검증", () => {
     mocks.fetch.mockResolvedValue(new Response("%PDF-1.7\n", { status: 206 }));
     vi.stubGlobal("fetch", mocks.fetch);
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it("정확히 50MB의 본인 PDF를 허용하고 원장에 남긴다", async () => {
     expect(await validateResourceUploadReference("class-materials", userId, url, fileName)).toEqual({ url, fileName });
@@ -58,5 +60,19 @@ describe("직접 업로드 완료 검증", () => {
   it("원장의 소유자가 다른 경우 URL 재사용을 거부한다", async () => {
     mocks.findFirst.mockResolvedValue({ uploadedById: uploadId, deletedAt: null });
     expect("error" in await validateResourceUploadReference("class-materials", userId, url, fileName)).toBe(true);
+  });
+
+  it("비공개 전환 후 공개 URL을 거부하고 비공개 파일의 시작 바이트를 토큰으로 확인한다", async () => {
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_ENABLED", "true");
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_HOST", "private123.private.blob.vercel-storage.com");
+    vi.stubEnv("RESOURCE_PRIVATE_READ_WRITE_TOKEN", "server-only-token");
+    const privateUrl = `https://private123.private.blob.vercel-storage.com/${pathname}`;
+    expect("error" in await validateResourceUploadReference("class-materials", userId, url, fileName)).toBe(true);
+    mocks.head.mockResolvedValue({ url: privateUrl, pathname, size: 100, contentType: "application/pdf" });
+    expect(await validateResourceUploadReference("class-materials", userId, privateUrl, fileName)).toEqual({ url: privateUrl, fileName });
+    expect(mocks.head).toHaveBeenCalledWith(privateUrl, { token: "server-only-token" });
+    expect(mocks.fetch).toHaveBeenCalledWith(privateUrl, expect.objectContaining({
+      headers: { Range: "bytes=0-11", Authorization: "Bearer server-only-token" },
+    }));
   });
 });

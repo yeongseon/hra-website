@@ -1,5 +1,5 @@
 /** #102 직접 업로드 토큰 발급의 권한·대상·형식·크기 경계를 확인합니다. */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), handleUpload: vi.fn(), head: vi.fn(), recordResourceUpload: vi.fn(), userLimit: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
@@ -35,6 +35,8 @@ describe("자료실 직접 업로드 토큰", () => {
     mocks.auth.mockResolvedValue({ user: { id: userId, role: "ADMIN" } });
     mocks.userLimit.mockResolvedValue([{ cohortId: uploadId }]);
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it("정확히 30MB 가이드북에 제한된 토큰만 발급한다", async () => {
     const input = { kind: "guidebooks" as const, fileName: "책.pdf", size: 30 * 1024 * 1024, contentType: "application/pdf", uploadId };
@@ -100,5 +102,20 @@ describe("자료실 직접 업로드 토큰", () => {
     mocks.head.mockResolvedValue({ url: validUrl, pathname });
     expect((await invoke(validUrl)).status).toBe(200);
     expect(mocks.recordResourceUpload).toHaveBeenCalledExactlyOnceWith(validUrl, userId);
+  });
+
+  it("비공개 전환 후 전용 토큰으로 발급하고 공개 완료 URL을 거부한다", async () => {
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_ENABLED", "true");
+    vi.stubEnv("RESOURCE_PRIVATE_BLOB_HOST", "private123.private.blob.vercel-storage.com");
+    vi.stubEnv("RESOURCE_PRIVATE_READ_WRITE_TOKEN", "server-only-token");
+    const input = { kind: "guidebooks" as const, fileName: "책.pdf", size: 100, contentType: "application/pdf", uploadId };
+    const pathname = resourceUploadPath(input.kind, userId, uploadId, input.fileName);
+    expect((await issueToken(input)).status).toBe(200);
+    expect(mocks.handleUpload).toHaveBeenCalledWith(expect.objectContaining({ token: "server-only-token" }));
+    expect(mocks.recordResourceUpload).toHaveBeenCalledWith(
+      `https://private123.private.blob.vercel-storage.com/${pathname}`, userId,
+    );
+    vi.stubEnv("RESOURCE_PRIVATE_READ_WRITE_TOKEN", "");
+    expect((await issueToken(input)).status).toBe(400);
   });
 });

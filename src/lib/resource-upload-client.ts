@@ -3,6 +3,7 @@
  * Server Action에는 작은 텍스트 값과 완료 URL만 보내 Vercel 함수 본문 제한을 피합니다.
  */
 import { upload } from "@vercel/blob/client";
+import { resourceUploadAccess } from "@/lib/resource-upload-access-client";
 import {
   maxResourceUploadBytes,
   resourceUploadPath,
@@ -36,8 +37,9 @@ export async function prepareResourceUpload(
   const uploadId = crypto.randomUUID();
   const pathname = resourceUploadPath(kind, userId, uploadId, file.name);
   try {
+    const access = await resourceUploadAccess("/api/resource-uploads");
     const blob = await upload(pathname, file, {
-      access: "public",
+      access,
       handleUploadUrl: "/api/resource-uploads",
       contentType: rule.contentType,
       multipart: file.size > 5 * 1024 * 1024,

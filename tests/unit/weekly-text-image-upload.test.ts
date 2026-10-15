@@ -1,5 +1,5 @@
 /** 주차별 텍스트 사진 직접 업로드의 관리자 권한·크기·완료 URL 검증입니다 (#102). */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), handleUpload: vi.fn(), upload: vi.fn(), head: vi.fn(), recordUpload: vi.fn(), fetch: vi.fn(),
@@ -38,9 +38,13 @@ describe("주차별 텍스트 사진 업로드", () => {
     vi.resetAllMocks();
     mocks.auth.mockResolvedValue({ user: { id: userId, role: "ADMIN" } });
     mocks.head.mockResolvedValue({ url, pathname, size: input.size, contentType: "image/png" });
-    mocks.fetch.mockResolvedValue(new Response(Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a), { status: 206 }));
+    mocks.fetch.mockImplementation(async (input: string) => input === "/api/weekly-text-image-uploads"
+      ? Response.json({ access: "public" })
+      : new Response(Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a), { status: 206 }));
     vi.stubGlobal("fetch", mocks.fetch);
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it("관리자에게만 10MB PNG 토큰을 발급한다", async () => {
     expect((await issueToken()).status).toBe(200);

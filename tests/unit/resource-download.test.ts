@@ -73,7 +73,7 @@ describe("자료실 다운로드", () => {
 
   it("등록된 비공개 저장소만 서버 토큰으로 읽는다", async () => {
     vi.stubEnv("RESOURCE_PRIVATE_BLOB_HOST", "private123.private.blob.vercel-storage.com");
-    vi.stubEnv("RESOURCE_PRIVATE_BLOB_TOKEN", "server-only-token");
+    vi.stubEnv("RESOURCE_PRIVATE_READ_WRITE_TOKEN", "server-only-token");
     const privateUrl = "https://private123.private.blob.vercel-storage.com/resources/test.pdf";
     mocks.limit.mockResolvedValue([{ fileUrl: privateUrl, fileName: "수업 자료.pdf" }]);
     const response = await GET(new Request("http://localhost"), { params: Promise.resolve({ kind: "class-materials", id }) });
