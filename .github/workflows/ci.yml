@@ -53,6 +53,11 @@ jobs:
       - name: Chromium 설치
         run: npx playwright install --with-deps chromium
 
+      - name: 학사 G1 실제 제출 품질 게이트
+        # fork PR에서도 secrets 없이 실제 앱·격리 DB·로컬 private 저장소를 검증합니다.
+        timeout-minutes: 10
+        run: npm run test:academic-g1
+
       - name: 브라우저 스모크 테스트
         # DB가 필요한 공개 홈·자료 상세 테스트는 격리 CI와 분리합니다.
         run: npm run test:e2e -- tests/e2e/ci-smoke.spec.ts

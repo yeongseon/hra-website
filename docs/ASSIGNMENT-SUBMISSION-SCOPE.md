@@ -4,7 +4,7 @@
 
 HRA 사이트를 간단한 학사관리 시스템으로 확장할 때, 첫 번째 기능은 **학생이 과제를 제출하고 운영진이 학생별 제출 여부를 확인하는 것**이다. 대학교 학사시스템의 모든 기능을 한 번에 도입하지 않는다.
 
-이 문서는 기능 범위와 #140·#141에서 확정한 G1 운영 규칙을 기록한다. 개인정보 보존(#142)과 교수 검토·출결(#143)은 아직 미정이며, 학사 기능이 이미 구현됐다는 뜻은 아니다.
+이 문서는 기능 범위와 #140·#141에서 확정한 G1 운영 규칙을 기록한다. **2026-10-16 기준, #144~#158의 명부·과제·개인 제출·비공개 파일·학생/승인자 화면 코드와 격리 검증이 구현됐다.** 운영 학사 공개·쓰기·업로드·정리 설정은 모두 비활성이며 운영 출시는 아니다. 개인정보 보존·파기·백업(#142), 교수 검토·출결·수료(#143) 정책은 미정이고, 관측·통합 CI(#157·#158) 코드와 격리 검증도 포함한다.
 
 ## 확정된 방향
 
@@ -22,11 +22,13 @@ HRA 사이트를 간단한 학사관리 시스템으로 확장할 때, 첫 번�
 | 수업일지 | 작성자 `authorId`를 기록하지만 기수에 공유하는 수업 기록이다. | 과제·제출 상태·제출 파일을 연결하는 별도 흐름이 필요하다. |
 | 일정 | 수업 설명에 과제를 적을 수 있다. | 설명 문구만으로는 학생별 제출 여부를 집계할 수 없다. |
 
-관련 코드: `src/lib/db/schema.ts`, `src/features/weekly-texts/actions/index.ts`, `src/features/class-logs/actions/index.ts`, `src/app/(member)/resources/weekly-texts/page.tsx`.
+위 표는 기존 공동 자료와 개인 제출을 구분하기 위한 차이다. 개인 과제에는 별도로 구현된 `academic_students`, `cohort_enrollments`, `assignments`, `assignment_targets`, 최종 제출·파일·업로드 의도를 사용한다. 서버 계약은 [학생 조회](developer/academic-student-queries.md), [과제 관리](developer/academic-assignment-actions.md), [비공개 업로드](developer/academic-assignment-uploads.md), [최종 제출](developer/academic-submission-finalization.md), [파일 다운로드](developer/academic-submission-files.md)를 따른다.
 
-## 제안하는 최소 사용 흐름
+관련 코드: `src/lib/db/schema.ts`, `src/features/academics/`, `src/features/weekly-texts/actions/index.ts`, `src/features/class-logs/actions/index.ts`.
 
-아래는 구현을 시작하기 위한 **제안 범위**다. 운영진의 과제 등록 방식 등은 아직 최종 확정되지 않았다.
+## G1 최소 사용 흐름
+
+아래 흐름의 G1 코드는 구현됐다. 과제 등록·공개와 전체 제출 현황·파일 조회는 홈페이지 관리자 역할만으로 허용하지 않고 지정된 학사 승인자의 검증된 계정 ID로 인가한다. 실제 운영 사용은 #142 정책과 운영 활성화 절차를 충족한 뒤 가능하다.
 
 1. 운영진이 과제의 제목, 안내, 대상 기수, 마감일을 등록한다.
 2. 해당 기수의 학생은 `내 과제`에서 과제와 마감일을 확인한다.
@@ -144,17 +146,19 @@ G1에서는 공개 후 대상 추가·제외를 허용하지 않는다. 예외�
 
 ### 6. 화면 최소 범위
 
-| URL (제안) | 사용자 | G1 기능 |
+| 구현 경로 | 사용자 | G1 기능 |
 | --- | --- | --- |
 | `/member/assignments` | 해당 기수 학생 | 내 과제 목록·마감·제출 상태 |
 | `/member/assignments/[id]` | 해당 학생 | 과제 상세·파일 제출·본인 제출 확인 |
-| `/admin/academics/students` | 관리자 | 기수 필터·등록 학생 명부·계정 연결 상태 |
-| `/admin/academics/assignments` | 관리자 | 과제 목록·등록·공개·마감 |
-| `/admin/academics/assignments/[id]/submissions` | 관리자 | 대상 전원·제출/미제출 현황·허용된 파일 확인 |
+| `/admin/academics/students` | 지정 학사 승인자 | 기수 필터·등록 학생 명부·계정 연결 상태 |
+| `/admin/academics/assignments` | 지정 학사 승인자 | 과제 목록·등록·공개·마감 |
+| `/admin/academics/assignments/[id]/submissions` | 지정 학사 승인자 | 대상 전원·제출/미제출 현황·CSV 내보내기 |
 
 기존 `/resources`와 `/mypage` 동작은 유지하고 학사 메뉴를 추가한다. 기존 관리자 CMS를 별도 서비스로 분리하지 않는다.
 
 ### 7. G1 통합/E2E 수용 테스트 (필수)
+
+아래는 전체 수용 기준이며 자동으로 완료 처리하지 않는다. 구현 단위의 격리 PostgreSQL·실제 HTTP/브라우저 검증과 [G1 전용 통합 CI](developer/academic-g1-quality-gate.md), 운영 DB·저장소 적용 및 백업/복원 확인을 구분한다. 코드·로컬 검증 통과만으로 운영 출시를 선언하지 않는다.
 
 - [ ] 기수 A 학생, 기수 B 학생, `PENDING`, 비로그인, `FACULTY`, `ADMIN` 조합으로 목록·상세·서버 액션·파일 API 권한 검사
 - [ ] 해당 기수에 등록돼 있으나 미제출인 학생이 관리자 명단에 표시되고 제출 후 즉시 카운트가 일치

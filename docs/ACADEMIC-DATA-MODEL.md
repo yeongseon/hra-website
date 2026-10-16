@@ -1,7 +1,7 @@
 # HRA 학사 데이터 모델 및 접근 제약 (설계안)
 
-> 상태: 학생·기수 등록 스키마(#144)는 코드·격리 DB 검증 대상이며 나머지는 **구현 전 설계**다. 운영 적용·기능 공개와 구별한다. 범위: G1 학적·과제 MVP와 향후 G2/G3 확장.
-> #140·#141의 운영 규칙은 확정됐지만, #142의 보존 기간·파기 기준은 미정이다. `src/lib/db/schema.ts`에는 학생·기수 등록 테이블만 추가됐으며, 나머지 엔터티는 후속 구현·마이그레이션 대상이다.
+> 상태: **G1 엔터티·제약·서버/화면 코드 구현 및 격리 검증 / 운영 미활성** · 기준: 2026-10-16, #144~#158 구현·격리 검증. G2/G3는 후속 설계다.
+> #140·#141의 운영 규칙은 확정됐지만, #142의 보존·파기·백업 정책은 미정이다. 학사 공개·쓰기·업로드·정리 설정은 운영에서 모두 비활성이며, 코드 구현은 운영 DB 적용·기능 공개를 의미하지 않는다.
 
 ## 1. 기존 엔터티 재사용과 금지사항
 
@@ -14,7 +14,9 @@
 
 ## 2. G1 엔터티 (권장 스키마)
 
-다음 이름은 제안이며, 단계별 독립 PR에서 실제 Drizzle 타입·DB migration으로 확정한다.
+아래 A~F에 대응하는 G1 모델·범위 SQL은 #144·#147·#148에서 구현됐다. 표는 초기 설계 요약을 유지하며, 실제 필드·제약·함수의 정본은 `src/lib/db/schema.ts`가 내보내는 `academic-assignments.ts`, `academic-submissions.ts` 등 모델과 범위 migration이다. G2/G3 후보는 §5의 미구현 설계로 구분한다.
+
+적용·복구 절차는 [학생 명부](developer/academic-students-migration.md), [과제·최초 공개 대상](developer/academic-assignments-migration.md), [최종 제출·파일·업로드 의도](developer/academic-submissions-migration.md)를 따른다. 검증 계정 연결·승인, 업로드 승인 원장과 최소 감사도 별도 범위 SQL로 구현됐으며 운영 적용은 #142 정책·백업/복원 증거·승인 절차를 충족한 뒤 진행한다.
 
 ### A. `academic_students` — 학적의 학생 식별자
 
@@ -72,15 +74,15 @@
 | `schedule_session_id` | UUID nullable | 기존 `schedule_sessions` FK; 연결 시 이벤트·기수 교차 검증 |
 | `title`, `instructions` | varchar/text | 서버 길이 제한·내용 정제 |
 | `due_at` | timestamptz nullable | 초안에서는 NULL 가능, 공개 시 미래 시각 필수. KST 입력 → UTC instant 저장 |
-| `status` | enum | `DRAFT`/`PUBLISHED`/`CLOSED` 제안; 허용 전이 규칙 필요 |
+| `status` | enum | `DRAFT`/`PUBLISHED`/`CLOSED` 구현. 공개 후 과제 정의는 불변이며 종료만 허용 |
 | `created_by_user_id` | UUID | 작성 관리자 |
 | `published_at`, `created_at`, `updated_at` | timestamptz | 공개/감사 |
 
 - 비공개 과제의 UUID를 알아도 MEMBER가 조회·제출하지 못해야 한다.
-- 이미 제출자가 있는 과제를 삭제하거나 대상 기수·문항 의미를 변경하면 기존 이력의 의미가 깨질 수 있으므로 불변 필드/비활성화 정책이 필요하다.
+- 현재 G1은 제출 유무와 관계없이 공개 후 과제 정의 수정·삭제와 대상 변경을 거부한다. 초안 수정·공개·종료 및 요청 재시도는 [과제 서버 액션](developer/academic-assignment-actions.md)의 원자 변경·최소 감사 계약을 사용한다.
 - 기존 수업과 연결되는 과제는 참조 무결성에 더해 **수업과 과제 기수가 같아야 함**을 트랜잭션/서버에서 검증한다.
 
-### D. `assignment_targets` — 발행 당시 과제 대상자 (제안, G1에서 검토)
+### D. `assignment_targets` — 최초 공개 당시 과제 대상자 (G1 구현)
 
 | 필드 | 타입 | 제약·의미 |
 | --- | --- | --- |
@@ -120,9 +122,9 @@
 - 저장 키는 고유·추측 어려운 값이어야 하며, 한글 원본 파일명과 저장 경로를 분리한다.
 - 파일을 전송한 사람·대상 과제·실제 저장된 객체·크기/유형을 **서버에서 재검증**한다.
 - 기존 공용 `access: public` 업로드/이미지 정리 헬퍼를 그대로 제출물에 재사용하지 않는다.
-- 사용자의 직접 다운로드는 `GET /api/academic/submissions/[id]/file/[fileId]` 같은 인증된 API에서 매번 객체 수준 접근을 확인한다. 외부 서비스에 장기 유효 URL을 노출하지 않는다.
+- 구현된 `GET /api/academic/submissions/[id]/file/[fileId]`는 매번 객체 수준 접근을 확인한다. 적용·인가·전달 감사는 [개인 제출 파일 다운로드](developer/academic-submission-files.md)를 따른다. 외부 서비스에 장기 유효 URL을 노출하지 않는다.
 - 업로드 중단·만료·DB 실패 시 고아 객체 정리와 재시도 정책을 명시한다. **다른 제출물이 참조 중인 객체는 삭제하지 않는다.**
-- Vercel Function의 4.5MB 본문 제한은 `serverActions.bodySizeLimit` 확대만으로 해제되지 않는다. 큰 파일은 공급자가 지원하는 인증된 브라우저→비공개 스토리지 직접 업로드를 검토한다.
+- Vercel Function의 4.5MB 본문 제한은 `serverActions.bodySizeLimit` 확대만으로 해제되지 않는다. G1 코드에는 [인증된 브라우저→비공개 스토리지 직접 업로드와 원본 검증](developer/academic-assignment-uploads.md)이 구현됐으며, 운영 업로드는 비활성이다.
 - 파일 포맷은 확장자+매직 바이트 검증, 크기·개수·요청 제한, 바이러스/악성코드 정책은 데이터 민감도에 맞춰 단계화한다.
 - G1 파일 정책은 **비어 있지 않은 PDF 1개, 50MiB(52,428,800바이트) 이하**다. `.pdf` 확장자(대소문자 무관), `application/pdf` MIME, PDF 시그니처를 모두 검증하고 다른 형식·추가 파일은 거부한다. 개인 제출 파일은 인증된 첨부 다운로드만 허용한다.
 
