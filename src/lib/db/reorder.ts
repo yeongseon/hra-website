@@ -7,8 +7,9 @@
 //   중간에 실패했을 때 일부만 반영되어 정렬 상태가 뒤엉킴 (partial reorder).
 //
 // [해결]
-// - 단일 `UPDATE ... SET col = CASE id WHEN ... THEN ... END WHERE id IN (...)` 문 하나로 처리.
-// - Postgres 는 single statement 는 statement-level atomic 이므로 partial 반영이 원천 차단된다.
+// - 하나의 CTE에서 대상 행을 ID 순서로 잠그고, 요청 수와 대상 수가 같을 때만 UPDATE 한다.
+// - 단일 UPDATE만으로는 없는 ID·범위 밖 ID를 제외한 나머지가 저장될 수 있으므로
+//   동일한 잠금 CTE를 건수 검사와 갱신 대상에 함께 사용한다.
 //
 // [보안]
 // - 모든 사용자 입력(id, value)은 Drizzle `sql` 태그의 파라미터로 나감 (`$1`, `$2`, ...).
@@ -23,8 +24,8 @@ import { db } from "@/lib/db";
 // 여러 row 의 정수 컬럼을 단일 SQL UPDATE 로 한번에 갱신한다.
 // assignments 는 { id, value } 쌍의 배열. 각 id 에 해당하는 row 의 targetColumn 을 value 로 설정한다.
 // extraWhere 는 소유권 검증 등 추가 WHERE 조건 (선택).
-// 반환값의 affected 는 실제 갱신된 row 수 — 호출부에서 assignments.length 와 비교해
-// "존재하지 않는 ID" / "중복 ID" 등을 검출할 수 있다.
+// 반환값의 affected 는 실제 갱신된 row 수다. 요청이 누락·중복·범위 이탈을 포함하면
+// 어떤 행도 바꾸지 않고 0을 반환하므로 호출부에서 기존 실패 응답을 유지할 수 있다.
 export async function reorderByCase<T extends PgTable>(params: {
   table: T;
   idColumn: AnyColumn;
@@ -52,9 +53,17 @@ export async function reorderByCase<T extends PgTable>(params: {
     : inArray(idColumn, ids);
 
   const result = await db.execute(sql`
+    WITH reorder_targets AS MATERIALIZED (
+      SELECT ${idColumn} AS target_id
+      FROM ${table}
+      WHERE ${whereClause}
+      ORDER BY ${idColumn}
+      FOR UPDATE
+    )
     UPDATE ${table}
     SET ${targetName} = CASE ${sql.join(cases, sql` `)} END
-    WHERE ${whereClause}
+    WHERE ${idColumn} IN (SELECT target_id FROM reorder_targets)
+      AND (SELECT count(*) FROM reorder_targets) = ${assignments.length}::integer
   `);
 
   return { affected: result.rowCount ?? 0 };
