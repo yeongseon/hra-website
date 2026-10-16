@@ -42,6 +42,7 @@ nav:
       - 사이트 실행하기: getting-started/first-run.md
   - 🤝 기여하기:
       - 협업 워크플로우: contributing/workflow.md
+      - 전체 경로 감사: developer/site-route-audit.md
       - 코드 컨벤션: contributing/conventions.md
       - 빌드·배포 안전 가이드 ⚠️: contributing/build-and-deploy-safety.md
       - AI 도구로 기여하기: contributing/ai-tools.md
