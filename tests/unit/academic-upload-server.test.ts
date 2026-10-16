@@ -12,6 +12,7 @@ import { createAssignmentUploadIntent,authorizeAssignmentUploadToken,verifyAssig
 import { AcademicUploadError,assignmentUploadInput,academicUploadPath,MAX_ASSIGNMENT_UPLOAD_BYTES } from "@/features/academics/assignment-uploads/contract";
 import { DELETE as cancelRoute } from "@/app/api/academic/uploads/intents/[id]/route";
 import { POST as callback } from "@/app/api/academic/uploads/route";
+import { POST as createIntentRoute } from "@/app/api/academic/uploads/intents/route";
 const id="10000000-0000-4000-8000-000000000001",assignmentId="20000000-0000-4000-8000-000000000001",targetId="30000000-0000-4000-8000-000000000001";
 const selection={assignmentId,uploadIntentId:id};
 const pathname=academicUploadPath(id),host="qa151.private.blob.vercel-storage.com";
@@ -22,11 +23,32 @@ function stream(chunks:Uint8Array[]){return new ReadableStream<Uint8Array>({star
 function stored(chunks=[bytes]){return {statusCode:200,blob:metadata(),stream:stream(chunks)};}
 beforeEach(()=>{
  vi.resetAllMocks();vi.stubEnv("ACADEMIC_ENABLED","true");vi.stubEnv("ACADEMIC_UPLOADS_ENABLED","true");vi.stubEnv("ACADEMIC_SUBMISSION_BLOB_HOST",host);vi.stubEnv("ACADEMIC_SUBMISSION_READ_WRITE_TOKEN","vercel_blob_rw_qa151_fixture");
+ vi.spyOn(console,"info").mockImplementation(()=>{});vi.spyOn(console,"error").mockImplementation(()=>{});
  mocks.target.mockResolvedValue({userId:id,targetId,assignmentId,status:"PUBLISHED",dueAt:new Date(Date.now()+120000)});
  mocks.authorize.mockImplementation(async()=>record());mocks.head.mockImplementation(async()=>metadata());mocks.get.mockImplementation(async()=>stored());mocks.issue.mockResolvedValue(id);
 });
-afterEach(()=>vi.unstubAllEnvs());
+afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
 describe("과제 업로드 계약·실제 스트림 검증",()=>{
+ it("의도 발급은 서버 참조를 응답·헤더·인가/완료 이벤트에 연결한다",async()=>{
+  const result=await createIntentRoute(new Request("https://app.invalid/api/academic/uploads/intents",{method:"POST",headers:{Origin:"https://app.invalid"},
+   body:JSON.stringify({assignmentId,requestId:id,originalName:"합성비공개이름.pdf",sizeBytes:bytes.length,mimeType:"application/pdf"})}));
+  const body=await result.json();expect(result.status).toBe(200);expect(body.referenceId).toBe(result.headers.get("x-request-id"));
+  expect(console.info).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({
+   action:"UPLOAD_INTENT",outcome:"COMPLETED",actorUserId:id,resourceId:id,requestId:id,correlationId:body.referenceId,
+  }));
+  expect(JSON.stringify(vi.mocked(console.info).mock.calls)).not.toContain("합성비공개이름");
+ });
+ it("인가 전 실패는 actor를 추정하지 않고 원본 오류·URL·토큰을 로거에 전달하지 않는다",async()=>{
+  const secret=`synthetic@example.invalid https://${host}/${pathname} vercel_blob_rw_qa151_fixture`;
+  mocks.target.mockRejectedValueOnce(new Error(secret));
+  const result=await createIntentRoute(new Request("https://app.invalid/api/academic/uploads/intents",{method:"POST",headers:{Origin:"https://app.invalid"},
+   body:JSON.stringify({assignmentId,requestId:id,originalName:"합성.pdf",sizeBytes:bytes.length,mimeType:"application/pdf"})}));
+  const body=await result.json();expect(result.status).toBe(503);expect(body.referenceId).toBe(result.headers.get("x-request-id"));
+  expect(console.error).toHaveBeenCalledTimes(1);
+  expect(console.error).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({actorUserId:null})}));
+  const output=JSON.stringify([body,vi.mocked(console.error).mock.calls]);
+  for(const value of[secret,pathname,host,"vercel_blob_rw_qa151_fixture"])expect(output).not.toContain(value);
+ });
  it.each([0,MAX_ASSIGNMENT_UPLOAD_BYTES+1])("잘못된 크기 %s는 의도 발급 전 거부한다",async sizeBytes=>{
   await expect(createAssignmentUploadIntent({assignmentId,requestId:id,originalName:"과제.pdf",sizeBytes,mimeType:"application/pdf"})).rejects.toMatchObject({code:"INVALID_FILE"});expect(mocks.issue).not.toHaveBeenCalled();
  });
@@ -110,8 +132,12 @@ describe("과제 업로드 계약·실제 스트림 검증",()=>{
   for(let n=0;n<2;n++){
    const result=await callback(new Request("https://app.invalid/api/academic/uploads",{method:"POST",headers:{"Content-Type":"application/json","x-vercel-signature":signature},body:raw}));
    expect(result.status).toBe(200);
+   expect(result.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
   }
   expect(mocks.record).toHaveBeenCalledTimes(2);expect(mocks.record).toHaveBeenCalledWith(id);expect(mocks.persist).not.toHaveBeenCalled();
+  expect(console.info).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({
+   action:"UPLOAD_RECEIPT",outcome:"COMPLETED",actorUserId:null,resourceId:id,
+  }));
  });
  it("실제 SDK가 잘못된 callback 서명을 거부하며 수신 원장을 변경하지 않는다",async()=>{
   const body={type:"blob.upload-completed",payload:{blob:{...metadata(),downloadUrl:`https://${host}/${pathname}?download=1`,contentDisposition:"attachment"},tokenPayload:JSON.stringify({uploadIntentId:id})}};

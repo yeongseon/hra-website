@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { preserveAssignmentForm } from "./preserve-assignment-form";
 import { closeAssignment, publishAssignment } from "@/features/academics/assignments/actions";
 import type { AssignmentPublishPreview } from "@/features/academics/assignments/admin-queries";
+import { AcademicRequestReference } from "@/components/academics/request-reference";
 
 type TransitionProps = { assignmentId: string; requestId: string; writable: boolean } & (
   { kind: "publish"; preview: AssignmentPublishPreview } | { kind: "close" }
 );
-type TransitionState = { error?: string; success?: boolean; targetCount?: number };
+type TransitionState = { error?: string; referenceId?: string; success?: boolean; targetCount?: number };
 
 export function AssignmentTransitionForm(props: TransitionProps) {
   const router = useRouter();
@@ -21,7 +22,7 @@ export function AssignmentTransitionForm(props: TransitionProps) {
         ? await publishAssignment({ ...input, expectedUpdatedAt: props.preview.expectedUpdatedAt,
           expectedTargetFingerprint: props.preview.expectedTargetFingerprint })
         : await closeAssignment(input);
-      if (!result.success) return { error: result.message };
+      if (!result.success) return { error: result.message, referenceId: result.referenceId };
       router.refresh();
       return { success: true, targetCount: result.targetCount };
     } catch {
@@ -52,7 +53,7 @@ export function AssignmentTransitionForm(props: TransitionProps) {
         </button>
       </fieldset>
       {state.error && <div className="space-y-2">
-        <p role="alert" className="text-red-700">{state.error}</p>
+        <div role="alert" className="space-y-1 text-red-700"><p>{state.error}</p><AcademicRequestReference referenceId={state.referenceId} /></div>
         {publish && <button type="button" onClick={() => router.refresh()} className="text-[#2563EB] underline">최신 대상으로 다시 확인</button>}
       </div>}
     </form>

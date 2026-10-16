@@ -3,6 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { assertAcademicWritesEnabled, getAcademicApproverId, requireAcademicApprover } from "@/lib/academic-admin";
 import { db } from "@/lib/db";
+import type { AcademicObservation } from "@/lib/academic-observability";
 import { assignmentResultSchema, assignmentTransitionSchema, createAssignmentSchema,
   AssignmentOperationError, listAssignmentsSchema, parseAssignmentInput, parseAssignmentKst,
   publishAssignmentSchema, rethrowAssignmentStorageError, updateDraftAssignmentSchema } from "./validation";
@@ -15,8 +16,10 @@ function assertAssignmentsEnabled() {
 }
 
 /** Neon HTTP에서 대화형 트랜잭션 대신 범위 SQL 함수 한 번으로 변경과 감사를 확정합니다. */
-async function mutate(action: Action, input: unknown) {
+async function mutate(action: Action, input: unknown, observation?: AcademicObservation) {
   const actorId = await requireAcademicApprover();
+  observation?.authenticated(actorId);
+  observation?.emit("AUTHORIZED");
   assertAssignmentsEnabled();
   assertAcademicWritesEnabled();
   const parsed = action === "CREATE" ? parseAssignmentInput(createAssignmentSchema, input)
@@ -24,6 +27,7 @@ async function mutate(action: Action, input: unknown) {
       : action === "PUBLISH" ? parseAssignmentInput(publishAssignmentSchema, input)
       : parseAssignmentInput(assignmentTransitionSchema, input);
   const { requestId, correlationId, ...fields } = parsed;
+  observation?.identify({ requestId, resourceId: "assignmentId" in fields ? fields.assignmentId : undefined });
   let payload: Record<string, unknown> = fields;
   if ("dueAtKst" in fields) {
     const { dueAtKst, ...remaining } = fields;
@@ -31,19 +35,21 @@ async function mutate(action: Action, input: unknown) {
   }
   const result = await db.execute(sql`SELECT public.mutate_academic_assignment(
     ${action}::text, ${actorId}::uuid, ${getAcademicApproverId()}::uuid,
-    ${requestId}::uuid, ${correlationId ?? requestId}::uuid, ${JSON.stringify(payload)}::jsonb
+    ${requestId}::uuid, ${observation?.correlationId ?? correlationId ?? requestId}::uuid, ${JSON.stringify(payload)}::jsonb
   ) AS result`).catch(rethrowAssignmentStorageError);
   return assignmentResultSchema.parse(result.rows[0]?.result);
 }
 
-export async function createAssignment(input: unknown) { return mutate("CREATE", input); }
-export async function updateDraftAssignment(input: unknown) { return mutate("UPDATE_DRAFT", input); }
-export async function publishAssignment(input: unknown) { return mutate("PUBLISH", input); }
-export async function closeAssignment(input: unknown) { return mutate("CLOSE", input); }
+export async function createAssignment(input: unknown, observation?: AcademicObservation) { return mutate("CREATE", input, observation); }
+export async function updateDraftAssignment(input: unknown, observation?: AcademicObservation) { return mutate("UPDATE_DRAFT", input, observation); }
+export async function publishAssignment(input: unknown, observation?: AcademicObservation) { return mutate("PUBLISH", input, observation); }
+export async function closeAssignment(input: unknown, observation?: AcademicObservation) { return mutate("CLOSE", input, observation); }
 
 /** 관리 목록에도 같은 지정 책임자 인가를 적용하고 최대 100건만 반환합니다. */
-export async function listAssignmentsAdmin(input: unknown = {}) {
+export async function listAssignmentsAdmin(input: unknown = {}, observation?: AcademicObservation) {
   const actorId = await requireAcademicApprover();
+  observation?.authenticated(actorId);
+  observation?.emit("AUTHORIZED");
   assertAssignmentsEnabled();
   const filter = parseAssignmentInput(listAssignmentsSchema, input);
   const result = await db.execute(sql`SELECT jsonb_build_object('assignment', to_jsonb(a),

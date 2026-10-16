@@ -2,11 +2,17 @@
 import { upload } from "@vercel/blob/client";
 import { z } from "zod/v4";
 import { assignmentUploadInput } from "./contract";
-export async function uploadAssignmentFile(input:{assignmentId:string;file:File;requestId?:string;abortSignal?:AbortSignal;onProgress?:(percentage:number)=>void;onIntent?:(id:string)=>void}):Promise<{uploadIntentId:string}> {
+import { readAcademicRequestReference } from "@/lib/academic-request-reference";
+export async function uploadAssignmentFile(input:{assignmentId:string;file:File;requestId?:string;abortSignal?:AbortSignal;onProgress?:(percentage:number)=>void;onIntent?:(id:string)=>void;onRequestReference?:(id:string)=>void}):Promise<{uploadIntentId:string}> {
   const parsed=assignmentUploadInput.safeParse({assignmentId:input.assignmentId,requestId:input.requestId??crypto.randomUUID(),originalName:input.file.name,sizeBytes:input.file.size,mimeType:input.file.type});
   if(!parsed.success)throw new Error("비어 있지 않은 PDF 파일 한 개를 50MiB 이하로 선택해 주세요.");
   const response=await fetch("/api/academic/uploads/intents",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(parsed.data),signal:input.abortSignal});
-  if(!response.ok)throw new Error("업로드를 승인받지 못했습니다. 과제 상태를 확인해 주세요.");
+  if(!response.ok){
+    const failure=z.object({referenceId:z.unknown().optional()}).safeParse(await response.json().catch(()=>null));
+    const reference=failure.success?readAcademicRequestReference(failure.data.referenceId):undefined;
+    if(reference)input.onRequestReference?.(reference);
+    throw new Error("업로드를 승인받지 못했습니다. 과제 상태를 확인해 주세요.");
+  }
   const issued=z.object({uploadIntentId:z.uuid(),pathname:z.string(),expiresAt:z.string()}).parse(await response.json());
   // PUT 응답이 유실되어도 UI가 같은 의도와 제출 키로 복구할 수 있게 먼저 알린다.
   input.onIntent?.(issued.uploadIntentId);

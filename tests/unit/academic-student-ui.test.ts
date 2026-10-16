@@ -49,6 +49,34 @@ it("최종화 응답 유실 뒤 파일과 의도·멱등키를 보존하여 재�
   await waitFor(() => expect(screen.getByRole("heading", { name: "제출 완료" })).toBeTruthy());
   expect(mocks.finalize.mock.calls[1][0]).toEqual(first); expect(mocks.upload).toHaveBeenCalledOnce();
 });
+it("최종화 서버 참조만 기존 live 영역에 표시하고 다음 참조 없는 실패에서는 지운다",async()=>{
+  const reference="80000000-0000-4000-8000-000000000001";
+  mocks.finalize.mockResolvedValueOnce({success:false,message:"제출 상태를 확인해 주세요.",referenceId:reference})
+    .mockResolvedValueOnce({success:false,message:"다시 확인해 주세요."});
+  render(createElement(FileSubmissionForm,{assignment,open:true}));select();fireEvent.click(screen.getByRole("button",{name:"최종 제출"}));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toContain(`요청 참조: ${reference}`));
+  expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
+  const input=mocks.finalize.mock.calls[0][0];
+  expect(screen.getByRole("status").textContent).not.toContain(input.submissionKey);
+  fireEvent.click(screen.getByRole("button",{name:"같은 요청으로 제출 다시 확인"}));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toBe("다시 확인해 주세요."));
+});
+it("원본 예외의 임의 referenceId와 URL·SQL은 오류 UI에 표시하지 않는다",async()=>{
+  mocks.finalize.mockRejectedValueOnce(Object.assign(new Error("SELECT synthetic@example.invalid https://private.invalid/token"),{referenceId:"80000000-0000-4000-8000-000000000001"}));
+  render(createElement(FileSubmissionForm,{assignment,open:true}));select();fireEvent.click(screen.getByRole("button",{name:"최종 제출"}));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toContain("같은 요청"));
+  for(const text of["요청 참조","SELECT","synthetic@example.invalid","private.invalid"])expect(screen.getByRole("status").textContent).not.toContain(text);
+});
+it("취소 HTTP가 반환한 참조도 실패 안내에서 확인할 수 있다",async()=>{
+  const reference="90000000-0000-4000-8000-000000000001";
+  mocks.finalize.mockResolvedValueOnce({success:false,message:"파일 확인 실패"});mocks.refresh.mockResolvedValue({success:true,assignment});
+  mocks.cancel.mockResolvedValueOnce({ok:false,json:async()=>({referenceId:reference,error:"원본 비밀 메시지"})});
+  render(createElement(FileSubmissionForm,{assignment,open:true}));select();fireEvent.click(screen.getByRole("button",{name:"최종 제출"}));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toContain("파일 확인 실패"));
+  fireEvent.click(screen.getByRole("button",{name:"업로드 취소 후 다시 시작"}));
+  await waitFor(()=>expect(screen.getByRole("status").textContent).toContain(`요청 참조: ${reference}`));
+  expect(screen.getByRole("status").textContent).not.toContain("원본 비밀 메시지");
+});
 it("PUT 응답 유실도 발급 시 hook의 의도를 보존하여 서버 검증/최종화로 복구한다", async () => {
   mocks.upload.mockImplementationOnce(async input => { input.onIntent(intentId); throw new Error("PUT 응답 유실"); });
   render(createElement(FileSubmissionForm, { assignment, open: true })); select(); fireEvent.click(screen.getByRole("button", { name: "최종 제출" }));
@@ -140,9 +168,15 @@ it("취소 응답 유실이며 미제출이면 선택 파일·기존 키를 유�
 
 it("저장소 기록 실패는 고정 안내를 표시하고 현재 탭의 같은 키 재시도는 유지한다", async () => {
   vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("비밀 저장소 예외"); });
-  mocks.finalize.mockRejectedValueOnce(new Error("응답 유실"));
+  let rejectFinalize: (error: Error) => void = () => undefined;
+  mocks.finalize.mockImplementationOnce(() => new Promise<never>((_, reject) => { rejectFinalize = reject; }));
   render(createElement(FileSubmissionForm, { assignment, open: true })); select(); fireEvent.click(screen.getByRole("button", { name: "최종 제출" }));
   await waitFor(() => expect(screen.getByRole("note").textContent).toContain("새로고침 후에는 이전 요청을 복구하지 못할 수 있습니다"));
+  // 저장 경고는 전송 중에도 보이므로, 서버 응답 유실을 확정한 뒤 활성화된 재시도를 누른다.
+  await waitFor(() => expect(mocks.finalize).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole("button", { name: "같은 요청으로 제출 다시 확인" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => rejectFinalize(new Error("응답 유실")));
+  await waitFor(() => expect(screen.getByRole("status").textContent).toContain("전송 또는 제출 결과를 확인하지 못했습니다"));
   const previous = mocks.finalize.mock.calls[0][0];
   fireEvent.click(screen.getByRole("button", { name: "같은 요청으로 제출 다시 확인" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "제출 완료" })).toBeTruthy());

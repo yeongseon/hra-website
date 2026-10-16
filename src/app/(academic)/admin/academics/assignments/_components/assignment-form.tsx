@@ -7,8 +7,9 @@ import { createAssignment, updateDraftAssignment } from "@/features/academics/as
 import { assignmentKstInput } from "@/features/academics/assignments/admin-display";
 import type { AssignmentFormOptions } from "@/features/academics/assignments/admin-queries";
 import type { AssignmentMutationResult } from "@/features/academics/assignments/validation";
+import { AcademicRequestReference } from "@/components/academics/request-reference";
 
-type FormState = { error?: string };
+type FormState = { error?: string; referenceId?: string };
 export function AssignmentForm({ options, requestId, assignment, writable }: {
   options: AssignmentFormOptions; requestId: string;
   assignment?: AssignmentMutationResult["assignment"]; writable: boolean;
@@ -31,7 +32,7 @@ export function AssignmentForm({ options, requestId, assignment, writable }: {
       const result = assignment
         ? await updateDraftAssignment({ ...fields, assignmentId: assignment.id, expectedUpdatedAt: assignment.updatedAt })
         : await createAssignment(fields);
-      if (!result.success) return { error: result.message };
+      if (!result.success) return { error: result.message, referenceId: result.referenceId };
       router.replace(`/admin/academics/assignments/${result.assignment.id}`);
       router.refresh();
       return {};
@@ -87,7 +88,7 @@ export function AssignmentForm({ options, requestId, assignment, writable }: {
         <p className="text-sm text-[#666666]">저장하면 초안 상태로 유지됩니다. 공개 전 대상 명부를 별도로 확인합니다.</p>
         <button type="submit" className="rounded bg-[#1a1a1a] px-5 py-2 text-white">{pending ? "저장 중…" : assignment ? "초안 수정 저장" : "초안 저장"}</button>
       </fieldset>
-      {state.error && <p role="alert" className="text-red-700">{state.error}</p>}
+      {state.error && <div role="alert" className="space-y-1 text-red-700"><p>{state.error}</p><AcademicRequestReference referenceId={state.referenceId} /></div>}
     </form>
   );
 }

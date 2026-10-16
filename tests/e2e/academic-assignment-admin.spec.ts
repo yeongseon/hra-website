@@ -15,6 +15,16 @@ const session = process.env.HRA_ACADEMIC_QA_SESSION_ID;
 if (state && cohort) {
   test.describe("과제 관리 승인자 흐름", () => {
     test.use({ storageState: state });
+    test("서버 검증 오류는 원본 입력 대신 서버 요청 참조를 표시한다",async({page})=>{
+      await page.goto("/admin/academics/assignments/new");
+      await page.getByLabel("대상 기수",{exact:true}).selectOption(cohort);
+      // 네이티브 required를 넘어 실제 서버 입력 검증 응답을 확인합니다. 앱·인증·SQL은 바꾸지 않습니다.
+      await page.locator("form").evaluate(form=>{(form as HTMLFormElement).noValidate=true;});
+      await page.getByRole("button",{name:"초안 저장",exact:true}).click();
+      await expect(page.locator("form").getByRole("alert")).toContainText("과제 제목을 입력해 주세요.");
+      await expect(page.locator("form").getByRole("alert")).toContainText(/요청 참조: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/);
+      await expect(page.locator("form").getByRole("alert")).not.toContainText(/SELECT|params:|postgresql:|@/);
+    });
     test("키보드·모바일에서 초안 수정과 대상 확인을 거쳐 공개·종료한다", async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       const title = `과제관리시험 ${randomUUID().slice(0, 8)}`;

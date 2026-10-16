@@ -58,6 +58,18 @@ test.describe("격리 PostgreSQL 학생 화면", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.getByLabel("제출할 PDF 파일").focus(); await expect(page.getByLabel("제출할 PDF 파일")).toBeFocused();
   });
+  test("업로드 비활성 서버 오류는 실제 응답 참조를 live 영역에 표시한다",async({page})=>{
+    test.skip(process.env.HRA_ACADEMIC_UI_PROVIDER_QA==="true","쓰기 비활성 격리 QA 전용입니다.");
+    await page.goto(`/member/assignments/${process.env.HRA_ACADEMIC_UI_OPEN_ID}`);
+    await page.getByLabel("제출할 PDF 파일").setInputFiles({name:"참조시험.pdf",mimeType:"application/pdf",buffer:resourceQaPdfBytes()});
+    const failure=page.waitForResponse(response=>response.request().method()==="POST" && response.url().endsWith("/api/academic/uploads/intents"));
+    await page.getByRole("button",{name:"최종 제출",exact:true}).click();
+    const response=await failure;expect(response.status()).toBe(404);
+    const body=await response.json();expect(body.referenceId).toBe(response.headers()["x-request-id"]);
+    await expect(page.getByRole("status")).toContainText(`요청 참조: ${body.referenceId}`);
+    await expect(page.getByRole("status")).toHaveAttribute("aria-live","polite");
+    await expect(page.getByRole("status")).not.toContainText(/SELECT|params:|postgresql:|@/);
+  });
   test("실제 비공개 업로드·최종화 응답 유실·같은 요청 복구·새로고침", async ({ page }) => {
     test.setTimeout(180000);
     test.skip(process.env.HRA_ACADEMIC_UI_PROVIDER_QA !== "true", "실제 공급자 자격 증명과 QA 객체 정리 권한이 필요하다.");

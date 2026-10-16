@@ -32,6 +32,7 @@ const record = () => ({ id: assignment, cohort_id: cohort, schedule_event_id: nu
 beforeEach(() => {
   vi.resetAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "info").mockImplementation(() => {});
   vi.stubEnv("ACADEMIC_APPROVER_USER_ID", actor);
   vi.stubEnv("ACADEMIC_ENROLLMENT_WRITES_ENABLED", "true");
   vi.stubEnv("ACADEMIC_ENABLED", "true");
@@ -41,6 +42,36 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe("과제 액션·서비스 경계", () => {
+  it("클라이언트 추적값 대신 서버 참조를 DB 감사와 응답에 연결하고 같은 요청 재실행을 구별한다", async () => {
+    const clientCorrelation = "70000000-0000-4000-8000-000000000001";
+    const first = await actions.createAssignment({ ...draft(), correlationId: clientCorrelation });
+    expect(first.referenceId).not.toBe(clientCorrelation);
+    const query = new PgDialect().sqlToQuery(mocks.execute.mock.calls[0][0]);
+    expect(query.params).toContain(first.referenceId);
+    expect(query.params).not.toContain(clientCorrelation);
+    expect(console.info).toHaveBeenLastCalledWith("[academic/events]", expect.objectContaining({
+      actorUserId: actor, outcome: "COMPLETED", correlationId: first.referenceId, requestId: request,
+    }));
+    mocks.execute.mockResolvedValue({ rows: [{ result: { assignment: record(), targetCount: 0, replayed: true } }] });
+    const replay = await actions.createAssignment(draft());
+    expect(replay.referenceId).not.toBe(first.referenceId);
+    expect(console.info).toHaveBeenLastCalledWith("[academic/events]", expect.objectContaining({
+      outcome: "REPLAYED", correlationId: replay.referenceId, requestId: request,
+    }));
+  });
+
+  it("인증 전 실패는 지정 승인자를 actor로 기록하지 않고 감사 실패는 완료로 기록하지 않는다", async () => {
+    mocks.auth.mockResolvedValueOnce(null);
+    const denied = await actions.createAssignment(draft());
+    expect(console.error).toHaveBeenLastCalledWith("[academic/events]", expect.objectContaining({
+      context: expect.objectContaining({ outcome: "DENIED", actorUserId: null, correlationId: denied.referenceId }),
+    }));
+    expect(mocks.execute).not.toHaveBeenCalled();
+    mocks.execute.mockRejectedValue(new Error("감사 INSERT 실패 합성비공개본문"));
+    await actions.createAssignment(draft());
+    expect(vi.mocked(console.info).mock.calls.map(call => call[1])).not.toContainEqual(expect.objectContaining({ outcome: "COMPLETED" }));
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("합성비공개본문");
+  });
   it.each([
     ["create", () => actions.createAssignment(draft())],
     ["update", () => actions.updateDraftAssignment({ ...draft(), assignmentId: assignment, expectedUpdatedAt: updatedAt })],
@@ -144,7 +175,7 @@ describe("과제 액션·서비스 경계", () => {
     }
     expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
       context: expect.objectContaining({ sqlState: "XX000" }),
-      error: sanitizeError(new Error("과제 서버 처리 실패")),
+      error: sanitizeError(new Error("학사 요청 처리 실패")),
     }));
     expect(mocks.revalidate).not.toHaveBeenCalled();
   });

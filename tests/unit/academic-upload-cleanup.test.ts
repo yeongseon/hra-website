@@ -11,10 +11,11 @@ import { cleanupAcademicUploads } from "@/features/academics/assignment-uploads/
 const id="10000000-0000-4000-8000-000000000001",key=`academic-uploads/v1/${id}/document.pdf`,host="qa151.private.blob.vercel-storage.com";
 beforeEach(()=>{
  vi.resetAllMocks();vi.stubEnv("ACADEMIC_UPLOAD_CLEANUP_ENABLED","true");vi.stubEnv("ACADEMIC_UPLOAD_CLEANUP_DELETE_ENABLED","false");vi.stubEnv("ACADEMIC_SUBMISSION_BLOB_HOST",host);vi.stubEnv("ACADEMIC_SUBMISSION_READ_WRITE_TOKEN","test-only");
+ vi.spyOn(console,"info").mockImplementation(()=>{});vi.spyOn(console,"error").mockImplementation(()=>{});
  mocks.execute.mockResolvedValueOnce({rows:[{id,storage_key:key}]}).mockResolvedValueOnce({rows:[{claimed:true}]}).mockResolvedValue({rows:[]});
  mocks.head.mockResolvedValue({url:`https://${host}/${key}`,pathname:key,etag:"verified-etag"});
 });
-afterEach(()=>vi.unstubAllEnvs());
+afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
 describe("미참조 업로드 정리",()=>{
  it("비활성 기본값은 DB와 저장소를 조회하지 않는다",async()=>{
   vi.stubEnv("ACADEMIC_UPLOAD_CLEANUP_ENABLED",undefined);expect(await cleanupAcademicUploads()).toMatchObject({enabled:false,dryRun:true});expect(mocks.execute).not.toHaveBeenCalled();expect(mocks.head).not.toHaveBeenCalled();
@@ -38,5 +39,26 @@ describe("미참조 업로드 정리",()=>{
  });
  it("삭제 실패를 성공으로 기록하지 않고 재시도 가능한 원장을 보존한다",async()=>{
   vi.stubEnv("ACADEMIC_UPLOAD_CLEANUP_DELETE_ENABLED","true");mocks.del.mockRejectedValue(new Error("일시 실패"));expect(await cleanupAcademicUploads({dryRun:false})).toMatchObject({deleted:0,failed:1});expect(mocks.execute).toHaveBeenCalledTimes(2);
+ });
+ it("이전 선점의 재시도와 실패를 개인정보 없는 고정 이벤트로 남긴다",async()=>{
+  vi.stubEnv("ACADEMIC_UPLOAD_CLEANUP_DELETE_ENABLED","true");
+  mocks.execute.mockReset().mockResolvedValueOnce({rows:[{id,storage_key:key,previously_claimed:true,previously_deleted:false}]})
+   .mockResolvedValueOnce({rows:[{claimed:true}]});
+  mocks.del.mockRejectedValue(new Error(`test-only ${key} synthetic@example.invalid`));
+  expect(await cleanupAcademicUploads({dryRun:false})).toMatchObject({failed:1,deleted:0});
+  expect(console.info).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({
+   action:"UPLOAD_CLEANUP",outcome:"RETRY",actorUserId:null,resourceId:id,retryCount:null,
+  }));
+  expect(console.error).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({
+   action:"UPLOAD_CLEANUP",outcome:"FAILED",actorUserId:null,resourceId:id,
+  })}));
+  const output=JSON.stringify([vi.mocked(console.info).mock.calls,vi.mocked(console.error).mock.calls]);
+  for(const value of[key,"test-only","synthetic@example.invalid"])expect(output).not.toContain(value);
+ });
+ it("dry-run을 삭제 완료 이벤트로 기록하지 않는다",async()=>{
+  await cleanupAcademicUploads();
+  const events=vi.mocked(console.info).mock.calls.map(call=>call[1]);
+  expect(events).toContainEqual(expect.objectContaining({outcome:"SKIPPED",resourceId:id}));
+  expect(events).not.toContainEqual(expect.objectContaining({outcome:"COMPLETED"}));
  });
 });

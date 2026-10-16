@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { assertAcademicWritesEnabled, getAcademicApproverId, requireAcademicApprover } from "@/lib/academic-admin";
 import { db } from "@/lib/db";
+import type { AcademicObservation } from "@/lib/academic-observability";
 import { enrollmentPlanSchema } from "./plan.mjs";
 
 export type EnrollmentLinkPlan = z.infer<typeof enrollmentPlanSchema>;
@@ -26,12 +27,15 @@ export async function inspectEnrollmentCandidates() {
 }
 
 /** 승인 계획에 명시된 학생·계정·등록 기수만 처리합니다. */
-export async function applyEnrollmentLinkPlan(input: unknown) {
+export async function applyEnrollmentLinkPlan(input: unknown, observation?: AcademicObservation) {
   const actorId = await requireAcademicApprover();
+  observation?.authenticated(actorId);
+  observation?.emit("AUTHORIZED");
   assertAcademicWritesEnabled();
   const parsed = enrollmentPlanSchema.safeParse(input);
   if (!parsed.success) throw new Error("승인 계획의 형식이 올바르지 않습니다.");
   const plan = parsed.data;
+  observation?.identify({ requestId: plan.requestId, resourceId: plan.requestId });
   if (plan.approverUserId !== actorId) throw new Error("승인 계획의 책임자가 일치하지 않습니다.");
   const result = await db.execute(sql`
     SELECT public.apply_academic_enrollment_links(

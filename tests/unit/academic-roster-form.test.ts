@@ -1,13 +1,25 @@
 /** 명부 폼의 정확한 한국어 접근성 이름이 선택지 텍스트와 섞이지 않도록 검증한다. */
 import { createElement } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/features/academics/roster/actions", () => ({ registerStudent: vi.fn(async () => ({})) }));
 import { RosterForm } from "@/app/(academic)/admin/academics/students/_components/roster-form";
+import { registerStudent } from "@/features/academics/roster/actions";
 const id = "10000000-0000-4000-8000-000000000001";
 afterEach(cleanup);
 
 describe("명부 등록 폼의 명시적 레이블 연결", () => {
+  it("등록 오류는 서버 참조만 알림 안에 표시하고 폼 요청 ID를 대신 쓰지 않는다",async()=>{
+    const reference="20000000-0000-4000-8000-000000000001";
+    vi.mocked(registerStudent).mockResolvedValueOnce({error:"등록 상태를 확인해 주세요.",referenceId:reference})
+      .mockResolvedValueOnce({error:"다시 확인해 주세요."});
+    const view=render(createElement(RosterForm,{cohorts:[{id,name:"시험 기수"}],requestId:id}));
+    fireEvent.submit(view.container.querySelector("form")!);
+    await waitFor(()=>expect(screen.getByRole("alert").textContent).toContain(`요청 참조: ${reference}`));
+    expect(screen.getByRole("alert").textContent).not.toContain(id);
+    fireEvent.submit(view.container.querySelector("form")!);
+    await waitFor(()=>expect(screen.getByRole("alert").textContent).toBe("다시 확인해 주세요."));
+  });
   it("모든 선택 필드가 정확한 레이블과 접근성 이름을 갖는다", () => {
     render(createElement(RosterForm, { cohorts: [{ id, name: "시험 기수" }], requestId: id }));
     for (const label of ["등록 유형", "등록할 기수", "본인 확인 방식"]) {

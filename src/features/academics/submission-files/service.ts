@@ -6,7 +6,7 @@ import "server-only";
 import { get } from "@vercel/blob";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { logServerError } from "@/lib/errors";
+import { academicSqlState, createAcademicObservation, type AcademicObservation, type AcademicOutcome } from "@/lib/academic-observability";
 import { attachmentDisposition } from "@/lib/resource-download";
 import { buildAuthorizedSubmissionFileRead } from "./data";
 import { requireSubmissionFileReader, SubmissionFileAccessError } from "./access";
@@ -37,46 +37,71 @@ function matchesSubmissionBlob(blob: { url: string; pathname: string }, host: st
 }
 
 /** 응답 시작 후의 공급자 스트림 오류도 URL·키·토큰이 없는 고정 오류로 바꿉니다. */
-function protectedStream(source: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+function protectedStream(source: ReadableStream<Uint8Array>, observation: AcademicObservation, expectedBytes: number): ReadableStream<Uint8Array> {
   const reader = source.getReader();
   let released = false;
+  let terminal = false;
+  let cancelled = false;
+  let transferredBytes = 0;
   const release = () => { if (!released) { released = true; reader.releaseLock(); } };
+  const finish = (outcome: AcademicOutcome) => {
+    if (!terminal) { terminal = true; observation.emit(outcome, outcome === "STREAM_INTERRUPTED" ? { failureCode: "STREAM" } : {}); }
+  };
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const next = await reader.read();
-        if (next.done) { controller.close(); release(); }
-        else controller.enqueue(next.value);
+        if (cancelled) return;
+        if (next.done) {
+          if (transferredBytes !== expectedBytes) throw new Error("파일 전송 크기가 일치하지 않습니다.");
+          finish("COMPLETED");controller.close(); release();
+        } else {
+          transferredBytes += next.value.byteLength;
+          if (transferredBytes > expectedBytes) throw new Error("파일 전송 크기가 일치하지 않습니다.");
+          controller.enqueue(next.value);
+        }
       } catch {
-        logServerError("academic-submission-files/stream", new Error("과제 파일 전송이 중단되었습니다."));
+        if (cancelled) return;
+        finish("STREAM_INTERRUPTED");
         controller.error(new Error("파일 전송이 중단되었습니다."));
-        release();
+        try { await reader.cancel(); }
+        catch {
+          // 실패는 이미 고정 이벤트로 남겼으므로 취소 오류 원문을 다시 전파하지 않습니다.
+          return;
+        } finally { release(); }
       }
     },
     async cancel() {
-      try { await reader.cancel(); }
-      catch { logServerError("academic-submission-files/cancel", new Error("과제 파일 전송을 종료하지 못했습니다.")); }
+      if (terminal) return;
+      cancelled = true;
+      try { await reader.cancel();finish("CANCELLED"); }
+      catch { finish("STREAM_INTERRUPTED"); }
       finally { release(); }
     },
   });
 }
 
 /** 잘못된 UUID·없는 행·다른 제출의 파일·소유권 거부는 같은 404 본문을 사용합니다. */
-function failure(error: SubmissionFileAccessError) {
+function failure(error: SubmissionFileAccessError, observation: AcademicObservation) {
   return new Response(error.message, { status: error.status,
-    headers: { ...privateHeaders, "Content-Type": "text/plain; charset=utf-8" } });
+    headers: { ...privateHeaders, "Content-Type": "text/plain; charset=utf-8", "X-Request-Id":observation.correlationId } });
 }
 
 /** params도 인증 이후 평가하며 소유권·감사 확정 전에는 Blob을 요청하지 않습니다. */
 export async function downloadSubmissionFile(params: Promise<SubmissionFileParams>): Promise<Response> {
+  const observation=createAcademicObservation("FILE_READ","SUBMISSION_FILE");
   try {
     const reader = await requireSubmissionFileReader();
+    observation.authenticated(reader.userId);
     const parsed = identifiers.safeParse(await params);
     if (!parsed.success) throw new SubmissionFileAccessError("NOT_FOUND");
+    observation.identify({resourceId:parsed.data.fileId});
     const result = await db.execute(buildAuthorizedSubmissionFileRead(reader, parsed.data.id, parsed.data.fileId));
     const row = result.rows[0];
     if (!row) throw new SubmissionFileAccessError("NOT_FOUND");
     const file = authorizedFile.parse(row);
+    observation.identify({resourceId:parsed.data.fileId,requestId:file.access_id});
+    observation.emit("AUTHORIZED");
     const host = process.env.ACADEMIC_SUBMISSION_BLOB_HOST;
     const token = process.env.ACADEMIC_SUBMISSION_READ_WRITE_TOKEN;
     if (!host || !/^[a-z0-9-]+\.private\.blob\.vercel-storage\.com$/.test(host) || !token) {
@@ -91,17 +116,17 @@ export async function downloadSubmissionFile(params: Promise<SubmissionFileParam
       await blob.stream.cancel();
       throw new SubmissionFileAccessError("UNAVAILABLE");
     }
-    return new Response(protectedStream(blob.stream), { headers: {
+    return new Response(protectedStream(blob.stream,observation,file.size_bytes), { headers: {
       ...privateHeaders, "Content-Type": "application/octet-stream",
       "Content-Disposition": attachmentDisposition(file.original_name), "Content-Length": String(file.size_bytes),
       "Content-Security-Policy": "sandbox; default-src 'none'",
+      "X-Request-Id":observation.correlationId,
     } });
   } catch (error) {
     const safe = error instanceof SubmissionFileAccessError ? error : new SubmissionFileAccessError("UNAVAILABLE");
-    if (safe.status === 503) {
-      // 원래 예외에는 SQL·저장 키·토큰이 있을 수 있어 원인을 붙이지 않은 고정 Error만 기록합니다.
-      logServerError("academic-submission-files/download", new Error("과제 파일 전달을 완료하지 못했습니다."));
-    }
-    return failure(safe);
+    observation.emit(safe.status===503?"FAILED":"DENIED",{
+      failureCode:safe.status===503?"STORAGE":"AUTHORIZATION",sqlState:academicSqlState(error),
+    });
+    return failure(safe,observation);
   }
 }

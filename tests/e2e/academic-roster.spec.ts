@@ -39,6 +39,10 @@ if (state && cohort) {
       await page.getByLabel("승인 근거 참조 식별자", { exact: true }).fill(randomUUID());
       await page.getByRole("button", { name: "등록 승인" }).click();
       await expect(page.locator("form").getByRole("alert")).toContainText("이미 해당 기수에 등록");
+      await expect(page.locator("form").getByRole("alert")).toContainText(/요청 참조: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/);
+      const submittedRequest = await page.locator('input[name="requestId"]').inputValue();
+      await expect(page.locator("form").getByRole("alert")).not.toContainText(submittedRequest);
+      await expect(page.locator("form").getByRole("alert")).not.toContainText(/SELECT|params:|postgresql:|@/);
       await page.goto(studentUrl);
       await expect(page.getByRole("listitem")).toHaveCount(1);
     });

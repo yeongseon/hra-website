@@ -32,6 +32,7 @@ const targetRow=()=>({assignmentId:assignment,targetId:target,status:"PUBLISHED"
 beforeEach(()=>{
   vi.resetAllMocks();
   vi.spyOn(console,"error").mockImplementation(()=>{});
+  vi.spyOn(console,"info").mockImplementation(()=>{});
   vi.stubEnv("ACADEMIC_ENABLED","true");
   vi.stubEnv("ACADEMIC_ENROLLMENT_WRITES_ENABLED","true");
   vi.stubEnv("ACADEMIC_UPLOADS_ENABLED","true");
@@ -46,8 +47,13 @@ describe("제출 최종화 액션",()=>{
   it("본인 확인→기존 결과 조회→실제 검증기→재인가→원자 확정 순서를 지킨다",async()=>{
     const result=await finalizeAssignmentSubmission(request());
     expect(result).toMatchObject({success:true,...dto()});
+    expect(console.info).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({
+      action:"SUBMISSION_FINALIZE",outcome:"COMPLETED",actorUserId:user,resourceId:dto().submissionId,
+      requestId:key,correlationId:result.referenceId,
+    }));
     expect(mocks.lookup).toHaveBeenCalledTimes(2);
-    expect(mocks.verify).toHaveBeenCalledWith({assignmentId:assignment,uploadIntentId:intent});
+    expect(mocks.verify).toHaveBeenCalledWith({assignmentId:assignment,uploadIntentId:intent},
+      expect.objectContaining({correlationId:result.referenceId}));
     expect(mocks.execute.mock.invocationCallOrder[0]).toBeLessThan(mocks.verify.mock.invocationCallOrder[0]);
     expect(mocks.verify.mock.invocationCallOrder[0]).toBeLessThan(mocks.execute.mock.invocationCallOrder[1]);
     const dialect=new PgDialect();
@@ -64,6 +70,7 @@ describe("제출 최종화 액션",()=>{
     vi.stubEnv("ACADEMIC_UPLOADS_ENABLED","false");vi.stubEnv("ACADEMIC_ENROLLMENT_WRITES_ENABLED","false");
     mocks.verify.mockRejectedValue(new AcademicUploadError("UNAVAILABLE"));
     expect(await finalizeAssignmentSubmission(request())).toMatchObject({success:true,...dto(),replayed:true});
+    expect(console.info).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({outcome:"REPLAYED",actorUserId:user}));
     expect(mocks.execute).toHaveBeenCalledTimes(1);
     expect(mocks.verify).not.toHaveBeenCalled();expect(mocks.remove).not.toHaveBeenCalled();
   });
@@ -72,6 +79,7 @@ describe("제출 최종화 액션",()=>{
     "미로그인·학생 역할이 아닌 세션은 DB/Blob 전 거부한다 (%j)",async session=>{
       mocks.auth.mockResolvedValue(session);
       expect(await finalizeAssignmentSubmission(request())).toMatchObject({success:false});
+      expect(console.error).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({outcome:"DENIED",actorUserId:null})}));
       expect(mocks.execute).not.toHaveBeenCalled();expect(mocks.verify).not.toHaveBeenCalled();expect(mocks.remove).not.toHaveBeenCalled();
     });
 
@@ -142,8 +150,9 @@ describe("제출 최종화 액션",()=>{
     mocks.revalidate.mockImplementation(()=>{throw raw;});
     const cacheFailure=await finalizeAssignmentSubmission(request());
     expect(cacheFailure).toMatchObject({success:false,status:503});
-    expect(console.error).toHaveBeenCalledWith("[academic-submissions/finalize]",expect.objectContaining({
-      error:{name:"Error",message:"과제 제출 처리 실패"},context:{submissionKey:key},
+    expect(console.error).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({
+      error:expect.objectContaining({name:"Error",message:"학사 요청 처리 실패"}),
+      context:expect.objectContaining({action:"SUBMISSION_FINALIZE",requestId:key,actorUserId:user,correlationId:cacheFailure.referenceId}),
     }));
     const output=JSON.stringify([failed,cacheFailure,vi.mocked(console.error).mock.calls]);
     for(const secret of[email,privateBody,"SELECT","params","complete_academic_assignment_submission"])expect(output).not.toContain(secret);

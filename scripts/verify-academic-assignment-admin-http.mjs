@@ -215,8 +215,9 @@ async function runBrowserSpec(baseUrl, approverCookies) {
     const counts = cluster.sql("SELECT (SELECT count(*) FROM assignments) || ':' || (SELECT count(*) FROM assignment_targets) || ':' || (SELECT count(*) FROM academic_assignment_events)");
     if (/^[0-9]+:[0-9]+:[0-9]+$/.test(counts)) diagnostics.add(`ROWS_${counts.replaceAll(":", "_")}`);
   }
-  check(status === 0 && /\b2 passed\b/.test(transcript), "학사 QA Playwright 과제 등록·공개·종료 검증 실패");
+  check(status === 0 && /\b3 passed\b/.test(transcript), "학사 QA Playwright 과제 등록·공개·종료 검증 실패");
   passed("실제 Chromium 비로그인 접근 차단");
+  passed("실제 Chromium 서버 오류 메시지·요청 참조 표시");
   passed("실제 Chromium 모바일·키보드 초안→수정→대상 확인→공개→종료 재시도→불변 상세");
 }
 
