@@ -1183,3 +1183,6 @@ export * from "./academic-assignments";
 
 // 과제 업로드 의도·단일 최종 제출·파일 메타를 같은 스키마로 관리한다.
 export * from "./academic-submissions";
+
+// 과제 변경과 공개 확인의 최소 감사 기록을 Drizzle 적용 대상에 포함한다.
+export { academicAssignmentEvents } from "./academic-assignment-events";
