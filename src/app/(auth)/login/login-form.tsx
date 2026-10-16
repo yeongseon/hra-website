@@ -60,11 +60,13 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
   return (
     <Card className="border-slate-700 bg-slate-900">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl text-white">로그인</CardTitle>
+        <CardTitle className="text-2xl text-white">로그인·회원가입</CardTitle>
         <p className="text-sm text-slate-400 mt-2">
-          {enabledProviders.kakao
-            ? "카카오톡으로 간편하게 로그인하세요"
-            : "소셜 계정으로 로그인하세요"}
+          처음 소셜 로그인하면 자동으로 회원가입됩니다.
+        </p>
+        {/* 공개 페이지 이용과 구분해 승인 대기 중 제한되는 회원 기능만 안내한다. */}
+        <p className="text-sm text-slate-400">
+          자료실과 마이페이지는 관리자 승인 후 이용할 수 있습니다.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -87,7 +89,7 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
               <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.72 1.8 5.108 4.512 6.467-.198.74-.716 2.68-.82 3.095-.127.506.186.499.39.363.16-.107 2.554-1.737 3.588-2.446.748.11 1.52.168 2.33.168 5.523 0 10-3.463 10-7.647C22 6.463 17.523 3 12 3z" />
             </svg>
-            {isLoading === "kakao" ? "로그인 중..." : "카카오로 로그인"}
+            {isLoading === "kakao" ? "로그인 중..." : "카카오로 로그인·회원가입"}
           </button>
         )}
 
@@ -116,7 +118,7 @@ export function LoginForm({ enabledProviders }: LoginFormProps) {
                 fill="#EA4335"
               />
             </svg>
-            {isLoading === "google" ? "로그인 중..." : "구글로 로그인"}
+            {isLoading === "google" ? "로그인 중..." : "구글로 로그인·회원가입"}
           </button>
         )}
       </CardContent>

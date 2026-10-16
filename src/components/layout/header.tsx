@@ -271,7 +271,7 @@ export function Header({ session }: HeaderProps) {
                   href="/login"
                   className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
                 >
-                  로그인
+                  로그인·회원가입
                 </Link>
               )}
              
@@ -398,7 +398,7 @@ export function Header({ session }: HeaderProps) {
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-white border border-[#D9D9D9] py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   <LogIn className="size-4" />
-                  로그인
+                  로그인·회원가입
                 </Link>
               )}
             </div>
