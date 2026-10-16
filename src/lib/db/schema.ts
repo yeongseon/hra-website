@@ -204,6 +204,47 @@ export const cohortsRelations = relations(cohorts, ({ many }) => ({
 }));
 
 // ============================================================
+// Academic Students / Cohort Enrollments (G1 학생 명부·기수 등록)
+// ============================================================
+
+// G1은 등록만 지원한다. 휴학·탈퇴·수료 상태는 정책 확정 후 별도 migration으로 추가한다.
+export const enrollmentStatusEnum = pgEnum("enrollment_status", ["ENROLLED"]);
+
+// 로그인 계정과 독립적인 학생 식별자다. 이메일/회원 기수로 자동 생성하거나 연결하지 않는다.
+// #142의 탈퇴·파기 정책 확정 전에는 연결 계정 삭제를 거부하고, 승인된 연결 해제를 요구한다.
+export const academicStudents = pgTable("academic_students", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").unique().references(() => users.id, { onDelete: "restrict" }),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
+}, table => ({
+  // 일반 공백(스페이스)뿐인 이름은 DB에서도 거부한다. 입력 경로는 별도로 trim 검증한다.
+  displayNameNotBlank: check("academic_students_display_name_not_blank", sql`length(btrim(${table.displayName})) > 0`),
+}));
+
+// 한 학생의 여러 기수 이력을 저장한다. 기존 users.cohortId/role은 변경하지 않는다.
+// 학생·기수·등록 승인 계정은 연쇄 삭제하지 않아 명부와 승인 주체를 보존한다.
+export const cohortEnrollments = pgTable("cohort_enrollments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id").notNull().references(() => academicStudents.id, { onDelete: "restrict" }),
+  cohortId: uuid("cohort_id").notNull().references(() => cohorts.id, { onDelete: "restrict" }),
+  status: enrollmentStatusEnum("status").notNull().default("ENROLLED"),
+  enrolledAt: timestamp("enrolled_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    .$onUpdate(() => new Date()),
+}, table => ({
+  // 동일 학생의 같은 기수 동시 등록도 UNIQUE가 최종 차단한다.
+  studentCohortUnique: unique("cohort_enrollments_student_cohort_unique").on(table.studentId, table.cohortId),
+  cohortStatusIndex: index("cohort_enrollments_cohort_status_idx").on(table.cohortId, table.status),
+  endedAtOrder: check("cohort_enrollments_ended_at_order", sql`${table.endedAt} IS NULL OR ${table.endedAt} >= ${table.enrolledAt}`),
+}));
+
+// ============================================================
 // Notices (공지사항 테이블)
 // ============================================================
 

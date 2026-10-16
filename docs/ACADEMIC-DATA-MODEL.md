@@ -1,7 +1,7 @@
 # HRA 학사 데이터 모델 및 접근 제약 (설계안)
 
-> 상태: **구현 전 설계** · 범위: G1 학적·과제 MVP와 향후 G2/G3 확장.
-> #140·#141의 운영 규칙은 확정됐지만, #142의 보존 기간·파기 기준은 미정이다. 현재 `src/lib/db/schema.ts`에는 학사 테이블이 없으며, 이 문서의 필드·삭제 정책은 마이그레이션 승인 전 설계안이다.
+> 상태: 학생·기수 등록 스키마(#144)는 코드·격리 DB 검증 대상이며 나머지는 **구현 전 설계**다. 운영 적용·기능 공개와 구별한다. 범위: G1 학적·과제 MVP와 향후 G2/G3 확장.
+> #140·#141의 운영 규칙은 확정됐지만, #142의 보존 기간·파기 기준은 미정이다. `src/lib/db/schema.ts`에는 학생·기수 등록 테이블만 추가됐으며, 나머지 엔터티는 후속 구현·마이그레이션 대상이다.
 
 ## 1. 기존 엔터티 재사용과 금지사항
 
@@ -21,7 +21,7 @@
 | 필드 | 타입(제안) | 제약·의미 |
 | --- | --- | --- |
 | `id` | UUID | PK; 학생 식별자는 이메일이 아님 |
-| `user_id` | UUID nullable | 기존 `users.id`에 FK; NULL 허용, non-null UNIQUE, 탈퇴 시 연결 해제 정책 별도 결정 |
+| `user_id` | UUID nullable | 기존 `users.id`에 RESTRICT FK; NULL 허용, non-null UNIQUE. 탈퇴 시 연결 해제·파기는 #142 확정 후 승인 절차로 처리 |
 | `display_name` | varchar(100) | 최소 표시 이름, 확인된 명부 입력값; 추가 PII 저장 최소화 |
 | `created_at`, `updated_at` | timestamptz | 시각 이력 |
 
@@ -34,13 +34,13 @@
 | `id` | UUID | PK, 제출/출결이 참조하는 영속 식별자 |
 | `student_id` | UUID | `academic_students.id` FK, NOT NULL |
 | `cohort_id` | UUID | `cohorts.id` FK, NOT NULL |
-| `status` | enum | 초기 `ENROLLED`, 이후 `COMPLETED`, `WITHDRAWN` 등 정책 확정 |
+| `status` | enum | G1은 `ENROLLED`만 구현. `COMPLETED`, `WITHDRAWN` 등은 정책 확정 후 별도 migration |
 | `enrolled_at`, `ended_at` | timestamptz | 등록·종료 이력 |
 | `created_by_user_id` | UUID nullable | 행 생성 관리자 식별자 |
 | `created_at`, `updated_at` | timestamptz | 감사용 시각 |
 
 - `UNIQUE(student_id, cohort_id)`: 동일 학생·동일 기수 중복 등록 금지. 복학/재참여가 실제 필요할 때만 별도 회차 개념을 검토한다.
-- 학적이 존재하는 기수/학생을 물리 삭제하지 않도록 `RESTRICT` 또는 업무상 삭제 거부 정책을 우선 검토한다. 초기 G1에서는 재학 외 복잡한 상태 전환 UI를 구현하지 않는다.
+- 학적이 존재하는 기수/학생은 `RESTRICT`로 물리 삭제를 거부한다. 연결 계정과 등록 승인 계정도 보존한다. 초기 G1에서는 재학 외 복잡한 상태 전환 UI를 구현하지 않는다. 적용·복구 절차는 [학생 명부 스키마 적용](developer/academic-students-migration.md)을 따른다.
 - 다른 기수에 등록한 적 있는 학생의 기존 학적은 남아야 한다. 계정 역할 변경이 학적 기록을 소급 변경하지 않는다.
 - **동시 이중 등록**은 서버 사전 SELECT만으로 막지 않고 DB UNIQUE로 보장한다.
 
