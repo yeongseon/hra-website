@@ -1189,3 +1189,6 @@ export { academicAssignmentEvents } from "./academic-assignment-events";
 
 // 과제 업로드 승인·취소·정리 원장을 Drizzle 관리 범위에 포함한다.
 export { academicUploadAuthorizations } from "./academic-upload-authorizations";
+
+// 개별 제출 파일의 전달 허가 기록을 Drizzle 관리 범위에 포함한다.
+export { academicSubmissionFileReads } from "./academic-file-accesses";
