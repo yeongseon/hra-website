@@ -84,7 +84,17 @@ export async function POST(request: NextRequest) {
         },
       );
     }
-    const formData = await request.formData();
+    // JSON이나 손상된 multipart는 입력 오류다. 파싱 실패만 400으로 분리하고
+    // DB 예약·Blob 저장 등 서버 처리 실패는 바깥의 오류 처리에 맡긴다.
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "올바른 파일 업로드 요청이 아닙니다." },
+        { status: 400 },
+      );
+    }
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
