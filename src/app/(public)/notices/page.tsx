@@ -1,3 +1,7 @@
+/**
+ * 공개 공지 목록에서 검색·페이지 입력을 검증하고 발행된 공지만 조회합니다.
+ * 방문 기록으로 검색어가 바뀌면 검색 입력도 해당 목록의 검색어로 초기화합니다.
+ */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, count, desc, eq, sql } from "drizzle-orm";
@@ -61,7 +65,8 @@ export default async function NoticesPage({
           </p>
         </div>
 
-        <NoticeSearch defaultValue={query} />
+        {/* 검색어가 바뀐 방문 기록에서는 입력 상태를 새 검색어로 초기화합니다. */}
+        <NoticeSearch key={query} defaultValue={query} />
       </section>
 
       {totalCount === 0 ? (
