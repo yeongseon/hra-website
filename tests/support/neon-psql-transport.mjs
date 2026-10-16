@@ -120,13 +120,18 @@ export function createPsqlTransport(environment) {
   ].filter((key) => environment[key] !== undefined).map((key) => [key, environment[key]]));
   const run = (script) => {
     const result = spawnSync(join(environment.HRA_TEST_PG_BIN, "psql"),
-      ["-X", "-q", "--csv", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=sqlstate", "-P", "footer=off"], {
+      ["-X", "-q", "--csv", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose", "-P", "footer=off"], {
         input: script, encoding: "utf8", env: pgEnvironment,
         maxBuffer: 8 * 1024 * 1024, timeout: 15_000,
       });
     if (result.status !== 0 || result.error) {
-      const code = result.stderr?.match(/ERROR:\s+([0-9A-Z]{5})/)?.[1] || "unknown";
-      throw new Error(`격리 PostgreSQL 쿼리 실행 실패 (${code})`);
+      // 원문 오류는 보관하지 않는다. 실제 Neon 클라이언트의 분기에 필요한 비민감 필드만 남긴다.
+      const code = result.stderr?.match(/ERROR:\s+([0-9A-Z]{5}):/)?.[1] || "QA_TRANSPORT_ERROR";
+      const constraint = result.stderr?.match(/(?:CONSTRAINT NAME:\s+|constraint ")([a-z_][a-z0-9_]{0,62})/)?.[1];
+      const candidate = result.stderr?.match(/ERROR:\s+P0001:\s+([^\r\n]+)/)?.[1];
+      const message = candidate && /^[a-z][a-z0-9_]{2,100}$/.test(candidate)
+        ? candidate : "격리 PostgreSQL 쿼리 실행 실패";
+      throw Object.assign(new Error(message), { code, ...(constraint ? { constraint } : {}) });
     }
     return result.stdout;
   };

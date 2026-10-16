@@ -108,4 +108,22 @@ describe.skipIf(!process.env.HRA_TEST_PG_BIN)("QA 전송의 실제 PostgreSQL �
     expect(result.rows).toEqual([["격리 확인"]]);
     await execute({ query: "DELETE FROM qa_effects WHERE value = $1", params: ["격리 확인"] });
   });
+
+  it("오류의 SQLSTATE·제약명·고정 코드만 보존하며 SQL·값·detail을 버린다", async () => {
+    cluster.sql("CREATE TABLE qa_unique_values (value text CONSTRAINT qa_unique_values_unique UNIQUE);");
+    const privateValue = "비공개 시험 원문";
+    await execute({ query: "INSERT INTO qa_unique_values VALUES ($1)", params: [privateValue] });
+    try {
+      await execute({ query: "INSERT INTO qa_unique_values VALUES ($1)", params: [privateValue] });
+      throw new Error("중복값이 허용됐습니다.");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "23505", constraint: "qa_unique_values_unique" });
+      expect(String(error)).not.toContain(privateValue);
+      expect(JSON.stringify(error)).not.toContain(privateValue);
+      expect(String(error)).not.toContain("INSERT");
+    }
+    cluster.sql("CREATE FUNCTION qa_machine_error() RETURNS integer LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'roster_request_conflict'; END $$;");
+    await expect(execute({ query: "SELECT qa_machine_error()", params: [] }))
+      .rejects.toMatchObject({ code: "P0001", message: "roster_request_conflict" });
+  });
 });

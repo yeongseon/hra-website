@@ -22,8 +22,13 @@ globalThis.fetch = async (input, options = {}) => {
     return Response.json(await execute(payload));
   } catch (error) {
     // 원래 SQL/오류는 출력하지 않고 고정된 실행 단계와 SQLSTATE만 진단합니다.
-    const code = error instanceof Error ? error.message.match(/\(([0-9A-Z]{5}|unknown)\)$/)?.[1] : undefined;
-    console.error(`QA_TRANSPORT_FAILURE:${code || "CONTRACT"}`);
-    return Response.json({ message: "격리 QA 데이터베이스 요청 실패", code: "QA_TRANSPORT_ERROR" }, { status: 400 });
+    const code = error && typeof error === "object" && "code" in error &&
+      typeof error.code === "string" && /^[0-9A-Z]{5}$/.test(error.code) ? error.code : "QA_TRANSPORT_ERROR";
+    const constraint = error && typeof error === "object" && "constraint" in error &&
+      typeof error.constraint === "string" && /^[a-z_][a-z0-9_]{0,62}$/.test(error.constraint) ? error.constraint : undefined;
+    const message = error instanceof Error && code === "P0001" && /^[a-z][a-z0-9_]{2,100}$/.test(error.message)
+      ? error.message : "격리 QA 데이터베이스 요청 실패";
+    console.error(`QA_TRANSPORT_FAILURE:${code}`);
+    return Response.json({ message, code, ...(constraint ? { constraint } : {}) }, { status: 400 });
   }
 };
