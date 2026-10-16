@@ -40,6 +40,10 @@ export default async function MyPage() {
       )}
 
       <div className="grid grid-cols-1 gap-8">
+        {user.role === "MEMBER" && process.env.ACADEMIC_ENABLED === "true" && <section>
+          <h2 className="mb-3 text-2xl font-bold">내 과제</h2>
+          <Link href="/member/assignments" className="text-[#2563EB] underline">과제와 제출 결과 확인</Link>
+        </section>}
         <section>
           <h2 className="text-2xl font-bold text-[#1a1a1a] mb-6 flex items-center gap-2">
             <User className="w-6 h-6 text-blue-600" />

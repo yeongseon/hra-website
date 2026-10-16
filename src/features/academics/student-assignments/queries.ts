@@ -21,11 +21,11 @@ type SummaryRow = Awaited<ReturnType<typeof buildStudentAssignmentListQuery>>[nu
 function toSummary(row: SummaryRow): StudentAssignmentSummary {
   if (row.status === "DRAFT" || !row.dueAt || !row.publishedAt
     || !Number.isFinite(row.dueAt.getTime()) || !Number.isFinite(row.publishedAt.getTime())
-    || (row.submittedAt && !Number.isFinite(row.submittedAt.getTime()))) throw new AcademicAccessError("UNAVAILABLE");
+    || (row.submittedAt && (!row.submissionId || !Number.isFinite(row.submittedAt.getTime())))) throw new AcademicAccessError("UNAVAILABLE");
   return {
     assignmentId: row.assignmentId, targetId: row.targetId, title: row.title, status: row.status,
     dueAt: row.dueAt.toISOString(), publishedAt: row.publishedAt.toISOString(),
-    submission: row.submittedAt ? { submittedAt: row.submittedAt.toISOString() } : null,
+    submission: row.submittedAt && row.submissionId ? { submissionId: row.submissionId, submittedAt: row.submittedAt.toISOString() } : null,
   };
 }
 

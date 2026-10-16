@@ -15,7 +15,7 @@ export interface StudentAssignmentSummary {
   status: StudentAssignmentStatus;
   dueAt: string;
   publishedAt: string;
-  submission: { submittedAt: string } | null;
+  submission: { submissionId: string; submittedAt: string } | null;
 }
 
 // 상세에서도 해당 학생의 파일 메타만 제공한다. 실제 다운로드는 별도 서버 인가를 거친다.

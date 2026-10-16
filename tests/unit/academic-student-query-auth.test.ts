@@ -18,7 +18,8 @@ const userId = "10000000-0000-4000-8000-000000000001";
 const assignmentId = "20000000-0000-4000-8000-000000000001";
 const targetId = "30000000-0000-4000-8000-000000000001";
 const fileId = "40000000-0000-4000-8000-000000000001";
-const row = { assignmentId, targetId, title: "본인 과제", instructions: "과제 안내", status: "PUBLISHED", dueAt: new Date("2026-11-01T00:00:00Z"),
+const submissionId = "50000000-0000-4000-8000-000000000001";
+const row = { submissionId, assignmentId, targetId, title: "본인 과제", instructions: "과제 안내", status: "PUBLISHED", dueAt: new Date("2026-11-01T00:00:00Z"),
   publishedAt: new Date("2026-10-01T00:00:00Z"), submittedAt: new Date("2026-10-02T00:00:00Z"),
   fileId, originalName: "제출.pdf", mimeType: "application/pdf", sizeBytes: 2048,
   storageKey: "노출 금지 저장 키", fileUrl: "노출 금지 URL", checksum: "노출 금지 해시", email: "노출 금지 이메일", submissionKey: "노출 금지 키",
@@ -63,7 +64,7 @@ it("올바른 MEMBER 세션 ID만 DB 소유권 조회에 전달하고 허용 필
   expect(await canViewAssignment(assignmentId)).toBe(true);
   const detail = await getMyAssignment(assignmentId);
   expect(detail).toEqual({ assignmentId, targetId, title: row.title, instructions: row.instructions, status: "PUBLISHED",
-    dueAt: row.dueAt.toISOString(), publishedAt: row.publishedAt.toISOString(), submission: { submittedAt: row.submittedAt.toISOString() },
+    dueAt: row.dueAt.toISOString(), publishedAt: row.publishedAt.toISOString(), submission: { submissionId, submittedAt: row.submittedAt.toISOString() },
     file: { fileId, originalName: row.originalName, mimeType: row.mimeType, sizeBytes: row.sizeBytes } });
   expect(mocks.detail).toHaveBeenCalledWith({}, userId, targetId);
   expect(JSON.stringify(detail)).not.toContain("노출 금지");
