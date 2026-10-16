@@ -13,6 +13,8 @@ import { z } from "zod/v4";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { isConstraintViolation } from "@/lib/db/constraint-errors";
+import { logServerError } from "@/lib/errors";
 import { cohorts, users } from "@/lib/db/schema";
 
 // "ADMIN" | "FACULTY" | "PENDING" | "<uuid>" 형태의 드롭다운 값
@@ -195,20 +197,39 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
    *   auth.ts 의 `resolveJwtSession` 이 dbUser === undefined 인 경우 null 을 반환하여
    *   next-auth 가 세션 쿠키를 폐기하기 때문.
    */
-  const result = await db.execute(sql`
-    WITH admin_lock AS (
-      SELECT id FROM ${users} WHERE ${users.role} = 'ADMIN' FOR UPDATE
-    )
-    DELETE FROM ${users}
-    WHERE ${users.id} = ${parsed.data.userId}::uuid
-      AND (
-        ${users.role} <> 'ADMIN'
-        OR (SELECT count(*) FROM admin_lock) > 1
+  let affected = 0;
+  try {
+    const result = await db.execute(sql`
+      WITH admin_lock AS (
+        SELECT id FROM ${users} WHERE ${users.role} = 'ADMIN' FOR UPDATE
       )
-    RETURNING ${users.id};
-  `);
+      DELETE FROM ${users}
+      WHERE ${users.id} = ${parsed.data.userId}::uuid
+        AND (
+          ${users.role} <> 'ADMIN'
+          OR (SELECT count(*) FROM admin_lock) > 1
+        )
+      RETURNING ${users.id};
+    `);
+    affected = result.rowCount ?? 0;
+  } catch (error) {
+    // 학적 연결·등록 작성자·계정 연결 이력은 DB의 RESTRICT 정책으로 보존한다.
+    // PostgreSQL 버전에 따라 23001 또는 23503으로 전달되며 원문은 사용자에게 돌려주지 않는다.
+    const protectedReferences = [
+      "academic_students_user_id_users_id_fk",
+      "cohort_enrollments_created_by_user_id_users_id_fk",
+      "academic_enrollment_link_batches_actor_user_id_users_id_fk",
+    ];
+    if (protectedReferences.some(constraint =>
+      ["23001", "23503"].some(code => isConstraintViolation(error, code, constraint)))) {
+      return { success: false, message: "학적 정보나 학사 운영 이력이 연결된 회원은 삭제할 수 없습니다." };
+    }
+    // Drizzle 오류의 쿼리·매개변수·cause를 로거에 전달하지 않는다.
+    logServerError("users/delete", new Error("회원 삭제 처리 실패"), { userId: parsed.data.userId });
+    return { success: false, message: "회원 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." };
+  }
 
-  if ((result.rowCount ?? 0) === 0) {
+  if (affected === 0) {
     // 삭제 경합으로 행이 사라졌다면 마지막 관리자 오류를 표시하지 않습니다.
     const [stillExists] = await db.select({ id: users.id })
       .from(users)
