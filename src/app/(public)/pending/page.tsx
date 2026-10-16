@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Clock3, Home, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+// 서버에서 호출하는 스타일 함수는 클라이언트 경계가 없는 공용 모듈을 사용한다.
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 export default function PendingPage() {
