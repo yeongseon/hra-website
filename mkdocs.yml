@@ -57,6 +57,7 @@ nav:
   - 📋 기능 기획:
       - 학사관리 전환 로드맵: ACADEMIC-MANAGEMENT-ROADMAP.md
       - 학사 데이터 모델: ACADEMIC-DATA-MODEL.md
+      - 학사 개인정보 보존·파기 초안: ACADEMIC-PRIVACY-RETENTION-POLICY.md
       - 학생 과제 제출 1차 범위: ASSIGNMENT-SUBMISSION-SCOPE.md
   - 🚢 배포:
       - 배포 & 문제 해결: DEPLOYMENT.md
