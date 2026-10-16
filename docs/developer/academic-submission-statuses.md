@@ -4,7 +4,7 @@
 
 ## 진입점과 권한
 
-- 페이지: `/admin/academics/assignments/[id]/submissions`
+- 페이지: `/admin/academics/assignments/[id]/submissions` — 공개·종료 과제 상세의 **대상별 제출 현황**에서 이동한다.
 - CSV: `/api/academic/assignments/[id]/submissions/export`
 - 서버 쿼리: `listAssignmentSubmissionStatuses(input)`와 `exportAssignmentSubmissionStatuses(input)`
 
