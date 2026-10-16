@@ -20,10 +20,11 @@ export const dynamic = "force-dynamic";
 export default async function NoticesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string | string[]; page?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const query = (params.q ?? "").trim();
+  // 중복 키는 배열이므로 자료실의 단일 쿼리 처리처럼 무시하고 기본 목록을 표시한다.
+  const query = typeof params.q === "string" ? params.q.trim() : "";
   const ITEMS_PER_PAGE = 15;
   // 검색은 SQL에서 적용해 전체 행을 서버 메모리로 읽지 않는다.
   const filter = query
