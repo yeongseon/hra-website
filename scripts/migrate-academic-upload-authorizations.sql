@@ -72,10 +72,20 @@ CREATE OR REPLACE FUNCTION public.authorize_academic_assignment_upload(p_intent 
 RETURNS public.academic_upload_authorizations LANGUAGE plpgsql SET search_path=pg_catalog,public AS $authorize$
 DECLARE intent public.assignment_upload_intents; v_auth public.academic_upload_authorizations; target uuid;
 BEGIN
-  SELECT assignment_target_id INTO target FROM public.assignment_upload_intents WHERE id=p_intent;
+  SELECT assignment_target_id INTO target FROM public.assignment_upload_intents WHERE id=p_intent AND user_id=p_actor;
   IF NOT FOUND THEN RAISE EXCEPTION 'upload_not_found'; END IF;
   PERFORM 1 FROM public.assignment_targets WHERE id=target FOR UPDATE;
-  PERFORM public.assert_academic_submission_owner(target,p_actor,true);
+  BEGIN
+    -- 공통 소유권 검사와 잠금은 그대로 실행하고, 명시된 기존 인가 거부만 공개용 고정 코드로 바꾼다.
+    -- 다른 P0001(격리수준 등)·SQLSTATE·연결 장애는 원래대로 전파해 503으로 분류한다.
+    PERFORM public.assert_academic_submission_owner(target,p_actor,true);
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN
+    IF SQLERRM IN ('현재 학생 회원 계정만 제출할 수 있습니다.',
+      '유효한 등록 학적에 연결된 본인 계정만 제출할 수 있습니다.',
+      '공개된 본인 과제에만 접근할 수 있습니다.') THEN RAISE EXCEPTION 'upload_not_found';
+    ELSIF SQLERRM='공개되어 마감 전인 과제에만 제출할 수 있습니다.' THEN RAISE EXCEPTION 'upload_expired';
+    ELSE RAISE; END IF;
+  END;
   SELECT * INTO intent FROM public.assignment_upload_intents WHERE id=p_intent FOR UPDATE;
   SELECT * INTO v_auth FROM public.academic_upload_authorizations WHERE intent_id=p_intent FOR UPDATE;
   IF NOT FOUND OR v_auth.user_id IS DISTINCT FROM p_actor OR intent.user_id IS DISTINCT FROM p_actor
