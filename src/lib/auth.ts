@@ -19,6 +19,7 @@
  */
 
 import NextAuth from "next-auth";
+import { canManageAcademics } from "@/lib/academic-access";
 import type { Provider } from "next-auth/providers";
 import { compare } from "bcryptjs";
 import Credentials from "next-auth/providers/credentials";
@@ -305,6 +306,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const { pathname } = request.nextUrl;
 
       if (pathname === "/admin/login") {
+        return true;
+      }
+
+      // 학사관리 경로만 지정 승인자에게 열며 일반 홈페이지 관리자 권한은 그대로 분리한다.
+      if (pathname === "/admin/academics" || pathname.startsWith("/admin/academics/")) {
+        if (!auth?.user) {
+          const loginUrl = new URL("/login", request.url);
+          loginUrl.searchParams.set("callbackUrl", pathname);
+          return Response.redirect(loginUrl);
+        }
+        if (auth.user.role === "PENDING") {
+          return Response.redirect(new URL("/pending", request.url));
+        }
+        if (!canManageAcademics(auth.user)) {
+          // 사용자 middleware가 있으면 Auth.js가 false를 직접 차단하지 않으므로 응답으로 거부한다.
+          return new Response("학사 운영 책임자만 접근할 수 있습니다.", {
+            status: 403,
+            headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+          });
+        }
         return true;
       }
 

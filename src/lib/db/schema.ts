@@ -1174,3 +1174,6 @@ export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type NewLoginAttempt = typeof loginAttempts.$inferInsert;
 export type UploadRateLimitEntry = typeof uploadRateLimitLog.$inferSelect;
 export type NewUploadRateLimitEntry = typeof uploadRateLimitLog.$inferInsert;
+
+// 학사 명부 등록의 최소 감사 기록도 Drizzle 스키마 적용 대상에 포함한다.
+export { academicRosterRegistrations } from "./academic-roster";
