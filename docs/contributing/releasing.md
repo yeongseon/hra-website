@@ -12,7 +12,7 @@
 | release-please PR | `chore(release): release X.Y.Z` + 생성형 본문 | `chore(release): release 0.1.1` |
 | 태그 | `vX.Y.Z` | `v0.1.1` |
 
-이슈의 `P1/P2`는 **업무 우선순위**, `feat/fix/!`는 **릴리스 영향**이다. P1 버그가 반드시 major 릴리스인 것은 아니다. 이슈 제목을 전부 `feat:`/`fix:`로 바꾸지 않는다.
+이슈의 `P0/P1/P2`는 **업무 우선순위**, `feat/fix/!`는 **릴리스 영향**이다. P1 버그가 반드시 major 릴리스인 것은 아니다. 이슈 제목을 전부 `feat:`/`fix:`로 바꾸지 않는다.
 
 ## 2. PR 제목과 버전
 
