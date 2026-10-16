@@ -43,6 +43,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
       <p className="whitespace-pre-wrap break-words">{assignment.instructions || "과제 안내가 없습니다."}</p>
       <p className="text-[#666666]">공개된 과제의 기수·수업·제목·안내·마감은 수정하거나 삭제할 수 없습니다. 확정 대상은 최초 공개 시 명부를 기준으로 유지합니다.</p>
     </section>}
+    {assignment.status !== "DRAFT" && <Link href={`/admin/academics/assignments/${assignment.id}/submissions`} className="inline-block text-[#2563EB] underline">대상별 제출 현황</Link>}
     {assignment.status === "PUBLISHED" && <AssignmentTransitionForm kind="close" assignmentId={assignment.id}
       requestId={randomUUID()} writable={writable} />}
     {assignment.status === "CLOSED" && <p role="status">종료된 과제입니다. 학생의 추가 제출을 받지 않습니다.</p>}
