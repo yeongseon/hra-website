@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -93,6 +94,15 @@ export function AdminLoginForm() {
             {isLoading ? "로그인 중..." : "로그인"}
           </Button>
         </form>
+        {/* 일반 회원의 소셜 로그인·가입 경로를 관리자 비밀번호 로그인과 구분한다. */}
+        <div className="mt-6 border-t border-slate-700 pt-4 text-center">
+          <Link
+            href="/login"
+            className="text-sm text-slate-300 underline underline-offset-4 hover:text-white"
+          >
+            일반 회원 로그인·회원가입
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

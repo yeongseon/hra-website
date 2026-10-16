@@ -98,6 +98,9 @@ export async function updateUserGroup(
    *    CTE 의 `SELECT ... FOR UPDATE` 는 statement 실행 동안 모든 ADMIN row 를 잠근다.
    *    (neon-http 는 트랜잭션 미지원이지만 단일 statement 는 원자적)
    *
+   * SET 좌변은 PostgreSQL 문법상 테이블명을 붙일 수 없어 컬럼 식별자만 사용한다.
+   * CASE 우변·WHERE의 컬럼 참조는 기존 테이블 수식을 유지한다.
+   *
    * 2. session_version bump (#68):
    *    role 또는 cohort_id 가 실제로 변경된 경우에만 session_version + 1.
    *    IS DISTINCT FROM 은 NULL-safe 비교로, NULL <-> UUID 전환도 정확히 감지한다.
@@ -115,15 +118,15 @@ export async function updateUserGroup(
     )
     UPDATE ${users}
     SET
-      ${users.role} = ${newRole}::user_role,
-      ${users.cohortId} = ${newCohortId}::uuid,
-      ${users.sessionVersion} = CASE
+      ${sql.identifier(users.role.name)} = ${newRole}::user_role,
+      ${sql.identifier(users.cohortId.name)} = ${newCohortId}::uuid,
+      ${sql.identifier(users.sessionVersion.name)} = CASE
         WHEN ${users.role} IS DISTINCT FROM ${newRole}::user_role
           OR ${users.cohortId} IS DISTINCT FROM ${newCohortId}::uuid
         THEN ${users.sessionVersion} + 1
         ELSE ${users.sessionVersion}
       END,
-      ${users.updatedAt} = now()
+      ${sql.identifier(users.updatedAt.name)} = now()
     WHERE ${users.id} = ${parsed.data.userId}::uuid
       AND (
         ${users.role} <> 'ADMIN'
