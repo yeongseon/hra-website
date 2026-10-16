@@ -95,6 +95,12 @@ describe("과제 업로드 계약·실제 스트림 검증",()=>{
   await expect(authorizeAssignmentUploadToken(selection,"resource-uploads/wrong.pdf",false)).rejects.toMatchObject({code:"CONFLICT"});
   await expect(authorizeAssignmentUploadToken(selection,pathname,true)).rejects.toMatchObject({code:"CONFLICT"});
  });
+ it.each([["NOT_FOUND",404],["UNAVAILABLE",503]]as const)("토큰 승인 %s는 같은 고정 HTTP 상태로 반환하고 토큰을 발급하지 않는다",async(code,status)=>{
+  mocks.authorize.mockRejectedValueOnce(new AcademicUploadError(code));
+  const response=await callback(new Request("https://app.invalid/api/academic/uploads",{method:"POST",headers:{Origin:"https://app.invalid","Content-Type":"application/json"},
+   body:JSON.stringify({type:"blob.generate-client-token",payload:{pathname,multipart:false,clientPayload:JSON.stringify(selection)}})}));
+  expect(response.status).toBe(status);const body=await response.json();expect(body).toMatchObject({code});expect(body).not.toHaveProperty("clientToken");expect(mocks.reserve).not.toHaveBeenCalled();
+ });
  it("키 순서와 추가 속성을 가진 실제 HMAC callback을 재전송해도 정상 수신한다",async()=>{
   mocks.receipt.mockResolvedValue({storageKey:pathname});
   // 스키마 선언과 다른 키 순서 및 중첩 추가 속성도 원본 그대로 서명 검증해야 한다.

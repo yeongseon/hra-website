@@ -65,6 +65,39 @@ describe.skipIf(!bin)("과제 업로드 발급 원장 PostgreSQL",()=>{
   run("UPDATE assignments SET status='CLOSED';");expect(()=>verify(id)).toThrow();
   expect(run("SELECT count(*) FROM assignment_submissions;")).toBe("0");
  });
+ it("새 SQL과 재실행 뒤 정상 미소비 의도는 본인만 승인하며 같은/다른 기수 학생은 동일하게 숨긴다",()=>{
+  const peerStudent=randomUUID(),outsideStudent=randomUUID(),outsideUser=randomUUID(),outsideCohort=randomUUID(),fresh=randomUUID();
+  run(`INSERT INTO users VALUES('${outsideUser}','MEMBER');INSERT INTO cohorts VALUES('${outsideCohort}');
+   INSERT INTO academic_students(id,user_id,display_name)VALUES('${peerStudent}','${other}','같은 기수 시험'),('${outsideStudent}','${outsideUser}','다른 기수 시험');
+   INSERT INTO cohort_enrollments(student_id,cohort_id)VALUES('${peerStudent}','${cohort}'),('${outsideStudent}','${outsideCohort}');
+   INSERT INTO assignments(id,cohort_id,title,due_at,created_by_user_id)VALUES('${fresh}','${cohort}','인가 회귀',clock_timestamp()+interval '1 day','${actor}');
+   SELECT id FROM publish_academic_assignment('${fresh}','${actor}');`);
+  const selected=run(`SELECT t.id FROM assignment_targets t JOIN cohort_enrollments e ON e.id=t.enrollment_id WHERE t.assignment_id='${fresh}' AND e.student_id='${student}';`);
+  const id=run(`SELECT issue_academic_assignment_upload('${randomUUID()}','${selected}','${actor}','본인.pdf',5);`);
+  const authorized=(intentId:string,userId:string)=>run(`SELECT intent_id FROM authorize_academic_assignment_upload('${intentId}','${userId}');`);
+  for(let attempt=0;attempt<2;attempt++){
+   expect(authorized(id,actor)).toBe(id);
+   for(const user of [other,outsideUser])expect(()=>authorized(id,user)).toThrow(/upload_not_found/);
+   expect(()=>authorized(randomUUID(),actor)).toThrow(/upload_not_found/);
+   expect(run(`SELECT state FROM assignment_upload_intents WHERE id='${id}';`)).toBe("INTENDED");
+   expect(run("SELECT count(*) FROM assignment_submissions;")).toBe("0");
+   run(readFileSync("scripts/migrate-academic-upload-authorizations.sql","utf8"));
+  }
+ });
+ it("현재 역할·활성 학적 철회와 과제 마감은 알려진 고정 거부로 분류한다",()=>{
+  const id=issue();const authorize=()=>run(`SELECT intent_id FROM authorize_academic_assignment_upload('${id}','${actor}');`);
+  run(`UPDATE users SET role='PENDING' WHERE id='${actor}';`);expect(authorize).toThrow(/upload_not_found/);
+  run(`UPDATE users SET role='MEMBER' WHERE id='${actor}';UPDATE cohort_enrollments SET ended_at=clock_timestamp();`);
+  expect(authorize).toThrow(/upload_not_found/);run("UPDATE cohort_enrollments SET ended_at=NULL;");
+  run("UPDATE cohort_enrollments SET created_at=clock_timestamp()+interval '1 minute';");expect(authorize).toThrow(/upload_not_found/);
+  run("UPDATE cohort_enrollments SET created_at=clock_timestamp();UPDATE assignments SET status='CLOSED';");
+  expect(authorize).toThrow(/upload_expired/);
+ });
+ it("예상 인가 예외 이외의 P0001은 고정 404로 바꾸지 않고 그대로 전파한다",()=>{
+  const id=issue();
+  // 실제 공통 검사의 READ COMMITTED 거부는 예상 소유권 거부 목록에 포함하지 않는다.
+  expect(()=>run(`BEGIN ISOLATION LEVEL REPEATABLE READ;SELECT intent_id FROM authorize_academic_assignment_upload('${id}','${actor}');`)).toThrow(/READ COMMITTED/);
+ });
  it("취소 VERIFIED는 최종화할 수 없고 새 의도만 발급한다",()=>{
   const id=issue();verify(id);run(`SELECT cancel_academic_assignment_upload('${id}','${actor}','${target()}');`);
   expect(()=>finalize(id)).toThrow(/upload_conflict/);const next=issue();expect(next).not.toBe(id);
