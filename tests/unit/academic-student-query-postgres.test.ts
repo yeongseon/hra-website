@@ -24,6 +24,7 @@ vi.mock("@/lib/db", async () => {
 });
 import { canViewAssignment, requireAssignmentTarget } from "@/lib/academic-permissions";
 import { getMyAssignment, getMyAssignments } from "@/features/academics/student-assignments/queries";
+import { getMyAcademicUiContext } from "@/features/academics/student-assignments/ui-queries";
 
 const bin = process.env.HRA_TEST_PG_BIN;
 const uid = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -109,7 +110,11 @@ describe.skipIf(!bin)("학생 본인 과제 서비스의 격리 PostgreSQL 권�
     fileA = file(targetA); fileC = file(targetC);
     // Neon HTTP 배열 결과를 실제 DB PREPARE/EXECUTE로 전달한다. 실제 SQL은 SELECT만 허용한다.
     mocks.query.mockImplementation(async (query: string, params: unknown[], options: { arrayMode: boolean }) => {
-      if (!/^select /i.test(query) || !options.arrayMode) throw new Error("학생 조회 테스트에서는 배열 결과의 SELECT만 허용합니다.");
+      if (!/^select /i.test(query)) throw new Error("학생 조회 테스트에서는 SELECT만 허용합니다.");
+      if (!options.arrayMode) {
+        const result = run(`PREPARE academic_read AS SELECT COALESCE(json_agg(row_to_json(r)),'[]') FROM (${query}) r; EXECUTE academic_read(${params.map(literal).join(",")});`);
+        return { rows: JSON.parse(result) };
+      }
       const output = execFileSync(program("psql"), [...args, "-tq", "--csv"], { input: `PREPARE academic_read AS ${query}; EXECUTE academic_read(${params.map(literal).join(",")});`, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
       return { rows: parseCsv(output) };
     });
@@ -189,6 +194,25 @@ describe.skipIf(!bin)("학생 본인 과제 서비스의 격리 PostgreSQL 권�
     expect(second.items.map(item => item.assignmentId)).toEqual([closedA]); expect(second.hasNextPage).toBe(false);
     expect(empty.items).toEqual([]); expect(empty.hasNextPage).toBe(false);
     expect((await getMyAssignment(closedA)).submission).toBeNull();
+  });
+
+  it("화면 안내 helper는 본인 학적 유무와 실제 DB 현재 시각만 반환한다", async () => {
+    const before = Date.parse(run("SELECT clock_timestamp();"));
+    const context = await getMyAcademicUiContext();
+    const after = Date.parse(run("SELECT clock_timestamp();"));
+    expect(context.hasActiveEnrollment).toBe(true);
+    expect(Date.parse(context.serverNow)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(context.serverNow)).toBeLessThanOrEqual(after);
+    expect(Object.keys(context)).toEqual(["serverNow", "hasActiveEnrollment"]);
+    for (const id of [unlinked, ended]) { session(id, "MEMBER"); expect((await getMyAcademicUiContext()).hasActiveEnrollment).toBe(false); }
+  });
+
+  it("자기 최종 제출 ID를 파일 API 연결용으로만 반환하고 타인 최종 ID는 노출하지 않는다", async () => {
+    const ownId = run(`SELECT id FROM assignment_submissions WHERE assignment_target_id='${targetA}';`);
+    const otherId = run(`SELECT id FROM assignment_submissions WHERE assignment_target_id='${targetC}';`);
+    const detail = await getMyAssignment(visibleA);
+    expect(detail.submission?.submissionId).toBe(ownId);
+    expect(JSON.stringify(detail)).not.toContain(otherId);
   });
 
   it("비활성 gate는 실제 SQL 실행 전 닫힌다", async () => {

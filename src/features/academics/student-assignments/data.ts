@@ -50,7 +50,7 @@ export function buildStudentAssignmentListQuery(database: StudentQueryDatabase, 
   return database.select({
     assignmentId: assignments.id, targetId: assignmentTargets.id, title: assignments.title,
     status: assignments.status, dueAt: assignments.dueAt, publishedAt: assignments.publishedAt,
-    submittedAt: assignmentSubmissions.submittedAt,
+    submissionId: assignmentSubmissions.id, submittedAt: assignmentSubmissions.submittedAt,
   }).from(assignmentTargets)
     .innerJoin(assignments, eq(assignments.id, assignmentTargets.assignmentId))
     .innerJoin(cohortEnrollments, eq(cohortEnrollments.id, assignmentTargets.enrollmentId))
@@ -65,7 +65,7 @@ export function buildStudentAssignmentDetailQuery(database: StudentQueryDatabase
   return database.select({
     assignmentId: assignments.id, targetId: assignmentTargets.id, title: assignments.title,
     status: assignments.status, dueAt: assignments.dueAt, publishedAt: assignments.publishedAt,
-    instructions: assignments.instructions, submittedAt: assignmentSubmissions.submittedAt,
+    instructions: assignments.instructions, submissionId: assignmentSubmissions.id, submittedAt: assignmentSubmissions.submittedAt,
     fileId: assignmentSubmissionFiles.id, originalName: assignmentSubmissionFiles.originalName,
     mimeType: assignmentSubmissionFiles.mimeType, sizeBytes: assignmentSubmissionFiles.sizeBytes,
   }).from(assignmentTargets)
