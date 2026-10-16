@@ -16,6 +16,61 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ kind: string; id: string }> };
 
+/** 응답 시작 뒤의 읽기·취소 실패도 고정 오류로 처리하고 공급자 reader를 정리합니다. */
+function protectedStream(source: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = source.getReader();
+  let released = false;
+  let terminal = false;
+  let cancelled = false;
+  const release = () => {
+    if (!released) {
+      released = true;
+      reader.releaseLock();
+    }
+  };
+  // 취소 성공 여부만 반환하여 공급자 오류·cause·사용자 취소 사유를 전달하지 않습니다.
+  const cancelReader = async () => {
+    try {
+      await reader.cancel();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      release();
+    }
+  };
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const next = await reader.read();
+        if (cancelled) return;
+        if (next.done) {
+          terminal = true;
+          release();
+          controller.close();
+        } else {
+          controller.enqueue(next.value);
+        }
+      } catch {
+        if (cancelled) return;
+        terminal = true;
+        logServerError("resources/download/stream", new Error("파일 전송이 중단되었습니다."));
+        await cancelReader();
+        // 정리가 끝나기 전에 응답이 취소되었으면 닫힌 controller에 오류를 다시 보내지 않습니다.
+        if (!cancelled) controller.error(new Error("파일 전송이 중단되었습니다."));
+      }
+    },
+    async cancel() {
+      cancelled = true;
+      if (terminal) return;
+      terminal = true;
+      if (!await cancelReader()) {
+        logServerError("resources/download/cancel", new Error("파일 전송 취소에 실패했습니다."));
+      }
+    },
+  });
+}
+
 export async function GET(request: Request, { params }: Context): Promise<Response> {
   const session = await requireSharedResourceReader();
   const { kind, id } = await params;
@@ -71,11 +126,17 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
     }
     const contentType = blob.blob.contentType || "application/octet-stream";
     if (image && !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(contentType)) {
+      // 거부한 본문도 취소하여 연결을 정리하며, 취소 실패가 기존 404 응답을 바꾸지 않게 합니다.
+      try {
+        await blob.stream.cancel();
+      } catch {
+        logServerError("resources/download/cancel", new Error("파일 전송 취소에 실패했습니다."));
+      }
       return new Response("파일을 찾을 수 없습니다.", { status: 404 });
     }
     const inlinePdf = !image && new URL(request.url).searchParams.get("inline") === "1" &&
       file.fileName?.toLowerCase().endsWith(".pdf") && contentType === "application/pdf";
-    return new Response(blob.stream, {
+    return new Response(protectedStream(blob.stream), {
       headers: {
         "Content-Type": contentType,
         ...(image ? {} : { "Content-Disposition": attachmentDisposition(file.fileName, inlinePdf) }),
