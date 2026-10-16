@@ -48,9 +48,17 @@ export function PressSortableList({ initialItems }: Props) {
   // 서버 저장 상태
   const [isPending, startTransition] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // 같은 렌더 안의 연속 클릭도 막고, 삭제와 순서 저장이 서로의 목록 상태를 덮지 않게 합니다.
+  const operationRef = useRef(false);
+  const isBusy = isPending || deletingId !== null;
 
   // 드래그 시작 — ref(드롭 로직용) + state(시각 효과용) 모두 갱신
   const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, idx: number) => {
+    if (operationRef.current || isBusy) {
+      e.preventDefault();
+      return;
+    }
     draggingIdxRef.current = idx;
     setDraggingVisualIdx(idx);
     e.dataTransfer.effectAllowed = "move";
@@ -58,6 +66,7 @@ export function PressSortableList({ initialItems }: Props) {
 
   // 드래그 중 타겟 위 이동 — 브라우저 기본 금지 동작 해제 + 강조 인덱스 갱신
   const handleDragOver = (e: React.DragEvent<HTMLTableRowElement>, idx: number) => {
+    if (operationRef.current || isBusy) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     if (draggingIdxRef.current !== null && draggingIdxRef.current !== idx) {
@@ -75,6 +84,7 @@ export function PressSortableList({ initialItems }: Props) {
   // 드롭 — 항목 위치를 변경하고 서버에 저장
   const handleDrop = (e: React.DragEvent<HTMLTableRowElement>, dropIdx: number) => {
     e.preventDefault();
+    if (operationRef.current || isBusy) return;
     const fromIdx = draggingIdxRef.current;
 
     draggingIdxRef.current = null;
@@ -84,6 +94,8 @@ export function PressSortableList({ initialItems }: Props) {
     // 같은 위치에 드롭하면 변경 없음
     if (fromIdx === null || fromIdx === dropIdx) return;
 
+    // 처리 중에는 다음 변경을 막아 실패 복원이 이후 요청의 결과를 덮지 않게 합니다.
+    operationRef.current = true;
     // 낙관적 UI: 먼저 로컬 상태 갱신
     const prev = items;
     const next = [...items];
@@ -93,35 +105,52 @@ export function PressSortableList({ initialItems }: Props) {
 
     setSaveError(null);
     startTransition(async () => {
-      const result = await reorderPressArticles(next.map((i) => i.id));
-      if (!result.success) {
-        // 저장 실패 시 이전 상태로 복원
-        setSaveError(result.message);
+      try {
+        const result = await reorderPressArticles(next.map((i) => i.id));
+        if (!result.success) {
+          setSaveError(result.message);
+          setItems(prev);
+        }
+      } catch {
+        // 통신 실패도 서버의 명시적 실패와 같이 복원하고 내부 오류 원문은 표시하지 않습니다.
+        setSaveError("순서 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
         setItems(prev);
+      } finally {
+        operationRef.current = false;
       }
     });
   };
 
-  // 삭제 — 낙관적으로 로컬 상태에서 제거 후 서버 액션 호출
+  // 서버에서 삭제를 확인한 뒤 행을 제거하여 실패 시 표시 행과 재시도를 보존합니다.
   const handleDelete = async (id: string) => {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    await deletePressArticle(id);
+    if (operationRef.current || isBusy || !confirm("정말 삭제하시겠습니까?")) return;
+    operationRef.current = true;
+    setDeletingId(id);
+    setSaveError(null);
+    try {
+      await deletePressArticle(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch {
+      setSaveError("삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      operationRef.current = false;
+      setDeletingId(null);
+    }
   };
 
   return (
-    <Card className="border-[#D9D9D9] bg-white py-0 shadow-sm">
+    <Card aria-busy={isBusy} className="border-[#D9D9D9] bg-white py-0 shadow-sm">
       <CardHeader className="border-b border-[#D9D9D9] py-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base text-[#1a1a1a]">전체 언론보도 {items.length}건</CardTitle>
-          {isPending && (
-            <span className="text-xs text-[#666666]">순서 저장 중...</span>
+          {isBusy && (
+            <span className="text-xs text-[#666666]">{deletingId ? "삭제 중..." : "순서 저장 중..."}</span>
           )}
         </div>
       </CardHeader>
       <CardContent className="py-4">
         {saveError && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          <div role="alert" className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
             <AlertCircle className="size-4 shrink-0" />
             {saveError}
           </div>
@@ -150,7 +179,7 @@ export function PressSortableList({ initialItems }: Props) {
                 items.map((item, idx) => (
                   <TableRow
                     key={item.id}
-                    draggable
+                    draggable={!isBusy}
                     onDragStart={(e) => handleDragStart(e, idx)}
                     onDragOver={(e) => handleDragOver(e, idx)}
                     onDragEnd={handleDragEnd}
@@ -187,6 +216,7 @@ export function PressSortableList({ initialItems }: Props) {
                           type="button"
                           variant="destructive"
                           size="sm"
+                          disabled={isBusy}
                           onClick={() => handleDelete(item.id)}
                         >
                           <Trash2 className="size-3.5" />
