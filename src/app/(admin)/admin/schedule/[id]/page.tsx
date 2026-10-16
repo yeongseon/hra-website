@@ -65,6 +65,7 @@ export default async function EditSchedulePage({ params }: Props) {
         description: event.description ?? null,
         isPublic: event.isPublic,
         sessions: event.sessions.map((s) => ({
+          serverId: s.id, // 과제 FK가 참조하는 세션 UUID를 수정 후에도 보존한다.
           category: s.category,
           facultyId: s.facultyId ?? null,
           content: s.content ?? null,

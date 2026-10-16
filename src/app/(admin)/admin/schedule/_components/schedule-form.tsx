@@ -59,6 +59,7 @@ const sessionToFacultyCategory: Record<SessionCategory, "CLASSICS" | "BUSINESS" 
 // 세션 슬롯 데이터 타입
 type SessionSlot = {
   id: string; // 클라이언트 식별용 임시 키 (DB ID 아님)
+  serverId?: string; // 기존 세션의 DB UUID. 재정렬·편집 시 유지한다.
   category: SessionCategory;
   facultyId: string | null;
   content: string;
@@ -70,6 +71,7 @@ type SessionSlot = {
 
 // 기존 이벤트의 세션 데이터 타입 (수정 폼 defaultValues용)
 type DefaultSession = {
+  serverId?: string; // 수정 페이지가 전달한 영속 식별자이며 신규 슬롯에는 없다.
   category: SessionCategory;
   facultyId: string | null;
   content: string | null;
@@ -148,6 +150,7 @@ export function ScheduleForm({
     // 수정 폼: 세션이 없는 기존 일정은 빈 배열 그대로 유지한다.
     return (defaultValues.sessions ?? []).map((s, i) => ({
       id: `session-existing-${i}`,
+      serverId: s.serverId,
       category: s.category,
       facultyId: s.facultyId ?? null,
       content: s.content ?? "",
