@@ -36,12 +36,14 @@
 //     이 구조에만 반응한다.
 //   - [\s\S]* 로 SQL 이후를 전부 삼기는 이유: SQL 뒤에는 대개 파라미터 값(email 등 PII)이
 //     따라오므로 SQL 감지 즉시 문장 끝까지 잘라내는 게 안전하다.
+//   - 따옴표 식별자·여는 괄호 뒤에는 단어 경계가 없으므로 키워드에만 경계를 둔다.
+//     전체 분기 뒤의 경계는 개행 CTE와 따옴표 테이블의 SQL·매개변수를 남길 수 있다.
 //   - i 플래그 유지: Drizzle 은 대소문자 혼용을 낼 수 있고, SQL-structure 앵커가 이미
 //     자연어를 걸러주므로 false positive 위험은 낮다.
 //   - "Cannot delete from cache" 같은 극단적 자연어 문장은 여전히 오탐 가능하나 (DELETE FROM ident),
 //     비-SQL 컨텍스트에서 "delete from <명사>" 는 실무 로그에 드물어 트레이드오프상 수용한다.
 const SQL_KEYWORD_PATTERN =
-  /\b(?:INSERT\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)\s*(?:\(|VALUES|SELECT|DEFAULT)|UPDATE\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)\s+SET|DELETE\s+FROM\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|SELECT\s+[\s\S]+?\s+FROM\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|MERGE\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|UPSERT\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|CREATE\s+(?:TABLE|INDEX|UNIQUE|VIEW|SCHEMA)(?:\s+IF\s+NOT\s+EXISTS)?\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|ALTER\s+(?:TABLE|INDEX)\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|DROP\s+(?:TABLE|INDEX|VIEW|SCHEMA)(?:\s+IF\s+EXISTS)?\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|TRUNCATE\s+(?:TABLE\s+)?(?:"[^"]+"|[a-zA-Z_][\w$]*)|WITH\s+["\w]+\s+AS\s*\(|COPY\s+["\w]+\s+(?:FROM|TO))\b[\s\S]*/gi;
+  /\b(?:INSERT\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)\s*(?:\(|VALUES\b|SELECT\b|DEFAULT\b)|UPDATE\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)\s+SET\b|DELETE\s+FROM\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|SELECT\s+[\s\S]+?\s+FROM\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|MERGE\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|UPSERT\s+INTO\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|CREATE\s+(?:TABLE|INDEX|UNIQUE|VIEW|SCHEMA)(?:\s+IF\s+NOT\s+EXISTS)?\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|ALTER\s+(?:TABLE|INDEX)\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|DROP\s+(?:TABLE|INDEX|VIEW|SCHEMA)(?:\s+IF\s+EXISTS)?\s+(?:"[^"]+"|[a-zA-Z_][\w$]*)|TRUNCATE\s+(?:TABLE\s+)?(?:"[^"]+"|[a-zA-Z_][\w$]*)|WITH\s+["\w]+\s+AS\s*\(|COPY\s+["\w]+\s+(?:FROM|TO)\b)[\s\S]*/gi;
 
 // Postgres 연결 문자열 (postgres://user:pass@host/db 또는 postgresql://...) 마스킹.
 // DB 비밀번호·호스트명 등 인프라 노출 방지.

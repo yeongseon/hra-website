@@ -15,8 +15,36 @@
  *   - logServerError: 콘솔 포맷 및 context 병합, sanitize 통과
  *   - 통합: blob-utils 사용 패턴 (redactBlobUrl → logServerError context) 재현
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { DrizzleQueryError } from "drizzle-orm/errors";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { logServerError, redactBlobUrl, redactMessage, sanitizeError } from "@/lib/errors";
+
+// 개인정보 대신 합성 표식만 사용하되 설치 Drizzle의 실제 오류 메시지·cause 구조를 유지한다.
+const drizzleQueries = [
+  ["따옴표 SELECT", 'SELECT "qa_private_column" FROM "qa_private_rows" WHERE "id" = $1'],
+  ["따옴표 DELETE", 'DELETE FROM "qa_private_rows" WHERE "id" = $1'],
+  ["개행 CTE", `WITH "qa_private_cte" AS (
+    SELECT $1::text AS "qa_private_column"
+  )
+  SELECT "qa_private_column" FROM "qa_private_cte"`],
+];
+
+function drizzleFailure(query: string) {
+  const cause = Object.assign(new Error("qa_synthetic_provider_failure"), { code: "P0001" });
+  return new DrizzleQueryError(query, ["qa_synthetic_parameter"], cause);
+}
+
+/** assertion이 실패해도 SQL·매개변수·오류 원문 대신 노출 여부만 출력한다. */
+function expectNoDrizzleLeak(serialized: string, query: string) {
+  expect({
+    query: serialized.includes(JSON.stringify(query).slice(1, -1)),
+    identifier: serialized.includes("qa_private_"),
+    parameter: serialized.includes("qa_synthetic_parameter"),
+    parameterDump: serialized.includes("params:"),
+    provider: serialized.includes("qa_synthetic_provider_failure"),
+  }).toEqual({ query: false, identifier: false, parameter: false, parameterDump: false, provider: false });
+  expect(serialized.includes("[SQL redacted]")).toBe(true);
+}
 
 describe("redactMessage", () => {
   it("INSERT SQL 이후 전체를 [SQL redacted] 로 치환한다 (PII 제거 확인)", () => {
@@ -472,6 +500,13 @@ describe("redactMessage - SQL false positive 방지 (#70 Oracle NIT #3)", () => 
   // Drizzle SQL 은 항상 구조 마커(VALUES / SET / FROM / ( 등) 를 동반하므로
   // 이 마커가 없는 자연어 문장은 그대로 유지되어야 한다.
 
+  it.each([
+    ["SET 접두어", "Cannot update preferences SETtings before initialization"],
+    ["VALUES 접두어", "Please insert into draft VALUESomething descriptive"],
+  ])("%s만 닮은 비SQL 메시지는 마스킹하지 않는다", (_label, input) => {
+    expect(redactMessage(input) === input).toBe(true);
+  });
+
   it("'Cannot update headers after they are sent' 는 UPDATE ... SET 구조가 아니므로 유지한다", () => {
     // Node.js/Express 계열에서 자주 등장하는 실제 에러 메시지.
     const input = "Cannot update headers after they are sent to the client";
@@ -726,11 +761,29 @@ describe("redactBlobUrl (#70 Oracle BLOCK #2)", () => {
   });
 });
 
+describe("sanitizeError - 실제 Drizzle 오류의 SQL·매개변수 보호", () => {
+  it.each(drizzleQueries)("%s 메시지의 원문과 매개변수를 제거한다", (_label, query) => {
+    const error = drizzleFailure(query);
+    expect(error.cause && "code" in error.cause ? error.cause.code : undefined).toBe("P0001");
+    expectNoDrizzleLeak(JSON.stringify(sanitizeError(error)), query);
+  });
+});
+
 describe("logServerError", () => {
-  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
 
   afterEach(() => {
-    consoleErrorSpy.mockClear();
+    consoleErrorSpy.mockRestore();
+  });
+
+  it.each(drizzleQueries)("실제 %s 오류를 로그할 때도 SQL·매개변수를 제거한다", (_label, query) => {
+    logServerError("qa/redaction", drizzleFailure(query), { count: 1 });
+    expect(consoleErrorSpy).toHaveBeenCalledOnce();
+    expectNoDrizzleLeak(JSON.stringify(consoleErrorSpy.mock.calls), query);
   });
 
   it("scope 를 대괄호로 감싸 첫 번째 인자로 전달한다", () => {
@@ -763,10 +816,14 @@ describe("logServerError", () => {
 });
 
 describe("logServerError + redactBlobUrl 통합 (#70 Oracle 재리뷰 대비)", () => {
-  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
 
   afterEach(() => {
-    consoleErrorSpy.mockClear();
+    consoleErrorSpy.mockRestore();
   });
 
   it("blob-utils 가 redactBlobUrl 로 감싼 URL 을 context 로 넘기면 PII 가 로그에 남지 않는다", () => {
