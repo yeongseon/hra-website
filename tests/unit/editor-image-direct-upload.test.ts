@@ -1,4 +1,5 @@
 /** 편집기 직접 업로드의 붙여넣기 파일·권한·서명·소유권 경계를 검증합니다 (#102). */
+import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -27,11 +28,11 @@ const pathname = editorImagePath(uploadId, "png");
 const url = `https://${projectBlobHost}/${pathname}`;
 const pngHeader = Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
 
-async function issueToken(size = 10 * 1024 * 1024, path = pathname) {
+async function issueToken(size = 10 * 1024 * 1024, path = pathname, request?: Request) {
   mocks.handleUpload.mockImplementation(async (options: {
     onBeforeGenerateToken: (pathname: string, payload: string) => Promise<unknown>;
   }) => options.onBeforeGenerateToken(path, JSON.stringify({ uploadId, extension: "png", size })));
-  return POST(new Request("https://hra.example/api/editor-image-uploads", {
+  return POST(request ?? new Request("https://hra.example/api/editor-image-uploads", {
     method: "POST", headers: { origin: "https://hra.example" },
     body: JSON.stringify({ type: "blob.generate-client-token" }),
   }));
@@ -46,6 +47,12 @@ describe("편집기 이미지 직접 업로드", () => {
     mocks.findAsset.mockResolvedValue({ uploadedById: userId, deletedAt: null });
     mocks.fetch.mockImplementation(async () => new Response(pngHeader, { status: 206 }));
     vi.stubGlobal("fetch", mocks.fetch);
+  });
+
+  directUploadOriginCases({
+    route: "/api/editor-image-uploads",
+    issue: request => issueToken(10 * 1024 * 1024, pathname, request),
+    recordCount: () => mocks.recordUpload.mock.calls.length,
   });
 
   it("이름·MIME이 없는 붙여넣기 PNG를 직접 올리고 서버 검증 뒤 URL을 반환한다", async () => {

@@ -1,4 +1,5 @@
 /** 수료생 사진 직접 업로드의 크기·역할·경로·실물 검증을 확인합니다 (#102). */
+import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), handleUpload: vi.fn(), upload: vi.fn(), head: vi.fn(), recordUpload: vi.fn(), fetch: vi.fn() }));
@@ -21,10 +22,10 @@ const pathname = alumniUploadPath(storyId, userId, uploadId, "png");
 const url = `https://${projectBlobHost}/${pathname}`;
 const input = { storyId, uploadId, fileName: "사진.png", size: maxAlumniImageBytes, contentType: "image/png" };
 
-async function issueToken(payload = input, path = pathname) {
+async function issueToken(payload = input, path = pathname, request?: Request) {
   mocks.handleUpload.mockImplementation(async (options: { onBeforeGenerateToken: (path: string, payload: string) => Promise<unknown> }) =>
     options.onBeforeGenerateToken(path, JSON.stringify(payload)));
-  return POST(new Request("https://hra.example/api/alumni-uploads", {
+  return POST(request ?? new Request("https://hra.example/api/alumni-uploads", {
     method: "POST", headers: { origin: "https://hra.example" }, body: JSON.stringify({ type: "blob.generate-client-token" }),
   }));
 }
@@ -36,6 +37,12 @@ describe("수료생 사진 직접 업로드", () => {
     mocks.head.mockResolvedValue({ url, pathname, size: maxAlumniImageBytes, contentType: "image/png" });
     mocks.fetch.mockResolvedValue(new Response(Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a), { status: 206 }));
     vi.stubGlobal("fetch", mocks.fetch);
+  });
+
+  directUploadOriginCases({
+    route: "/api/alumni-uploads",
+    issue: request => issueToken(input, pathname, request),
+    recordCount: () => mocks.recordUpload.mock.calls.length,
   });
 
   it("5MB 경계와 관리자 권한을 허용하고 초과·타 경로·GIF를 거부한다", async () => {

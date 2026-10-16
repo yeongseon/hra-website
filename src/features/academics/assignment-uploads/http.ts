@@ -1,22 +1,13 @@
 /** 과제 API의 작은 JSON 입력·동일 출처·고정 오류 응답 경계다. */
 import "server-only";
+import { isSameRequestOrigin } from "@/lib/request-origin";
 import { AcademicAccessError } from "@/lib/academic-permissions";
 import { AcademicUploadError } from "./contract";
 import type { AcademicObservation } from "@/lib/academic-observability";
 import { recordUploadFailure } from "./observability";
 export function assertUploadOrigin(request:Request):void {
-  // NextURL은 127.0.0.1을 localhost로 정규화한다. 실제 HTTP Host를 우선해
-  // 브라우저가 접속한 authority(포트 포함)를 비교하고 임의 forwarded-host는 신뢰하지 않는다.
-  const requestUrl=new URL(request.url);
-  const host=request.headers.get("host");
-  let expectedOrigin=requestUrl.origin;
-  if(host!==null){
-    // Host 값은 authority 하나만 허용한다. 경로·사용자정보·여러 호스트를 URL로 재해석하지 않는다.
-    if(!host || /[\s,/@\\?#]/.test(host))throw new AcademicUploadError("NOT_FOUND");
-    try {expectedOrigin=new URL(`${requestUrl.protocol}//${host}`).origin;}
-    catch {throw new AcademicUploadError("NOT_FOUND");}
-  }
-  if(request.headers.get("origin")!==expectedOrigin) throw new AcademicUploadError("NOT_FOUND");
+  // 학사 업로드는 Origin을 필수로 유지하며 공통 Host 판정만 재사용합니다.
+  if(!isSameRequestOrigin(request)) throw new AcademicUploadError("NOT_FOUND");
 }
 export async function readUploadJson(request:Request):Promise<unknown> {
   if(!request.body) throw new AcademicUploadError("INVALID_FILE");

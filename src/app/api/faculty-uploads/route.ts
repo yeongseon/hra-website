@@ -6,6 +6,7 @@ import { facultyImageRule, facultyUploadPath, maxFacultyImageBytes } from "@/lib
 import { auth } from "@/lib/auth";
 import { projectBlobHost } from "@/lib/blob-host";
 import { logServerError } from "@/lib/errors";
+import { isSameRequestOrigin } from "@/lib/request-origin";
 import { isProjectBlobUrl } from "@/lib/resource-download";
 import { recordResourceUpload } from "@/lib/resource-upload-server";
 
@@ -18,7 +19,7 @@ export async function POST(request: Request): Promise<Response> {
     const result = await handleUpload({ body, request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const origin = request.headers.get("origin");
-        if (origin && origin !== new URL(request.url).origin) throw new Error("허용되지 않은 요청입니다.");
+        if (origin && !isSameRequestOrigin(request)) throw new Error("허용되지 않은 요청입니다.");
         const session = await auth();
         if (!session?.user?.id || session.user.role !== "ADMIN") throw new Error("업로드 권한이 없습니다.");
         const parsed = requestSchema.safeParse(clientPayload ? JSON.parse(clientPayload) : null);

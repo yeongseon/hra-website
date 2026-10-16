@@ -1,4 +1,5 @@
 /** 주차별 텍스트 사진 직접 업로드의 관리자 권한·크기·완료 URL 검증입니다 (#102). */
+import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -23,11 +24,11 @@ const pathname = weeklyTextImagePath(requestId, userId, uploadId, "png");
 const url = `https://${projectBlobHost}/${pathname}`;
 const input = { requestId, uploadId, fileName: "사진.png", size: 10 * 1024 * 1024, contentType: "image/png" };
 
-async function issueToken(payload = input, path = pathname) {
+async function issueToken(payload = input, path = pathname, request?: Request) {
   mocks.handleUpload.mockImplementation(async (options: {
     onBeforeGenerateToken: (pathname: string, payload: string) => Promise<unknown>;
   }) => options.onBeforeGenerateToken(path, JSON.stringify(payload)));
-  return POST(new Request("https://hra.example/api/weekly-text-image-uploads", {
+  return POST(request ?? new Request("https://hra.example/api/weekly-text-image-uploads", {
     method: "POST", headers: { origin: "https://hra.example" },
     body: JSON.stringify({ type: "blob.generate-client-token" }),
   }));
@@ -45,6 +46,12 @@ describe("주차별 텍스트 사진 업로드", () => {
   });
 
   afterEach(() => vi.unstubAllEnvs());
+
+  directUploadOriginCases({
+    route: "/api/weekly-text-image-uploads",
+    issue: request => issueToken(input, pathname, request),
+    recordCount: () => mocks.recordUpload.mock.calls.length,
+  });
 
   it("관리자에게만 10MB PNG 토큰을 발급한다", async () => {
     expect((await issueToken()).status).toBe(200);

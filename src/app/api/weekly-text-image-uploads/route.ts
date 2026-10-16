@@ -4,6 +4,7 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
+import { isSameRequestOrigin } from "@/lib/request-origin";
 import { isCurrentResourceUploadUrl, resourceUploadStore } from "@/lib/resource-blob-store";
 import { recordResourceUpload } from "@/lib/resource-upload-server";
 import { galleryImageRule, maxGalleryImageBytes } from "@/lib/gallery-upload-contract";
@@ -28,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
     const result = await handleUpload({ body, request, ...(store.token ? { token: store.token } : {}),
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const origin = request.headers.get("origin");
-        if (origin && origin !== new URL(request.url).origin) throw new Error("허용되지 않은 요청입니다.");
+        if (origin && !isSameRequestOrigin(request)) throw new Error("허용되지 않은 요청입니다.");
         const session = await auth();
         if (!session?.user?.id || session.user.role !== "ADMIN") throw new Error("업로드 권한이 없습니다.");
         const parsed = requestSchema.safeParse(clientPayload ? JSON.parse(clientPayload) : null);
