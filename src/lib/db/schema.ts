@@ -1174,3 +1174,6 @@ export type LoginAttempt = typeof loginAttempts.$inferSelect;
 export type NewLoginAttempt = typeof loginAttempts.$inferInsert;
 export type UploadRateLimitEntry = typeof uploadRateLimitLog.$inferSelect;
 export type NewUploadRateLimitEntry = typeof uploadRateLimitLog.$inferInsert;
+
+// 과제 정의와 최초 공개 대상도 Drizzle 적용 대상에 포함한다.
+export * from "./academic-assignments";
