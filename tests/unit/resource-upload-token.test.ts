@@ -1,4 +1,5 @@
 /** #102 직접 업로드 토큰 발급의 권한·대상·형식·크기 경계를 확인합니다. */
+import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), handleUpload: vi.fn(), head: vi.fn(), recordResourceUpload: vi.fn(), userLimit: vi.fn() }));
@@ -18,11 +19,11 @@ const uploadId = "22222222-2222-4222-8222-222222222222";
 
 type TokenInput = { kind: ResourceUploadKind; fileName: string; size: number; contentType: string; uploadId: string };
 
-async function issueToken(input: TokenInput, pathname = resourceUploadPath(input.kind, userId, input.uploadId, input.fileName)) {
+async function issueToken(input: TokenInput, pathname = resourceUploadPath(input.kind, userId, input.uploadId, input.fileName), request?: Request) {
   mocks.handleUpload.mockImplementation(async (options: {
     onBeforeGenerateToken: (path: string, payload: string) => Promise<unknown>;
   }) => options.onBeforeGenerateToken(pathname, JSON.stringify(input)));
-  return POST(new Request("https://hra.example/api/resource-uploads", {
+  return POST(request ?? new Request("https://hra.example/api/resource-uploads", {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://hra.example" },
     body: JSON.stringify({ type: "blob.generate-client-token" }),
@@ -37,6 +38,12 @@ describe("자료실 직접 업로드 토큰", () => {
   });
 
   afterEach(() => vi.unstubAllEnvs());
+
+  directUploadOriginCases({
+    route: "/api/resource-uploads",
+    issue: request => issueToken({ kind: "guidebooks", fileName: "합성.pdf", size: 100, contentType: "application/pdf", uploadId }, undefined, request),
+    recordCount: () => mocks.recordResourceUpload.mock.calls.length,
+  });
 
   it("정확히 30MB 가이드북에 제한된 토큰만 발급한다", async () => {
     const input = { kind: "guidebooks" as const, fileName: "책.pdf", size: 30 * 1024 * 1024, contentType: "application/pdf", uploadId };

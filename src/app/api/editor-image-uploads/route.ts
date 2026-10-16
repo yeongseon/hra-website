@@ -7,6 +7,7 @@ import { projectBlobHost } from "@/lib/blob-host";
 import { editorImageContentTypes, editorImagePath, maxEditorImageBytes } from "@/lib/editor-image-upload-contract";
 import { validateEditorImageReference } from "@/lib/editor-image-upload-server";
 import { logServerError } from "@/lib/errors";
+import { isSameRequestOrigin } from "@/lib/request-origin";
 import { reserveUploadAttempt } from "@/lib/rate-limit";
 import { extractClientIp } from "@/lib/rate-limit-core";
 import { isProjectBlobUrl } from "@/lib/resource-download";
@@ -35,7 +36,7 @@ export async function POST(request: Request): Promise<Response> {
     const result = await handleUpload({ body: raw as HandleUploadBody, request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const origin = request.headers.get("origin");
-        if (origin && origin !== new URL(request.url).origin) throw new Error("허용되지 않은 요청입니다.");
+        if (origin && !isSameRequestOrigin(request)) throw new Error("허용되지 않은 요청입니다.");
         const session = await auth();
         if (!session?.user?.id || !["ADMIN", "FACULTY", "MEMBER"].includes(session.user.role)) {
           throw new Error("업로드 권한이 없습니다.");

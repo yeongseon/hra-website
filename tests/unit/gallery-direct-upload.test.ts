@@ -1,4 +1,5 @@
 /** 갤러리 직접 업로드 토큰과 완료 URL의 권한·대상·실물 검증을 확인합니다 (#102). */
+import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -25,11 +26,11 @@ const pathname = galleryUploadPath(galleryId, userId, uploadId, "png");
 const url = `https://${projectBlobHost}/${pathname}`;
 const input = { galleryId, uploadId, fileName: "사진.png", size: 10 * 1024 * 1024, contentType: "image/png" };
 
-async function issueToken(payload = input, path = pathname) {
+async function issueToken(payload = input, path = pathname, request?: Request) {
   mocks.handleUpload.mockImplementation(async (options: {
     onBeforeGenerateToken: (pathname: string, payload: string) => Promise<unknown>;
   }) => options.onBeforeGenerateToken(path, JSON.stringify(payload)));
-  return POST(new Request("https://hra.example/api/gallery-uploads", {
+  return POST(request ?? new Request("https://hra.example/api/gallery-uploads", {
     method: "POST", headers: { origin: "https://hra.example" },
     body: JSON.stringify({ type: "blob.generate-client-token" }),
   }));
@@ -43,6 +44,12 @@ describe("갤러리 직접 업로드", () => {
     mocks.head.mockResolvedValue({ url, pathname, size: 10 * 1024 * 1024, contentType: "image/png" });
     mocks.fetch.mockResolvedValue(new Response(Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a), { status: 206 }));
     vi.stubGlobal("fetch", mocks.fetch);
+  });
+
+  directUploadOriginCases({
+    route: "/api/gallery-uploads",
+    issue: request => issueToken(input, pathname, request),
+    recordCount: () => mocks.recordUpload.mock.calls.length,
   });
 
   it("관리자의 10MB PNG만 해당 앨범 경로로 허용한다", async () => {

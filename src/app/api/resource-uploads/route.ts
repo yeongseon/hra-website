@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logServerError } from "@/lib/errors";
+import { isSameRequestOrigin } from "@/lib/request-origin";
 import { isCurrentResourceUploadUrl, resourceUploadStore } from "@/lib/resource-blob-store";
 import {
   isResourceUploadKind,
@@ -51,7 +52,7 @@ export async function POST(request: Request): Promise<Response> {
       ...(store.token ? { token: store.token } : {}),
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const origin = request.headers.get("origin");
-        if (origin && origin !== new URL(request.url).origin) throw new Error("허용되지 않은 요청입니다.");
+        if (origin && !isSameRequestOrigin(request)) throw new Error("허용되지 않은 요청입니다.");
 
         const session = await auth();
         const userId = session?.user?.id;
