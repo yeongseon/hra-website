@@ -116,7 +116,7 @@ export async function updatePressArticle(id: string, formData: FormData): Promis
     };
   }
 
-  await db
+  const updated = await db
     .update(pressArticles)
     .set({
       title: parsed.data.title,
@@ -126,7 +126,13 @@ export async function updatePressArticle(id: string, formData: FormData): Promis
       description: parsed.data.description ?? null,
       imageUrl: parsed.data.imageUrl ?? null,
     })
-    .where(eq(pressArticles.id, parsedId.data));
+    .where(eq(pressArticles.id, parsedId.data))
+    .returning({ id: pressArticles.id });
+
+  // 저장 직전 다른 관리자가 삭제했더라도 UPDATE 결과로 확인해 성공 처리를 막습니다.
+  if (updated.length === 0) {
+    return { success: false, message: "언론보도를 찾을 수 없습니다." };
+  }
 
   revalidatePressPaths();
   redirect("/admin/press");

@@ -205,7 +205,12 @@ export async function updateFaqItem(id: string, formData: FormData): Promise<Faq
     };
   }
 
-  await db.update(faqItems).set(parsed.data).where(eq(faqItems.id, parsedId.data));
+  const updated = await db.update(faqItems).set(parsed.data)
+    .where(eq(faqItems.id, parsedId.data)).returning({ id: faqItems.id });
+  // 별도 존재 조회 대신 실제 저장 결과를 검사해 조회 후 삭제 경합도 처리합니다.
+  if (updated.length === 0) {
+    return { success: false, message: "FAQ 항목을 찾을 수 없습니다." };
+  }
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
   redirect("/admin/faq");
