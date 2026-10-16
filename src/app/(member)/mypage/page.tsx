@@ -3,6 +3,8 @@
  * 소셜 로그인 내부 주소는 실제 연락처로 오인하지 않도록 표시하지 않는다.
  */
 import type { Metadata } from "next";
+import Link from "next/link";
+import { canManageAcademics } from "@/lib/academic-access";
 import { requireMember } from "@/lib/member";
 import { getDisplayEmail } from "@/lib/auth-email";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +34,10 @@ export default async function MyPage() {
           환영합니다, <span className="text-[#1a1a1a] font-medium">{user.name}</span>님.
         </p>
       </div>
+
+      {canManageAcademics(user) && (
+        <Link href="/admin/academics/students" className="mb-8 inline-block rounded bg-[#2563EB] px-5 py-3 text-white">학사관리</Link>
+      )}
 
       <div className="grid grid-cols-1 gap-8">
         <section>
