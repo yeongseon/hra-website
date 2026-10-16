@@ -35,8 +35,8 @@ export default async function EditResourceTemplatePage({ params }: Props) {
     notFound();
   }
 
-  const boundAction = async (formData: FormData) =>
-    updateReportTemplate(target.id, formData);
+  // 서버 액션 참조를 유지한 채 대상 ID를 바인딩해 클라이언트 폼으로 전달한다.
+  const boundAction = updateReportTemplate.bind(null, target.id);
 
   return (
     <section className="mx-auto max-w-4xl px-6 py-10">
