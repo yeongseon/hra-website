@@ -168,9 +168,15 @@ it("취소 응답 유실이며 미제출이면 선택 파일·기존 키를 유�
 
 it("저장소 기록 실패는 고정 안내를 표시하고 현재 탭의 같은 키 재시도는 유지한다", async () => {
   vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("비밀 저장소 예외"); });
-  mocks.finalize.mockRejectedValueOnce(new Error("응답 유실"));
+  let rejectFinalize: (error: Error) => void = () => undefined;
+  mocks.finalize.mockImplementationOnce(() => new Promise<never>((_, reject) => { rejectFinalize = reject; }));
   render(createElement(FileSubmissionForm, { assignment, open: true })); select(); fireEvent.click(screen.getByRole("button", { name: "최종 제출" }));
   await waitFor(() => expect(screen.getByRole("note").textContent).toContain("새로고침 후에는 이전 요청을 복구하지 못할 수 있습니다"));
+  // 저장 경고는 전송 중에도 보이므로, 서버 응답 유실을 확정한 뒤 활성화된 재시도를 누른다.
+  await waitFor(() => expect(mocks.finalize).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole("button", { name: "같은 요청으로 제출 다시 확인" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => rejectFinalize(new Error("응답 유실")));
+  await waitFor(() => expect(screen.getByRole("status").textContent).toContain("전송 또는 제출 결과를 확인하지 못했습니다"));
   const previous = mocks.finalize.mock.calls[0][0];
   fireEvent.click(screen.getByRole("button", { name: "같은 요청으로 제출 다시 확인" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "제출 완료" })).toBeTruthy());
