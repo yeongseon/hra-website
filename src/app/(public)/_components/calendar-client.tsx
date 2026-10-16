@@ -303,7 +303,8 @@ export function CalendarClient({ events: initialEvents, year: initialYear, month
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[450px_600px] md:justify-center">
+    // 태블릿에서는 한 열을 유지하고, 두 열도 남은 폭 안에서 줄어들도록 최소 폭을 0으로 둡니다.
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,450px)_minmax(0,600px)] lg:justify-center">
       {/* ── 달력 그리드 ── */}
       <div className="space-y-4">
         {/* 헤더: 이전/다음 월 이동 + 오늘 버튼 */}
