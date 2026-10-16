@@ -29,6 +29,7 @@ import {
   uuid, // 고유 ID 저장 (128비트 무작위 값)
   unique, // 복합 컬럼에 대한 UNIQUE 제약(중복 차단)을 선언할 때 사용
   check, // 컬럼 값에 대한 CHECK 제약 (조건식) 을 선언할 때 사용
+  jsonb, // 학적 연결 승인 계획·변경 전후의 최소 식별자 기록
 } from "drizzle-orm/pg-core";
 
 // Drizzle ORM의 관계 설정 함수
@@ -242,6 +243,25 @@ export const cohortEnrollments = pgTable("cohort_enrollments", {
   studentCohortUnique: unique("cohort_enrollments_student_cohort_unique").on(table.studentId, table.cohortId),
   cohortStatusIndex: index("cohort_enrollments_cohort_status_idx").on(table.cohortId, table.status),
   endedAtOrder: check("cohort_enrollments_ended_at_order", sql`${table.endedAt} IS NULL OR ${table.endedAt} >= ${table.enrolledAt}`),
+}));
+
+// 연결·명시 등록을 같은 트랜잭션으로 확정한 승인 기록입니다.
+// 계획과 변경 기록에는 UUID·역할·확인 방식만 저장하며 이름·증빙 원문은 저장하지 않습니다.
+export const academicEnrollmentLinkBatches = pgTable("academic_enrollment_link_batches", {
+  requestId: uuid("request_id").primaryKey(),
+  actorUserId: uuid("actor_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  approvalReferenceId: uuid("approval_reference_id").notNull(),
+  verificationMethod: text("verification_method").notNull(),
+  plan: jsonb("plan").notNull(),
+  changes: jsonb("changes").notNull(),
+  linkedCount: integer("linked_count").notNull(),
+  enrolledCount: integer("enrolled_count").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => ({
+  verificationMethodAllowed: check("academic_enrollment_link_batches_verification_method_check",
+    sql`${table.verificationMethod} IN ('IN_PERSON', 'VERIFIED_CONTACT')`),
+  linkedCountNonnegative: check("academic_enrollment_link_batches_linked_count_check", sql`${table.linkedCount} >= 0`),
+  enrolledCountNonnegative: check("academic_enrollment_link_batches_enrolled_count_check", sql`${table.enrolledCount} >= 0`),
 }));
 
 // ============================================================
