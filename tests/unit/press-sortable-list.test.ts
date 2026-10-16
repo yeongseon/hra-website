@@ -142,6 +142,12 @@ describe("언론보도 목록의 순서 저장 복구", () => {
     expect(titles()).toEqual([firstTitle, secondTitle]);
     expect(screen.queryByText(internalError)).toBeNull();
     expect(mocks.renderFailure).not.toHaveBeenCalled();
+    // 오류 안내가 먼저 표시되어도 전이가 끝나기 전에는 실제 UI가 재시도를 막으므로 활성 상태를 기다립니다.
+    await waitFor(() => {
+      expect(row(firstTitle).getAttribute("draggable")).toBe("true");
+      expect(removeButton(firstTitle).hasAttribute("disabled")).toBe(false);
+      expect(row(firstTitle).closest("[aria-busy]")?.getAttribute("aria-busy")).toBe("false");
+    });
     drag(firstTitle, secondTitle);
     await waitFor(() => expect(mocks.reorder).toHaveBeenCalledTimes(2));
     expect(mocks.reorder.mock.calls).toEqual([[[secondId, firstId]], [[secondId, firstId]]]);
