@@ -6,6 +6,8 @@
 현재 버전별 마이그레이션 디렉터리는 없으며, 범위별 SQL·스크립트는 `scripts/migrate-*`에 있습니다.
 새 스키마 변경은 해당 이슈·PR에 적용 순서와 검증 근거를 남깁니다.
 
+G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
+
 ## 새 개발·테스트 Neon DB
 
 1. `cp .env.example .env` 후 별도 개발용 Neon DB 주소와 필요한 설정을 채웁니다. 운영 DB 주소를 사용하지 않습니다.
