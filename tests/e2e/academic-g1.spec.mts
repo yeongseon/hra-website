@@ -121,7 +121,8 @@ test("[G1:ADMIN_FLOW] 실제 관리 액션으로 초안·공개·종료", async 
   await page.getByLabel("대상 기수", { exact: true }).selectOption(ids.cohortA);
   await page.getByLabel("과제 제목", { exact: true }).fill("G1 실제 관리 흐름");
   await page.getByLabel("과제 안내", { exact: true }).fill("비민감 시험 안내");
-  const kst = new Date(Date.now() + 2 * 86_400_000 + 9 * 3_600_000).toISOString().slice(0, 19);
+  // 초가 00이면 브라우저가 생략하므로 datetime-local의 분 단위 정규형을 사용한다.
+  const kst = new Date(Date.now() + 2 * 86_400_000 + 9 * 3_600_000).toISOString().slice(0, 16);
   await page.getByLabel("마감 일시 (한국시간)", { exact: true }).fill(kst);
   const request = page.waitForRequest((value) => value.method() === "POST" && Boolean(value.headers()["next-action"]));
   await page.getByRole("button", { name: "초안 저장", exact: true }).click();
