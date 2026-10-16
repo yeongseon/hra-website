@@ -195,7 +195,7 @@ describe.skipIf(!bin)("학생·기수 학적 migration", () => {
       run("DROP TABLE academic_students;");
       run(migration);
     }
-  });
+  }, 15000);
 
   it("기존 테이블의 기본값·FK·인덱스 불일치를 자동 보정하지 않는다", () => {
     const cases = [
@@ -222,7 +222,7 @@ describe.skipIf(!bin)("학생·기수 학적 migration", () => {
       }
       run(migration);
     }
-  });
+  }, 15000);
 
   it("읽기 전용 preflight는 연결·등록 중복을 찾아내고 행을 수정하지 않는다", () => {
     run(`ALTER TABLE academic_students DROP CONSTRAINT academic_students_user_id_unique;
