@@ -2,6 +2,8 @@
 import "server-only";
 import { AcademicAccessError } from "@/lib/academic-permissions";
 import { AcademicUploadError } from "./contract";
+import type { AcademicObservation } from "@/lib/academic-observability";
+import { recordUploadFailure } from "./observability";
 export function assertUploadOrigin(request:Request):void {
   // NextURL은 127.0.0.1을 localhost로 정규화한다. 실제 HTTP Host를 우선해
   // 브라우저가 접속한 authority(포트 포함)를 비교하고 임의 forwarded-host는 신뢰하지 않는다.
@@ -25,7 +27,9 @@ export async function readUploadJson(request:Request):Promise<unknown> {
   } catch(error){if(error instanceof AcademicUploadError)throw error;throw new AcademicUploadError("INVALID_FILE");}
   finally {await reader.cancel();}
 }
-export function uploadErrorResponse(error:unknown):Response {
+export function uploadErrorResponse(error:unknown, observation?: AcademicObservation):Response {
+  if(observation)recordUploadFailure(observation,error);
   const safe=error instanceof AcademicUploadError || error instanceof AcademicAccessError ? error : new AcademicUploadError("UNAVAILABLE");
-  return Response.json({error:safe.message,code:safe.code},{status:safe.status,headers:{"Cache-Control":"no-store"}});
+  return Response.json({error:safe.message,code:safe.code,...(observation?{referenceId:observation.correlationId}:{})},
+    {status:safe.status,headers:{"Cache-Control":"no-store",...(observation?{"X-Request-Id":observation.correlationId}:{})}});
 }

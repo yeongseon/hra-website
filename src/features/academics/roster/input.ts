@@ -15,4 +15,4 @@ export const rosterInputSchema = z.union([
 ], { error: "등록 유형에 맞는 학생 식별자 또는 표시 이름과 승인 근거를 확인해 주세요." });
 
 export type RosterInput = z.infer<typeof rosterInputSchema>;
-export type RosterFormState = { error?: string };
+export type RosterFormState = { error?: string; referenceId?: string };

@@ -30,6 +30,8 @@ const blob = () => ({ statusCode: 200, blob: { size: bytes.length, contentType: 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(console,"info").mockImplementation(()=>{});
+  vi.spyOn(console,"error").mockImplementation(()=>{});
   vi.stubEnv("ACADEMIC_ENABLED", "true");
   vi.stubEnv("ACADEMIC_APPROVER_USER_ID", "");
   vi.stubEnv("ACADEMIC_SUBMISSION_BLOB_HOST", "submissionqa.private.blob.vercel-storage.com");
@@ -48,6 +50,7 @@ describe("개인 제출 파일 HTTP 경계", () => {
     expect(response.status).toBe(401);
     expect(mocks.execute).not.toHaveBeenCalled();
     expect(mocks.get).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({outcome:"DENIED",actorUserId:null})}));
   });
 
   it.each(["ADMIN", "FACULTY", "PENDING", "UNKNOWN"])("미지정 %s 역할은 DB 조회 전에 403", async (role) => {
@@ -94,6 +97,10 @@ describe("개인 제출 파일 HTTP 경계", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("PDF");
+    const referenceId=response.headers.get("x-request-id");
+    expect(referenceId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(console.info).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({outcome:"AUTHORIZED",actorUserId:userId,requestId:stored.access_id,correlationId:referenceId}));
+    expect(console.info).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({outcome:"COMPLETED",resourceId:fileId,correlationId:referenceId}));
     expect(response.headers.get("content-type")).toBe("application/octet-stream");
     expect(response.headers.get("content-disposition")).toContain("filename*=UTF-8''%ED%95%9C%EA%B8%80%20%EA%B3%BC%EC%A0%9C.pdf");
     expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
@@ -167,5 +174,31 @@ describe("개인 제출 파일 HTTP 경계", () => {
     await expect(response.text()).rejects.toThrow("파일 전송이 중단되었습니다.");
     expect(JSON.stringify(log.mock.calls)).not.toContain(key);
     expect(JSON.stringify(log.mock.calls)).not.toContain("qa-only-sensitive-token");
+    expect(log).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({outcome:"STREAM_INTERRUPTED",correlationId:response.headers.get("x-request-id")})}));
+  });
+  it("짧은 본문은 메타가 정상이더라도 전송 완료로 기록하지 않습니다",async()=>{
+    mocks.get.mockResolvedValue({...blob(),stream:new ReadableStream({start(controller){controller.enqueue(bytes.subarray(0,1));controller.close();}})});
+    const response=await GET(request,context());
+    await expect(response.text()).rejects.toThrow("파일 전송이 중단되었습니다.");
+    expect(vi.mocked(console.info).mock.calls.map(call=>call[1])).not.toContainEqual(expect.objectContaining({outcome:"COMPLETED"}));
+    expect(console.error).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({outcome:"STREAM_INTERRUPTED"})}));
+  });
+  it("본문 크기 초과 시 공급자 스트림도 취소합니다",async()=>{
+    const cancel=vi.fn();
+    mocks.get.mockResolvedValue({...blob(),stream:new ReadableStream({start(controller){controller.enqueue(new Uint8Array(bytes.length+1));},cancel})});
+    const response=await GET(request,context());
+    await expect(response.text()).rejects.toThrow("파일 전송이 중단되었습니다.");
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenLastCalledWith("[academic/events]",expect.objectContaining({context:expect.objectContaining({outcome:"STREAM_INTERRUPTED"})}));
+    expect(vi.mocked(console.info).mock.calls.map(call=>call[1])).not.toContainEqual(expect.objectContaining({outcome:"COMPLETED"}));
+  });
+  it("읽기 대기 중 클라이언트 취소는 완료와 공급자 오류로 중복 기록하지 않습니다",async()=>{
+    mocks.get.mockResolvedValue({...blob(),stream:new ReadableStream<Uint8Array>({pull(){return new Promise<void>(()=>{});}})});
+    const response=await GET(request,context());
+    await response.body?.cancel();
+    const events=vi.mocked(console.info).mock.calls.map(call=>call[1]);
+    expect(events).toContainEqual(expect.objectContaining({outcome:"CANCELLED",correlationId:response.headers.get("x-request-id")}));
+    expect(events).not.toContainEqual(expect.objectContaining({outcome:"COMPLETED"}));
+    expect(console.error).not.toHaveBeenCalled();
   });
 });

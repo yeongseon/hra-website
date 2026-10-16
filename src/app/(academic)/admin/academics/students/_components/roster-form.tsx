@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { registerStudent } from "@/features/academics/roster/actions";
 import type { RosterFormState } from "@/features/academics/roster/input";
+import { AcademicRequestReference } from "@/components/academics/request-reference";
 
 export function RosterForm({ cohorts, requestId, studentId }: {
   cohorts: { id: string; name: string }[]; requestId: string; studentId?: string;
@@ -59,7 +60,7 @@ export function RosterForm({ cohorts, requestId, studentId }: {
       <p id="evidence-help" className="text-sm text-[#666666]">
         운영자가 별도로 관리하는 확인 기록의 식별자(UUID)를 입력하세요. 증빙 원문·전화번호·이메일은 입력하지 마세요.
       </p>
-      {state.error && <p role="alert" className="text-red-700">{state.error}</p>}
+      {state.error && <div role="alert" className="space-y-1 text-red-700"><p>{state.error}</p><AcademicRequestReference referenceId={state.referenceId} /></div>}
       <button type="submit" disabled={pending || !cohorts.length}
         className="rounded bg-[#1a1a1a] px-5 py-2 text-white disabled:opacity-50">
         {pending ? "등록 중…" : "등록 승인"}

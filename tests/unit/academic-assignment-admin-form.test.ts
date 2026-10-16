@@ -47,13 +47,15 @@ describe("과제 관리 폼", () => {
     expect(screen.getByLabelText("과제를 종료하면 학생의 추가 제출을 받을 수 없음을 확인했습니다.", { exact: true })).toBeTruthy();
   });
   it("초안 저장의 검증 오류와 재시도가 같은 요청 키를 유지한다", async () => {
-    mocks.create.mockResolvedValueOnce({ success: false, message: "과제 입력값을 확인해 주세요." })
+    mocks.create.mockResolvedValueOnce({ success: false, message: "과제 입력값을 확인해 주세요.", referenceId: id })
       .mockResolvedValueOnce({ success: true, assignment: { id } });
     const view = render(createElement(AssignmentForm, { options, requestId: other, writable: true }));
     fireEvent.change(screen.getByLabelText("대상 기수", { exact: true }), { target: { value: id } });
     fireEvent.change(screen.getByLabelText("과제 제목", { exact: true }), { target: { value: "시험 과제" } });
     fireEvent.submit(view.container.querySelector("form")!);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("과제 입력값을 확인"));
+    expect(screen.getByRole("alert").textContent).toContain(`요청 참조: ${id}`);
+    expect(screen.getByRole("alert").textContent).not.toContain(other);
     expect((screen.getByLabelText("과제 제목", { exact: true }) as HTMLInputElement).value).toBe("시험 과제");
     fireEvent.submit(view.container.querySelector("form")!);
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(`/admin/academics/assignments/${id}`));
@@ -63,11 +65,12 @@ describe("과제 관리 폼", () => {
   it("공개는 확인한 초안 버전과 대상 fingerprint를 보내고 오류 이후에도 요청 키를 보존한다", async () => {
     const preview = { assignmentId: id, expectedUpdatedAt: "2030-01-01T00:00:00.123456+00:00",
       expectedTargetFingerprint: "a".repeat(64), reviewedAt: "2030-01-01T00:00:01+00:00", targetCount: 4, unlinkedCount: 1 };
-    mocks.publish.mockResolvedValueOnce({ success: false, message: "공개 대상 명부가 변경되었습니다. 미리보기를 다시 확인해 주세요." })
+    mocks.publish.mockResolvedValueOnce({ success: false, message: "공개 대상 명부가 변경되었습니다. 미리보기를 다시 확인해 주세요.", referenceId:id })
       .mockResolvedValueOnce({ success: true, targetCount: 4 });
     const view = render(createElement(AssignmentTransitionForm, { kind: "publish", assignmentId: id, requestId: other, writable: true, preview }));
     fireEvent.submit(view.container.querySelector("form")!);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("미리보기를 다시 확인"));
+    expect(screen.getByRole("alert").textContent).toContain(`요청 참조: ${id}`);
     expect(screen.getByRole("button", { name: "최신 대상으로 다시 확인" })).toBeTruthy();
     fireEvent.submit(view.container.querySelector("form")!);
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("확정 대상 4명"));
@@ -78,14 +81,23 @@ describe("과제 관리 폼", () => {
   });
 
   it("통신 오류 뒤 동일 종료 요청을 재시도할 때 확인 체크 상태를 유지한다", async () => {
-    mocks.close.mockRejectedValueOnce(new Error("시험 통신 오류"));
+    mocks.close.mockRejectedValueOnce(Object.assign(new Error("SELECT synthetic@example.invalid https://private.invalid/token"),{referenceId:id}));
     const view = render(createElement(AssignmentTransitionForm, { kind: "close", assignmentId: id, requestId: other, writable: true }));
     const confirmation = screen.getByRole("checkbox") as HTMLInputElement;
     fireEvent.click(confirmation);
     expect(confirmation.checked).toBe(true);
     fireEvent.submit(view.container.querySelector("form")!);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("같은 화면에서 다시 시도"));
+    expect(screen.getByRole("alert").textContent).not.toContain("요청 참조");
+    expect(screen.getByRole("alert").textContent).not.toContain("synthetic@example.invalid");
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+  });
+  it("종료 액션의 서버 참조는 메시지와 별도로 표시한다",async()=>{
+    mocks.close.mockResolvedValue({success:false,message:"과제를 종료하지 못했습니다.",referenceId:id});
+    const view=render(createElement(AssignmentTransitionForm,{kind:"close",assignmentId:id,requestId:other,writable:true}));
+    fireEvent.submit(view.container.querySelector("form")!);
+    await waitFor(()=>expect(screen.getByRole("alert").textContent).toContain(`요청 참조: ${id}`));
+    expect(screen.getByRole("alert").textContent).toContain("과제를 종료하지 못했습니다.");
   });
 
 });
