@@ -87,7 +87,8 @@ describe.skipIf(!bin)("제출 최종화 wrapper PostgreSQL", () => {
     });
     const listed=run(`PREPARE student_list AS ${query.sql}; EXECUTE student_list(${parameters.join(",")});`).split("|");
     expect(listed[0]).toBe(assignment);
-    const timestamp=listed[6].replaceAll("'","''");
+    expect(listed[6]).toBe(result.submissionId);
+    const timestamp=listed[7].replaceAll("'","''");
     expect(run(`SELECT '${timestamp}'::timestamptz=s.submitted_at AND f.id IS NOT NULL
       FROM assignment_targets t LEFT JOIN assignment_submissions s ON s.assignment_target_id=t.id
       LEFT JOIN assignment_submission_files f ON f.submission_id=s.id WHERE t.id='${target}';`)).toBe("t");
