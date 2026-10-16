@@ -18,6 +18,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
+import { isConstraintViolation } from "@/lib/db/constraint-errors";
+import { logServerError } from "@/lib/errors";
 import { scheduleEvents, scheduleSessions } from "@/lib/db/schema";
 import { parseCalendarMonth } from "@/lib/query-params";
 
@@ -27,6 +29,8 @@ import { parseCalendarMonth } from "@/lib/query-params";
 
 // 세션 슬롯 하나에 대한 유효성 검사
 const sessionSchema = z.object({
+  // 폼의 로컬 키와 구분해 기존 세션의 영속 UUID만 받는다.
+  serverId: z.string().uuid().transform(value => value.toLowerCase()).optional(),
   category: z.enum(["CLASSICS", "ENGLISH", "SPEECH", "SPECIAL_LECTURE", "CASE_STUDY"]),
   facultyId: z.string().uuid().optional().nullable(),
   content: z.string().trim().max(500).optional().nullable(),
@@ -50,7 +54,14 @@ const scheduleEventFormSchema = z.object({
   weekNumber: z.number().int().positive().optional().nullable(),
   description: z.string().trim().optional().nullable(),
   isPublic: z.boolean().default(true),
-  sessions: z.array(sessionSchema).default([]),
+  sessions: z.array(sessionSchema).default([]).superRefine((sessions, context) => {
+    const ids = new Set<string>();
+    for (const [index, session] of sessions.entries()) {
+      if (!session.serverId) continue;
+      if (ids.has(session.serverId)) context.addIssue({ code: "custom", path: [index, "serverId"], message: "같은 세션을 중복해서 저장할 수 없습니다." });
+      ids.add(session.serverId);
+    }
+  }),
 });
 
 // 액션 반환 타입
@@ -91,14 +102,14 @@ function parseWeekNumber(value: FormDataEntryValue | null): number | null {
   return isNaN(num) ? null : num;
 }
 
-function parseSessions(value: FormDataEntryValue | null): z.infer<typeof sessionSchema>[] {
+// 잘못된 JSON을 빈 배열로 해석하면 기존 세션이 삭제될 수 있어 검증 오류로 돌린다.
+function parseSessions(value: FormDataEntryValue | null): unknown {
   if (typeof value !== "string" || value.trim() === "") return [];
   try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
+    const parsed: unknown = JSON.parse(value);
     return parsed;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -251,6 +262,11 @@ export async function createScheduleEvent(
     return { success: false, message: "입력값을 확인해주세요.", fieldErrors };
   }
 
+  // 새 일정은 기존 세션의 UUID를 채택하지 않는다.
+  if (result.data.sessions.some(session => session.serverId)) {
+    return { success: false, message: "새 일정에는 기존 세션을 연결할 수 없습니다." };
+  }
+
   const { sessions, startTime, endTime, ...eventData } = result.data;
   const eventDate = buildEventDate(eventData.eventDate, startTime);
   // timestamp(시간대 없음) 컬럼에는 KST 달력의 벽시계 값을 ISO 문자열로 통일해 전달한다.
@@ -314,11 +330,10 @@ export async function createScheduleEvent(
 }
 
 /**
- * 일정 수정
- *
- * UPDATE event + DELETE 기존 sessions + INSERT 새 sessions 를 단일 SQL CTE 로 묶어
- * partial 반영을 원천 차단한다. 세션 재삽입이 없어도 UPDATE 와 DELETE 는 함께
- * 원자화되어야 한다 (원자화 근거는 createScheduleEvent 의 docstring 참고).
+ * 일정 수정은 기존 세션 UUID를 보존하며 변경된 행만 원자적으로 저장한다.
+ * Neon HTTP는 대화형 트랜잭션을 지원하지 않으므로 소유권 검사·행 잠금·일정 수정·
+ * 세션 UPDATE/INSERT/DELETE를 단일 SQL CTE로 묶는다. 과제가 참조하는 세션을
+ * 유지하면 일반 제목/내용 수정이 가능하고, 실제 제거하면 RESTRICT FK가 전체를 롤백한다.
  */
 export async function updateScheduleEvent(
   id: string,
@@ -326,17 +341,10 @@ export async function updateScheduleEvent(
   formData: FormData
 ): Promise<ScheduleActionState> {
   await requireAdmin();
-
-  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
-  // 특히 이 함수는 raw SQL 의 ${id}::uuid 캐스트가 5곳에 있어 캐스트 실패 시
-  // Vercel Logs 에 raw ID 가 노출될 위험이 크므로 반드시 사전 차단이 필요하다.
   const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    return { success: false, message: "유효하지 않은 ID입니다." };
-  }
+  if (!parsedId.success) return { success: false, message: "유효하지 않은 ID입니다." };
 
   const result = parseFormData(formData);
-
   if (!result.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of result.error.issues) {
@@ -347,15 +355,37 @@ export async function updateScheduleEvent(
   }
 
   const { sessions, startTime, endTime, ...eventData } = result.data;
-  const eventDate = buildEventDate(eventData.eventDate, startTime);
-  const eventDateSql = eventDate.toISOString();
-  const hasSessions = eventData.eventType === "CLASS" && sessions.length > 0;
+  const eventDateSql = buildEventDate(eventData.eventDate, startTime).toISOString();
+  // 행사용 전환 시 기존 동작대로 세션을 제거하되, 전달된 UUID의 소유권부터 검증한다.
+  const sessionPayload = sessions.map(session => ({
+    id: session.serverId ?? null,
+    category: session.category,
+    faculty_id: session.facultyId ?? null,
+    content: session.content ?? null,
+    report_category: session.reportCategory ?? null,
+    sub_title: session.subTitle ?? null,
+    sub_description: session.subDescription ?? null,
+    order: session.order,
+  }));
 
-  if (!hasSessions) {
-    // 세션 없음 — UPDATE + DELETE 만 원자화.
-    // 데이터 수정 CTE 는 참조되지 않아도 정확히 1회 실행된다 (Postgres 매뉴얼 규정).
-    await db.execute(sql`
-      WITH updated_event AS (
+  try {
+    const saved = await db.execute(sql`
+      WITH input_sessions AS MATERIALIZED (
+        SELECT * FROM jsonb_to_recordset(${JSON.stringify(sessionPayload)}::jsonb)
+          AS s(id uuid, category session_category, faculty_id uuid, content text,
+            report_category text, sub_title text, sub_description text, "order" integer)
+      ), locked_event AS MATERIALIZED (
+        SELECT id FROM schedule_events WHERE id = ${parsedId.data}::uuid FOR UPDATE
+      ), locked_sessions AS MATERIALIZED (
+        SELECT s.id FROM schedule_sessions s JOIN locked_event e ON e.id = s.schedule_event_id FOR UPDATE OF s
+      ), valid_request AS MATERIALIZED (
+        SELECT NOT EXISTS (
+          SELECT 1 FROM input_sessions s WHERE s.id IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM locked_sessions owned WHERE owned.id = s.id)
+        ) AS valid
+      ), requested_sessions AS MATERIALIZED (
+        SELECT * FROM input_sessions WHERE ${eventData.eventType === "CLASS"}::boolean
+      ), updated_event AS (
         UPDATE schedule_events SET
           event_date = ${eventDateSql}::timestamp,
           end_time = ${endTime ?? null},
@@ -364,57 +394,49 @@ export async function updateScheduleEvent(
           cohort_id = ${eventData.cohortId ?? null}::uuid,
           week_number = ${eventData.weekNumber ?? null}::integer,
           description = ${eventData.description ?? null},
-          is_public = ${eventData.isPublic}
-        WHERE id = ${parsedId.data}::uuid
+          is_public = ${eventData.isPublic},
+          updated_at = now()
+        WHERE id IN (SELECT id FROM locked_event) AND (SELECT valid FROM valid_request)
+        RETURNING id
+      ), updated_sessions AS (
+        UPDATE schedule_sessions existing SET category = incoming.category,
+          faculty_id = incoming.faculty_id, content = incoming.content,
+          report_category = incoming.report_category, sub_title = incoming.sub_title,
+          sub_description = incoming.sub_description, "order" = incoming."order"
+        FROM requested_sessions incoming, updated_event e
+        WHERE existing.id = incoming.id AND existing.schedule_event_id = e.id
+        RETURNING existing.id
+      ), deleted_sessions AS (
+        DELETE FROM schedule_sessions existing USING updated_event e
+        WHERE existing.schedule_event_id = e.id
+          AND NOT EXISTS (SELECT 1 FROM requested_sessions incoming WHERE incoming.id = existing.id)
+        RETURNING existing.id
+      ), inserted_sessions AS (
+        INSERT INTO schedule_sessions (schedule_event_id, category, faculty_id, content,
+          report_category, sub_title, sub_description, "order")
+        SELECT e.id, incoming.category, incoming.faculty_id, incoming.content,
+          incoming.report_category, incoming.sub_title, incoming.sub_description, incoming."order"
+        FROM requested_sessions incoming CROSS JOIN updated_event e WHERE incoming.id IS NULL
         RETURNING id
       )
-      DELETE FROM schedule_sessions
-      WHERE schedule_event_id = ${parsedId.data}::uuid
+      SELECT EXISTS (SELECT 1 FROM locked_event) AS event_exists,
+        (SELECT valid FROM valid_request) AS sessions_valid,
+        (SELECT count(*) FROM updated_sessions) AS updated_count,
+        (SELECT count(*) FROM deleted_sessions) AS deleted_count,
+        (SELECT count(*) FROM inserted_sessions) AS inserted_count
     `);
-  } else {
-    // CLASS + sessions — UPDATE + DELETE 기존 + INSERT 새 sessions 을 CTE 한 문장으로 처리.
-    // DELETE 와 INSERT 모두 schedule_sessions 를 대상으로 하지만 새 sessions 는 PK
-    // (defaultRandom UUID) 가 새로 발급되므로 PK 충돌은 발생하지 않는다.
-    const sessionValues = sessions.map(
-      (s, i) => sql`(
-        ${s.category}::session_category,
-        ${s.facultyId ?? null}::uuid,
-        ${s.content ?? null}::text,
-        ${s.reportCategory ?? null}::text,
-        ${s.subTitle ?? null}::text,
-        ${s.subDescription ?? null}::text,
-        ${s.order ?? i}::integer
-      )`
-    );
-
-    await db.execute(sql`
-      WITH updated_event AS (
-        UPDATE schedule_events SET
-          event_date = ${eventDateSql}::timestamp,
-          end_time = ${endTime ?? null},
-          event_type = ${eventData.eventType}::schedule_event_type,
-          title = ${eventData.title},
-          cohort_id = ${eventData.cohortId ?? null}::uuid,
-          week_number = ${eventData.weekNumber ?? null}::integer,
-          description = ${eventData.description ?? null},
-          is_public = ${eventData.isPublic}
-        WHERE id = ${parsedId.data}::uuid
-        RETURNING id
-      ),
-      deleted_sessions AS (
-        DELETE FROM schedule_sessions
-        WHERE schedule_event_id = ${parsedId.data}::uuid
-        RETURNING id
-      )
-      INSERT INTO schedule_sessions (
-        schedule_event_id, category, faculty_id, content, report_category, sub_title, sub_description, "order"
-      )
-      SELECT
-        ${parsedId.data}::uuid,
-        s.category, s.faculty_id, s.content, s.report_category, s.sub_title, s.sub_description, s."order"
-      FROM (VALUES ${sql.join(sessionValues, sql`, `)})
-        AS s(category, faculty_id, content, report_category, sub_title, sub_description, "order")
-    `);
+    const status = z.object({ event_exists: z.boolean(), sessions_valid: z.boolean() }).safeParse(saved.rows[0]);
+    if (!status.success) throw new Error("일정 저장 결과를 확인할 수 없습니다.");
+    if (!status.data.event_exists) return { success: false, message: "일정을 찾을 수 없습니다. 목록을 새로고침해주세요." };
+    if (!status.data.sessions_valid) return { success: false, message: "다른 일정의 세션이 포함되었거나 세션이 변경되었습니다. 새로고침 후 다시 확인해주세요." };
+  } catch (error) {
+    // PostgreSQL 18의 RESTRICT 위반은 23001이며, 이전 서버의 23503도 같은 정책으로 처리한다.
+    if (["23001", "23503"].some(code => isConstraintViolation(error, code, "assignments_schedule_session_id_schedule_sessions_id_fk"))) {
+      return { success: false, message: "과제에 연결된 세션은 삭제할 수 없습니다. 해당 세션을 유지한 뒤 다시 저장해주세요." };
+    }
+    // SQL 본문과 입력값은 반환하지 않으며, 서버 로그 역시 기존 정제 헬퍼를 사용한다.
+    logServerError("schedule/update", error, { eventId: parsedId.data, sessionCount: sessions.length });
+    return { success: false, message: "일정을 저장하지 못했습니다. 연결된 기록과 입력값을 확인한 뒤 다시 시도해주세요." };
   }
 
   revalidatePath("/");
