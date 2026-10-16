@@ -42,4 +42,43 @@
 4. 모든 DB 참조가 비공개 URL이고 애플리케이션에서 열림을 확인한 후, 새 보호 자료 업로드가 비공개로 전환된 상태에서 비공개 사본의 존재와 공개 원본의 미참조 상태를 삭제 직전에 다시 확인한다. 소유권 원장에 있는 기존 공개 Blob만 원본 ETag 조건으로 삭제한다. 새 본문에 이전 공개 URL을 붙이면 링크가 깨질 수 있으므로 이전 주소 재사용은 금지한다. 재조회로 잔존 공개 참조와 공개 파일을 확인한다. 삭제 실패나 참조 불일치가 있으면 이슈를 열어둔다.
 5. 비로그인·PENDING·MEMBER·FACULTY·ADMIN으로 학생용/교수용 파일의 목록·상세·파일 응답을 검증한다. 역할 강등·계정 삭제 후 재요청, 링크 공유, PDF 인라인·다운로드, 파일 교체·삭제, 기존 공개 URL의 접근 실패까지 확인한다. 운영 자료 URL이나 본문은 테스트 기록에 쓰지 않는다.
 
+## 실제 HTTP 접근 검증
+
+`scripts/verify-resource-access-http.mjs`는 운영 회원을 변경하거나 JWT를 직접 발급하지 않고 실제 Next 서버의 CSRF·credentials 로그인과 다운로드 API를 실행한다. 임시 PostgreSQL에 합성 계정 4개와 학생용·교수용·가이드북 fixture만 만들고, 역할 변경·세션 버전 변경·계정 삭제도 그 임시 DB에서 수행한다.
+
+앱의 DB 드라이버·인증·권한 코드는 그대로 사용한다. `NODE_OPTIONS`의 테스트 전용 preload가 정확한 `.invalid` Neon 엔드포인트만 로컬 `psql`로 전달한다. `\gdesc`로 결과 타입을 설명하고 SQL을 한 번 실행한 결과를 설치된 Neon 클라이언트가 해석하므로, 요청 제한 함수의 실제 실행·성공 예약 삭제·중복 컬럼·타입도 검증된다. 운영 Neon 서비스의 네트워크 동작을 재현하는 검사는 아니다.
+
+전송 어댑터는 단일 SQL 요청만 지원한다. Neon batch 트랜잭션과 여러 요청에 걸친 동일 DB 세션은 재현하지 않는다. 이 접근 검증에 필요한 함수·SQL의 각 요청은 실제 PostgreSQL 트랜잭션 하나로 실행한다.
+
+**실행 준비**
+
+- `node_modules`가 설치되고 로컬 PostgreSQL 실행 파일이 있어야 한다. 운영 `.env`를 읽지 않도록 `.env`, `.env.local`, `.env.development`, `.env.development.local`이 없는 격리 worktree에서 실행한다.
+- `tests/support/resource-qa-pdf.mjs`의 `resourceQaPdfBytes()`가 만든 고정 비민감 PDF만 전용 private Blob의 `qa/resource-access-http/` 접두어 아래 `.pdf` 파일로 준비한다. 콘텐츠 형식은 `application/pdf`이다. 실행기 자체는 Blob을 업로드·수정·삭제하지 않는다.
+- 실행 프로세스에 `HRA_QA_PRIVATE_BLOB_URL`, `RESOURCE_PRIVATE_BLOB_HOST`, `RESOURCE_PRIVATE_READ_WRITE_TOKEN`을 전달한다. URL은 해당 호스트의 전용 QA 경로여야 한다. 선택 항목 `HRA_QA_PRIVATE_BLOB_SHA256`은 `resourceQaPdfSha256()`의 값과 같아야 한다. 비밀값은 명령 인자·기록·추적되는 환경 파일·이슈·로그에 기록하지 않는다. 비밀 관리 도구나 권한이 제한된 임시 파일을 사용하고 검증 후 정리한다.
+- 기존 `DATABASE_URL`, `AUTH_SECRET`, 소셜 로그인 설정을 상속하지 않는다. 실행기가 테스트 전용 값과 고유한 HTTP 포트·유닉스 소켓을 만든다.
+
+```bash
+HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npm test -- tests/unit/neon-psql-transport.test.ts
+HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-resource-access-http.mjs
+```
+
+**성공 기준**
+
+| 상태 | 학생용·가이드북 | 교수용 |
+| --- | --- | --- |
+| 비로그인 | 307, `/login` | 307, `/login` |
+| PENDING | 307, `/pending` | 307, `/pending` |
+| MEMBER | 200 | 404 |
+| FACULTY·ADMIN | 200 | 200 |
+
+허용된 다운로드·PDF 인라인 응답은 고정 PDF의 SHA-256과 바이트가 일치하고 `private, no-store`, `nosniff`, 올바른 콘텐츠 형식·다운로드 방식 헤더를 가져야 한다. private URL의 토큰 없는 직접 접근은 403이고, 쿠키 없이 같은 앱 링크를 재요청하면 307이어야 한다. 기존 교수 쿠키도 역할을 MEMBER로 바꾼 직후 교수용 자료에 404를 받고, 승인 취소·세션 버전 변경·계정 삭제도 다음 요청에 반영되어야 한다.
+
+기본 모드에서 전체 31개 검증이 통과해야 실물 접근 테스트 완료 증거로 사용한다. 상태 코드·검증 이름만 출력하며 쿠키·파일 URL·응답 본문·토큰·trace는 저장하지 않는다. 종료 시 이 실행에서 만든 Next 프로세스와 임시 DB만 정리한다. 전용 QA Blob의 삭제는 파일을 준비한 작업자가 최종 검증 후 수행한다.
+
+저장소 연결 전에는 다음 명령으로 정상 로그인과 차단 matrix 30개를 먼저 검증할 수 있다. 이 모드의 허용 경로는 저장소 미연결 502를 확인하므로 **실물 200 검증이나 이슈 완료 증거로 사용하지 않는다.**
+
+```bash
+HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-resource-access-http.mjs --authorization-only
+```
+
 참고: [Vercel 공개 Blob](https://vercel.com/docs/vercel-blob/public-storage), [비공개 Blob](https://vercel.com/docs/vercel-blob/private-storage), [서명 URL](https://vercel.com/docs/vercel-blob/vercel-signed-urls).
