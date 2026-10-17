@@ -4,6 +4,11 @@
 
 ## 결정
 
+- 환경 기본값: **Local Development → PR Preview/Test → Production**
+- 고정 Staging: 모바일 내부 테스트/Store 검수 등 명확한 목적이 생길 때만 추가
+- 비운영 환경에서 Production DB·Blob·PII·session/token 공유 금지
+- 환경 전략 정본: [환경 분리 및 배포 전략](developer/environment-strategy.md)
+
 - 목표: Web + Android + iOS
 - 모바일: **React Native + Expo 단일 코드베이스**
 - 서버: **API-first modular monolith**
