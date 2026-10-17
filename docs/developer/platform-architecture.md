@@ -274,7 +274,18 @@ Mobile E2E      → Android/iOS
 
 기존 auth/DB race/private upload/route audit 테스트는 구조 변경 과정에서도 삭제하거나 완화하지 않는다.
 
-## 10. CI 목표
+## 10. 환경 및 배포 경계
+
+환경 분리는 [환경 분리 및 배포 전략](environment-strategy.md)을 정본으로 한다.
+
+기본은 **Local Development → PR Preview/Test → Production**이며, 고정 Staging은 Android/iOS 내부 배포나 반복 pre-production 검수가 실제로 필요해질 때만 추가한다.
+
+- Preview는 Production DB/Blob/PII를 사용하지 않는다.
+- DB migration은 Vercel build와 분리한다.
+- monorepo 전환 뒤 `apps/web`은 Vercel, `apps/mobile`은 Expo EAS가 담당한다.
+- Web/Android/iOS release는 서로 독립적으로 실행·롤백 가능해야 한다.
+
+## 11. CI 목표
 
 monorepo PR 하나에서 가능한 범위로 다음을 검증한다.
 
