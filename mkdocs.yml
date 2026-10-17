@@ -47,9 +47,13 @@ nav:
       - 빌드·배포 안전 가이드 ⚠️: contributing/build-and-deploy-safety.md
       - AI 도구로 기여하기: contributing/ai-tools.md
       - 난이도별 작업 가이드: contributing/tasks-by-level.md
+  - 🏗️ 아키텍처:
+      - 멀티클라이언트 플랫폼 구조: developer/platform-architecture.md
+      - Web → Android → iOS 전환 로드맵: PLATFORM-ROADMAP.md
+      - Dev·Preview·Production 환경 전략: developer/environment-strategy.md
   - 🔧 사이트 수정:
       - 페이지 수정 & 꾸미기: CUSTOMIZATION.md
-      - 폴더 구조 이해하기: GUIDE.md
+      - 현재 폴더 구조 이해하기: GUIDE.md
   - 👑 관리자:
       - 관리자 운영 가이드: ADMIN-GUIDE.md
       - 데이터베이스 가이드: DATABASE.md

@@ -1,5 +1,9 @@
 # HRA 웹사이트 배포 & 문제 해결 가이드
 
+> 운영 환경 분리의 정본은 [환경 분리 및 배포 전략](developer/environment-strategy.md)입니다.
+> HRA는 **Local Development → PR Preview/Test → Production**을 기본으로 하며, 모바일 내부 테스트 등 실제 목적이 생기기 전에는 별도 상시 Staging을 만들지 않습니다.
+> Preview/Test는 Production DB·Blob·PII·운영 session/token을 사용하지 않습니다.
+
 > ⭐ **배포가 뭔가요?**
 >
 > 내 컴퓨터에서만 보이는 사이트를 **인터넷에 올려서 다른 사람도 볼 수 있게** 만드는 거예요.
