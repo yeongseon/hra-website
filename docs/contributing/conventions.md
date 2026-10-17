@@ -62,13 +62,24 @@ function greet(user: any) {
 
 ---
 
-### 4. 파일 및 폴더 구조: 정해진 위치에 넣어주세요
-Next.js App Router 구조를 따르고 있어요. 각 폴더의 역할을 기억해주세요.
+### 4. 파일 및 폴더 구조: 현재와 목표를 구분해요
 
-*   `src/app`: 페이지 주소(URL)와 매칭되는 폴더들이에요.
-*   `src/components`: 여러 페이지에서 공통으로 쓰는 작은 부품(버튼, 입력창 등)들이 모여요.
-*   `src/features`: 특정 기능(로그인, 게시판 등)과 관련된 복잡한 비즈니스 로직이나 서버 액션이 위치해요.
-*   `src/lib`: 외부 라이브러리 설정(DB 연결, 인증 설정 등)이나 공통 도구들이 들어있어요.
+현재 main은 Next.js App Router 중심 구조지만 #277에서 **Web + Android + iOS용 monorepo**로 전환합니다. 현재 파일을 수정할 때는 기존 위치를 존중하고, 신규/리팩터링 기능은 [플랫폼 아키텍처](../developer/platform-architecture.md)의 경계를 따릅니다.
+
+현재:
+*   `src/app`: Next.js 페이지/route
+*   `src/components`: Web UI
+*   `src/features`: 기능별 기존 로직/Server Action
+*   `src/lib`: DB/Auth/공통 infrastructure
+
+목표:
+*   `apps/web`: Next.js Web adapter/UI
+*   `apps/mobile`: React Native + Expo Android/iOS 공통 앱
+*   `packages/contracts`: OpenAPI/DTO/error code
+*   `server/modules`: Application Service와 기능 경계
+*   `server/infrastructure`: DB/Auth/Blob/Push 세부 구현
+
+신규/리팩터링 Page·Server Action·API route는 DB를 직접 호출하지 않고 Application Service → Repository 경계를 사용합니다.
 
 ---
 
