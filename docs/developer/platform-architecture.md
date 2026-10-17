@@ -301,7 +301,7 @@ iOS compile/build check
 
 Android를 먼저 출시해도 iOS 코드가 장기간 깨진 상태로 방치되지 않게 한다.
 
-## 11. 의도적으로 하지 않는 것
+## 12. 의도적으로 하지 않는 것
 
 - Microservice 선도입
 - Web UI와 React Native UI 강제 공유
