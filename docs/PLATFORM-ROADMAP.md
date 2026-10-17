@@ -1,0 +1,150 @@
+# HRA Web → Android → iOS 플랫폼 전환 로드맵
+
+> 이 문서는 출시일을 약속하지 않는다. 구조 개편의 의존 순서와 완료 조건을 관리한다. 전체 추적 이슈는 #277이다.
+
+## 결정
+
+- 목표: Web + Android + iOS
+- 모바일: **React Native + Expo 단일 코드베이스**
+- 서버: **API-first modular monolith**
+- 저장소: **monorepo**
+- 출시 순서: **Web 구조 개편 → Android 첫 출시 → iOS 출시**
+- 운영 Admin: 당분간 Web 유지
+- Microservice: 도입하지 않음
+
+## Phase 0 — 보안 선행
+
+구조 개편 전에 현재 알려진 기반 취약점을 먼저 없앤다.
+
+- #266 Next.js 보안 버전 업데이트
+- #267 Auth.js/next-auth 보안 업데이트
+- #268 보호 자료 Private Blob 운영 검증
+- #269 Public 저장소 보안 hardening
+
+Phase 0은 새 구조가 취약한 dependency를 그대로 확대하지 않기 위한 선행 조건이다.
+
+## Phase 1 — Web/Backend Big-bang
+
+실서비스 전이므로 점진적 호환 layer를 장기간 유지하기보다 목표 경계를 한 번에 확정한다. 단, 한 PR에 모든 module을 무제한 혼합하지 않고 module 단위로 완료한다.
+
+### #271 API-first modular monolith
+
+- monorepo 기본 구조
+- Application Service
+- Repository
+- infrastructure adapter
+- Page/Server Action 직접 DB 접근 제거
+- 기존 Web을 새 service에 연결
+
+### #272 API v1 / OpenAPI
+
+- `/api/v1`
+- `/api/internal`
+- DTO mapping
+- error code
+- pagination/date-time
+- OpenAPI/contract compatibility
+
+### #273 공용 인증
+
+- Principal
+- Web Auth.js adapter
+- Mobile bearer adapter
+- access/rotating refresh token
+- revoke/sessionVersion
+- Google/Kakao/향후 Apple identity
+
+### Phase 1 종료 게이트
+
+다음을 모두 만족해야 Android 구현을 시작한다.
+
+- 기존 Web 기능/권한/자료실/학사 E2E 통과
+- 모바일이 DB나 Server Action을 몰라도 OpenAPI만 보고 주요 기능 구현 가능
+- Application Service를 Web과 API가 공통 사용
+- auth principal이 Web/Mobile transport와 분리
+- 직접 DB access 예외가 문서화된 infrastructure/repository에 한정
+
+## Phase 2 — Android 첫 출시
+
+### #274 React Native + Expo / Android MVP
+
+MVP:
+
+- 로그인
+- 홈
+- 공지
+- 일정
+- 자료실
+- 마이페이지
+- 내 과제
+- 과제 제출
+
+운영 기능은 Web Admin에 유지한다.
+
+Android 전용 코드를 먼저 만들고 iOS를 나중에 재작성하지 않는다. 앱 코드는 처음부터 `apps/mobile` 공통 codebase이고 Android만 먼저 Store에 공개한다.
+
+### #275 Device / Push
+
+- Android/iOS 공용 device model
+- NotificationService
+- token rotation/revoke
+- provider failure와 business transaction 분리
+- 첫 알림 이벤트
+
+### Phase 2 종료 게이트
+
+- Android 실기기 핵심 E2E
+- 보호 자료 직접 URL 우회 불가
+- 과제 private upload/finalize 복구 흐름 통과
+- mobile token logout/revoke 통과
+- Android release build
+- iOS build/compile check도 계속 통과
+- Play Store 공개 준비 완료
+
+## Phase 3 — iOS
+
+### #276 동일 React Native 앱의 iOS 출시
+
+주요 추가 범위:
+
+- Sign in with Apple 요구사항
+- iOS Keychain
+- APNs/선택한 push provider
+- Universal Links/deep link
+- iOS permission/privacy metadata
+- App Store review
+
+### Phase 3 종료 게이트
+
+- iPhone 실기기 로그인→자료→과제 제출 핵심 E2E
+- Android와 공통 feature/network/domain 유지
+- Android 회귀 없음
+- App Store release build/심사 완료
+
+## 이후 확장
+
+이 구조에서는 다음 기능이 생겨도 서버 핵심 구조를 다시 만들지 않는 것을 목표로 한다.
+
+- iPad/tablet UI
+- 출결 Advisor/조교 모바일 기능
+- 교수 과제 검토
+- 관리자 전용 모바일 기능(필요 시)
+- 외부 시스템 연동
+- 제한된 공개 API
+- background worker 분리
+
+실제 독립 scaling이나 장애 격리가 필요한 workload가 확인되면 그때 notification/file processing 같은 일부 infrastructure를 분리한다. 처음부터 microservice로 전환하지 않는다.
+
+## 변경 금지 원칙
+
+구조 개편 때문에 다음 안전장치를 약화하지 않는다.
+
+- OAuth binding
+- sessionVersion
+- 권한별 object ownership 검사
+- rate limit
+- private Blob
+- upload intent / verify / finalize
+- DB UNIQUE/FK/CHECK/transaction
+- audit/observability
+- 기존 PostgreSQL integration 및 HTTP security test
