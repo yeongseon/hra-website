@@ -1,5 +1,9 @@
 # 개인 제출 파일 다운로드
 
+개인 과제 PDF 다운로드를 개발하거나 접근 권한을 검수할 때 읽는다. 브라우저는 제출·파일 식별자만 서버에 보내고, 서버가 현재 권한을 확인한 뒤 비공개 저장소에서 파일을 전달한다. **전달 허가 감사**는 이 권한 판단을 남긴 기록이며 사용자가 파일을 끝까지 받았다는 뜻은 아니다.
+
+다운로드 API와 감사 저장은 구현되어 있다. 먼저 [최종화 계약](academic-submission-finalization.md)에서 어떤 파일이 최종 제출에 속하는지 확인하고, 아래 권한·응답·저장소 조건을 읽는다. 격리 검증과 실제 공급자의 파일 읽기는 필요한 환경과 입증하는 범위가 다르므로 구분한다.
+
 `GET /api/academic/submissions/[id]/file/[fileId]`는 최종 제출에 귀속된 PDF를 서버에서 전달한다. 요청은 제출 UUID와 파일 UUID만 받는다. 클라이언트의 저장 키·URL·기수·역할 값은 사용하지 않는다.
 
 ## 인가와 응답
@@ -25,7 +29,7 @@
 - `ACADEMIC_SUBMISSION_BLOB_HOST`: 소문자 private Blob 호스트
 - `ACADEMIC_SUBMISSION_READ_WRITE_TOKEN`: 해당 저장소 전용 토큰
 
-저장 키는 `academic-uploads/v1/<불투명 UUID>/document.pdf` 형식만 허용한다. 공유 자료나 일반 업로드 토큰으로 대체하지 않는다. #151 업로드 완료 검증은 파일을 최종 제출에 귀속시키며, 다운로드는 DB에 확정된 키·PDF 형식·크기를 사용한다.
+저장 키는 `academic-uploads/v1/<불투명 UUID>/document.pdf` 형식만 허용한다. 공유 자료나 일반 업로드 토큰으로 대체하지 않는다. #151은 업로드된 실제 파일을 검증하고, #152 최종화가 그 파일을 최종 제출에 귀속시킨다. 다운로드는 이때 DB에 확정된 키·PDF 형식·크기를 사용한다.
 
 Blob SDK는 명시 토큰에서 저장소 ID를 추출하므로 `storeId` 옵션만으로 저장소 일치를 보장하지 못한다. 다운로드는 반환된 URL의 HTTPS·정확한 설정 호스트·포트/사용자 정보/쿼리/fragment 부재·정확한 DB 키 경로와 반환 `pathname`을 다시 검사한다. 크기·형식·저장소·경로가 다르면 원본 스트림을 취소하고 고정 503을 반환한다. DB/Blob 오류의 SQL·매개변수·키·URL·토큰·파일 본문은 응답이나 로그에 기록하지 않는다. 응답 시작 뒤 전송 실패는 원인을 포함하지 않는 고정 스트림 오류로 종료한다.
 
@@ -33,7 +37,7 @@ Blob SDK는 명시 토큰에서 저장소 ID를 추출하므로 `storeId` 옵션
 
 `scripts/migrate-academic-submission-file-reads.sql`은 #144 학생/학적 → #147 과제 → #148 최종 제출 적용 뒤 실행한다. 운영 적용은 [DB 변경 절차](database-change-procedure.md)에 따라 승인된 대상에서 수행한다. 이 QA 실행기는 운영 migration을 실행하지 않는다.
 
-`src/lib/db/academic-file-accesses.ts`의 `academicSubmissionFileReads`는 전체 schema 정본에서 재수출해야 한다. 실제 DB에는 별도 SQL의 불변 트리거와 카탈로그 검증도 필요하므로 `db:push`만으로 완료하지 않는다.
+현재 `src/lib/db/schema.ts`는 `src/lib/db/academic-file-accesses.ts`의 `academicSubmissionFileReads`를 재수출한다. 실제 DB에는 별도 SQL의 불변 트리거와 카탈로그 검증도 필요하므로 `db:push`만으로 완료하지 않는다.
 
 파일 메타 조회와 `academic_submission_file_reads` INSERT는 하나의 SQL 문장으로 수행한다. 계정·학생 연결·학적·과제·제출·파일 행의 SHARE 잠금으로 철회 변경과 결정을 직렬화한다. 감사 INSERT가 실패하면 파일을 읽지 않는다. 감사에는 행위자/제출/파일 UUID, OWNER 또는 MANAGEMENT 근거, 허가 시각만 남긴다. 이 기록은 **전달 허가**이며, 저장소 연결 실패나 사용자 연결 종료까지 포함한 실제 수신 완료를 증명하지 않는다.
 
@@ -41,7 +45,7 @@ Blob SDK는 명시 토큰에서 저장소 ID를 추출하므로 `storeId` 옵션
 
 ## 격리 검증
 
-Node 의존성 설치와 로컬 PostgreSQL 바이너리가 필요하다. `.env*`가 없는 별도 worktree에서 실행한다. 실행기는 운영 DB URL을 상속하지 않고 자체 PostgreSQL과 가짜 Neon `.invalid` 호스트만 사용하는 테스트 전송 어댑터로 실제 Next 서버를 띄운다. OAuth는 끄고 무작위 테스트 AUTH_SECRET과 합성 계정으로 정상 CSRF/credentials 로그인을 수행한다. 쿠키·헤더·개인정보·추적/스크린샷 파일은 저장하지 않으며 서버와 DB는 종료 시 정리한다.
+Node 의존성 설치와 로컬 PostgreSQL 바이너리가 필요하다. 실제 환경 설정을 담은 `.env*`가 없는 별도 worktree에서 실행한다. `.env.example`은 실행 환경 파일이 아니다. 실행기는 운영 DB URL을 상속하지 않고 자체 PostgreSQL과 가짜 Neon `.invalid` 호스트만 사용하는 테스트 전송 어댑터로 실제 Next 서버를 띄운다. OAuth는 끄고 무작위 테스트 AUTH_SECRET과 합성 계정으로 정상 CSRF/credentials 로그인을 수행한다. 쿠키·헤더·개인정보·추적/스크린샷 파일은 저장하지 않으며 서버와 DB는 종료 시 정리한다.
 
 ```sh
 HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin \
@@ -71,3 +75,4 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin \
 ```
 
 기본 모드는 44건으로, private 직접 URL의 토큰 없는 403, 본인 및 지정 FACULTY 관리자의 200, 원본 SHA-256 일치, 캐시/다운로드 헤더, 매 요청의 감사 개수, 쿠키 없는 재요청, 역할/세션 버전/학적/연결 변경 뒤 거부와 감사 실패 503을 검증한다. 개인정보가 없는 합성 fixture만 사용하고 실제 private 파일은 읽기만 한다. QA 업로드의 정리는 검증 담당자가 별도로 처리한다.
+

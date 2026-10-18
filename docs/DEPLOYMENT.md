@@ -1,338 +1,153 @@
-# HRA 웹사이트 배포 & 문제 해결 가이드
+# HRA 배포와 문제 해결
 
-> 운영 환경 분리의 정본은 [환경 분리 및 배포 전략](developer/environment-strategy.md)입니다.
-> HRA는 **Local Development → PR Preview/Test → Production**을 기본으로 하며, 모바일 내부 테스트 등 실제 목적이 생기기 전에는 별도 상시 Staging을 만들지 않습니다.
-> Preview/Test는 Production DB·Blob·PII·운영 session/token을 사용하지 않습니다.
+이 문서는 개발한 웹사이트를 검증 환경에 올리고, 확인한 버전을 운영에 반영하는 순서를 설명합니다. **배포 성공은 코드가 실행된다는 뜻이며, DB 변경·파일 보호·로그인 설정까지 완료됐다는 뜻은 아닙니다.**
 
-> ⭐ **배포가 뭔가요?**
->
-> 내 컴퓨터에서만 보이는 사이트를 **인터넷에 올려서 다른 사람도 볼 수 있게** 만드는 거예요.
-> 유튜브에 영상을 올리는 것처럼, 사이트도 인터넷에 올려야 다른 사람이 접속할 수 있어요.
-> 아래 순서를 그대로 따라 하면 돼요!
+문서 확인일: 2026-10-18. 현재 앱은 저장소 루트의 `package.json`과 `src/`를 사용합니다. `apps/web` 전환과 자동 migration gate는 [환경 분리 및 배포 전략](developer/environment-strategy.md)의 목표이며, 실제 구축 여부는 각각의 이슈에서 확인합니다.
 
----
+## 1. 먼저 구분할 세 가지
 
-## 1. ⭐ Vercel로 사이트 올리기 (배포)
+| 용어 | 의미 | HRA에서 확인할 것 |
+| --- | --- | --- |
+| 배포 | 특정 코드 버전을 서버에서 실행하는 작업 | 배포 대상 브랜치와 커밋 |
+| 환경변수 | 실행 환경마다 다른 설정값 | DB 주소, 로그인 키, 저장소 설정 |
+| 마이그레이션 | 기존 DB에 필요한 구조·함수를 적용하는 작업 | 적용 대상, 순서, 검증 결과 |
 
-### Vercel이 뭔가요?
+환경변수에는 비밀값도 있고 공개 가능한 값도 있습니다. 이름에 `NEXT_PUBLIC_`이 붙은 값은 브라우저에 전달될 수 있으므로 비밀번호나 토큰을 넣지 않습니다. 용어가 낯설면 [용어집](getting-started/glossary.md)을 함께 보세요.
 
-우리가 만든 사이트를 인터넷에 올려주는 무료 서비스예요. 한 번 연결해두면, 코드를 수정할 때마다 **자동으로** 사이트도 업데이트돼요!
+## 2. 배포할 환경부터 선택하기
 
-### 따라하기 (5단계)
+기본 운영 정책은 **Local Development → PR Preview/Test → Production**입니다. 자세한 결정과 아직 구현할 작업은 [환경 전략](developer/environment-strategy.md)에 있습니다.
 
-**① Vercel 가입하기**
+| 환경 | 목적 | 사용 데이터·저장소 |
+| --- | --- | --- |
+| Local Development | 내 컴퓨터에서 개발 | 개인 개발 DB와 합성 테스트 자료 |
+| PR Preview/Test | 변경 사항을 함께 확인 | Production과 분리된 테스트 DB·Blob |
+| Production | 실제 사용자에게 제공 | 운영 DB·운영 저장소 |
 
-1. 브라우저에서 [vercel.com](https://vercel.com/)에 접속해요
-2. **Continue with GitHub** 버튼을 클릭해요 (GitHub 계정이 필요해요)
-3. GitHub 계정으로 로그인하면 가입 완료!
+같은 설정값을 모든 환경에 체크해서 복사하지 않습니다. Preview가 운영 DB나 운영 파일을 사용하지 않는지 먼저 확인합니다. 현재 앱의 DB 드라이버는 Neon HTTP 방식입니다. 일반 로컬 PostgreSQL 주소만 넣어 앱을 실행할 수 있다고 가정하지 말고, 앱 개발용 Neon DB 또는 문서화된 테스트 실행기를 사용합니다.
 
-**② 우리 프로젝트 연결하기**
+**정상 결과:** 배포 대상과 DB·파일 저장소가 같은 환경을 가리킵니다. **대상이 불분명하면:** 배포나 초기화 명령을 실행하기 전에 프로젝트 담당자에게 환경 구성을 확인합니다.
 
-1. Vercel 대시보드에서 **Add New...** 버튼을 클릭해요
-2. **Project**를 선택해요
-3. 목록에서 `hra-website`를 찾아서 **Import** 버튼을 클릭해요
+## 3. 필요한 설정값
 
-**③ 비밀 설정값 입력하기**
+로컬 앱과 여러 npm 스크립트는 `.env`를 사용합니다. 새 작업 폴더에서 `.env.example`을 참고해 만들고, 기존 `.env`를 덮어쓰지 않습니다. Vercel에서는 프로젝트의 환경변수 설정에 **대상 환경별로** 등록한 뒤 새 배포에 반영합니다.
 
-1. 배포 화면 중간쯤에 **Environment Variables**라는 칸이 있어요
-2. **Key** 칸에 변수 이름을, **Value** 칸에 값을 넣고 **Add** 버튼을 눌러요
-3. 필요한 설정값들은 아래 2번 섹션에 자세히 나와요!
+### 웹사이트와 로그인
 
-**④ Deploy 버튼 클릭!**
+| 설정 | 목적 | 설정 조건·확인 결과 |
+| --- | --- | --- |
+| `DATABASE_URL` | Neon DB 연결 문자열 | DB 기능에 필요. 환경에 맞는 DB를 선택 |
+| `AUTH_SECRET` | 로그인 세션 보호에 사용하는 비밀 키 | 로그인에 필요. 환경별로 관리 |
+| `NEXT_PUBLIC_APP_URL` | 외부 링크 등에 사용할 앱의 기준 주소 | 로컬은 `http://localhost:3000`, 배포 환경은 그 환경의 주소 |
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | 구글 로그인 | 해당 로그인을 제공할 때 두 값 설정 |
+| `AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET` | 카카오 로그인 | 해당 로그인을 제공할 때 두 값 설정 |
+| `AUTH_KAKAO_EMAIL_SCOPE` | 카카오 이메일 동의 요청 선택 | 기본 `false`; [이메일 동의 절차](operations/kakao-email-consent.md)의 계정 처리 검토·회귀 확인 뒤 변경 |
+| `HEALTH_CHECK_SECRET` | 상태 점검의 상세 응답 확인 | 상세 모니터링에만 필요 |
 
-1. 설정값을 다 입력했으면 **Deploy** 버튼을 눌러요
-2. 2~3분 기다려요
-3. 축하해요! 사이트가 인터넷에 올라갔어요! 🎉
+로그인 제공자의 callback은 로그인 완료 후 돌아오는 주소입니다. 예를 들어 로컬 구글 로그인은 `http://localhost:3000/api/auth/callback/google`, 카카오는 `/api/auth/callback/kakao`를 사용합니다. 운영·검증 환경에는 각각의 실제 앱 주소를 등록합니다. 제공자 설정 방법은 [Google OAuth 문서](https://developers.google.com/identity/protocols/oauth2/web-server)와 [카카오 로그인 문서](https://developers.kakao.com/docs/latest/ko/kakaologin/prerequisite)를 확인합니다.
 
-**⑤ 이제부터는 자동이에요**
+소셜 로그인 설정이 없으면 해당 버튼을 제공하지 않습니다. 이메일/비밀번호 로그인을 사용하려면 실제로 생성된 해당 계정도 있어야 합니다. `AUTH_SECRET`만 등록한다고 관리자 계정이 생기지는 않습니다.
 
-코드를 수정하고 `git push`만 하면 Vercel이 알아서 사이트를 최신 버전으로 바꿔줘요. 다시 배포 버튼을 누를 필요가 없어요!
+### 파일 저장소
 
----
+Blob은 사진·PDF 같은 파일의 실제 내용을 보관하는 저장소입니다. 파일 제목·작성자·연결 정보는 DB에 따로 저장합니다.
 
-## 2. ⭐ 비밀 설정값 넣는 방법
+| 용도 | 설정 | 운영 조건 |
+| --- | --- | --- |
+| 공개 사진·포스터 | `BLOB_READ_WRITE_TOKEN` | 공개 콘텐츠용 저장소와 연결 |
+| 보호 자료 | `RESOURCE_PRIVATE_BLOB_HOST`, `RESOURCE_PRIVATE_READ_WRITE_TOKEN`, `RESOURCE_PRIVATE_BLOB_ENABLED` | [파일 접근 정책](resource-file-access-policy.md)의 전환·검증 절차 적용 |
+| 학사 개인 제출 파일 | `ACADEMIC_SUBMISSION_BLOB_HOST`, `ACADEMIC_SUBMISSION_READ_WRITE_TOKEN` | 명시적으로 지정한 Private Blob만 사용 |
 
-비밀 설정값은 사이트가 작동하려면 꼭 필요한 정보들이에요. 데이터베이스 주소, 로그인 보안 키 같은 정보들을 Vercel에 입력해줘야 해요.
+저장소를 새로 만드는 것만으로 앱과 연결이 끝나지 않습니다. 토큰이 속한 저장소와 앱이 허용하는 호스트 설정이 일치하는지 확인합니다. 공개 이미지 호스트는 현재 `src/lib/blob-host.ts`와 이미지 설정에서도 사용하므로 다른 개발 저장소를 연결할 때 함께 검토합니다.
 
-### 필수 항목 (꼭 넣어야 해요! ⭐)
+보호 자료는 설정 등록뿐 아니라 기존 파일의 전환까지 확인해야 합니다. 전환 완료 여부는 [#268](https://github.com/yeongseon/hra-website/issues/268)의 운영 증거로 판단하며, 이 문서는 운영 환경의 현재 상태를 보증하지 않습니다.
 
-이 값들이 없으면 사이트가 정상적으로 작동하지 않아요.
+### 학사 기능과 예약 작업
 
-#### ① DATABASE_URL (데이터베이스 주소)
+`gate`는 준비가 끝난 기능만 열기 위한 설정 스위치입니다. 아래 값을 모두 켜는 것이 설치 절차는 아닙니다.
 
-데이터를 저장하는 창고의 주소예요.
+| 설정 | 의미 | 기본·선행 조건 |
+| --- | --- | --- |
+| `ACADEMIC_ENABLED` | 학사 화면·기능 공개 | 기본 비활성, 관련 DB 적용 필요 |
+| `ACADEMIC_APPROVER_USER_ID` | 학사 운영 책임자 계정 지정 | 검증된 계정 ID를 별도로 지정 |
+| `ACADEMIC_ENROLLMENT_WRITES_ENABLED` | 학사 개인정보 쓰기 허용 | 기본 비활성, 보존 정책과 운영 결정 필요 |
+| `ACADEMIC_UPLOADS_ENABLED` | 과제 파일 업로드 허용 | 기본 비활성, 제출 저장소·DB 준비 필요 |
+| `ACADEMIC_UPLOAD_CLEANUP_ENABLED` | 미완료 학사 업로드 정리 실행 | 기본 비활성 |
+| `ACADEMIC_UPLOAD_CLEANUP_DELETE_ENABLED` | 위 정리에서 실제 파일 삭제 허용 | 없으면 dry-run, 즉 삭제 없이 확인 |
+| `CRON_SECRET` | 예약 작업 호출 인증 | 예약 작업을 운영할 환경에 설정 |
 
-1. [neon.tech](https://neon.tech/)에 로그인해요
-2. 왼쪽에서 프로젝트를 클릭해요
-3. 메인 화면에 **Connection String**이라고 적힌 긴 문자열이 있어요 (`postgres://...`으로 시작해요)
-4. 그걸 복사해서 Vercel의 Value 칸에 붙여넣어요
+현재 `vercel.json`에 등록된 일정은 `/api/cron/cleanup-rate-limits` 한 개이며 매일 **03:00 UTC, 한국 시간 12:00**입니다. 학사 업로드 정리 일정은 자동 등록하지 않는다는 별도 결정이 있습니다. [학사 업로드 운영 조건](developer/academic-assignment-uploads.md)을 확인한 뒤 통합 담당자가 일정을 정합니다.
 
-#### ② AUTH_SECRET (보안 키)
+`GOOGLE_SHEETS_API_KEY`는 기존 외부 시트 조회 코드의 선택 설정입니다. **사이트의 내장 지원서 관리에는 필요하지 않습니다.** 외부 시트 연동을 운영하려면 사용 화면·접근 권한·개인정보 처리 방식을 별도로 확인합니다.
 
-사이트 보안을 위한 비밀 열쇠예요. 아무도 모르는 랜덤 문자열이어야 해요.
+## 4. 코드와 DB를 준비하기
 
-터미널(검은 창)에서 이걸 입력하면 자동으로 만들어져요:
+작업 브랜치에서 잠금 파일에 맞춰 의존성을 설치하고 검증합니다. 아래 명령은 소스 검증용입니다.
 
 ```bash
-npx auth secret
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
 ```
 
-> 👉 나온 값을 복사해서 Vercel에 넣으면 돼요.
-
-#### ③ BLOB_READ_WRITE_TOKEN (이미지 저장소)
-
-사진 업로드 기능을 쓰려면 필요해요.
-
-1. [Vercel 대시보드](https://vercel.com/)에서 상단의 **Storage** 탭을 클릭해요
-2. **Create** → **Blob** 선택 → 이름 입력 (예: `hra-images`) → **Create** 클릭
-3. 나오는 `BLOB_READ_WRITE_TOKEN` 값을 복사해요
-4. 프로젝트의 Settings → Environment Variables에 등록해요
-5. **Redeploy**(다시 배포)를 해야 적용돼요!
-
-#### ④ NEXT_PUBLIC_APP_URL (사이트 주소)
-
-| 어디서 쓰는 건가요? | 값 |
-| --- | --- |
-| 인터넷에 올린 사이트 | `https://hra-website-theta.vercel.app` (본인 주소) |
-| 내 컴퓨터에서 테스트할 때 | `http://localhost:3000` |
-
----
-
-### 선택 항목 (더 많은 기능을 쓰고 싶을 때! 💡)
-
-이 설정값들은 없어도 사이트는 정상적으로 작동해요! 관리자는 이메일/비밀번호로 로그인할 수 있고, 소셜 로그인 버튼은 설정이 없으면 자동으로 숨겨져요.
-
-#### ⑤ 구글 로그인 (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`)
-
-구글 계정으로 로그인할 수 있게 해주는 열쇠예요.
-
-1. 브라우저에서 [Google Cloud Console](https://console.cloud.google.com/)에 접속해요
-2. 왼쪽 위 **프로젝트 선택** → **새 프로젝트** → 이름 입력 (예: "HRA 웹사이트") → **만들기**
-3. 왼쪽 메뉴에서 **API 및 서비스** → **OAuth 동의 화면** 클릭
-4. **External** 선택 → 앱 이름, 이메일 등을 입력 → **저장**
-5. 왼쪽 메뉴에서 **사용자 인증 정보** 클릭
-6. 위쪽의 **+ 만들기** → **OAuth 클라이언트 ID** 선택
-7. 유형은 **웹 애플리케이션** 선택
-8. **승인된 리디렉션 URI**에 아래 2개를 추가해요:
-
-```
-http://localhost:3000/api/auth/callback/google
-https://hra-website-theta.vercel.app/api/auth/callback/google
-```
-
-> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
-
-9. **만들기** 버튼을 클릭하면 **클라이언트 ID**와 **클라이언트 보안 비밀번호**가 나와요
-10. 이 두 값을 Vercel에 넣으면 돼요:
-    - 클라이언트 ID → `AUTH_GOOGLE_ID`
-    - 클라이언트 보안 비밀번호 → `AUTH_GOOGLE_SECRET`
-11. Vercel에서 **Redeploy 실행** (Deployments 탭 → 최신 배포 옆 ⋯ → Redeploy)
-
-> ⚠️ 환경변수는 빌드 시점에 주입되므로, 변수 추가 후 반드시 재배포해야 구글 로그인 버튼이 화면에 나타납니다.
-
-> 💡 이 설정이 없어도 사이트는 정상 작동해요! 구글 로그인 버튼만 안 보일 뿐이에요.
-
-#### ⑥ 카카오 로그인 (`AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET`)
-
-카카오톡 계정으로 로그인할 수 있게 해주는 열쇠예요.
-
-> 💡 **도메인 구입 전에도 바로 등록 가능해요.** Vercel 기본 주소(`xxx.vercel.app`)도 카카오에서 정상 도메인으로 인정해줘요. 나중에 커스텀 도메인을 사면 그때 Redirect URI 한 줄만 추가하면 됩니다.
-
-1. 브라우저에서 [Kakao Developers](https://developers.kakao.com/)에 로그인해요
-2. 상단 메뉴에서 **내 애플리케이션** → **애플리케이션 추가하기** 클릭
-3. 앱 이름 입력 (예: "HRA 웹사이트") → **저장**
-
-4. **요약 정보** 탭에서 **REST API 키**를 복사해요 → 이게 `AUTH_KAKAO_ID`
-
-5. 왼쪽 메뉴에서 **제품 설정** → **카카오 로그인** → 활성화를 **ON**으로 바꿔요
-
-6. **Redirect URI**에 아래 2개를 추가해요:
-
-```
-http://localhost:3000/api/auth/callback/kakao
-https://hra-website-theta.vercel.app/api/auth/callback/kakao
-```
-
-> 👉 두 번째 주소는 본인의 Vercel 사이트 주소로 바꿔야 해요!
-> 👉 나중에 커스텀 도메인(예: `hra.kr`)을 연결하면 `https://hra.kr/api/auth/callback/kakao`도 추가하세요.
-
-7. 왼쪽 메뉴에서 **동의항목** 설정:
-   - 닉네임: **필수 동의**
-   - 프로필 사진: **선택 동의**
-   - 이메일: **선택 동의** 또는 생략
-
-> ⚠️ **이메일을 "필수 동의"로 설정하려면 카카오 비즈앱 심사가 필요해요.** 일반 개발자 앱은 이메일 필수 동의가 거부됩니다. 처음에는 닉네임만 받아도 로그인은 정상 동작하니, 나중에 비즈앱 신청 후 이메일을 추가해도 됩니다.
-
-8. 왼쪽 메뉴에서 **보안** → **Client Secret** → **코드 생성** 클릭 → **활성화 상태를 "사용함"으로 변경** → 이게 `AUTH_KAKAO_SECRET`
-
-> ⚠️ Client Secret은 생성만 하고 "사용함" 토글을 안 켜면 적용되지 않아요.
-
-9. Vercel 대시보드 → 프로젝트 → **Settings** → **Environment Variables**에 두 키를 등록해요:
-   - `AUTH_KAKAO_ID` (Production + Preview 둘 다 체크)
-   - `AUTH_KAKAO_SECRET` (Production + Preview 둘 다 체크)
-
-10. **Vercel에서 Redeploy 실행** (Deployments 탭 → 최신 배포 옆 ⋯ → Redeploy)
-
-> ⚠️ **환경변수는 빌드 시점에 주입되므로, 변수 추가 후 반드시 재배포해야 카카오 로그인 버튼이 화면에 나타납니다.** 등록만 하고 재배포를 안 하면 버튼이 계속 숨겨진 상태로 보여요.
-
-> 💡 이 설정이 없어도 사이트는 정상 작동해요! 카카오 로그인 버튼만 안 보일 뿐이에요.
-
-#### ⑦ 구글 시트 API (`GOOGLE_SHEETS_API_KEY`)
-
-관리자 화면에서 구글 폼으로 접수된 지원서를 바로 확인하고 싶을 때 설정해요.
-
-1. 브라우저에서 [Google Cloud Console](https://console.cloud.google.com/)에 접속해요
-2. 위쪽의 **프로젝트 선택** → 아까 만든 프로젝트 선택 (또는 새로 만들기)
-3. 왼쪽 메뉴에서 **API 및 서비스** → **라이브러리** 클릭
-4. 검색창에 **Google Sheets API** 입력 → 결과를 클릭 → **사용** 버튼 클릭
-5. 왼쪽 메뉴에서 **사용자 인증 정보** 클릭
-6. 위쪽의 **+ 만들기** → **API 키** 선택
-7. 나오는 API 키를 복사해요
-8. Vercel에 등록해요:
-   - **Key**: `GOOGLE_SHEETS_API_KEY` / **Value**: 방금 복사한 API 키
-
-> 💡 보안을 위해 API 키에 제한을 걸어두면 좋아요:
-> - 만들어진 키 옆의 **연필 아이콘** 클릭 → **API 제한** → **키 제한** → **Google Sheets API**만 선택 → **저장**
-
-#### ⑧ HEALTH_CHECK_SECRET (헬스체크 상세 응답용)
-
-`/api/health` 는 사이트가 살아있는지 확인하는 주소예요. 아무나 접속하면 `{ "status": "ok" }` (또는 문제 있을 때 `"error"`) 만 반환해서 외부에 인프라 정보를 흘리지 않아요. 운영자가 데이터베이스 연결 상태·타임스탬프까지 함께 보고 싶을 때만 이 열쇠를 설정하세요.
-
-1. 터미널(검은 창)에서 이 명령어로 랜덤한 열쇠를 만들어요:
-
-```bash
-openssl rand -hex 32
-```
-
-2. 나온 값을 Vercel Settings → Environment Variables 에 `HEALTH_CHECK_SECRET` 이름으로 등록해요.
-3. 상세 응답이 필요할 때는 요청에 `x-health-check-secret: <위에서 만든 값>` 헤더를 붙이면 돼요.
-
-> 💡 이 설정이 없어도 사이트는 정상 작동해요! Vercel/UptimeRobot 같은 일반 헬스체크는 HTTP 200/503 만 봐도 충분히 동작해요.
-
-> ⚠️ 환경변수는 빌드 시점에 주입되므로, 값을 추가·변경한 뒤에는 반드시 **Redeploy** 를 해야 반영돼요.
-
----
-
-## 3. 내 도메인(주소) 연결하기 (하고 싶을 때만)
-
-`hra-academy.com` 같은 예쁜 주소를 쓰고 싶다면:
-
-1. 도메인을 구입해요 (가비아, 후이즈 같은 사이트에서)
-2. Vercel → Settings → Domains → 도메인 입력 → **Add** 클릭
-3. Vercel이 알려주는 설정값을 도메인 관리 사이트에 입력해요
-4. 10분~하루 기다리면 적용!
-
-> 💡 이건 필수가 아니에요. Vercel이 기본으로 주는 주소(`xxx.vercel.app`)만 써도 충분해요!
-
----
-
-## 4. Vercel 대시보드에서 할 수 있는 것들
-
-Vercel 사이트에 로그인하면 여러 가지를 관리할 수 있어요.
-
-| 메뉴 | 뭘 할 수 있나요? |
-| --- | --- |
-| **Deployments** | 배포가 잘 됐는지 확인해요 (초록색 = 성공, 빨간색 = 실패) |
-| **Logs** | 에러가 나면 여기서 원인을 찾아요 |
-| **점 세 개(···) → Redeploy** | 사이트를 다시 배포해요 |
-| **Settings → Environment Variables** | 비밀 설정값을 수정해요 (수정 후 Redeploy 필수!) |
-| **점 세 개(···) → Rollback** | 문제가 생겼을 때 이전 버전으로 되돌려요 |
-
----
-
-## 5. ⭐ 이런 문제가 생기면 이렇게 하세요
-
-### "DATABASE_URL is not set" (데이터베이스 주소가 없어요)
-
-> 👉 Vercel Settings에서 `DATABASE_URL`이 제대로 들어있는지 확인하세요.
-> 👉 Neon 사이트에서 데이터베이스가 켜져있는(Active) 상태인지도 확인하세요.
-
-### "relation [테이블명] does not exist" (테이블을 찾을 수 없어요)
-
-> 👉 데이터베이스에 테이블을 아직 안 만들었을 수 있어요. [DB 변경 절차](developer/database-change-procedure.md)에서 대상 DB를 확인한 뒤 적용하세요.
-
-### 500 에러 (페이지가 안 열려요)
-
-> 👉 Vercel 대시보드 → **Logs** 탭을 확인해보세요. 어떤 파일에서 문제가 생겼는지 자세히 나와요.
-> 에러 메시지를 복사해서 팀원이나 관리자에게 보여주세요.
-
-### 로그인이 안 돼요
-
-아래 내용들을 확인해보세요:
-
-1. **관리자 로그인이 안 돼요** → `AUTH_SECRET`이 설정되어 있는지 확인하세요. 관리자는 이메일과 비밀번호로 로그인합니다.
-2. **소셜 로그인 버튼이 안 보여요** → `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (또는 카카오) 환경변수가 설정되어 있는지 확인하세요. 환경변수가 없으면 해당 버튼은 자동으로 숨겨집니다.
-3. **구글/카카오 로그인이 안 돼요** → 구글/카카오 개발자 사이트에서 **Redirect URI**에 내 Vercel 주소를 넣었는지 확인하세요.
-4. 비밀 설정값을 수정한 후 **Redeploy**(다시 배포)를 했는지 확인하세요.
-
-### 이미지 업로드가 안 돼요
-
-> 👉 `BLOB_READ_WRITE_TOKEN`이 Vercel에 등록돼있는지 확인하세요.
-> Vercel Storage에서 Blob이 프로젝트와 연결됐는지도 확인하세요.
-
-### "Port 3000 already in use" (내 컴퓨터에서 사이트를 켤 때)
-
-> 👉 이전에 켠 서버가 아직 돌고 있어요. 터미널에서 `Ctrl + C`를 눌러서 끄고, `npm run dev`를 다시 입력하세요.
-
-### "맞춤법 검사를 하고 싶어요"
-
-> 👉 배포 전에 사이트의 맞춤법을 확인하려면 터미널에서 아래 명령어를 입력하세요:
-> ```bash
-> npm run spell-check
-> ```
-> 자동으로 고치고 싶다면 `npm run spell-fix`를 입력하세요.
-
----
-
-## 6. 내 컴퓨터 vs 인터넷 사이트 — 뭐가 다른가요?
-
-| | 내 컴퓨터 (로컬) | 인터넷 (실서비스) |
+| 명령 | 확인하는 것 | 실패했을 때 |
 | --- | --- | --- |
-| 주소 | `localhost:3000` | `hra-website-theta.vercel.app` |
-| 비밀 설정값 위치 | `.env` 파일 | Vercel Settings |
-| 누가 보나요? | 나만 | 전 세계 누구나 |
-| 언제 쓰나요? | 수정하고 테스트할 때 | 실제 사용할 때 |
+| `lint` | 코드 작성 규칙 | 오류 위치를 수정하고 다시 실행 |
+| `typecheck` | 값·함수 사용의 타입 일치 | 해당 타입 오류를 해결 |
+| `test` | 자동 테스트 | 실패와 건너뜀을 구분하고 필요한 DB 테스트 환경 확인 |
+| `build` | 배포 가능한 앱 생성 | 빌드 로그의 첫 원인부터 확인 |
 
-> 💡 **"내 컴퓨터에선 잘 되는데 인터넷 사이트에선 안 돼요!"**
-> → 99%는 Vercel에 비밀 설정값을 빠뜨렸거나 오타 낸 거예요!
+DB 변경이 필요하면 **앱 배포보다 먼저 적용해야 할 항목**을 [DB 변경 절차](developer/database-change-procedure.md)에서 확인합니다. `npm run db:push`는 새 빈 개발 DB를 준비하는 제한된 용도입니다. 기존 운영 DB를 고치는 일반 명령으로 사용하지 않습니다. 자동 적용 이력·배포 차단 장치의 구축은 [#280](https://github.com/yeongseon/hra-website/issues/280)에서 진행할 작업입니다.
 
----
+## 5. Preview에서 확인한 뒤 운영 반영하기
 
-## 7. 보안 — 이것만 지키세요 ⚠️
+1. Vercel 프로젝트가 올바른 저장소와 연결됐는지 확인합니다. 현재 앱의 기준 폴더는 저장소 루트입니다.
+2. 작업 브랜치의 PR과 Preview를 준비합니다. 실제 자동 배포 조건은 프로젝트 설정에서 확인합니다.
+3. 아래 확인표를 Preview의 합성 계정·자료로 검사합니다.
+4. 리뷰와 필요한 검증을 통과한 변경을 프로젝트 절차에 따라 병합합니다.
+5. DB 변경 순서와 운영 설정을 확인한 뒤 Production 배포 또는 승격을 진행합니다.
 
-1. **`.env` 파일은 절대 다른 사람한테 보여주지 마세요** — 데이터베이스 비밀번호가 들어있어요!
-2. **GitHub에 `.env` 파일을 올리면 안 돼요** — `.gitignore` 파일이 자동으로 막아주지만, 혹시 모르니 확인하세요
-3. **공용 컴퓨터에서 작업했으면** 반드시 로그아웃하세요
+브랜치에 `git push`했다고 반드시 운영이 갱신되는 것은 아닙니다. 연결된 Production Branch와 Preview 설정에 따라 대상이 달라집니다. [Vercel 배포 환경 문서](https://vercel.com/docs/deployments/environments)를 참고합니다.
 
----
+| 확인 항목 | 기대 결과 |
+| --- | --- |
+| 공개 홈페이지 | 오류 없이 표시 |
+| `/api/health` | 정상 DB 연결에서 HTTP 200과 `status: ok` |
+| 로그인 | 준비한 계정으로 로그인 가능 |
+| 자료실 | 승인 역할별 정책이 동일하게 적용 |
+| 공개 이미지 업로드 | 저장 후 실제 페이지에서 표시 |
+| 보호 자료 | 합성 자료로 다운로드·권한 검사 확인 |
+| 내부 지원서 | 양식 공개·제출·관리자 조회가 연결 |
+| 외부 접수 사용 시 | 모집 날짜·외부 버튼과 외부 서비스의 접수 상태를 각각 확인 |
 
-## 8. ⭐ 처음 배포 후 이것만 확인하세요
+처음 사용하는 DB라면 [첫 관리자 준비](DATABASE.md)를 **관리자 로그인 검사 전에** 마칩니다. 기수와 공지 작성 방법은 [관리자 가이드](ADMIN-GUIDE.md)를 따릅니다.
 
-사이트를 처음 올린 후, 순서대로 체크하세요:
+## 6. 실패했을 때 무엇부터 볼까요?
 
-| 순서 | 할 일 | 어떻게 확인하나요? |
+| 증상 | 먼저 확인할 것 | 다음 행동 |
 | --- | --- | --- |
-| 1 | 데이터베이스 테이블 만들기 | [DB 변경 절차](developer/database-change-procedure.md)에 따라 테이블·추가 SQL·카탈로그 확인 |
-| 2 | (선택) 소셜 로그인을 사용하려면 | 위 2번 섹션 참고 (설정값 4개 추가) |
-| 3 | 사이트 접속 확인 | Vercel이 준 주소로 접속 → 홈페이지가 보이면 성공 |
-| 4 | 관리자 이메일/비밀번호로 로그인 테스트 | 사이트에서 로그인 페이지 접속 → 관리자 계정으로 로그인 성공하면 OK |
-| 5 | 첫 관리자 만들기 | 터미널에서 `ADMIN_EMAIL="admin@hra.ac.kr" ADMIN_PASSWORD="비밀번호" npm run seed-admin -- --confirm-create` 입력 |
-| 6 | 이미지 저장소 만들기 | 위 2번의 ③ 참고 → 갤러리에서 사진 올리기 성공하면 OK |
-| 7 | 첫 기수 만들기 | 관리자 페이지 → 기수 관리 → 새 기수 등록 |
-| 8 | 첫 공지사항 쓰기 | 관리자 페이지 → 공지사항 → 글 써보기 |
-| 9 | 맞춤법 검사 | 터미널에서 `npm run spell-check`로 전체 맞춤법 확인 |
-| 10 | 신규 페이지 확인 | 교수진, 자료실, 마이페이지 등 새로 추가된 페이지들이 잘 열리는지 확인 |
-| 11 | 지원하기 버튼 확인 | 모집 안내 페이지의 '지원하기' 버튼이 구글 폼으로 잘 연결되는지 확인 |
-| 12 | 권한 제한 페이지 확인 | 자료실, 마이페이지가 로그인 없이 접속이 차단되는지 확인 |
+| `DATABASE_URL is not set` | 실패한 배포 환경에 값이 있는지 | 해당 환경 설정 후 새 배포로 확인 |
+| `relation ... does not exist` | 연결 DB와 적용한 변경 목록 | 누락된 범위의 DB 절차 확인; 전체 push로 덮지 않음 |
+| 로그인 버튼 없음 | 제공자 ID·Secret 설정과 새 배포 반영 | 설정 조합과 callback을 함께 확인 |
+| 관리자 로그인 실패 | 계정 생성 여부·입력값·로그인 오류 | 비밀번호 재설정 목적으로 seed를 반복하지 않음 |
+| 업로드 실패 | 파일 종류·크기, 해당 기능의 저장소, 권한 | 오류 메시지와 요청 시각을 기록하고 담당자 확인 |
+| 학사 준비 안내 | 기능·쓰기 gate 및 책임자 지정 | 정책과 DB 준비 상태 확인 후 필요한 기능만 활성화 |
+| Cron 503 또는 401 | secret 누락 또는 호출 인증 실패 | [요청 제한 운영 절차](operations/rate-limits.md) 확인 |
+| `/api/health` 503 | 환경 설정과 DB 연결 | 허용된 상세 점검과 서버 로그로 원인 분리 |
 
-모든 체크를 완료하면 사이트 운영 준비 끝! 🎉
+상태 점검 HTTP 200은 로그인·업로드·전체 학사 기능의 성공까지 보장하지 않습니다. `HEALTH_CHECK_SECRET`과 일치하는 `x-health-check-secret` 헤더를 보내면 DB 상태와 시각을 포함한 상세 응답을 확인할 수 있습니다.
 
----
+운영 로그를 공유할 때에는 연결 문자열·쿠키·파일 주소·개인정보를 제거하고, 배포 커밋·발생 시각·기능·오류 종류를 남깁니다. 앱을 이전 버전으로 되돌려도 DB와 파일 변경은 자동 복구되지 않으므로 해당 변경의 복구 절차를 함께 확인합니다.
 
-막히는 부분이 있으면 에러 메시지를 복사해서 팀원이나 관리자한테 보내주세요. 처음이라 어려운 게 당연해요. 화이팅! 💪
+## 7. 문서 사이트 배포
 
-## 문서 사이트(MkDocs) 배포
+MkDocs 문서 사이트와 Vercel 앱은 별도 배포입니다. 문서 수정은 `mkdocs build --strict`로 링크·구성을 검사하고, 게시 권한이 있는 담당자가 저장소의 문서 배포 절차를 따릅니다. 앱을 재배포해도 GitHub Pages 문서가 자동 갱신됐다고 판단하지 않습니다.
 
-문서는 `gh-pages` 브랜치에서 제공되며 앱의 Vercel 배포와 별개입니다.
-문서 변경을 검토한 뒤 `mkdocs build --strict`로 검사합니다.
-게시 권한이 있는 담당자는 `mkdocs gh-deploy --force`로 `gh-pages` 브랜치를 갱신합니다.
+## 코드 근거
+
+- `package.json`, `.env.example`, `vercel.json`
+- `src/lib/db/index.ts`, `src/lib/auth.ts`, `src/lib/blob-host.ts`
+- `src/lib/academic-admin.ts`, `src/lib/resource-blob-store.ts`
+- `src/app/api/health/route.ts`, `src/app/api/cron/cleanup-rate-limits/route.ts`

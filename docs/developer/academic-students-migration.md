@@ -1,5 +1,9 @@
 # G1 학생·기수 등록 스키마 적용 (#144)
 
+학사 DB를 처음 준비하거나 학생·기수 관계를 변경하는 개발자가 읽는다. **스키마**는 DB에 어떤 표와 관계를 둘지 정한 정의다. 여기서는 로그인 계정과 학생 명부를 분리하고, 학생이 기수에 등록한 관계를 `cohort_enrollments`에 보관한다. 실제 계정 연결은 [검증 연결 절차](academic-enrollment-backfill.md)에서 별도로 수행한다.
+
+아래 SQL은 구현된 첫 저장 단계의 적용 절차다. DB에 적용됐는지는 실행 기록과 카탈로그(표·제약의 실제 구조 정보)로 확인해야 한다. [DB 변경 절차](database-change-procedure.md)를 먼저 읽고, 사전 확인 → 격리 DB 적용 → 구조·회귀 검증 순서로 진행한다. 학사 전체 설치 순서는 [G1 품질 게이트](academic-g1-quality-gate.md)에 있다.
+
 `scripts/migrate-academic-students.sql`은 `academic_students`, `cohort_enrollments`,
 `enrollment_status`만 추가한다. 기존 회원 역할·기수·지원서 행을 수정하거나 자동 백필하지 않는다.
 이는 학생 명부의 저장 기반이며 학사 화면·인가·과제 제출 기능의 공개를 의미하지 않는다.
@@ -20,6 +24,8 @@ psql -X -v ON_ERROR_STOP=1 -f scripts/preflight-academic-students.sql
 이메일·이름 일치로 연결하거나 보고된 차이를 자동 덮어쓰지 않는다.
 
 ## 생성·반복 적용과 검증
+
+다음 두 번 적용은 **#144 단계 직후의 격리 DB**에서 반복 가능성을 확인하는 순서다. 후속 학사 migration을 설치한 DB에 옛 #144 baseline을 다시 적용하는 절차가 아니다. 후속 트리거 때문에 구조 검증이 거부할 수 있으므로, 학사 전체 검증은 [G1의 단계별 SQL 순서](academic-g1-quality-gate.md)를 따른다.
 
 ```bash
 psql -X -v ON_ERROR_STOP=1 -f scripts/migrate-academic-students.sql
@@ -74,3 +80,4 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npm test -- tests/unit/acade
 ```
 
 운영 적용 여부와 개인정보 적재 승인은 별도 증거로 기록한다. 이 문서나 테스트 통과만으로 운영 DB에 적용됐다고 판단하지 않는다.
+

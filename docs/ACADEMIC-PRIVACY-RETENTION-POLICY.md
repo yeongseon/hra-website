@@ -1,5 +1,7 @@
 # 학사 개인정보 보존·파기 정책 초안
 
+운영 책임자와 개인정보 처리 기능을 구현하는 개발자가 함께 읽는 승인용 문서다. 먼저 1절에서 어떤 데이터가 있는지, 2절에서 무엇을 결정해야 하는지 확인한다. **삭제를 막는 DB 제약, 미완료 업로드 정리, 개인정보 보존기간에 따른 파기는 서로 다른 기능**이다. 용어는 [용어집](getting-started/glossary.md), 실제 코드 변경 절차는 [DB 변경 절차](developer/database-change-procedure.md)를 참고한다.
+
 ## 상태와 적용 범위
 
 **2026-10-16 기준 승인용 초안이며, #142는 미완료다.** G1의 최종 학사 관리 승인자는 사용자가 지정한 HRA 운영 책임자 본인으로 확정됐다. 저장 종류별 보존기간·기산점과 아래 운영 절차는 아직 승인되지 않았다. 이 문서의 추가는 운영 수집·삭제·백업을 활성화하거나 법적 보존기간을 확정하지 않는다.
@@ -97,3 +99,4 @@ DB 백업은 Blob 본문을 포함하지 않는다. 현재 합성 로컬 Postgre
 | 복구·고아 정리의 정책 일치 | 격리 합성 검증 완료, 운영 확인 미완료 | 5절의 승인된 기준과 운영 백업·Blob 복구·재삭제 검증. #157과 연결 |
 
 관련 이슈: [#142 보존·파기 정책](https://github.com/yeongseon/hra-website/issues/142), [#143 후속 학사 운영 정책](https://github.com/yeongseon/hra-website/issues/143), [#157 감사·관측·복구](https://github.com/yeongseon/hra-website/issues/157). 상위 결정은 [학사 로드맵 D8](ACADEMIC-MANAGEMENT-ROADMAP.md), 현재 G1 범위는 [학생 과제 제출 1차 범위](ASSIGNMENT-SUBMISSION-SCOPE.md)를 참조한다.
+

@@ -2,7 +2,9 @@
 
 **결정**: 운영 데이터는 DB(Neon Postgres)를 단일 수정 지점으로 사용하고, `content/` 폴더는 초기 내장 양식 및 fallback baseline으로 유지한다.
 
-**결정일**: 2026-04
+**결정일**: 2026-04 · **코드 대조**: 2026-10-18
+
+양식이 어디에서 오는지, 비공개 처리 후 무엇을 확인해야 하는지 알고 싶은 개발자를 위한 결정 기록이다. `fallback`은 DB에 해당 항목 자체가 없을 때 내장 기본본을 사용하는 동작이다. 현재 화면 경로는 [양식·가이드 경로](REPORT-ARCHIVE-SCOPE.md)를 따른다.
 **관련 이슈**: #14, #18
 
 ---
@@ -16,7 +18,7 @@
 ### 1안. DB 우선 + content fallback (채택)
 - 운영 변경은 모두 `report_templates` 테이블에서 발생
 - 관리자 페이지(`/admin/resources/templates`)에서 CRUD
-- `content/member/templates/`, `content/member/guides/`는 **초기 내장(default) 양식**으로 유지하여 신규 환경/DB 비어있는 상태에서도 회원 페이지가 동작하도록 한다.
+- `content/member/templates/`, `content/member/guides/`는 **초기 내장(default) 양식**으로 유지한다. DB 연결과 스키마가 준비됐지만 해당 양식·가이드 행이 없을 때 기본 문서를 제공한다. DB 장애나 테이블 부재를 복구하는 대체 저장소는 아니다.
 
 ### 2안. content/ fs 단독 저장
 - Markdown 파일을 git으로만 관리
@@ -51,7 +53,7 @@ listTemplates():
   - 비공개(published=false) row의 slug는 content fallback 차단 집합에 포함
 ```
 
-회원 UI에는 출처를 작은 라벨("DB 등록 양식" / "기본 시드 양식")로 표시해 디버깅을 돕는다.
+조회 결과의 `source` 값은 DB와 내장 기본본을 구분하는 데 사용한다. 현재 상세 화면에 출처 라벨이 있다고 가정하지 말고, 테스트에서 실제 선택한 내용과 비공개 시 반환 결과를 확인한다.
 
 ## 삭제/비공개 정책
 
@@ -66,5 +68,6 @@ listTemplates():
 - `content/member/templates/*.md`는 더 이상 회원 페이지의 1차 데이터 소스가 아님
 - 운영 양식 변경은 반드시 `/admin/resources/templates`에서 진행
 - content/ 내장 양식은 다음 경우에만 사용:
-  - 신규 환경에서 DB seed 전 임시 fallback
+  - DB 스키마가 준비된 신규 환경에서 양식·가이드 행을 넣기 전 기본 문서 제공
   - 양식 회귀 테스트(Vitest)의 고정 입력
+

@@ -1,5 +1,9 @@
 # 과제 전용 비공개 업로드 (#151)
 
+학생의 PDF 전송이나 실패 복구를 수정하는 개발자가 읽는다. **업로드 의도(intent)**는 서버가 특정 학생·과제·저장 경로에 발급한 전송 준비 기록이다. **검증 완료(VERIFIED)**는 저장소의 실제 파일을 확인했다는 뜻이며, 제출 완료는 [최종화](academic-submission-finalization.md)에서 DB에 확정한다.
+
+업로드·검증·취소·정리 API는 구현되어 있다. 아래 환경 변수와 DB 준비가 충족되어야 사용할 수 있으며, 구현 완료가 운영 활성화를 뜻하지 않는다. 먼저 [학생 화면](academic-student-ui.md)의 사용자 흐름을 읽고, 변경 후 [G1 품질 게이트](academic-g1-quality-gate.md)로 연결을 확인한다. 실제 공급자 검증 기록은 날짜가 표시된 당시 증거로 구분한다.
+
 ## 저장 계약과 적용 범위
 
 G1은 PDF 한 개, 비어 있지 않은 실제 크기 50MiB(52,428,800바이트) 이하만 허용한다.
@@ -11,7 +15,7 @@ G1은 PDF 한 개, 비어 있지 않은 실제 크기 50MiB(52,428,800바이트)
 
 ## SDK 및 공급자 PoC 근거
 
-확인일 **2026-10-16**. 설치 SDK `@vercel/blob` **2.4.0**의 README와 `dist/client.d.ts`, `dist/index.d.ts`를 확인했다.
+확인일 **2026-10-16**. 당시 설치 SDK `@vercel/blob` **2.4.0**의 README와 `dist/client.d.ts`, `dist/index.d.ts`를 확인한 기록이다. 아래 SDK 기능·공급자 제한은 당시 근거이며, SDK 변경이나 실제 공급자 QA 전에는 설치 버전과 공식 문서를 다시 확인한다. 이번 문서 정비에서 외부 공급자 검증을 새로 실행한 것은 아니다.
 
 - [Client uploads](https://vercel.com/docs/vercel-blob/client-upload): 브라우저→Blob 직접 업로드로 Function 본문 제한을 우회한다. callback은 localhost로 전달되지 않으며 로컬 실전 검증에는 터널 또는 공개 가능한 QA URL이 필요하다.
 - [Private storage](https://vercel.com/docs/vercel-blob/private-storage): private 저장소는 읽기·쓰기에 인증이 필요하고 SDK 2.3 이상을 지원한다.
@@ -54,7 +58,7 @@ await verifyAssignmentUploadIntent({ assignmentId, uploadIntentId });
 적용 순서는 **#144 → #147 → 최신 #148 → #151 → #152**다.
 범위 SQL `scripts/migrate-academic-upload-authorizations.sql`을 격리 DB에서 신규 적용·재실행한 뒤 카탈로그를 확인한다.
 컬럼·기본값·FK/CHECK/UNIQUE·인덱스 전체 키/조건이 다르면 전체 롤백한다. 기존 원장을 자동 보정하지 않는다.
-Drizzle 정본 `schema.ts`에서 `academicUploadAuthorizations`를 내보내야 한다. root 통합 담당자가 export를 추가한다.
+현재 `src/lib/db/schema.ts`는 `academicUploadAuthorizations`를 `./academic-upload-authorizations`에서 재수출한다. 이 코드의 테이블 정의와 실제 DB의 함수·트리거 적용 여부는 별도로 확인한다.
 함수는 SECURITY INVOKER이며 PUBLIC EXECUTE를 제거한다. 앱 역할이 소유자와 다르면 범위 함수/표 권한만 별도로 부여한다.
 
 필요한 서버 설정:
@@ -65,7 +69,7 @@ Drizzle 정본 `schema.ts`에서 `academicUploadAuthorizations`를 내보내야 
 - `ACADEMIC_SUBMISSION_READ_WRITE_TOKEN`: 위 private 저장소의 서버 전용 토큰. 공개 저장소 fallback은 없다.
 - `ACADEMIC_UPLOAD_CLEANUP_ENABLED=true`: 정리 작업의 별도 활성화. **기본 비활성**.
 - `ACADEMIC_UPLOAD_CLEANUP_DELETE_ENABLED=true`: 실제 삭제의 추가 활성화. 없으면 **dry-run**.
-- `CRON_SECRET`: 정리 API의 Bearer 인증. 일정 등록은 root 통합 담당자가 결정하며 이 PR이 자동 등록하지 않는다.
+- `CRON_SECRET`: 정리 API의 Bearer 인증. 현재 `vercel.json`에는 `/api/cron/cleanup-academic-uploads`의 예약이 등록되어 있지 않다. API 구현과 주기 실행은 별개이므로, 예약이 필요하면 승인된 운영 일정과 플랫폼 설정을 확인한 뒤 등록한다.
 
 기능 롤백은 신규 업로드 공개부터 끈다. 학적·원장·최종 제출물은 삭제하지 않는다.
 정리는 사용자 기능과 독립적으로 승인된 설정에서 동작할 수 있으나 운영 DB/저장소 적용·검증 전에는 켜지 않는다.
@@ -105,7 +109,7 @@ npm run typecheck
 실제 SDK의 정상 HMAC(키 순서/추가 속성/중복), 위조 서명 거부를 검증한다. 이 테스트들은 공급자 실전 PoC를 대신하지 않는다.
 
 `scripts/verify-academic-private-upload-http.mjs`는 승인된 private 저장소의 QA 전용 namespace에서 실제 공급자 경로를 실행한다. 물리적으로 별도 저장소일 필요는 없다. 기존 private 저장소를 사용할 때도 이번 실행의 무작위 경로·격리 원장 한 개만 조회·정리한다.
-root가 승인된 저장소 자격정보를 비공개 환경 파일로 공급하고 다음 조건을 명시해야 한다. 운영 비밀 파일을 자동 탐색하지 않는다.
+검증 담당자가 승인된 저장소 자격정보를 비공개 환경 파일로 공급하고 다음 조건을 명시해야 한다. 운영 비밀 파일을 자동 탐색하지 않는다.
 
 ```bash
 # 외부의 비공개 환경 파일에 승인된 private HOST/TOKEN과 아래 확인 플래그를 넣는다.
@@ -123,8 +127,13 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin \
 실패 시 재시도를 위한 원장(manifest)은 `/tmp`의 0600 파일에 저장하고 경로만 출력한다. 원문 URL·저장 키·파일명·토큰은 출력하지 않는다.
 실패로 객체가 남으면 해당 manifest의 정확한 키와 만료 시각을 기준으로 승인된 복구 작업을 수행해야 한다.
 
+### 2026-10-16 실제 공급자 검증 기록
+
+다음은 당시 실행 결과이며 현재 환경의 재실행 결과로 해석하지 않는다.
+
 **2026-10-16 통합 담당자 실전 결과:** 격리 PostgreSQL·실제 credentials 로그인과 승인된 private 저장소의 새 QA 경로로 위 실행기를 실행해 exit 0을 확인했다. SDK의 50MiB 직접 PUT, 익명 403, 같은 경로 덮어쓰기 거부, 서버 원본 SHA-256 일치, VERIFIED·최종 제출 0건, 실제 토큰 만료와 5분 유예 후 해당 원장 객체 한 개 삭제가 모두 통과했다. 운영 회원·DB·기존 파일은 사용하거나 변경하지 않았다.
 
 확인한 전송 규모는 성공한 파일 쓰기 50MiB와 서버 검증 원본 읽기 50MiB이며, 메타 조회·덮어쓰기 거부·삭제 요청도 실행했다. 청구서와 계정 사용량은 조회하지 않았으므로 실제 청구 금액을 0원으로 단정하지 않는다. 운영 지역·요금제의 작업/저장/전송 단가는 위 공식 가격표와 계정 사용량으로 확인한다.
 
 실제 callback 전달은 이번 로컬 실행에서 하지 않았다. callback 미전달 상태의 명시적 검증 복구는 실전 통과했고, 정상/위조 HMAC·키 순서·추가 속성·중복 callback은 실제 SDK를 사용하는 격리 회귀로 별도 검증했다.
+

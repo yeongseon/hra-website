@@ -1,5 +1,5 @@
 site_name: HRA 개발 가이드
-site_description: 대학교 1학년도 따라할 수 있는 HRA 웹사이트 개발 참여 가이드
+site_description: 처음 참여하는 개발자를 위한 HRA 실행, 코드 이해, 협업 및 운영 안내
 site_url: https://yeongseon.github.io/hra-website/
 
 theme:
@@ -22,7 +22,6 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
-    - navigation.expand
     - navigation.top
     - search.suggest
     - search.highlight
@@ -35,37 +34,75 @@ repo_url: https://github.com/yeongseon/hra-website
 repo_name: yeongseon/hra-website
 
 nav:
-  - 🏠 홈: index.md
-  - 🚀 시작하기:
-      - 사전 준비 (설치): getting-started/prerequisites.md
-      - 프로젝트 받아오기: getting-started/clone-and-setup.md
-      - 사이트 실행하기: getting-started/first-run.md
-  - 🤝 기여하기:
-      - 협업 워크플로우: contributing/workflow.md
-      - 전체 경로 감사: developer/site-route-audit.md
-      - 코드 컨벤션: contributing/conventions.md
-      - 빌드·배포 안전 가이드 ⚠️: contributing/build-and-deploy-safety.md
-      - AI 도구로 기여하기: contributing/ai-tools.md
-      - 난이도별 작업 가이드: contributing/tasks-by-level.md
-  - 🏗️ 아키텍처:
-      - 멀티클라이언트 플랫폼 구조: developer/platform-architecture.md
-      - Web → Android → iOS 전환 로드맵: PLATFORM-ROADMAP.md
-      - Dev·Preview·Production 환경 전략: developer/environment-strategy.md
-  - 🔧 사이트 수정:
-      - 페이지 수정 & 꾸미기: CUSTOMIZATION.md
-      - 현재 폴더 구조 이해하기: GUIDE.md
-  - 👑 관리자:
-      - 관리자 운영 가이드: ADMIN-GUIDE.md
-      - 데이터베이스 가이드: DATABASE.md
-      - 데이터베이스 변경 절차: developer/database-change-procedure.md
-      - P1 보안 수정 적용 절차: developer/p1-security-rollout.md
-  - 📋 기능 기획:
-      - 학사관리 전환 로드맵: ACADEMIC-MANAGEMENT-ROADMAP.md
-      - 학사 데이터 모델: ACADEMIC-DATA-MODEL.md
-      - 학사 개인정보 보존·파기 초안: ACADEMIC-PRIVACY-RETENTION-POLICY.md
-      - 학생 과제 제출 1차 범위: ASSIGNMENT-SUBMISSION-SCOPE.md
-  - 🚢 배포:
-      - 배포 & 문제 해결: DEPLOYMENT.md
+  - 개발 가이드: index.md
+  - 시작하기:
+      - 사전 준비: getting-started/prerequisites.md
+      - 코드 받아오기와 설정: getting-started/clone-and-setup.md
+      - 첫 실행: getting-started/first-run.md
+      - 화면부터 DB까지 따라가기: getting-started/project-tour.md
+      - 용어집: getting-started/glossary.md
+      - 현재 폴더와 기능: GUIDE.md
+  - 수정하고 기여하기:
+      - 화면과 내용 수정: CUSTOMIZATION.md
+      - 협업 순서: contributing/workflow.md
+      - 코드 작성 규칙: contributing/conventions.md
+      - 작업 난이도와 첫 기여: contributing/tasks-by-level.md
+      - AI 도구 사용: contributing/ai-tools.md
+      - 품질 검사와 CI 범위: QUALITY-GATE.md
+      - 빌드·배포 안전 가이드: contributing/build-and-deploy-safety.md
+      - 버전과 릴리스: contributing/releasing.md
+  - 관리자와 운영:
+      - 관리자 메뉴: ADMIN-GUIDE.md
+      - 데이터베이스: DATABASE.md
+      - 배포와 문제 해결: DEPLOYMENT.md
+      - DB 변경 절차: developer/database-change-procedure.md
+      - 요청 제한: operations/rate-limits.md
+      - 업로드 파일 원장과 정리: operations/markdown-image-ownership.md
+      - 카카오 로그인 설정: KAKAO-LOGIN-SETUP.md
+      - 카카오 이메일 동의: operations/kakao-email-consent.md
+      - 카카오 기존 계정 연결: operations/kakao-legacy-binding.md
+  - 자료실과 모집:
+      - 자료실 조회 권한: resource-access-policy.md
+      - 자료 파일 접근: resource-file-access-policy.md
+      - 보고서 자료실 범위: REPORT-ARCHIVE-SCOPE.md
+      - 보고서 저장 방식 결정: REPORT-STORAGE-DECISION.md
+      - 모집과 지원 접수: recruitment-intake-policy.md
+      - 모집 설정 한 행 규칙: recruitment-singleton.md
+      - 질문 편집과 지원서 제출: application-form-concurrency.md
+  - 학사 G1:
+      - 현재 범위와 로드맵: ACADEMIC-MANAGEMENT-ROADMAP.md
+      - 개인 과제 제출 범위: ASSIGNMENT-SUBMISSION-SCOPE.md
+      - 데이터 모델: ACADEMIC-DATA-MODEL.md
+      - 학생과 수강:
+          - 학생 모델 SQL 적용: developer/academic-students-migration.md
+          - 기존 수강 데이터 연결: developer/academic-enrollment-backfill.md
+          - 학사 명단 관리: developer/academic-roster.md
+      - 과제와 대상:
+          - 과제 모델 SQL 적용: developer/academic-assignments-migration.md
+          - 과제 변경 액션: developer/academic-assignment-actions.md
+          - 관리자 화면: developer/academic-assignment-admin.md
+      - 학생 화면:
+          - 학생 조회 계약: developer/academic-student-queries.md
+          - 제출 상태 계산: developer/academic-submission-statuses.md
+          - 학생 화면과 검증 기록: developer/academic-student-ui.md
+      - 파일 제출:
+          - 제출 모델 SQL 적용: developer/academic-submissions-migration.md
+          - 업로드·검증·정리: developer/academic-assignment-uploads.md
+          - 최종 제출 확정: developer/academic-submission-finalization.md
+          - 파일 다운로드와 삭제: developer/academic-submission-files.md
+      - 운영과 검증:
+          - 로그·지표·기능 설정: developer/academic-observability.md
+          - G1 통합 품질 검사: developer/academic-g1-quality-gate.md
+      - 개인정보 정책 초안: ACADEMIC-PRIVACY-RETENTION-POLICY.md
+  - 앞으로의 플랫폼:
+      - 목표 아키텍처: developer/platform-architecture.md
+      - 전환 로드맵: PLATFORM-ROADMAP.md
+      - 환경 분리와 배포 전략: developer/environment-strategy.md
+  - 기록과 문서 관리:
+      - 전체 경로 감사 기록: developer/site-route-audit.md
+      - 초기 P1 변경 적용 기록: developer/p1-security-rollout.md
+      - 언론 기사 조사 기록: PRESS-ARTICLES.md
+      - 전체 문서 지도: documentation-map.md
 
 markdown_extensions:
   - admonition
@@ -91,3 +128,4 @@ extra:
       link: https://github.com/yeongseon/hra-website
     - icon: fontawesome/brands/instagram
       link: https://instagram.com/hra_official_
+

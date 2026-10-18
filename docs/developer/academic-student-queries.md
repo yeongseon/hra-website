@@ -1,6 +1,10 @@
 # 학생 본인 과제 조회 계약
 
-#150은 `MEMBER` 학생의 자기 과제 목록·상세·최종 제출 메타 조회를 서버 한 곳에 모은다. 선행 스키마 #144/#147/#148이 필요하다. 운영 기능 활성화, 과제 관리 #149, 업로드·최종화 #151/#152 및 파일 전달 #154는 별도 작업이다. 기존 공동 자료실의 기수별 정책 #100은 변경하지 않는다.
+학생의 과제 목록·상세에 어떤 데이터를 전달할지 수정할 때 읽는다. **조회 계약**은 로그인한 학생에게 보여줄 수 있는 행과 필드를 정한 규칙이다. **DTO**는 DB 전체 행 대신 화면에 필요한 정보만 골라 전달하는 객체다. 과제가 보인다는 사실과 새 파일을 제출할 수 있다는 사실은 각각 검사한다.
+
+본인 조회 함수는 구현되어 있고 [학생 화면](academic-student-ui.md)이 이를 사용한다. 화면이 필요로 하는 필드를 확인한 뒤 아래 서버 진입점·권한·응답 순서로 읽는다. 새로운 필드를 추가할 때는 타인의 정보나 저장소 URL이 섞이지 않는지 조회 테스트로 확인한다. 용어는 [용어집](../getting-started/glossary.md)을 참고한다.
+
+#150은 `MEMBER` 학생의 자기 과제 목록·상세·최종 제출 메타 조회를 서버 한 곳에 모은다. 선행 스키마 #144/#147/#148이 필요하다. 과제 관리 #149, 업로드·최종화 #151/#152, 파일 전달 #153과 학생 화면 #154는 각각 연결된 별도 구현이다. 운영 활성화는 별도 결정이며 기존 공동 자료실의 기수별 정책 #100은 변경하지 않는다.
 
 ## 서버 진입점
 
@@ -21,7 +25,7 @@
 ## 판단 순서와 DB 정책
 
 1. 실제 `auth()` 세션을 읽고 계정 UUID를 확인한다.
-2. `MEMBER`만 학생 경로에 허용한다. `ADMIN`은 관리 경로 #149를 사용하고 `FACULTY`는 담당 교수 정책 확정 전 학생 전체를 열람하지 못한다. `PENDING`과 비로그인도 차단한다.
+2. `MEMBER`만 학생 경로에 허용한다. 관리 경로 #149/#155도 정확한 지정 승인자에게만 허용하며 `ADMIN` 역할만으로 접근하지 못한다. `FACULTY`는 담당 교수 정책 확정 전 학생 전체를 열람하지 못한다. `PENDING`과 비로그인도 차단한다.
 3. `ACADEMIC_ENABLED`가 정확히 `true`인지 확인한다. 비활성 상태이면 신규 학사 테이블을 조회하지 않는다. 인증은 기존 인증 체계에 따라 자체 DB 확인을 할 수 있다.
 4. 세션 계정 ID → `academic_students.user_id` → `cohort_enrollments` → `assignment_targets` → `assignments`를 조인한다. 각 실제 조회 문장은 현재 `users.role = MEMBER`도 다시 확인하여 인증 직후 역할 철회를 반영한다. 학적은 `ENROLLED`, `ended_at IS NULL`, 등록·생성 시각이 DB 현재 시각 이하이어야 한다. 학적과 과제의 기수도 일치해야 한다.
 5. `PUBLISHED`/`CLOSED`, 공개 시각이 DB `CURRENT_TIMESTAMP` 이하인 과제만 반환한다. `DRAFT`, 미래 공개, 스냅샷 대상 없음, 미연결·종료 학적은 조회하지 못한다. `users.cohort_id`, 이메일, 지원서 상태를 학사 권한으로 사용하지 않는다.
@@ -31,7 +35,7 @@
 
 ## 응답과 오류
 
-목록 항목은 `{ assignmentId, targetId, title, status, dueAt, publishedAt, submission }`만 반환한다. `submission`은 미제출이면 `null`, 최종 제출이면 `{ submittedAt }`이다. 상세는 여기에 `instructions`와 본인 `file` 메타 `{ fileId, originalName, mimeType, sizeBytes }`만 추가한다. 날짜는 ISO 문자열이다. 자기 파일 ID는 별도 인증 다운로드 경로에서 사용하며 파일 URL 자체가 아니다.
+목록 항목은 `{ assignmentId, targetId, title, status, dueAt, publishedAt, submission }`만 반환한다. `submission`은 미제출이면 `null`, 최종 제출이면 `{ submissionId, submittedAt }`이다. 상세는 여기에 `instructions`와 본인 `file` 메타 `{ fileId, originalName, mimeType, sizeBytes }`만 추가한다. 날짜는 ISO 문자열이다. 자기 제출·파일 ID는 별도 인증 다운로드 경로에서 사용하며 파일 URL 자체가 아니다. 현재 응답 타입은 `src/features/academics/student-assignments/contracts.ts`가 정의한다.
 
 DB 응답 전체를 펼치지 않는다. 저장 키·URL·체크섬·멱등 키·타인 제출/파일 ID·학생 이름/학적 ID·이메일·자격 정보는 DTO에 포함하지 않는다. 미검증 업로드나 검증만 끝난 의도를 최종 제출 완료로 표시하지 않는다. 최종 제출의 파일 메타가 누락된 비정상 DB 결과도 완료 응답으로 반환하지 않는다.
 
@@ -46,7 +50,7 @@ DB 응답 전체를 펼치지 않는다. 저장 키·URL·체크섬·멱등 키�
 | 페이지 범위·자료형·추가 입력 필드 오류 | `INVALID_INPUT` / 422 |
 | 인증/DB 장애·비정상 결과 | `UNAVAILABLE` / 503 |
 
-서버 페이지는 `AcademicAccessError.status === 404`를 `notFound()`로 매핑하고 다른 오류는 기존 로그인/권한/장애 응답에 매핑한다. 액션/API도 같은 상태를 사용한다. 함수가 `null`을 반환하는 별도 상세 계약은 없다. 부모 페이지에서 로그인했다는 이유로 하위 쿼리 검사를 생략하지 않는다. 개인화 페이지/파일 응답은 공개 캐시에 저장하지 않으며 G1 화면 구현 #153에서 동적 렌더링과 응답 캐시 정책을 적용한다.
+서버 페이지는 `AcademicAccessError.status === 404`를 `notFound()`로 매핑하고 다른 오류는 기존 로그인/권한/장애 응답에 매핑한다. 액션/API도 같은 상태를 사용한다. 함수가 `null`을 반환하는 별도 상세 계약은 없다. 부모 페이지에서 로그인했다는 이유로 하위 쿼리 검사를 생략하지 않는다. 개인화 페이지/파일 응답은 공개 캐시에 저장하지 않으며 G1 학생 화면 #154와 파일 전달 #153에서 동적 렌더링·응답 캐시 정책을 적용한다.
 
 ## 검증
 
@@ -60,3 +64,4 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npx vitest run tests/unit/ac
 npm run typecheck
 npx eslint src/lib/academic-permissions.ts src/features/academics/student-assignments tests/unit/academic-student-query-*.test.ts
 ```
+
