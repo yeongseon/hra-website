@@ -1,4 +1,5 @@
 /** 모집 포스터 직접 업로드의 크기·역할·경로·실물 검증을 확인합니다 (#102). */
+import { syntheticPng } from "../support/synthetic-image";
 import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -62,7 +63,7 @@ describe("모집 포스터 직접 업로드", () => {
   it("브라우저가 직접 보내고 서버 액션에는 URL만 전달한다", async () => {
     mocks.upload.mockResolvedValue({ url });
     const formData = new FormData();
-    formData.set("posterFile", new File([Uint8Array.of(0x89, 0x50, 0x4e, 0x47)], "사진.png", { type: "image/png" }));
+    formData.set("posterFile", new File([syntheticPng()], "사진.png", { type: "image/png" }));
     const result = await preparePosterUpload(formData, userId);
     expect("formData" in result).toBe(true);
     expect(formData.has("posterFile")).toBe(false);
@@ -97,16 +98,27 @@ describe("모집 포스터 직접 업로드", () => {
     expect(await validatePosterImageReference(posterId, userId, url)).toBe(false);
   });
 
-  it("검증된 원본을 WebP로 변환하고 변환 결과의 소유권을 기록한다", async () => {
+  it("검증된 원본을 WebP로 변환하고 변환 결과의 소유권을 선예약한다", async () => {
     const original = await sharp({ create: { width: 1, height: 1, channels: 4, background: "#ffffff" } }).png().toBuffer();
     mocks.fetch.mockResolvedValueOnce(new Response(new Uint8Array(original), { status: 206 }));
     mocks.fetch.mockResolvedValueOnce(new Response(new Uint8Array(original), { status: 200 }));
-    const convertedUrl = `https://${projectBlobHost}/recruitment/poster.webp`;
-    mocks.put.mockResolvedValue({ url: convertedUrl });
-    expect(await prepareStoredPoster(url, userId)).toBe(convertedUrl);
+    mocks.put.mockImplementation(async (path: string) => ({ url: `https://${projectBlobHost}/${path}` }));
+    const convertedUrl = await prepareStoredPoster(url, userId);
+    expect(convertedUrl).toMatch(new RegExp(`^https://${projectBlobHost}/recruitment/[0-9a-f-]{36}\\.webp$`));
     const webp = mocks.put.mock.calls[0]?.[1];
     expect(Buffer.isBuffer(webp)).toBe(true);
     if (Buffer.isBuffer(webp)) expect(webp.toString("ascii", 0, 4)).toBe("RIFF");
-    expect(mocks.recordOwnedBlob).toHaveBeenCalledWith(convertedUrl, userId);
+    expect(mocks.recordUpload).toHaveBeenCalledWith(convertedUrl, userId);
+    expect(mocks.recordUpload.mock.invocationCallOrder[1]).toBeLessThan(mocks.put.mock.invocationCallOrder[0]);
   });
+
+  it("전체 디코딩에 실패한 직접 업로드 포스터를 원본 URL로 저장하지 않는다", async () => {
+    const damaged = syntheticPng().slice(0, 12);
+    mocks.fetch.mockResolvedValueOnce(new Response(damaged, { status: 206 }));
+    mocks.fetch.mockResolvedValueOnce(new Response(damaged, { status: 200 }));
+    await expect(prepareStoredPoster(url, userId)).rejects.toThrow("포스터 이미지 변환에 실패했습니다.");
+    expect(mocks.put).not.toHaveBeenCalled();
+    expect(mocks.recordUpload).toHaveBeenCalledTimes(1);
+  });
+
 });

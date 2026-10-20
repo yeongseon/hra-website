@@ -2,6 +2,7 @@
  * #193 기수·양식 삭제 액션이 제출 데이터를 보존하고 한국어 결과를 돌려주는지 확인합니다.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { syntheticPng } from "../support/synthetic-image";
 
 const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
@@ -12,14 +13,14 @@ const mocks = vi.hoisted(() => ({
   logServerError: vi.fn(),
   hasGuards: vi.fn(),
   put: vi.fn(),
-  recordOwnedBlob: vi.fn(),
+  recordResourceUpload: vi.fn(),
   insertValues: vi.fn(),
   updateSet: vi.fn(),
 }));
 
 vi.mock("@/lib/admin", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/lib/blob-utils", () => ({ deleteBlobIfExists: mocks.deleteBlobIfExists }));
-vi.mock("@/lib/owned-blob", () => ({ recordOwnedBlob: mocks.recordOwnedBlob }));
+vi.mock("@/lib/resource-upload-server", () => ({ recordResourceUpload: mocks.recordResourceUpload }));
 vi.mock("@vercel/blob", () => ({ put: mocks.put }));
 vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("@/lib/db/submission-delete-guards", () => ({ hasSubmissionDeleteGuards: mocks.hasGuards }));
@@ -44,6 +45,7 @@ vi.mock("@/lib/db", () => ({
 
 import { createCohort, deleteCohort, updateCohort } from "@/features/recruitment/actions";
 import { deleteForm } from "@/features/applications/actions/forms";
+import { projectBlobHost } from "@/lib/blob-host";
 
 const id = "11111111-1111-4111-8111-111111111111";
 
@@ -53,19 +55,21 @@ beforeEach(() => {
   mocks.requireAdmin.mockResolvedValue({ user: { id } });
   mocks.hasGuards.mockResolvedValue(true);
   mocks.deleteReturning.mockResolvedValue([{ id }]);
-  mocks.put.mockResolvedValue({ url: "https://example.public.blob.vercel-storage.com/cohorts/new.png" });
+  mocks.put.mockImplementation(async (path: string) => ({ url: `https://${projectBlobHost}/${path}` }));
   mocks.insertValues.mockResolvedValue(undefined);
 });
 
 describe("지원서 보존 삭제 액션", () => {
-  it("새 기수 이미지는 소유권 원장에 기록해 이후 공유 참조 정리 대상에 넣는다", async () => {
+  it("새 기수 이미지는 소유권 원장에 선예약해 이후 공유 참조 정리 대상에 넣는다", async () => {
     const form = new FormData();
     form.set("name", "1기");
-    form.set("image", new File(["image"], "photo.png", { type: "image/png" }));
+    // 공통 검증을 통과하는 실제 PNG로 업로드 전 소유권 선예약을 확인합니다.
+    form.set("image", new File([syntheticPng()], "photo.png", { type: "image/png" }));
     await createCohort(form);
-    expect(mocks.recordOwnedBlob).toHaveBeenCalledExactlyOnceWith(
-      "https://example.public.blob.vercel-storage.com/cohorts/new.png", id,
+    expect(mocks.recordResourceUpload).toHaveBeenCalledExactlyOnceWith(
+      expect.stringMatching(new RegExp(`^https://${projectBlobHost}/cohorts/[0-9a-f-]{36}\\.png$`)), id,
     );
+    expect(mocks.recordResourceUpload.mock.invocationCallOrder[0]).toBeLessThan(mocks.put.mock.invocationCallOrder[0]);
   });
 
   it("기수 이미지를 제거해도 공유 참조 확인 전에는 Blob을 지우지 않는다", async () => {
