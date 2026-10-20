@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ScheduleActionState } from "@/features/schedule/actions";
-import type { Faculty, Cohort } from "@/lib/db/schema";
 
 // 세션 카테고리 선택지
 const categoryOptions = [
@@ -94,13 +93,17 @@ type DefaultValues = {
   sessions?: DefaultSession[];
 };
 
+// 폼의 선택 목록은 DB 전체 행 대신 실제로 표시·비교하는 필드만 받습니다.
+type FacultyChoice = { id: string; name: string; category: "CLASSICS" | "BUSINESS" | "LECTURE" };
+type CohortChoice = { id: string; name: string };
+
 type ScheduleFormProps = {
   title: string;
   submitLabel: string;
   action: (prevState: ScheduleActionState, formData: FormData) => Promise<ScheduleActionState>;
   defaultValues?: DefaultValues;
-  faculties: Faculty[];
-  cohorts: Cohort[];
+  faculties: FacultyChoice[];
+  cohorts: CohortChoice[];
 };
 
 const initialState: ScheduleActionState = {

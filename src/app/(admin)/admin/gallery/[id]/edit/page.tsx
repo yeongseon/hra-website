@@ -60,9 +60,21 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
   }
 
   const gallery = await db.query.galleries.findFirst({
+    columns: {
+      id: true,
+      title: true,
+      description: true,
+      coverImageUrl: true,
+    },
     where: eq(galleries.id, parsedId.data),
     with: {
       images: {
+        columns: {
+          id: true,
+          url: true,
+          alt: true,
+          order: true,
+        },
         orderBy: [asc(galleryImages.order), asc(galleryImages.createdAt)],
       },
     },
@@ -132,7 +144,12 @@ export default async function EditGalleryPage({ params }: EditGalleryPageProps) 
             key={gallery.images.map((image) => image.id).join(",")}
             galleryId={gallery.id}
             coverImageUrl={gallery.coverImageUrl}
-            initialImages={gallery.images}
+            initialImages={gallery.images.map((image) => ({
+              id: image.id,
+              url: image.url,
+              alt: image.alt,
+              order: image.order,
+            }))}
           />
         </CardContent>
       </Card>
