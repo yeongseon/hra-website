@@ -1,15 +1,17 @@
+/** 모집 설정 서버 액션: 모집 정보와 포스터를 저장하고 이미지 변환 실패를 폼 오류로 반환합니다. */
 "use server";
 
-import { put } from "@vercel/blob";
 import { desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
 import { db } from "@/lib/db";
 import { cohorts, recruitmentSettings } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import { validateAdminImage } from "@/lib/admin-image-validation";
+import { posterImageRule } from "@/lib/poster-upload-contract";
 import { prepareStoredPoster } from "@/lib/poster-upload-server";
 
 const maxPosterFileSize = 10 * 1024 * 1024;
@@ -82,16 +84,7 @@ function toDate(value: string) {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-function normalizePosterFileName(fileName: string) {
-  return fileName.trim().replace(/\s+/g, "-");
-}
-
-function toWebpFileName(fileName: string) {
-  // 마지막 확장자만 교체해 다중 점(.)이 포함된 파일명도 안전하게 처리한다.
-  return fileName.replace(/\.[^./\\]+$/, "") + ".webp";
-}
-
-function validatePosterFile(fileEntry: FormDataEntryValue | null) {
+async function validatePosterFile(fileEntry: FormDataEntryValue | null) {
   if (!(fileEntry instanceof File) || fileEntry.size === 0) {
     return {
       success: true as const,
@@ -99,11 +92,11 @@ function validatePosterFile(fileEntry: FormDataEntryValue | null) {
     };
   }
 
-  if (!fileEntry.type.startsWith("image/")) {
+  if (!await validateAdminImage(fileEntry, posterImageRule)) {
     return {
       success: false as const,
-      message: "포스터 이미지는 이미지 파일만 업로드할 수 있습니다.",
-      fieldErrors: { posterFile: "포스터 이미지는 이미지 파일만 업로드할 수 있습니다." },
+      message: "포스터 이미지는 JPG, PNG, WEBP, GIF 파일만 업로드할 수 있습니다.",
+      fieldErrors: { posterFile: "포스터 이미지는 JPG, PNG, WEBP, GIF 파일만 업로드할 수 있습니다." },
     };
   }
 
@@ -134,34 +127,14 @@ async function getDirectPosterUrl(formData: FormData, userId: string): Promise<s
   return prepareStoredPoster(value, userId);
 }
 
-async function uploadPosterFile(file: File) {
+/** 변환 실패는 호출자의 안전한 폼 오류로 처리하며 원본 저장으로 우회하지 않습니다. */
+async function uploadPosterFile(file: File, uploadedById: string) {
   const originalBuffer = Buffer.from(await file.arrayBuffer());
-  const safeFileName = normalizePosterFileName(file.name);
-
-  // WebP 변환만 try 로 감싼다. 예전에는 업로드(put)까지 같은 try 안에 있어, 업로드 실패가
-  // 변환 실패로 취급되어 변환 전 원본이 대신 올라갔다 (#110).
-  let webpBuffer: Buffer | null = null;
-  try {
-    webpBuffer = await sharp(originalBuffer).webp({ quality: 85 }).toBuffer();
-  } catch (error) {
-    // sharp 가 처리하지 못하는 이미지면 원본을 그대로 올린다.
-    logServerError("recruitment-settings/poster-convert", error);
-  }
-
-  // addRandomSuffix: 같은 이름의 포스터를 다시 올려도 경로가 겹치지 않고, 지운 주소가 재사용되지 않는다.
-  const blob = webpBuffer
-    ? await put(`recruitment/포스터-${toWebpFileName(safeFileName)}`, webpBuffer, {
-        access: "public",
-        contentType: "image/webp",
-        addRandomSuffix: true,
-      })
-    : await put(`recruitment/포스터-${safeFileName}`, originalBuffer, {
-        access: "public",
-        contentType: file.type || undefined,
-        addRandomSuffix: true,
-      });
-
-  return blob.url;
+  const webpBuffer = await sharp(originalBuffer).webp({ quality: 85 }).toBuffer();
+  return uploadWithOwnedIntent({
+    namespace: "recruitment", extension: "webp", body: webpBuffer,
+    contentType: "image/webp", uploadedById,
+  });
 }
 
 function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: string }>) {
@@ -213,7 +186,7 @@ export async function updateRecruitmentSettings(
   }
 
   const removePoster = normalizeText(formData.get("removePoster")) === "true";
-  const validatedPosterFile = validatePosterFile(formData.get("posterFile"));
+  const validatedPosterFile = await validatePosterFile(formData.get("posterFile"));
 
   if (!validatedPosterFile.success) {
     return {
@@ -231,9 +204,7 @@ export async function updateRecruitmentSettings(
     .limit(1);
 
   let nextPosterImageUrl: string | null = existingSettings?.posterImageUrl ?? null;
-  // 구형 서버 업로드만 즉시 정리합니다. 직접 업로드와 변환 결과는 소유권 원장에
-  // 남겨 DB 커밋 후 응답이 유실된 경우에도 참조 중인 Blob을 보존합니다.
-  let newlyUploadedBlobUrl: string | null = null;
+  // 직접·서버 업로드 모두 원장으로 추적해 응답 유실 후 현재 참조를 재확인합니다.
 
   if (removePoster) {
     nextPosterImageUrl = null;
@@ -244,8 +215,7 @@ export async function updateRecruitmentSettings(
         if (formData.has("uploadedPosterUrl")) {
           nextPosterImageUrl = await getDirectPosterUrl(formData, session.user.id);
         } else if (validatedPosterFile.file) {
-          newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
-          nextPosterImageUrl = newlyUploadedBlobUrl;
+          nextPosterImageUrl = await uploadPosterFile(validatedPosterFile.file, session.user.id);
         }
       } catch (error) {
         logServerError("recruitment-settings/poster-upload", error);
@@ -272,19 +242,9 @@ export async function updateRecruitmentSettings(
     posterLayout: parsed.data.posterLayout,
   };
 
-  // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
-  // 이전 URL은 소유권을 확인할 수 없어 DB 저장 성공 여부와 관계없이 삭제하지 않습니다.
-  try {
-    await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
-      .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
-  } catch (dbError) {
-    // DB write 가 실패하면 방금 업로드한 새 Blob 은 어떤 row 에서도 참조되지 않으므로 되지운다.
-    // deleteBlobIfExists 는 내부에서 오류를 로그로만 남기므로 rethrow 하기 전에 안전하게 호출 가능하다.
-    if (newlyUploadedBlobUrl) {
-      await deleteBlobIfExists(newlyUploadedBlobUrl);
-    }
-    throw dbError;
-  }
+  // 커밋 후 응답 유실도 가능하므로 새 객체를 삭제하지 않고 원장 정리에 맡깁니다.
+  await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+    .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
 
   // 이전 URL은 관리자 입력값일 수 있습니다. 같은 Blob 도메인이어도 현재 설정이
   // 파일 소유자임을 증명하지 못하므로 교체·제거 시 자동 삭제하지 않습니다 (#88).
@@ -401,7 +361,7 @@ export async function updateRecruitmentPoster(
   }
 
   const removePoster = normalizeText(formData.get("removePoster")) === "true";
-  const validatedPosterFile = validatePosterFile(formData.get("posterFile"));
+  const validatedPosterFile = await validatePosterFile(formData.get("posterFile"));
 
   if (!validatedPosterFile.success) {
     return { success: false, message: validatedPosterFile.message, fieldErrors: validatedPosterFile.fieldErrors };
@@ -413,9 +373,7 @@ export async function updateRecruitmentPoster(
     .limit(1);
 
   let nextPosterImageUrl: string | null = existing?.posterImageUrl ?? null;
-  // 직접 업로드 결과는 소유권 원장에서 미참조 여부를 확인한 뒤 정리합니다.
-  // 구형 서버 업로드만 DB 실패 시 즉시 정리합니다.
-  let newlyUploadedBlobUrl: string | null = null;
+  // 직접·서버 업로드 모두 원장으로 추적해 응답 유실 후 현재 참조를 재확인합니다.
 
   if (removePoster) {
     nextPosterImageUrl = null;
@@ -426,8 +384,7 @@ export async function updateRecruitmentPoster(
         if (formData.has("uploadedPosterUrl")) {
           nextPosterImageUrl = await getDirectPosterUrl(formData, session.user.id);
         } else if (validatedPosterFile.file) {
-          newlyUploadedBlobUrl = await uploadPosterFile(validatedPosterFile.file);
-          nextPosterImageUrl = newlyUploadedBlobUrl;
+          nextPosterImageUrl = await uploadPosterFile(validatedPosterFile.file, session.user.id);
         }
       } catch (error) {
         logServerError("recruitment-settings/poster-upload", error);
@@ -444,18 +401,9 @@ export async function updateRecruitmentPoster(
 
   const values = { posterImageUrl: nextPosterImageUrl, posterLayout: parsed.data.posterLayout };
 
-  // 새 Blob 업로드 후 DB 저장이 실패하면 이번 요청에서 만든 파일만 정리합니다.
-  // 상세 근거는 updateRecruitmentSettings 의 동일 블록 주석 참고.
-  try {
-    await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
-      .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
-  } catch (dbError) {
-    // DB write 실패 시 새 Blob 은 미참조 → best-effort 로 되지운다.
-    if (newlyUploadedBlobUrl) {
-      await deleteBlobIfExists(newlyUploadedBlobUrl);
-    }
-    throw dbError;
-  }
+  // 커밋 후 응답 유실도 가능하므로 새 객체를 삭제하지 않고 원장 정리에 맡깁니다.
+  await db.insert(recruitmentSettings).values({ singletonKey: 1, ...values })
+    .onConflictDoUpdate({ target: recruitmentSettings.singletonKey, set: values });
 
   // 이전 URL은 파일 소유권을 확인할 수 없으므로 자동 삭제하지 않습니다 (#88).
 
