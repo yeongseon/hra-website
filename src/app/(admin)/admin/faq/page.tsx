@@ -16,9 +16,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminFaqPage() {
   await requireAdmin();
 
-  // order 오름차순, 동일 order는 생성일 오름차순으로 초기 정렬
+  // order 오름차순, 동일 order는 생성일 오름차순으로 초기 정렬 (클라이언트 목록에 필요한 네 컬럼만 조회)
   const items = await db
-    .select()
+    .select({
+      id: faqItems.id,
+      question: faqItems.question,
+      answer: faqItems.answer,
+      order: faqItems.order,
+    })
     .from(faqItems)
     .orderBy(asc(faqItems.order), asc(faqItems.createdAt));
 
@@ -36,7 +41,15 @@ export default async function AdminFaqPage() {
       </div>
 
       {/* FAQ 항목 목록 — key를 items.length에 연결해 항목 추가 후 서버 재렌더 시 상태 초기화 */}
-      <FaqSortableList key={items.length} initialItems={items} />
+      <FaqSortableList
+        key={items.length}
+        initialItems={items.map((item) => ({
+          id: item.id,
+          question: item.question,
+          answer: item.answer,
+          order: item.order,
+        }))}
+      />
     </section>
   );
 }
