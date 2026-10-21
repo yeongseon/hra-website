@@ -7,6 +7,7 @@
 새 스키마 변경은 해당 이슈·PR에 적용 순서와 검증 근거를 남깁니다.
 
 G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
+예약 ID 정리 인덱스의 범위 SQL·카탈로그 검증·운영 미적용 상태는 [#287 변경 절차](rate-limit-reservation-index.md)를 따릅니다.
 
 ## 새 개발·테스트 Neon DB
 

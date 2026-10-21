@@ -521,8 +521,9 @@ const MarkdownImage = Image.extend({
     const title = node.attrs?.title as string | null;
 
     if (width) {
-      // 기존 표 헬퍼로 속성을 인코딩하고 HTML 파서가 줄바꿈으로 정규화하는 CR도 문자 참조로 보존한다.
-      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;");
+      // CR·LF를 문자 참조로 보존해 원래 설명을 복원하고, 여러 줄 속성이 inline HTML로
+      // 분류되어 Tiptap 3.32에서 블록 이미지가 유실되는 것을 방지합니다.
+      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
       const srcAttr = encodeAttribute(src);
       const altAttr = encodeAttribute(alt);
       const titleAttr = title != null ? ` title="${encodeAttribute(title)}"` : "";
@@ -550,7 +551,6 @@ const MarkdownImage = Image.extend({
   },
 });
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { TextSelection } from "@tiptap/pm/state";
 import {
   Bold,
@@ -575,6 +575,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 /**
  * 마크다운 리치 텍스트 에디터
@@ -608,10 +609,6 @@ export function RichTextEditor({
   previewTitle,
 }: RichTextEditorProps) {
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
-  // createPortal은 브라우저 전용이므로 클라이언트 마운트 후에만 사용
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration 후 클라이언트 마운트 감지를 위한 패턴
-  useEffect(() => { setMounted(true); }, []);
 
   // 에디터 표시 모드
   // - "edit"   : TipTap WYSIWYG 편집 (기본)
@@ -625,6 +622,9 @@ export function RichTextEditor({
   //   4) 외부 value prop sync useEffect 는 edit 모드일 때만 실행
   //   5) 툴바 버튼은 edit 모드일 때만 활성화
   const [mode, setMode] = useState<"edit" | "source" | "preview">("edit");
+  // 전체화면 미리보기를 열면 닫기 버튼으로, 닫으면 실행한 버튼으로 포커스를 돌립니다.
+  const previewTriggerRef = useRef<HTMLButtonElement>(null);
+  const previewCloseRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 에디터 콘텐츠 컨테이너 ref — 표 스트립 절대 좌표 계산 기준
   const editorContentRef = useRef<HTMLDivElement>(null);
@@ -1162,7 +1162,7 @@ export function RichTextEditor({
   }
 
   return (
-    <>
+    <Dialog open={mode === "preview"} onOpenChange={(open) => setMode(open ? "preview" : "edit")} modal>
     {/* 에디터 내부 표 스타일 — prose 기본값을 보완해 셀 테두리·선택 하이라이트를 명시적으로 지정 */}
     <style>{`
       .ProseMirror .tableWrapper { overflow-x: auto; }
@@ -1391,7 +1391,8 @@ export function RichTextEditor({
 
         <div className="ml-auto flex gap-1">
           {/* 미리보기 토글 — 실제 홈페이지에서 보이는 그대로 렌더링 */}
-          <ToolbarButton
+          <DialogTrigger
+            ref={previewTriggerRef}
             onClick={() => {
               if (mode === "source") {
                 // 소스 → 미리보기: textarea 값을 editor에 동기화 후 미리보기
@@ -1400,13 +1401,15 @@ export function RichTextEditor({
                 setInternalValue(normalized);
                 onChange?.(normalized);
               }
-              setMode((prev) => (prev === "preview" ? "edit" : "preview"));
             }}
-            isActive={mode === "preview"}
+            className={cn(
+              "rounded-md p-2 transition-colors",
+              mode === "preview" ? "bg-gray-200 text-[#1a1a1a]" : "text-[#666666] hover:bg-gray-100 hover:text-[#1a1a1a]",
+            )}
             title={mode === "preview" ? "편집으로 돌아가기" : "미리보기 (홈페이지 렌더링)"}
           >
             <Eye className="w-4 h-4" />
-          </ToolbarButton>
+          </DialogTrigger>
           {/* 소스 모드 토글 */}
           <ToolbarButton
             onClick={() => {
@@ -1548,28 +1551,31 @@ export function RichTextEditor({
       />
     </div>
 
-    {/* 전체화면 미리보기 오버레이 — createPortal 로 document.body 에 마운트해 z-index 충돌 방지 */}
-    {mounted && mode === "preview" && createPortal(
-      <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden bg-gray-50">
+    {/* 기존 Dialog의 모달 격리·스크롤 잠금·Escape 처리를 사용하며 전체화면 배치는 유지합니다. */}
+    <DialogContent
+      showCloseButton={false}
+      initialFocus={previewCloseRef}
+      finalFocus={previewTriggerRef}
+      className="fixed inset-0 top-0 left-0 z-[9999] flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none bg-gray-50 p-0 text-base ring-0 sm:max-w-none data-open:animate-none data-closed:animate-none"
+    >
         {/* 상단 미리보기 바 */}
         <div className="flex shrink-0 items-center justify-between border-b border-[#D9D9D9] bg-white px-4 py-2.5 shadow-sm">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-[#2563EB]" />
-            <span className="text-xs font-medium text-[#666666]">
+            <DialogTitle className="text-xs leading-4 font-medium text-[#666666]">
               미리보기 — 실제 홈페이지와 동일한 렌더링
-            </span>
+            </DialogTitle>
           </div>
-          <button
-            type="button"
-            onClick={() => setMode("edit")}
+          <DialogClose
+            ref={previewCloseRef}
             className="rounded-md px-3 py-1.5 text-sm font-medium text-[#1a1a1a] transition-colors hover:bg-gray-100"
           >
             ✕ 편집으로 돌아가기
-          </button>
+          </DialogClose>
         </div>
 
         {/* 스크롤 가능한 본문 영역 */}
-        <div className="flex-1 overflow-y-auto">
+        <div role="region" aria-label="미리보기 본문" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
           {/* 실제 공개 페이지와 동일한 컨테이너·패딩·최대 너비 */}
           <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-20">
             {/* 제목이 전달된 경우 기사 헤더 시뮬레이션 */}
@@ -1587,10 +1593,8 @@ export function RichTextEditor({
             )}
           </div>
         </div>
-      </div>,
-      document.body,
-    )}
-    </>
+    </DialogContent>
+    </Dialog>
   );
 }
 
