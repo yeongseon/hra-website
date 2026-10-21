@@ -1,5 +1,3 @@
-"use client";
-
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -15,6 +13,8 @@ import { isAllowedImageUrl, sanitizeSchema } from "@/lib/markdown/sanitize";
  * - 보안: src/lib/markdown/sanitize.ts 의 화이트리스트 정책(sanitizeSchema)을 사용하고,
  *         이미지는 추가로 isAllowedImageUrl 호스트 검사를 통과해야만 렌더링한다.
  * - 스타일: Tailwind Typography(`prose`)에 사이트 디자인 토큰을 덧씌운다.
+ * - 공개 페이지는 서버에서 실행하고, 클라이언트 에디터·인쇄 뷰가 import하면 해당 클라이언트 그래프에 포함된다.
+ *   상태·이벤트·브라우저 API가 없는 공용 모듈이므로 별도 클라이언트 경계나 server-only 표시는 두지 않는다.
  */
 interface MarkdownViewerProps {
   body: string;

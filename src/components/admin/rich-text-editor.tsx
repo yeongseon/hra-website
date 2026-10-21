@@ -1,5 +1,6 @@
 "use client";
 
+/** 관리자 본문을 Markdown으로 편집·저장하고 표·이미지 크기와 공개 미리보기를 제공하는 에디터입니다. */
 import { useEditor, EditorContent, useEditorState, NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Paragraph } from "@tiptap/extension-paragraph";
@@ -9,7 +10,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
 // Table, TableRow 등은 단일 패키지에서 named export로 제공됨
 import { Table, TableRow, TableCell, TableHeader, renderTableToMarkdown } from "@tiptap/extension-table";
-import type { JSONContent, MarkdownToken } from "@tiptap/core";
+import { decodeHtmlEntities, type JSONContent, type MarkdownToken } from "@tiptap/core";
 import { uploadEditorImage } from "@/lib/editor-image-upload-client";
 
 /** 이미지 크기 조정 프리셋 — null 은 "원본(크기 제한 없음)"을 의미한다 */
@@ -457,10 +458,41 @@ const MarkdownTable = Table.configure({ resizable: true }).extend({
   },
 });
 
-// @tiptap/extension-image 는 TipTap 렌더링만 처리하고 @tiptap/markdown 직렬화 훅이 없다.
-// 그 결과 editor.getMarkdown() 호출 시 이미지가 조용히 누락되어 DB에 저장되지 않는다.
-// Image.extend()로 renderMarkdown / parseMarkdown 을 추가해 직렬화를 활성화하고,
-// width 속성과 NodeView(ImageResizeView)를 추가해 크기 조정 기능을 지원한다.
+/** 이미지 크기 조정 UI와 같은 1~100% 범위만 저장·복원하며 다른 CSS 단위·선언은 버립니다. */
+function normalizeImageWidth(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?%$/.test(value)) return null;
+  const width = Number(value.slice(0, -1));
+  return width >= 1 && width <= 100 ? `${width}%` : null;
+}
+
+/** Markdown 이미지의 설명·주소·제목에서 구분자가 되는 문자는 문자 참조로 저장합니다. */
+function encodeMarkdownImageValue(value: string): string {
+  return value.replace(/[&<>"'\\[\]()*_`~!|\s]/g, (character) => `&#${character.charCodeAt(0)};`);
+}
+
+/**
+ * marked의 이미지 토큰은 문자 참조를 그대로 주므로 저장 시 인코딩한 값을 한 번만 복원합니다.
+ * Tiptap의 기존 named entity 헬퍼를 재사용하고 숫자 참조만 보완합니다. `&amp;lt;` 같은 실제
+ * 설명을 다시 `<`로 바꾸지 않도록 숫자·이름 참조를 한 번의 치환에서 처리합니다.
+ */
+function decodeMarkdownImageValue(value: string): string {
+  return value.replace(/&#(x[\da-f]+|\d+);|&(?:amp|lt|gt|quot);/gi, (entity: string, numeric: string | undefined) => {
+    if (!numeric) return decodeHtmlEntities(entity.toLowerCase());
+    const code = numeric.toLowerCase().startsWith("x") ? parseInt(numeric.slice(1), 16) : Number(numeric);
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : "\uFFFD";
+  });
+}
+
+/** 이미지 설명은 marked가 나눈 escape·인라인 토큰을 재사용해 문법 기호와 실제 글자를 구분합니다. */
+function parseMarkdownImageAlt(tokens: MarkdownToken[]): string {
+  return tokens.map((token) => {
+    if (token.tokens) return parseMarkdownImageAlt(token.tokens);
+    if (token.type === "escape" || token.type === "codespan") return token.text ?? "";
+    return decodeMarkdownImageValue(token.text ?? "");
+  }).join("");
+}
+
+// 이미지의 Markdown·크기 지정 HTML 양쪽에 저장 규칙을 적용하고, NodeView로 크기 조정 UI를 제공합니다.
 const MarkdownImage = Image.extend({
   addAttributes() {
     const parent = this.parent?.() ?? {};
@@ -470,10 +502,12 @@ const MarkdownImage = Image.extend({
       width: {
         default: null,
         // <img style="width: 50%"> 로부터 파싱
-        parseHTML: (element: HTMLElement) => element.style.width || null,
+        parseHTML: (element: HTMLElement) => normalizeImageWidth(element.style.width),
         // TipTap 에디터 내부 HTML 직렬화 (붙여넣기·드래그 용)
-        renderHTML: (attrs: Record<string, unknown>) =>
-          attrs.width ? { style: `width: ${attrs.width as string}` } : {},
+        renderHTML: (attrs: Record<string, unknown>) => {
+          const width = normalizeImageWidth(attrs.width);
+          return width ? { style: `width: ${width}` } : {};
+        },
       },
     };
   },
@@ -483,14 +517,20 @@ const MarkdownImage = Image.extend({
   renderMarkdown(node) {
     const src = (node.attrs?.src as string) ?? "";
     const alt = (node.attrs?.alt as string) ?? "";
-    const width = node.attrs?.width as string | null;
+    const width = normalizeImageWidth(node.attrs?.width);
     const title = node.attrs?.title as string | null;
 
     if (width) {
-      const altAttr = alt ? ` alt="${alt}"` : "";
-      return `<img src="${src}"${altAttr} style="width: ${width}" />`;
+      // CR·LF를 문자 참조로 보존해 원래 설명을 복원하고, 여러 줄 속성이 inline HTML로
+      // 분류되어 Tiptap 3.32에서 블록 이미지가 유실되는 것을 방지합니다.
+      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
+      const srcAttr = encodeAttribute(src);
+      const altAttr = encodeAttribute(alt);
+      const titleAttr = title != null ? ` title="${encodeAttribute(title)}"` : "";
+      return `<img src="${srcAttr}" alt="${altAttr}"${titleAttr} style="width: ${width}" />`;
     }
-    return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`;
+    const titlePart = title != null ? ` "${encodeMarkdownImageValue(title)}"` : "";
+    return `![${encodeMarkdownImageValue(alt)}](${encodeMarkdownImageValue(src)}${titlePart})`;
   },
 
   // 마크다운 image 토큰 → TipTap 이미지 노드
@@ -498,9 +538,9 @@ const MarkdownImage = Image.extend({
     return {
       type: "image",
       attrs: {
-        src: token.href ?? "",
-        alt: token.text ?? null,
-        title: token.title ?? null,
+        src: decodeMarkdownImageValue(token.href ?? ""),
+        alt: token.tokens ? parseMarkdownImageAlt(token.tokens) : token.text != null ? decodeMarkdownImageValue(token.text) : null,
+        title: token.title != null ? decodeMarkdownImageValue(token.title) : null,
       },
     };
   },
@@ -511,7 +551,6 @@ const MarkdownImage = Image.extend({
   },
 });
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { TextSelection } from "@tiptap/pm/state";
 import {
   Bold,
@@ -536,6 +575,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 /**
  * 마크다운 리치 텍스트 에디터
@@ -569,10 +609,6 @@ export function RichTextEditor({
   previewTitle,
 }: RichTextEditorProps) {
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
-  // createPortal은 브라우저 전용이므로 클라이언트 마운트 후에만 사용
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration 후 클라이언트 마운트 감지를 위한 패턴
-  useEffect(() => { setMounted(true); }, []);
 
   // 에디터 표시 모드
   // - "edit"   : TipTap WYSIWYG 편집 (기본)
@@ -586,6 +622,9 @@ export function RichTextEditor({
   //   4) 외부 value prop sync useEffect 는 edit 모드일 때만 실행
   //   5) 툴바 버튼은 edit 모드일 때만 활성화
   const [mode, setMode] = useState<"edit" | "source" | "preview">("edit");
+  // 전체화면 미리보기를 열면 닫기 버튼으로, 닫으면 실행한 버튼으로 포커스를 돌립니다.
+  const previewTriggerRef = useRef<HTMLButtonElement>(null);
+  const previewCloseRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 에디터 콘텐츠 컨테이너 ref — 표 스트립 절대 좌표 계산 기준
   const editorContentRef = useRef<HTMLDivElement>(null);
@@ -1123,7 +1162,7 @@ export function RichTextEditor({
   }
 
   return (
-    <>
+    <Dialog open={mode === "preview"} onOpenChange={(open) => setMode(open ? "preview" : "edit")} modal>
     {/* 에디터 내부 표 스타일 — prose 기본값을 보완해 셀 테두리·선택 하이라이트를 명시적으로 지정 */}
     <style>{`
       .ProseMirror .tableWrapper { overflow-x: auto; }
@@ -1352,7 +1391,8 @@ export function RichTextEditor({
 
         <div className="ml-auto flex gap-1">
           {/* 미리보기 토글 — 실제 홈페이지에서 보이는 그대로 렌더링 */}
-          <ToolbarButton
+          <DialogTrigger
+            ref={previewTriggerRef}
             onClick={() => {
               if (mode === "source") {
                 // 소스 → 미리보기: textarea 값을 editor에 동기화 후 미리보기
@@ -1361,13 +1401,15 @@ export function RichTextEditor({
                 setInternalValue(normalized);
                 onChange?.(normalized);
               }
-              setMode((prev) => (prev === "preview" ? "edit" : "preview"));
             }}
-            isActive={mode === "preview"}
+            className={cn(
+              "rounded-md p-2 transition-colors",
+              mode === "preview" ? "bg-gray-200 text-[#1a1a1a]" : "text-[#666666] hover:bg-gray-100 hover:text-[#1a1a1a]",
+            )}
             title={mode === "preview" ? "편집으로 돌아가기" : "미리보기 (홈페이지 렌더링)"}
           >
             <Eye className="w-4 h-4" />
-          </ToolbarButton>
+          </DialogTrigger>
           {/* 소스 모드 토글 */}
           <ToolbarButton
             onClick={() => {
@@ -1509,28 +1551,31 @@ export function RichTextEditor({
       />
     </div>
 
-    {/* 전체화면 미리보기 오버레이 — createPortal 로 document.body 에 마운트해 z-index 충돌 방지 */}
-    {mounted && mode === "preview" && createPortal(
-      <div className="fixed inset-0 z-[9999] flex flex-col overflow-hidden bg-gray-50">
+    {/* 기존 Dialog의 모달 격리·스크롤 잠금·Escape 처리를 사용하며 전체화면 배치는 유지합니다. */}
+    <DialogContent
+      showCloseButton={false}
+      initialFocus={previewCloseRef}
+      finalFocus={previewTriggerRef}
+      className="fixed inset-0 top-0 left-0 z-[9999] flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none bg-gray-50 p-0 text-base ring-0 sm:max-w-none data-open:animate-none data-closed:animate-none"
+    >
         {/* 상단 미리보기 바 */}
         <div className="flex shrink-0 items-center justify-between border-b border-[#D9D9D9] bg-white px-4 py-2.5 shadow-sm">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-[#2563EB]" />
-            <span className="text-xs font-medium text-[#666666]">
+            <DialogTitle className="text-xs leading-4 font-medium text-[#666666]">
               미리보기 — 실제 홈페이지와 동일한 렌더링
-            </span>
+            </DialogTitle>
           </div>
-          <button
-            type="button"
-            onClick={() => setMode("edit")}
+          <DialogClose
+            ref={previewCloseRef}
             className="rounded-md px-3 py-1.5 text-sm font-medium text-[#1a1a1a] transition-colors hover:bg-gray-100"
           >
             ✕ 편집으로 돌아가기
-          </button>
+          </DialogClose>
         </div>
 
         {/* 스크롤 가능한 본문 영역 */}
-        <div className="flex-1 overflow-y-auto">
+        <div role="region" aria-label="미리보기 본문" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
           {/* 실제 공개 페이지와 동일한 컨테이너·패딩·최대 너비 */}
           <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-20">
             {/* 제목이 전달된 경우 기사 헤더 시뮬레이션 */}
@@ -1548,10 +1593,8 @@ export function RichTextEditor({
             )}
           </div>
         </div>
-      </div>,
-      document.body,
-    )}
-    </>
+    </DialogContent>
+    </Dialog>
   );
 }
 
