@@ -521,8 +521,9 @@ const MarkdownImage = Image.extend({
     const title = node.attrs?.title as string | null;
 
     if (width) {
-      // 기존 표 헬퍼로 속성을 인코딩하고 HTML 파서가 줄바꿈으로 정규화하는 CR도 문자 참조로 보존한다.
-      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;");
+      // CR·LF를 문자 참조로 보존해 원래 설명을 복원하고, 여러 줄 속성이 inline HTML로
+      // 분류되어 Tiptap 3.32에서 블록 이미지가 유실되는 것을 방지합니다.
+      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
       const srcAttr = encodeAttribute(src);
       const altAttr = encodeAttribute(alt);
       const titleAttr = title != null ? ` title="${encodeAttribute(title)}"` : "";
