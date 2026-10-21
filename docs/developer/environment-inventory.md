@@ -16,8 +16,8 @@ Production·Preview·Development는 DB·공개/비공개 Blob·OAuth·세션 비
 - 인증 URL 선택은 위 metadataBase 주소 선택과 별도입니다. Auth.js는 AUTH_URL ?? NEXTAUTH_URL로 origin/basePath를 선택합니다. canonical 값의 빈 문자열도 nullish가 아니므로 호환 별칭을 막습니다. 새 설정은 AUTH_URL·AUTH_SECRET을 사용하며 NEXTAUTH_URL·NEXTAUTH_SECRET은 기존 호환 입력으로 구분합니다.
 - Auth.js의 trustHost 기본값은 !!(AUTH_URL ?? AUTH_TRUST_HOST ?? VERCEL ?? CF_PAGES ?? NODE_ENV !== 'production')입니다. 먼저 선택된 비어 있지 않은 문자열은 false라는 문자열도 true이며, 먼저 선택된 빈 문자열은 false입니다. 미설정과 빈 문자열은 다르므로 예시를 임의로 false 문자열로 채우지 않습니다.
 - Auth.js의 redirect proxy·secret rotation이나 Blob의 OIDC/store ID 등 모든 SDK 옵션을 지원하거나 열거하는 계약은 아닙니다. 새 옵션을 도입하려면 목록·문서·검증을 함께 변경합니다. 공급자 내부의 임의 환경변수까지 정적으로 전수 검사했다고 주장하지 않습니다.
-- Node 24 및 Action SHA/권한 변경은 부모 문서 PR #301에 포함되어 있지 않습니다. #315/#319와 통합할 때 소스·Node·CI를 별도로 검증합니다.
-- #315/#319 쪽 소스의 scripts/verify-auth-proxy-http.mjs를 통합하면 그 파일의 시스템 값 복사도 별도의 정확한 예외로 검토·등록해야 합니다. 현재 부모에 없는 파일을 미리 포괄 허용하지 않으며, 통합 후 계약 검사와 앱 검증을 다시 실행합니다.
+- 저장소는 `.nvmrc`와 `package.json`에 Node 24를 지정하며 앱 CI는 `.nvmrc`를 읽습니다. 앱 CI의 checkout/setup-node Action은 SHA로 고정하고 작업에는 저장소 읽기 권한만 부여합니다. 이는 저장소 설정의 확인이며 실제 Vercel 실행 버전이나 배포 성공을 증명하지 않습니다.
+- `scripts/verify-auth-proxy-http.mjs`와 `scripts/verify-markdown-boundary.mjs`의 여섯 시스템 값 복사는 각각 파일 경로와 전체 식이 일치할 때만 예외로 허용합니다. 새 키·동적 접근은 계약 검사에서 거부합니다. 이 정적 검사는 QA 실행기의 런타임 격리나 작업 디렉터리의 `.env` 파일 부재까지 증명하지 않습니다.
 
 ## 앱 설정
 
