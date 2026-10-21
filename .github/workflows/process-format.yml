@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: node scripts/check-process-format.mjs --event
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,9 +53,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
+      # 최초 PR의 신뢰된 base에는 .nvmrc가 없을 수 있어 파일 대신 메이저 버전을 명시한다.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: node scripts/check-process-format.mjs --event
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,7 +74,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: node --test scripts/tests/release-policy.test.mjs
       - run: node scripts/check-release-config.mjs
 
@@ -92,7 +93,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - run: node scripts/check-process-format.mjs --all
         env:
           GH_TOKEN: ${{ github.token }}
