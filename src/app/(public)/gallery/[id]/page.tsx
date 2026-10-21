@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { asc, eq, sql } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod/v4";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -77,14 +78,18 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
     notFound();
   }
 
-  // 조회수 증가 (fire-and-forget)
-  void db
-    .update(galleries)
-    .set({ viewCount: sql`${galleries.viewCount} + 1` })
-    .where(eq(galleries.id, gallery.id))
-    .catch((err: unknown) => {
+  // 응답을 막지 않되 플랫폼이 SQL 완료를 기다리도록 응답 후 수명주기에 등록한다.
+  // 요청별 원자 갱신이며 방문자 중복 제거·정확히 한 번 집계는 보장하지 않는다.
+  after(async () => {
+    try {
+      await db
+        .update(galleries)
+        .set({ viewCount: sql`${galleries.viewCount} + 1` })
+        .where(eq(galleries.id, gallery.id));
+    } catch (err: unknown) {
       logServerError("public/gallery/viewCount", err, { id: gallery.id });
-    });
+    }
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20">

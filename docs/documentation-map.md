@@ -11,7 +11,7 @@
 | 정책 초안 | 운영 책임자가 결정해야 하는 규칙 | 승인 여부와 승인된 범위 |
 | 과거 기록 | 특정 날짜·커밋·환경에서 수행한 조사나 검증 | 현재 환경에서도 그대로 성립하는지 |
 
-이 문서 정비는 2026-10-18에 시작했고, 2026-10-21에 앱 스크립트·기본 CI·의존성·배포 안내를 `15665df`의 코드와 다시 대조했다. 플랫폼 목표와 환경 분리 경계는 [문서 PR #278](https://github.com/yeongseon/hra-website/pull/278)을 반영했다. 각 문서의 개별 검증 기록은 해당 시점의 근거로 남겨 두었다. **이 검토는 운영 Vercel 런타임, Preview 자원 격리, DB 적용, OAuth·Blob 실제 연결을 확인한 결과가 아니다.** 현재 우선순위와 남은 작업은 [전체 추적 #300](https://github.com/yeongseon/hra-website/issues/300)에서 확인한다.
+이 문서 정비는 2026-10-18에 시작했고, 2026-10-21에 앱 스크립트·기본 CI·의존성·배포 안내를 `15665df`의 코드와 다시 대조했다. 2026-10-22에는 [문서 PR #278](https://github.com/yeongseon/hra-website/pull/278)의 목표 구조와 #317·#310·#320의 검증된 **로컬 통합 코드**를 함께 읽었다. 이 세 작업이 이미 `main`에 병합됐거나 운영 DB에 적용됐다는 뜻은 아니다. 각 문서의 개별 검증 기록은 해당 시점의 근거로 남겨 두었다. **이 검토는 운영 Vercel 런타임, Preview 자원 격리, DB 적용, OAuth·Blob 실제 연결을 확인한 결과가 아니다.** 현재 우선순위와 남은 작업은 [전체 추적 #300](https://github.com/yeongseon/hra-website/issues/300)에서 확인한다.
 
 PR #301의 [문서별 검토 기록](developer/document-review-ledger.md)은 원래 기준의 기존 Markdown 66개를 변경·보존으로 구분하고, 각 문서에서 대조한 구현 근거와 남은 운영 확인을 적는다. 이 기록을 실제 배포 검증으로 확대하지 않는다.
 
@@ -48,6 +48,7 @@ PR #301의 [문서별 검토 기록](developer/document-review-ledger.md)은 원
 | [DB 변경 절차](developer/database-change-procedure.md) | 구조·함수 변경을 어떤 순서로 준비하고 적용하나? |
 | [초기 P1 보안 변경 적용 기록](developer/p1-security-rollout.md) | 당시 변경의 적용·검증·복구 절차는 무엇이었나? |
 | [요청 제한 운영](operations/rate-limits.md) | 요청 제한 함수와 정리 예약을 어떻게 확인하나? |
+| [예약 ID 인덱스 변경](developer/rate-limit-reservation-index.md) | 범위 SQL·카탈로그 검증과 운영 미적용 상태는 무엇인가? |
 | [업로드 파일 원장과 정리](operations/markdown-image-ownership.md) | 파일 소유 기록과 사용하지 않는 파일 정리는 어떻게 연결되나? |
 | [카카오 로그인 설정](KAKAO-LOGIN-SETUP.md) | 개발·운영 로그인 주소와 제공자 설정을 어떻게 준비하나? |
 | [카카오 이메일 동의](operations/kakao-email-consent.md) | 선택 동의 항목을 바꾸기 전에 무엇을 확인하나? |

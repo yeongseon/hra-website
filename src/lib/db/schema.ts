@@ -1013,6 +1013,8 @@ export const rateLimitEvents = pgTable(
     index("idx_rate_limit_scope_key_time").on(table.scope, table.keyHash, table.attemptedAt),
     index("idx_rate_limit_attempted_at").on(table.attemptedAt),
     index("idx_rate_limit_submission_id").on(table.submissionId),
+    // 같은 예약의 여러 축을 성공 로그인 정리·지원서 연결에서 함께 찾습니다 (#287).
+    index("idx_rate_limit_reservation_id").on(table.reservationId),
   ],
 );
 
