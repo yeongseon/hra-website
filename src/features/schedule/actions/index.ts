@@ -446,7 +446,8 @@ export async function updateScheduleEvent(
 
 /**
  * 일정 삭제
- * CASCADE 설정으로 scheduleSessions도 자동 삭제됨
+ * 참조가 없으면 세션까지 CASCADE로 삭제하고, 과제 FK가 있으면 전체 삭제를 거부한다.
+ * 알려진 참조 거부와 그 밖의 DB 오류를 구분해 관리자에게 안전한 결과만 반환한다.
  */
 export async function deleteScheduleEvent(id: string): Promise<ScheduleActionState> {
   await requireAdmin();
@@ -457,7 +458,30 @@ export async function deleteScheduleEvent(id: string): Promise<ScheduleActionSta
     return { success: false, message: "유효하지 않은 ID입니다." };
   }
 
-  await db.delete(scheduleEvents).where(eq(scheduleEvents.id, parsedId.data));
+  try {
+    // DELETE 결과로 존재 여부까지 확인해 없는 대상을 삭제 성공으로 안내하지 않는다.
+    const deleted = await db.delete(scheduleEvents)
+      .where(eq(scheduleEvents.id, parsedId.data))
+      .returning({ id: scheduleEvents.id });
+    if (deleted.length === 0) {
+      return { success: false, message: "일정을 찾을 수 없습니다. 목록을 새로고침해주세요." };
+    }
+  } catch (error) {
+    // 일정 직접 참조와 CASCADE되는 세션 참조만 처리한다. PostgreSQL 버전에 따라
+    // RESTRICT 위반은 23503 또는 23001이므로 SQLSTATE와 제약명이 함께 일치해야 한다.
+    const assignmentConstraints = [
+      "assignments_schedule_event_id_schedule_events_id_fk",
+      "assignments_schedule_session_id_schedule_sessions_id_fk",
+    ];
+    if (["23503", "23001"].some(code => assignmentConstraints.some(constraint =>
+      isConstraintViolation(error, code, constraint)
+    ))) {
+      return { success: false, message: "과제에 연결된 일정이나 세션은 삭제할 수 없습니다. 연결된 과제를 확인해주세요." };
+    }
+    // 다른 오류를 참조 오류로 오인하지 않으며 SQL·입력값은 정제 로그로만 기록한다.
+    logServerError("schedule/delete", error, { eventId: parsedId.data });
+    return { success: false, message: "일정을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요." };
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/schedule");
