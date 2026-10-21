@@ -7,7 +7,6 @@
 
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteScheduleEvent, getAllScheduleEvents } from "@/features/schedule/actions";
+import { getAllScheduleEvents } from "@/features/schedule/actions";
 import { requireAdmin } from "@/lib/admin";
+import { ScheduleDeleteButton } from "./_components/schedule-delete-button";
 
 export const metadata = { title: "일정 관리" };
 
@@ -149,16 +149,7 @@ export default async function AdminSchedulePage() {
                             >
                               수정
                             </Link>
-                            <form
-                              action={async () => {
-                                "use server";
-                                await deleteScheduleEvent(event.id);
-                              }}
-                            >
-                              <Button type="submit" variant="destructive">
-                                삭제
-                              </Button>
-                            </form>
+                            <ScheduleDeleteButton id={event.id} />
                           </div>
                         </TableCell>
                       </TableRow>
