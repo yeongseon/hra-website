@@ -7,20 +7,9 @@
  */
 
 import { expect, test } from "@playwright/test";
+import { anonymousProtectedPaths } from "../support/auth-protected-paths";
 
-const protectedPaths = [
-  "/admin",
-  "/admin/templates",
-  "/admin/resources/templates",
-  "/resources",
-  "/member/templates",
-  "/member/templates/management-book",
-  "/member/templates/management-book/print",
-  "/member/guides/report-writing-guide",
-  "/mypage",
-];
-
-for (const path of protectedPaths) {
+for (const path of anonymousProtectedPaths) {
   test(`비로그인 사용자가 ${path} 접근 시 로그인 페이지로 이동한다`, async ({
     page,
   }) => {

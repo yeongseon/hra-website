@@ -1,12 +1,12 @@
-/** 저장 전 모집 포스터 URL의 경로·Blob 메타·실제 이미지 형식·소유권을 검증합니다 (#102). */
-import { head, put } from "@vercel/blob";
+/** 저장 전 모집 포스터 URL의 경로·Blob 메타·실제 이미지 형식·소유권을 검증합니다 (#102, #302). */
+import { head } from "@vercel/blob";
 import sharp from "sharp";
 import { posterUploadPath, maxPosterImageBytes, posterUploadTargetId, type PosterImageExtension } from "@/lib/poster-upload-contract";
 import { hasGalleryImageSignature } from "@/lib/gallery-upload-contract";
 import { logServerError } from "@/lib/errors";
-import { recordOwnedBlob } from "@/lib/owned-blob";
 import { isProjectBlobUrl } from "@/lib/resource-download";
 import { recordResourceUpload } from "@/lib/resource-upload-server";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const contentTypes: Record<PosterImageExtension, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" };
@@ -63,13 +63,15 @@ export async function prepareStoredPoster(url: string, userId: string): Promise<
   try {
     webp = await sharp(original).webp({ quality: 85 }).toBuffer();
   } catch (error) {
-    // 기존 동작과 같이 변환 불가 파일은 검증된 원본을 사용합니다.
+    // 헤더가 맞더라도 전체 디코딩이 실패하면 저장 가능한 이미지로 취급하지 않습니다.
     logServerError("recruitment-settings/poster-convert", error);
-    return url;
+    throw new Error("포스터 이미지 변환에 실패했습니다. 다른 이미지를 선택해주세요.");
   }
-  const blob = await put(`recruitment/포스터-${crypto.randomUUID()}.webp`, webp, {
-    access: "public", contentType: "image/webp", addRandomSuffix: true,
+  return uploadWithOwnedIntent({
+    namespace: "recruitment",
+    extension: "webp",
+    body: webp,
+    contentType: "image/webp",
+    uploadedById: userId,
   });
-  await recordOwnedBlob(blob.url, userId);
-  return blob.url;
 }

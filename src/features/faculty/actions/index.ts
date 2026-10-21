@@ -1,6 +1,6 @@
+/** 교수진 관리 서버 액션: 관리자 권한과 입력값을 확인하고 프로필 이미지를 검증해 저장합니다. */
 "use server";
 
-import { put } from "@vercel/blob";
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -8,12 +8,13 @@ import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { faculty } from "@/lib/db/schema";
-import { recordOwnedBlob } from "@/lib/owned-blob";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
+import { validateAdminImage, type ValidatedAdminImage } from "@/lib/admin-image-validation";
+import { facultyImageRule } from "@/lib/faculty-upload-contract";
 import { validateFacultyImageReference } from "@/lib/faculty-upload-server";
 
 const facultyCategorySchema = z.enum(["CLASSICS", "BUSINESS", "LECTURE"]);
 const maxImageSize = 5 * 1024 * 1024;
-const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
 
 const facultySchema = z.object({
   name: z.string().trim().min(1, "이름을 입력해주세요.").max(100, "이름은 100자 이하여야 합니다."),
@@ -71,7 +72,7 @@ function parseFacultyFormData(formData: FormData) {
   });
 }
 
-function validateImageFile(fileEntry: FormDataEntryValue | null) {
+async function validateImageFile(fileEntry: FormDataEntryValue | null) {
   if (!(fileEntry instanceof File) || fileEntry.size === 0) {
     return {
       success: true as const,
@@ -79,7 +80,8 @@ function validateImageFile(fileEntry: FormDataEntryValue | null) {
     };
   }
 
-  if (!allowedImageTypes.includes(fileEntry.type as (typeof allowedImageTypes)[number])) {
+  const image = await validateAdminImage(fileEntry, facultyImageRule);
+  if (!image) {
     return {
       success: false as const,
       message: "프로필 사진은 JPG, PNG, WEBP 파일만 업로드할 수 있습니다.",
@@ -102,7 +104,7 @@ function validateImageFile(fileEntry: FormDataEntryValue | null) {
 
   return {
     success: true as const,
-    file: fileEntry,
+    file: image,
   };
 }
 
@@ -118,13 +120,15 @@ async function getUploadedFacultyImage(formData: FormData, targetId: string, use
   return { url: value };
 }
 
-async function uploadFacultyImage(file: File, uploadedById: string) {
-  const safeFileName = file.name.replace(/\s+/g, "-");
-  // addRandomSuffix: 다른 교수와 사진 파일명이 같아도 경로가 겹치지 않게 한다 (#110).
-  const blob = await put(`faculty/${safeFileName}`, file, { access: "public", addRandomSuffix: true });
-  await recordOwnedBlob(blob.url, uploadedById);
-
-  return blob.url;
+/** 검증된 형식만 UUID 경로로 원장에 선예약하고 원래 파일명은 공개 경로에 넣지 않습니다 (#302). */
+async function uploadFacultyImage(image: ValidatedAdminImage, uploadedById: string) {
+  return uploadWithOwnedIntent({
+    namespace: "faculty",
+    extension: image.extension,
+    body: image.file,
+    contentType: image.contentType,
+    uploadedById,
+  });
 }
 
 export async function createFaculty(formData: FormData): Promise<FacultyActionState> {
@@ -141,7 +145,7 @@ export async function createFaculty(formData: FormData): Promise<FacultyActionSt
     };
   }
 
-  const validatedImage = validateImageFile(formData.get("image"));
+  const validatedImage = await validateImageFile(formData.get("image"));
   if (!validatedImage.success) {
     return {
       success: false,
@@ -197,7 +201,7 @@ export async function updateFaculty(id: string, formData: FormData): Promise<Fac
     };
   }
 
-  const validatedImage = validateImageFile(formData.get("image"));
+  const validatedImage = await validateImageFile(formData.get("image"));
   if (!validatedImage.success) {
     return {
       success: false,

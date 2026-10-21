@@ -1,0 +1,17 @@
+# 보안 공지 이후에도 직접·전이 의존성 갱신 제안을 매주 검토합니다.
+# 자동 병합하지 않으며 기존 앱 CI와 리뷰 절차를 유지합니다.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      next-framework:
+        patterns:
+          - next
+          - eslint-config-next
+      auth-framework:
+        patterns:
+          - next-auth
+          - "@auth/core"

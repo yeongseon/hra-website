@@ -21,6 +21,7 @@ export async function readUploadJson(request:Request):Promise<unknown> {
 export function uploadErrorResponse(error:unknown, observation?: AcademicObservation):Response {
   if(observation)recordUploadFailure(observation,error);
   const safe=error instanceof AcademicUploadError || error instanceof AcademicAccessError ? error : new AcademicUploadError("UNAVAILABLE");
-  return Response.json({error:safe.message,code:safe.code,...(observation?{referenceId:observation.correlationId}:{})},
-    {status:safe.status,headers:{"Cache-Control":"no-store",...(observation?{"X-Request-Id":observation.correlationId}:{})}});
+  const retry=error instanceof AcademicUploadError && error.code==="RATE_LIMITED"?error.retryAfterSeconds:undefined;
+  return Response.json({error:safe.message,code:safe.code,...(retry?{retryAfterSeconds:retry}:{}),...(observation?{referenceId:observation.correlationId}:{})},
+    {status:safe.status,headers:{"Cache-Control":"no-store",...(retry?{"Retry-After":String(retry)}:{}),...(observation?{"X-Request-Id":observation.correlationId}:{})}});
 }

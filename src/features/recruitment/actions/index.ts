@@ -8,7 +8,6 @@
  */
 "use server";
 
-import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,7 +18,9 @@ import { applicationForms, applicationSubmissions, cohorts, legacyApplications }
 import { isConstraintViolation } from "@/lib/db/constraint-errors";
 import { hasSubmissionDeleteGuards } from "@/lib/db/submission-delete-guards";
 import { logServerError } from "@/lib/errors";
-import { recordOwnedBlob } from "@/lib/owned-blob";
+import { validateAdminImage } from "@/lib/admin-image-validation";
+import { galleryImageRule } from "@/lib/gallery-upload-contract";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
 
 
 /**
@@ -138,22 +139,14 @@ function parseCohortFormData(formData: FormData) {
   });
 }
 
-function normalizeFileName(fileName: string) {
-  const trimmed = fileName.trim();
-  const sanitized = trimmed
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "");
-
-  return sanitized || "cohort-image";
-}
-
 async function uploadCohortImage(fileEntry: FormDataEntryValue | null, uploadedById: string) {
   if (!(fileEntry instanceof File) || fileEntry.size === 0) {
     return { imageUrl: null, error: null } as const;
   }
 
-  if (!fileEntry.type.startsWith("image/")) {
-    return { imageUrl: null, error: "이미지 파일만 업로드할 수 있습니다." } as const;
+  const image = await validateAdminImage(fileEntry, galleryImageRule);
+  if (!image) {
+    return { imageUrl: null, error: "이미지는 JPG, PNG, WEBP, GIF 파일만 업로드할 수 있습니다." } as const;
   }
 
   const maxFileSize = 4 * 1024 * 1024;
@@ -161,14 +154,16 @@ async function uploadCohortImage(fileEntry: FormDataEntryValue | null, uploadedB
     return { imageUrl: null, error: "이미지 파일은 4MB 이하여야 합니다." } as const;
   }
 
-  const safeFileName = `cohorts/${Date.now()}-${normalizeFileName(fileEntry.name)}`;
-  const blob = await put(safeFileName, fileEntry, {
-    access: "public",
-    addRandomSuffix: true,
+  // 실제 사용 중인 기수 FormData 업로드는 유지하되 UUID 경로를 원장에 선예약해 저장합니다 (#302).
+  const imageUrl = await uploadWithOwnedIntent({
+    namespace: "cohorts",
+    extension: image.extension,
+    body: fileEntry,
+    contentType: image.contentType,
+    uploadedById,
   });
-  await recordOwnedBlob(blob.url, uploadedById);
 
-  return { imageUrl: blob.url, error: null } as const;
+  return { imageUrl, error: null } as const;
 }
 
 /**
