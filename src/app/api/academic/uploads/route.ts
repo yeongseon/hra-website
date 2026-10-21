@@ -29,7 +29,7 @@ export async function POST(request:Request){
         let input:unknown;try{input=JSON.parse(payload??"");}catch{throw new AcademicUploadError("INVALID_FILE");}
         const authorization=await authorizeAssignmentUploadToken(input,pathname,multipart,observation);
         const reservation=await reserveUploadAttempt(extractClientIp(request.headers));
-        if(reservation.blocked)throw new AcademicUploadError("RATE_LIMITED");
+        if(reservation.blocked)throw new AcademicUploadError("RATE_LIMITED",reservation.retryAfterSec);
         return authorization;
       },
       onUploadCompleted:async({blob,tokenPayload})=>{
