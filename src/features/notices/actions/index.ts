@@ -1,6 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+/**
+ * 관리자 공지사항 생성·수정·삭제와 고정·게시 상태 반전을 처리한다.
+ * 반전은 요청마다 실행하는 명령이며, 반환 안내는 그 명령이 저장한 상태를 나타낸다.
+ */
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -185,6 +189,10 @@ export async function deleteNotice(id: string): Promise<NoticeActionState> {
   };
 }
 
+/**
+ * 클릭마다 현재 DB 값을 한 번 반전한다. 재전송도 별도 반전이며 중복 실행 방지는 보장하지 않는다.
+ * 응답은 해당 UPDATE의 저장값 기준이고, 이후 다른 명령으로 상태가 다시 바뀔 수 있다.
+ */
 export async function togglePin(id: string): Promise<NoticeActionState> {
   await requireAdmin();
 
@@ -196,35 +204,27 @@ export async function togglePin(id: string): Promise<NoticeActionState> {
     };
   }
 
-  const currentNotice = await db.query.notices.findFirst({
-    where: eq(notices.id, parsedId.data),
-    columns: {
-      id: true,
-      pinned: true,
-    },
-  });
+  // 행 잠금 획득 후의 최신 값을 SQL 안에서 반전해 동시 요청의 변경을 덮어쓰지 않는다.
+  const [updated] = await db.update(notices)
+    .set({ pinned: sql`NOT ${notices.pinned}` })
+    .where(eq(notices.id, parsedId.data))
+    .returning({ pinned: notices.pinned });
 
-  if (!currentNotice) {
+  if (!updated) {
     return {
       success: false,
       message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  await db
-    .update(notices)
-    .set({
-      pinned: !currentNotice.pinned,
-    })
-    .where(eq(notices.id, currentNotice.id));
-
   revalidateNoticePaths();
   return {
     success: true,
-    message: currentNotice.pinned ? "공지사항 고정을 해제했습니다." : "공지사항을 고정했습니다.",
+    message: updated.pinned ? "공지사항을 고정했습니다." : "공지사항 고정을 해제했습니다.",
   };
 }
 
+/** 게시 반전도 요청마다 적용하며, 재전송·후속 명령의 의미는 togglePin과 동일하다. */
 export async function toggleStatus(id: string): Promise<NoticeActionState> {
   await requireAdmin();
 
@@ -236,33 +236,24 @@ export async function toggleStatus(id: string): Promise<NoticeActionState> {
     };
   }
 
-  const currentNotice = await db.query.notices.findFirst({
-    where: eq(notices.id, parsedId.data),
-    columns: {
-      id: true,
-      status: true,
-    },
-  });
+  const [updated] = await db.update(notices)
+    .set({ status: sql`CASE WHEN ${notices.status} = 'DRAFT'
+      THEN 'PUBLISHED'::notice_status ELSE 'DRAFT'::notice_status END` })
+    .where(eq(notices.id, parsedId.data))
+    .returning({ status: notices.status });
 
-  if (!currentNotice) {
+  if (!updated) {
     return {
       success: false,
       message: "공지사항을 찾을 수 없습니다.",
     };
   }
 
-  await db
-    .update(notices)
-    .set({
-      status: currentNotice.status === "DRAFT" ? "PUBLISHED" : "DRAFT",
-    })
-    .where(eq(notices.id, currentNotice.id));
-
   revalidateNoticePaths();
   return {
     success: true,
     message:
-      currentNotice.status === "DRAFT"
+      updated.status === "PUBLISHED"
         ? "공지사항을 게시했습니다."
         : "공지사항을 임시저장 상태로 변경했습니다.",
   };
