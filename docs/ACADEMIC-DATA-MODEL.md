@@ -1,7 +1,15 @@
-# HRA 학사 데이터 모델 및 접근 제약 (설계안)
+# HRA 학사 데이터 모델 — G1 구현과 G2/G3 설계
 
 > 상태: **G1 엔터티·제약·서버/화면 코드 구현 및 격리 검증 / 운영 미활성** · 기준: 2026-10-16, #144~#158 구현·격리 검증. G2/G3는 후속 설계다.
-> #140·#141의 운영 규칙은 확정됐지만, #142의 보존·파기·백업 정책은 미정이다. 학사 공개·쓰기·업로드·정리 설정은 운영에서 모두 비활성이며, 코드 구현은 운영 DB 적용·기능 공개를 의미하지 않는다.
+> #140·#141의 운영 규칙은 확정됐지만, #142의 보존·파기·백업 정책은 미정이다. 학사 공개·쓰기·업로드·정리의 설정 기본값은 비활성이다. 실제 운영 설정은 별도 확인 사항이며, 코드 구현은 운영 DB 적용·기능 공개를 의미하지 않는다.
+
+## 데이터를 읽는 순서
+
+개발·DB 변경 담당자를 위한 문서다. **계정 → 학생 → 기수별 학적 → 과제 대상 → 최종 제출 → 파일**을 서로 다른 기록으로 이해하면 뒤의 표를 읽기 쉽다. 예를 들어 한 학생이 두 기수에 참여하면 학생 기록은 같고 학적 기록은 두 개다. 로그인 역할을 바꿨다고 과거 학적을 지우지 않는다.
+
+과제를 공개할 때 대상 명단을 고정하므로, 제출 기록이 없는 사람도 “미제출”로 집계할 수 있다. PK·FK·UNIQUE·트랜잭션·멱등성은 [용어집](getting-started/glossary.md), 사용자 동작은 [과제 제출 범위](ASSIGNMENT-SUBMISSION-SCOPE.md)를 먼저 참고해도 된다.
+
+아래는 구조의 요약이며 SQL 전체를 대신하지 않는다. 실제 변경은 테이블 모델과 별도 migration의 함수·지연 제약을 함께 확인한다.
 
 ## 1. 기존 엔터티 재사용과 금지사항
 
@@ -12,15 +20,15 @@
 - `weekly_texts` / `class_logs` / `report_templates`는 공동 학습 자료다. 개인별 과제 실적을 이들 행의 개수로 계산하지 않는다.
 - `application_submissions`는 **지원 이력**이지 학적의 정본이 아니다. `status=ACCEPTED`를 곧바로 유효한 학적/로그인 권한으로 해석하지 않는다.
 
-## 2. G1 엔터티 (권장 스키마)
+## 2. G1 엔터티 (현재 구조 요약)
 
-아래 A~F에 대응하는 G1 모델·범위 SQL은 #144·#147·#148에서 구현됐다. 표는 초기 설계 요약을 유지하며, 실제 필드·제약·함수의 정본은 `src/lib/db/schema.ts`가 내보내는 `academic-assignments.ts`, `academic-submissions.ts` 등 모델과 범위 migration이다. G2/G3 후보는 §5의 미구현 설계로 구분한다.
+아래 A~F에 대응하는 G1 모델·범위 SQL은 #144·#147·#148에서 구현됐다. 표는 이해를 위한 주요 필드 요약이며, 실제 필드·제약·함수의 정본은 `src/lib/db/schema.ts`가 내보내는 `academic-assignments.ts`, `academic-submissions.ts` 등 모델과 범위 migration이다. G2/G3 후보는 §5의 미구현 설계로 구분한다.
 
 적용·복구 절차는 [학생 명부](developer/academic-students-migration.md), [과제·최초 공개 대상](developer/academic-assignments-migration.md), [최종 제출·파일·업로드 의도](developer/academic-submissions-migration.md)를 따른다. 검증 계정 연결·승인, 업로드 승인 원장과 최소 감사도 별도 범위 SQL로 구현됐으며 운영 적용은 #142 정책·백업/복원 증거·승인 절차를 충족한 뒤 진행한다.
 
 ### A. `academic_students` — 학적의 학생 식별자
 
-| 필드 | 타입(제안) | 제약·의미 |
+| 필드 | 타입 | 제약·의미 |
 | --- | --- | --- |
 | `id` | UUID | PK; 학생 식별자는 이메일이 아님 |
 | `user_id` | UUID nullable | 기존 `users.id`에 RESTRICT FK; NULL 허용, non-null UNIQUE. 탈퇴 시 연결 해제·파기는 #142 확정 후 승인 절차로 처리 |
@@ -31,7 +39,7 @@
 
 ### B. `cohort_enrollments` — 학생의 기수별 학적
 
-| 필드 | 타입(제안) | 제약·의미 |
+| 필드 | 타입 | 제약·의미 |
 | --- | --- | --- |
 | `id` | UUID | PK, 제출/출결이 참조하는 영속 식별자 |
 | `student_id` | UUID | `academic_students.id` FK, NOT NULL |
@@ -66,13 +74,13 @@
 
 ### C. `assignments` — 과제 정의
 
-| 필드 | 타입(제안) | 제약·의미 |
+| 필드 | 타입 | 제약·의미 |
 | --- | --- | --- |
 | `id` | UUID | PK |
 | `cohort_id` | UUID | FK, 과제 대상 기수 (G1은 1개 기수) |
 | `schedule_event_id` | UUID nullable | 기존 `schedule_events` FK; 연결 시 같은 기수 검증 |
 | `schedule_session_id` | UUID nullable | 기존 `schedule_sessions` FK; 연결 시 이벤트·기수 교차 검증 |
-| `title`, `instructions` | varchar/text | 서버 길이 제한·내용 정제 |
+| `title`, `instructions` | varchar/text | 서버 길이 제한. 안내문은 일반 텍스트로 표시 |
 | `due_at` | timestamptz nullable | 초안에서는 NULL 가능, 공개 시 미래 시각 필수. KST 입력 → UTC instant 저장 |
 | `status` | enum | `DRAFT`/`PUBLISHED`/`CLOSED` 구현. 공개 후 과제 정의는 불변이며 종료만 허용 |
 | `created_by_user_id` | UUID | 작성 관리자 |
@@ -90,7 +98,7 @@
 | `assignment_id` | UUID | FK; 과제 |
 | `enrollment_id` | UUID | FK; 과제 대상 학적 |
 | `assigned_at` | timestamptz | 대상 확정 시각 |
-| `assigned_by_user_id` | UUID nullable | 관리자/시스템 |
+| `assigned_by_user_id` | UUID | NOT NULL, 대상 확정 승인 계정 FK |
 
 - `UNIQUE(assignment_id, enrollment_id)`로 이중 대상 생성 금지.
 - 최초 공개 시 유효한 해당 기수 학적 전체를 대상 스냅샷으로 확정한다. 재공개·재시도는 동일한 대상을 유지한다.
@@ -99,25 +107,25 @@
 
 ### E. `assignment_submissions` — 과제 제출 사실
 
-| 필드 | 타입(제안) | 제약·의미 |
+| 필드 | 타입 | 제약·의미 |
 | --- | --- | --- |
 | `id` | UUID | PK |
 | `assignment_target_id` | UUID | FK; 제출자와 과제를 하나의 확정 대상으로 식별 |
 | `submitted_by_user_id` | UUID | 실제 제출 계정; 해당 target의 학생과 동일인 검증 |
-| `submission_key` | UUID 또는 고유 문자열 | 요청 재시도 멱등성 키, UNIQUE |
+| `upload_intent_id` | UUID | 검증한 업로드 의도와 연결, UNIQUE |
+| `submission_key` | UUID | 요청 재시도 멱등성 키, UNIQUE |
 | `submitted_at` | timestamptz | **최종 제출 확정** 시각 |
-| `created_at` | timestamptz | 행 생성 시각 |
 
 - G1은 한 대상당 최종 제출 1개이므로 `UNIQUE(assignment_target_id)`를 적용한다. 최종화 이후 교체·재제출은 허용하지 않는다. 같은 `submission_key` 재시도만 기존 완료 결과를 돌려준다.
 - DB에 최종 제출 행이 생기기 전 업로드만 성공한 상태를 `SUBMITTED`로 표시하지 않는다.
-- 명시적인 상태 모델이 필요하면 임시 업로드와 최종 제출을 별도 테이블로 구분한다. 모든 파일 처리 실패를 제출 성공/실패 행에 섞어 기록하지 않는다.
+- 임시 업로드와 최종 제출을 별도 테이블로 관리한다. 파일 처리 중의 상태는 업로드 의도에 기록하고 최종 제출 사실과 구분한다.
 - 출석·수료 같은 향후 도메인이 사용자 이메일이 아닌 영속적인 `enrollment_id`를 참조하도록 일관성을 유지한다.
 
 ### F. `assignment_submission_files` 및 `assignment_upload_intents`
 
-`assignment_submission_files` 필드: `id`, `submission_id` FK, 불투명 `storage_key`, `original_name`, `mime_type`, `size_bytes`, `checksum`(가능하면), `created_at`.
+`assignment_submission_files` 필드: `id`, `submission_id` FK, 불투명 `storage_key`, `original_name`, `mime_type`, `size_bytes`, `checksum`. 최종 파일의 체크섬은 선택 사항이 아니며 소문자 16진수 64자리의 SHA-256을 요구한다. 파일 테이블에 별도 `created_at` 필드는 없다. 제출 시각은 연결된 제출 기록에서 확인한다.
 
-`assignment_upload_intents`(또는 동등한 임시 업로드 영수증): `id`, `target_id`, `user_id`, `storage_key`, `expires_at`, `state`, `created_at`. 업로드 승인과 최종 제출을 연결해, 클라이언트가 임의 Blob URL을 제출한 것으로 확정하지 못하게 한다.
+`assignment_upload_intents`는 `id`, `assignment_target_id`, `user_id`, `storage_key`, `expires_at`, `state`, `created_at`과 검증 시각·파일 메타데이터를 가진다. 상태는 `INTENDED`·`VERIFIED`·`CONSUMED`·`EXPIRED`로 구분한다. 검증 전에는 파일 메타데이터가 비어 있고, 검증·사용 상태에는 형식·크기·체크섬이 모두 필요하다. 업로드 승인과 최종 제출을 연결해 클라이언트의 임의 URL을 제출로 확정하지 않는다. 승인·취소·정리의 별도 원장은 [업로드 계약](developer/academic-assignment-uploads.md)을 따른다.
 
 - 저장 키는 고유·추측 어려운 값이어야 하며, 한글 원본 파일명과 저장 경로를 분리한다.
 - 파일을 전송한 사람·대상 과제·실제 저장된 객체·크기/유형을 **서버에서 재검증**한다.
@@ -155,7 +163,7 @@
 3. 현재 `MEMBER` + 유효한 `users.cohortId`의 후보 행을 dry-run으로 표시하되 **누락/중복/관리자·교수의 기존 참여 이력**은 수동 확인 대상으로 출력한다.
 4. 계정 없는 등록 대상은 관리자 검증 후 학생 엔터티로 생성한다. 이메일 동등성만으로 자동 매칭하지 않는다.
 5. 기존 권한/회원 화면은 변경 없이 남기고, 새 학사 경로만 신규 학적 기반으로 동작시킨다.
-6. 스테이징 DB에서 backfill 재실행(멱등성), 유일성, rollback/forward-fix, 삭제 제한을 검증한다.
+6. 폐기 가능한 격리 검증 DB에서 backfill 재실행(멱등성), 유일성, rollback/forward-fix, 삭제 제한을 검증한다.
 7. 운영 백업 및 복원 시험 증거 확보 후 승인된 migration을 배포한다. 적절한 기간 동안 기존 `users.cohortId`와 신규 학적 간 불일치를 리포트한다.
 8. 이행 후에만 호환 필드 축소를 별도 결정한다.
 
@@ -180,3 +188,4 @@
 - `completion_decisions`: 수료 조건 버전·운영진 승인·예외 사유·확정 시각 (G3).
 
 새 엔터티 추가는 운영 정책과 이용자 요구가 확인되었을 때만 진행한다. 선제적인 학점/학과/학기 테이블은 만들지 않는다.
+
