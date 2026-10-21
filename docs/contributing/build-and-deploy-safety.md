@@ -12,6 +12,8 @@ git diff
 node --version
 ```
 
+[사전 준비](../getting-started/prerequisites.md)에 따라 Node 24를 사용합니다. `.nvmrc`는 `24`, `engines.node`는 `24.x`이며 nvm 사용자는 `nvm use`로 선택하고 실제 `node --version`을 확인합니다.
+
 변경 파일이 요청한 범위에 맞는지 확인합니다. DB·파일 저장소를 사용하는 검사는 개발·검증용 환경을 준비하며, 운영 자격 증명을 일반 테스트에 연결하지 않습니다.
 
 **빌드(build)**는 배포할 프로그램을 만드는 작업이고, **배포(deploy)**는 그 결과를 서버에서 제공하는 작업입니다. **CI(Continuous Integration)**는 GitHub에서 자동 실행하는 검사입니다.
@@ -25,7 +27,7 @@ node --version
 | `npm run lint` | ESLint가 검사하는 코드 규칙 | 오류 파일·규칙과 종료 상태 |
 | `npm run typecheck` | TypeScript 타입 일치 | 타입 오류가 없는지 |
 | `npm test` | Vitest에 등록된 테스트 | 통과·실패뿐 아니라 건너뛴 테스트와 준비 조건 |
-| `npm run build` | `next build --webpack`으로 배포용 결과물 생성 | 빌드 성공 여부와 관련 오류 |
+| `npm run build` | `prebuild`의 실제 Node 버전 출력 뒤 `next build --webpack`으로 결과물 생성 | 실행 버전·빌드 성공 여부와 관련 오류 |
 | `npm run test:academic-g1` | 학사 G1의 실제 앱·격리 DB·로컬 파일 저장 검증 | [G1 품질 게이트](../developer/academic-g1-quality-gate.md)의 조건과 결과 |
 | `npm run test:e2e -- tests/e2e/ci-smoke.spec.ts` | Playwright의 기본 브라우저 확인 | 로그인 화면·보호 경로 등의 결과 |
 
@@ -46,9 +48,13 @@ DB의 제약이나 동시 요청을 검사하는 테스트에는 로컬 PostgreS
 
 ### 현재 CI 범위
 
-`.github/workflows/ci.yml`은 `main` 대상 PR과 `main` 푸시에서 lint·typecheck·격리 PostgreSQL을 준비한 Vitest·build를 실행합니다. 그다음 **학사 G1 검증을 별도로 실행**하고, 일반 브라우저 검사는 `ci-smoke.spec.ts`를 실행합니다. 모든 E2E 파일을 기본 CI에서 실행하는 설정은 아닙니다.
+`.github/workflows/ci.yml`은 `main` 대상 PR과 `main` 푸시에서 lint·typecheck·격리 PostgreSQL을 준비한 Vitest·build를 실행합니다. 빌드 뒤 Proxy 인증 경계 HTTP 검사, Chromium 설치, 에디터 미리보기 키보드 회귀와 **별도 학사 G1 검증**을 실행합니다. 일반 브라우저 검사는 `ci-smoke.spec.ts`의 수집 목록을 남긴 뒤 실행합니다. 모든 E2E 파일을 기본 CI에서 실행하는 설정은 아닙니다.
 
-CI는 이 검증에 운영 DB·Blob 자격 증명을 전달하지 않습니다. Node.js 버전의 현재 차이와 통일 작업은 [사전 준비](../getting-started/prerequisites.md)에 정리되어 있습니다.
+Vitest 설정은 `tests/unit/**/*.test.{ts,tsx}`를 수집하므로 TSX를 위해 별도 설정을 추가하지 않습니다. 실제 수집·skip·성공 범위는 실행 로그로 확인합니다.
+
+CI는 이 검증에 운영 DB·Blob 자격 증명을 전달하지 않습니다. Node 24 설정과 실제 실행 버전 확인 방법은 [사전 준비](../getting-started/prerequisites.md)에 정리되어 있습니다.
+
+`prebuild`의 Node 버전 로그는 해당 빌드의 실행 버전 증거이며, 현재 운영 Vercel 배포의 런타임이 이미 일치한다는 증거는 아닙니다. 운영 일치 여부는 미확인으로 남깁니다.
 
 형식·릴리스 설정을 바꿨다면 [릴리스 운영](releasing.md)의 Node 테스트와 설정 검사도 확인합니다.
 
