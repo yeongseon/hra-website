@@ -64,7 +64,7 @@ git push
 ✅ [pre-push] 빌드 통과! 안전하게 push 합니다.
 ```
 
-- **검사 내용**: `npm run build` (Vercel 과 100% 동일한 검증)
+- **검사 내용**: `npm run build` (배포용 Next.js 빌드)
 - **소요 시간**: 1~3분
 - **실패하면**: push 가 차단됨. **이게 11회 사고를 막아주는 마지막 안전벨트입니다.**
 
@@ -85,6 +85,28 @@ git push --no-verify
 npx husky        # 훅 재활성화
 chmod +x .husky/pre-commit .husky/pre-push   # 실행 권한 부여 (Mac/Linux)
 ```
+
+---
+
+### 2-5. Node.js 버전 맞추기
+
+개발·앱 CI·이슈/PR 형식 검사는 **Node.js 24.x**를 사용합니다. 프로젝트 폴더에서 nvm으로 같은 메이저 버전을 선택하세요.
+
+```bash
+nvm install
+nvm use
+node --version
+npm ci
+npm run build
+```
+
+`.nvmrc`는 `24`, `package.json`의 `engines.node`는 `24.x`입니다. 패치 버전은 고정하지 않으며 `npm run build`의 `prebuild`가 실제 Node 버전을 로그에 남깁니다.
+앱 CI는 `.nvmrc`를 읽습니다. 형식 검사는 신뢰된 PR base SHA에 `.nvmrc`가 아직 없는 첫 변경도 검사해야 하므로 Node 24를 명시합니다.
+
+2026-10-21 확인 기준 [Node 공식 지원 일정](https://github.com/nodejs/Release/blob/main/schedule.json)에서 24는 지원 중인 LTS이고, [Vercel 지원 버전 문서](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)는 24.x를 지원합니다.
+로컬 검증 버전은 `v24.14.0`입니다. **저장소의 버전 선언과 현재 운영 배포의 실제 실행 버전이 일치한다는 뜻은 아닙니다.**
+현재 운영 Vercel 프로젝트의 Node 설정과 배포 메타데이터는 인증 접근이 없어 확인하지 못했습니다. 실제 운영 설정 변경이나 재배포는 수행하지 않았습니다.
+후속 확인에서는 권한 있는 프로젝트 설정·배포 메타데이터와 새 배포의 빌드 버전 로그를 함께 비교하세요. CI·로컬 검사는 운영 DB·Blob 비밀값 대신 기존 합성 설정·격리 PostgreSQL을 유지합니다.
 
 ---
 

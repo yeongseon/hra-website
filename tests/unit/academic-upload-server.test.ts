@@ -2,12 +2,15 @@
 /** 실제 검증 서비스가 메타·스트림·시그니처·전체 크기·SHA256을 비교한 뒤에만 VERIFIED로 저장하는지 검사한다. */
 import { createHash, createHmac } from "node:crypto";
 import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
-const mocks=vi.hoisted(()=>({target:vi.fn(),head:vi.fn(),get:vi.fn(),authorize:vi.fn(),persist:vi.fn(),reserve:vi.fn(),issue:vi.fn(),retire:vi.fn(),receipt:vi.fn(),record:vi.fn()}));
+const mocks=vi.hoisted(()=>({target:vi.fn(),head:vi.fn(),get:vi.fn(),authorize:vi.fn(),persist:vi.fn(),reserve:vi.fn(),issue:vi.fn(),retire:vi.fn(),receipt:vi.fn(),record:vi.fn(),execute:vi.fn(),ipReserve:vi.fn()}));
 vi.mock("server-only",()=>({}));
 vi.mock("@/lib/academic-permissions",()=>({requireAssignmentTarget:mocks.target,AcademicAccessError:class extends Error{status=403;code="FORBIDDEN";}}));
 vi.mock("@vercel/blob",()=>({head:mocks.head,get:mocks.get}));
 vi.mock("@/features/academics/assignment-uploads/repository",()=>({authorizeUploadRecord:mocks.authorize,persistUploadVerification:mocks.persist,reserveAssignmentUploadAttempt:mocks.reserve,issueUploadRecord:mocks.issue,retireUploadRecord:mocks.retire,getUploadReceiptRecord:mocks.receipt,recordUploadReceipt:mocks.record}));
-vi.mock("@/lib/rate-limit",()=>({reserveUploadAttempt:vi.fn()}));
+vi.mock("@/lib/rate-limit",()=>({reserveUploadAttempt:mocks.ipReserve}));
+vi.mock("@/lib/db",()=>({db:{execute:mocks.execute}}));
+vi.mock("@/lib/auth",()=>({auth:vi.fn()}));
+import { finalizeAssignmentSubmission } from "@/features/academics/submissions/service";
 import { createAssignmentUploadIntent,authorizeAssignmentUploadToken,verifyAssignmentUploadIntent,cancelAssignmentUploadIntent } from "@/features/academics/assignment-uploads/server";
 import { AcademicUploadError,assignmentUploadInput,academicUploadPath,MAX_ASSIGNMENT_UPLOAD_BYTES } from "@/features/academics/assignment-uploads/contract";
 import { DELETE as cancelRoute } from "@/app/api/academic/uploads/intents/[id]/route";
@@ -22,10 +25,10 @@ const metadata=()=>({url:`https://${host}/${pathname}`,pathname,size:bytes.lengt
 function stream(chunks:Uint8Array[]){return new ReadableStream<Uint8Array>({start(controller){for(const chunk of chunks)controller.enqueue(chunk);controller.close();}});}
 function stored(chunks=[bytes]){return {statusCode:200,blob:metadata(),stream:stream(chunks)};}
 beforeEach(()=>{
- vi.resetAllMocks();vi.stubEnv("ACADEMIC_ENABLED","true");vi.stubEnv("ACADEMIC_UPLOADS_ENABLED","true");vi.stubEnv("ACADEMIC_SUBMISSION_BLOB_HOST",host);vi.stubEnv("ACADEMIC_SUBMISSION_READ_WRITE_TOKEN","vercel_blob_rw_qa151_fixture");
+ vi.resetAllMocks();vi.stubEnv("ACADEMIC_ENROLLMENT_WRITES_ENABLED","true");vi.stubEnv("ACADEMIC_ENABLED","true");vi.stubEnv("ACADEMIC_UPLOADS_ENABLED","true");vi.stubEnv("ACADEMIC_SUBMISSION_BLOB_HOST",host);vi.stubEnv("ACADEMIC_SUBMISSION_READ_WRITE_TOKEN","vercel_blob_rw_qa151_fixture");
  vi.spyOn(console,"info").mockImplementation(()=>{});vi.spyOn(console,"error").mockImplementation(()=>{});
  mocks.target.mockResolvedValue({userId:id,targetId,assignmentId,status:"PUBLISHED",dueAt:new Date(Date.now()+120000)});
- mocks.authorize.mockImplementation(async()=>record());mocks.head.mockImplementation(async()=>metadata());mocks.get.mockImplementation(async()=>stored());mocks.issue.mockResolvedValue(id);
+ mocks.authorize.mockImplementation(async()=>record());mocks.head.mockImplementation(async()=>metadata());mocks.get.mockImplementation(async()=>stored());mocks.issue.mockResolvedValue(id);mocks.ipReserve.mockResolvedValue({blocked:false,retryAfterSec:0});
 });
 afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
 describe("과제 업로드 계약·실제 스트림 검증",()=>{
@@ -144,4 +147,72 @@ describe("과제 업로드 계약·실제 스트림 검증",()=>{
   const result=await callback(new Request("https://app.invalid/api/academic/uploads",{method:"POST",headers:{"Content-Type":"application/json","x-vercel-signature":"forged"},body:JSON.stringify(body)}));
   expect(result.status).toBeGreaterThanOrEqual(400);expect(mocks.receipt).not.toHaveBeenCalled();expect(mocks.record).not.toHaveBeenCalled();expect(await result.text()).not.toContain(host);
  });
+});
+
+// 같은 대상의 실제 단계 순서에서 예산을 초기화하지 않아 단계 중복 차감 회귀를 잡습니다.
+describe("의도 발급과 외부 작업 예산 분리",()=>{
+ const input={assignmentId,requestId:id,originalName:"과제.pdf",sizeBytes:bytes.length,mimeType:"application/pdf"};
+ function budget(){
+  const used={intent:0,external:0};
+  mocks.reserve.mockImplementation(async(_user:string,_target:string,phase?:string)=>{
+   const scope=phase==="intent"?"intent":"external";
+   if(used[scope]>=4)throw new AcademicUploadError("RATE_LIMITED");
+   used[scope]++;
+  });
+  return used;
+ }
+ async function start(){await createAssignmentUploadIntent(input);await authorizeAssignmentUploadToken(selection,pathname,false);}
+ async function replacement(){
+  const next={assignmentId,uploadIntentId:assignmentId},nextPath=academicUploadPath(assignmentId);
+  mocks.issue.mockResolvedValue(assignmentId);
+  mocks.authorize.mockImplementation(async()=>({...record(),intent_id:assignmentId,storage_key:nextPath}));
+  mocks.head.mockImplementation(async()=>({...metadata(),pathname:nextPath,url:`https://${host}/${nextPath}`}));
+  mocks.get.mockImplementation(async()=>({...stored(),blob:{...metadata(),pathname:nextPath,url:`https://${host}/${nextPath}`}}));
+  await createAssignmentUploadIntent({...input,requestId:assignmentId});await authorizeAssignmentUploadToken(next,nextPath,false);
+  return next;
+ }
+ it("정상 제출은 발급 한 번과 외부 작업 두 번을 예약한다",async()=>{
+  const used=budget();await start();await verifyAssignmentUploadIntent(selection);
+  expect(used).toEqual({intent:1,external:2});
+ });
+ it("PUT 실패 뒤 취소하고 새 의도로 다시 전송·검증해도 같은 창에 완료한다",async()=>{
+  const used=budget();await start();await cancelAssignmentUploadIntent(selection);
+  await verifyAssignmentUploadIntent(await replacement());
+  expect(used).toEqual({intent:2,external:3});
+ });
+ it("전송 후 검증 실패는 같은 의도로 다시 검증하며 발급을 중복 차감하지 않는다",async()=>{
+  const used=budget();await start();mocks.get.mockRejectedValueOnce(new Error("읽기 실패"));
+  await expect(verifyAssignmentUploadIntent(selection)).rejects.toMatchObject({code:"UNAVAILABLE"});
+  await verifyAssignmentUploadIntent(selection);expect(used).toEqual({intent:1,external:3});
+ });
+ it("검증에 실패한 파일을 취소·교체한 뒤 같은 창의 네 번째 외부 작업으로 검증한다",async()=>{
+  const used=budget();await start();mocks.get.mockResolvedValueOnce(stored([new Uint8Array(bytes.length)]));
+  await expect(verifyAssignmentUploadIntent(selection)).rejects.toMatchObject({code:"INVALID_FILE"});
+  await cancelAssignmentUploadIntent(selection);const next=await replacement();await verifyAssignmentUploadIntent(next);
+  expect(used).toEqual({intent:2,external:4});
+  const reads=mocks.head.mock.calls.length;
+  await expect(verifyAssignmentUploadIntent(next)).rejects.toMatchObject({code:"RATE_LIMITED"});
+  expect(mocks.head).toHaveBeenCalledTimes(reads);
+ });
+});
+
+it.each(["intent","token","ip"])("%s 차단 HTTP는 고정 코드·대기 초·Retry-After를 반환한다",async phase=>{
+ if(phase==="ip")mocks.ipReserve.mockResolvedValue({blocked:true,retryAfterSec:37});
+ else mocks.reserve.mockRejectedValueOnce(new AcademicUploadError("RATE_LIMITED",37));
+ const response=phase==="intent"?await createIntentRoute(new Request("https://app.invalid/api/academic/uploads/intents",{method:"POST",headers:{Origin:"https://app.invalid"},body:JSON.stringify({assignmentId,requestId:id,originalName:"과제.pdf",sizeBytes:bytes.length,mimeType:"application/pdf"})}))
+  :await callback(new Request("https://app.invalid/api/academic/uploads",{method:"POST",headers:{Origin:"https://app.invalid","Content-Type":"application/json"},body:JSON.stringify({type:"blob.generate-client-token",payload:{pathname,multipart:false,clientPayload:JSON.stringify(selection)}})}));
+ expect(response.status).toBe(429);expect(response.headers.get("retry-after")).toBe("37");
+ expect(await response.json()).toMatchObject({code:"RATE_LIMITED",retryAfterSeconds:37,error:expect.stringContaining("37초")});
+});
+it("성공 커밋의 같은 키 복구는 실제 검증기와 예산 예약을 다시 호출하지 않는다",async()=>{
+ const dto={assignmentId,submissionId:assignmentId,submittedAt:new Date().toISOString(),replayed:false,file:{fileId:id,originalName:"과제.pdf",mimeType:"application/pdf",sizeBytes:bytes.length}};
+ mocks.execute.mockResolvedValueOnce({rows:[{result:null}]}).mockResolvedValueOnce({rows:[{result:dto}]}).mockResolvedValueOnce({rows:[{result:{...dto,replayed:true}}]});
+ await createAssignmentUploadIntent({assignmentId,requestId:id,originalName:"과제.pdf",sizeBytes:bytes.length,mimeType:"application/pdf"});
+ await authorizeAssignmentUploadToken(selection,pathname,false);
+ const request={...selection,submissionKey:id};
+ await finalizeAssignmentSubmission(request);
+ const reservations=mocks.reserve.mock.calls.slice();
+ expect(reservations.map(call=>call[2])).toEqual(["intent","external","external"]);
+ expect(await finalizeAssignmentSubmission(request)).toMatchObject({replayed:true,submissionId:assignmentId});
+ expect(mocks.reserve.mock.calls).toEqual(reservations);expect(mocks.head).toHaveBeenCalledTimes(1);expect(mocks.get).toHaveBeenCalledTimes(1);
 });

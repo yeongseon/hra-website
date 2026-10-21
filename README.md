@@ -112,11 +112,11 @@ src/
 ## 8. 🚀 시작하기 (로컬 실행 10단계)
 내 컴퓨터에서 이 웹사이트를 직접 띄워보는 방법이에요!
 
-1.  **엔진 설치**: [Node.js](https://nodejs.org/ko/)를 설치하세요. (LTS 버전 추천)
+1.  **엔진 설치**: [Node.js](https://nodejs.org/ko/) **24.x**를 설치하세요. 이 프로젝트가 사용하는 지원 중인 LTS 버전이에요.
 2.  **스마트 메모장**: [VS Code](https://code.visualstudio.com/)를 설치하세요.
 3.  **코드 가져오기**: 터미널을 열고 `git clone https://github.com/yeongseon/hra-website.git`을 입력하세요.
 4.  **폴더 들어가기**: `cd hra-website`를 입력해 프로젝트 폴더로 이동하세요.
-5.  **도구 설치**: `npm install`을 입력하고 잠시 기다려주세요.
+5.  **도구 설치**: nvm을 사용한다면 `nvm install` → `nvm use`로 `.nvmrc`의 Node 24를 선택한 뒤 `npm ci`를 실행하세요. nvm 없이 설치했다면 `node --version`이 `v24.x`인지 먼저 확인하세요.
 6.  **비밀 설정**: 폴더 안의 `.env.example` 파일을 복사해서 이름을 `.env`로 바꾸세요.
 7.  **열쇠 채우기**: `.env` 파일 안에 `DATABASE_URL` 등 필수 항목들을 채워 넣으세요. (관리자에게 문의!)
 8.  **창고 정리**: 새 빈 개발 DB에서 [DB 변경 절차](docs/developer/database-change-procedure.md)에 따라 테이블·추가 SQL을 준비하세요.
@@ -160,6 +160,7 @@ import { revalidatePath } from "next/cache"; // 4. "화면 새로고침해!" 하
 - **우리 사이트**: Vercel을 통해 전 세계 어디서든 접속할 수 있게 되어 있어요.
 - **개발 가이드 문서**: [https://yeongseon.github.io/hra-website/](https://yeongseon.github.io/hra-website/) — MkDocs로 운영 중인 풀 가이드 (처음 기여하는 분 필독!)
 - **주의사항**: 코드를 고친 뒤에는 꼭 `npm run build`를 해서 문제가 없는지 확인해야 해요!
+- **Node.js 기준**: 개발·CI·배포 선언은 24.x예요. 빌드 시작에 실제 Node 버전을 출력하지만, 현재 운영 Vercel 배포의 실행 버전 일치는 아직 확인하지 못했어요. 확인 범위는 [빌드·배포 안전 가이드](docs/contributing/build-and-deploy-safety.md#2-5-nodejs-버전-맞추기)를 참고하세요.
 - **자동 안전망**: `npm install` 한 번이면 `pre-commit`(타입 검사) + `pre-push`(빌드 검증) 훅이 자동으로 켜져요. 이게 있으면 깨진 코드를 push 하려고 해도 컴퓨터가 막아줍니다. 자세한 내용은 👉 **[빌드·배포 안전 가이드](https://yeongseon.github.io/hra-website/contributing/build-and-deploy-safety/)** 를 꼭 읽어주세요. (10분이면 다 읽어요!)
 
 ---
