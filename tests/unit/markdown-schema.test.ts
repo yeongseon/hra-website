@@ -6,6 +6,7 @@
  *   - guide / template 스키마: visibility, version 형식 검증
  */
 import { describe, expect, it } from "vitest";
+import { parseMarkdown } from "@/lib/markdown/parse";
 import {
   guideFrontmatterSchema,
   reportFrontmatterSchema,
@@ -29,6 +30,25 @@ describe("reportFrontmatterSchema", () => {
 
   it("정상 입력은 통과한다", () => {
     expect(reportFrontmatterSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it.each(["2026-04-26", '"2026-04-26"'])("YAML 날짜 %s를 문자열로 보존한다", (date) => {
+    // 실제 파서의 JSON_SCHEMA 설정이 따옴표 없는 날짜도 Date 객체로 바꾸지 않는지 확인합니다.
+    const raw = [
+      "---",
+      ...Object.entries(valid).map(([key, value]) =>
+        `${key}: ${key === "presentationDate" ? date : JSON.stringify(value)}`,
+      ),
+      "---",
+      "보고서 본문",
+    ].join("\n");
+    const result = parseMarkdown(raw, "report");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.frontmatter.presentationDate).toBe("2026-04-26");
+      expect(result.data.body.trim()).toBe("보고서 본문");
+    }
   });
 
   it("title 누락 시 한국어 오류를 반환한다", () => {
