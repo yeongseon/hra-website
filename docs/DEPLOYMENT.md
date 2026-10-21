@@ -2,6 +2,8 @@
 
 이 문서는 개발한 웹사이트를 검증 환경에 올리고, 확인한 버전을 운영에 반영하는 순서를 설명합니다. **배포 성공은 코드가 실행된다는 뜻이며, DB 변경·파일 보호·로그인 설정까지 완료됐다는 뜻은 아닙니다.**
 
+운영 환경 분리의 **목표 정책**은 [환경 분리 및 배포 전략](developer/environment-strategy.md)을 따릅니다. 목표 흐름은 **Local Development → PR Preview/Test → Production**이며, 모바일 내부 테스트 목적이 생기기 전에는 상시 Staging을 기본으로 두지 않습니다. Preview/Test는 Production DB·Blob·개인정보·운영 세션과 토큰을 사용하지 않아야 합니다. **현재 Preview 자원과 환경변수의 실제 격리 상태는 미확인입니다.** Preview 사용 전 [환경 분리 #279](https://github.com/yeongseon/hra-website/issues/279)에 따라 연결 대상을 확인합니다.
+
 문서 확인일: 2026-10-18. 현재 앱은 저장소 루트의 `package.json`과 `src/`를 사용합니다. `apps/web` 전환과 자동 migration gate는 [환경 분리 및 배포 전략](developer/environment-strategy.md)의 목표이며, 실제 구축 여부는 각각의 이슈에서 확인합니다.
 
 ## 1. 먼저 구분할 세 가지
@@ -106,12 +108,15 @@ DB 변경이 필요하면 **앱 배포보다 먼저 적용해야 할 항목**을
 ## 5. Preview에서 확인한 뒤 운영 반영하기
 
 1. Vercel 프로젝트가 올바른 저장소와 연결됐는지 확인합니다. 현재 앱의 기준 폴더는 저장소 루트입니다.
-2. 작업 브랜치의 PR과 Preview를 준비합니다. 실제 자동 배포 조건은 프로젝트 설정에서 확인합니다.
-3. 아래 확인표를 Preview의 합성 계정·자료로 검사합니다.
-4. 리뷰와 필요한 검증을 통과한 변경을 프로젝트 절차에 따라 병합합니다.
-5. DB 변경 순서와 운영 설정을 확인한 뒤 Production 배포 또는 승격을 진행합니다.
+2. 작업 브랜치의 PR과 Preview를 준비합니다. 실제 자동 배포 조건은 프로젝트 설정에서 확인합니다. **현재 PR 마지막 커밋**의 GitHub CI와 Vercel Preview 결과를 각각 확인합니다.
+3. Preview 설치·빌드가 실패하면 해당 커밋의 로그에서 첫 실패 단계를 확인하고 수정한 커밋으로 두 검사를 다시 통과시킵니다. `npm ci`의 peer 충돌은 [빌드·배포 안전 가이드](contributing/build-and-deploy-safety.md)의 의존성 확인 절차를 따릅니다.
+4. #279에 따라 Preview 자원이 Production과 분리된 것을 확인한 뒤 아래 확인표를 Preview의 합성 계정·자료로 검사합니다. 격리가 확인되지 않았다면 실사용 자료를 넣지 않고 미검증으로 기록합니다.
+5. 리뷰와 필요한 검증을 통과한 변경을 프로젝트 절차에 따라 병합합니다.
+6. DB 변경 순서와 운영 설정을 확인한 뒤 Production 배포 또는 승격을 진행합니다.
 
 브랜치에 `git push`했다고 반드시 운영이 갱신되는 것은 아닙니다. 연결된 Production Branch와 Preview 설정에 따라 대상이 달라집니다. [Vercel 배포 환경 문서](https://vercel.com/docs/deployments/environments)를 참고합니다.
+
+Preview가 `Ready`여도 실제 로그인 제공자·DB·Blob 연결과 운영 환경 설정까지 검증된 것은 아닙니다. 확인한 배포 커밋, CI·Preview 상태, 실행한 기능 검사와 미확인 범위를 PR에 각각 기록합니다.
 
 | 확인 항목 | 기대 결과 |
 | --- | --- |

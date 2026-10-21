@@ -9,12 +9,14 @@
 | 도구 | 하는 일 | 준비 방법 |
 | --- | --- | --- |
 | Git | 코드의 변경 이력을 저장하고 팀의 변경을 가져옵니다. | [Git 공식 사이트](https://git-scm.com/downloads)에서 설치합니다. |
-| Node.js | 개발 서버와 검사 명령을 실행합니다. | [Node.js 공식 사이트](https://nodejs.org/en/download)에서 **22.x의 최신 패치 버전**을 선택합니다. |
+| Node.js | 개발 서버와 검사 명령을 실행합니다. | [Node.js 공식 사이트](https://nodejs.org/en/download)에서 **24.x의 최신 패치 버전**을 선택합니다. |
 | npm | 프로젝트가 사용하는 외부 패키지를 설치합니다. | Node.js와 함께 설치됩니다. 별도 설치부터 할 필요는 없습니다. |
 | VS Code | 파일을 읽고 수정하는 편집기입니다. | [VS Code 공식 사이트](https://code.visualstudio.com/)에서 설치합니다. 다른 편집기도 사용할 수 있습니다. |
 | GitHub 계정 | 이슈를 작성하고 변경을 PR로 제출합니다. | [GitHub](https://github.com/)에서 계정을 만들고 이메일을 인증합니다. |
 
-**LTS(Long Term Support)**는 보안 수정 등을 장기간 제공하는 Node.js 버전입니다. 이 안내는 Node.js 22를 기준으로 합니다. **CI(Continuous Integration)**는 GitHub에서 자동 실행하는 검사입니다. 현재 저장소의 앱 CI는 Node.js 20, 형식 검사 CI는 22를 사용하고 있으며 버전 통일은 [#294](https://github.com/yeongseon/hra-website/issues/294)에서 진행합니다. 설치할 때의 지원 상태는 [Node.js 릴리스 표](https://nodejs.org/en/about/previous-releases)를 확인합니다.
+**LTS(Long Term Support)**는 보안 수정 등을 장기간 제공하는 Node.js 버전입니다. 프로젝트는 지원 중인 **Node.js 24.x**를 사용합니다. **CI(Continuous Integration)**는 GitHub에서 자동 실행하는 검사입니다. `.nvmrc`는 `24`, `package.json`의 `engines.node`는 `24.x`이며 앱 CI와 형식 검사 CI도 Node 24를 사용합니다. 지원 상태는 [Node 공식 일정](https://github.com/nodejs/Release/blob/main/schedule.json)을 확인합니다.
+
+`npm run build`는 `prebuild`에서 실제 Node 버전을 출력하지만, **현재 운영 Vercel 프로젝트·배포의 런타임 일치 여부는 미확인**입니다.
 
 공개 저장소를 읽거나 복제하는 데는 관리자 초대가 필요하지 않습니다. 팀 저장소에 작업 브랜치를 올리려면 쓰기 권한이 필요합니다. 관리자의 초대를 받은 경우 수락하고, 외부 기여라면 개인 계정에 복사한 저장소인 **포크(fork)**를 사용하는지 먼저 확인합니다.
 
@@ -36,7 +38,7 @@ node --version
 npm --version
 ```
 
-세 명령 모두 버전을 출력하고, Node.js가 `v22.`로 시작하면 이 안내의 도구 준비가 끝난 것입니다. `npm`의 주 버전은 Node.js 버전과 같을 필요가 없습니다.
+세 명령 모두 버전을 출력하고, Node.js가 `v24.`로 시작하면 이 안내의 도구 준비가 끝난 것입니다. `npm`의 주 버전은 Node.js 버전과 같을 필요가 없습니다.
 
 VS Code의 확장 기능은 선택 사항입니다. 한국어 메뉴가 필요하면 Korean Language Pack, Tailwind 클래스 자동 완성이 필요하면 Tailwind CSS IntelliSense, 편집 중 코드 진단이 필요하면 ESLint를 설치합니다.
 
@@ -57,7 +59,7 @@ HRA는 **데이터베이스(DB)**에 회원과 게시글을 저장하고, **Blob
 | 증상 | 먼저 확인할 것 |
 | --- | --- |
 | `command not found` 또는 `is not recognized` | 설치를 마친 뒤 터미널을 다시 엽니다. 계속되면 해당 프로그램의 설치 경로 설정을 확인합니다. |
-| Node.js가 다른 버전으로 나옴 | 이미 설치된 버전이나 버전 관리 도구가 있는지 확인하고 22.x로 전환합니다. |
+| Node.js가 다른 버전으로 나옴 | 이미 설치된 버전이나 버전 관리 도구가 있는지 확인하고 24.x로 전환합니다. |
 | 폴더 쓰기 권한 오류 | 내 계정이 소유한 작업 폴더를 선택합니다. 관리자 권한으로 설치 명령을 반복하지 않습니다. |
 | GitHub에 브랜치를 올릴 수 없음 | 초대 수락 여부와 저장소 쓰기 권한, 포크 사용 여부를 확인합니다. |
 

@@ -27,6 +27,8 @@ code .
 
 ## 2. 저장소에 고정된 패키지 설치하기
 
+[사전 준비](prerequisites.md)에 따라 Node 24를 선택합니다. `.nvmrc`는 `24`, `package.json`의 `engines.node`는 `24.x`이며 패치 버전은 고정하지 않습니다. nvm을 사용한다면 `nvm install` → `nvm use`를 실행한 뒤 `node --version`이 `v24.`로 시작하는지 확인합니다. nvm 없이 설치한 경우에도 실제 버전을 확인한 뒤 진행합니다.
+
 ```bash
 npm ci
 ```
@@ -86,7 +88,7 @@ git status --short
 | `node --env-file=.env`를 사용하는 seed·migration 명령 | 터미널의 기존 환경변수 → 지정한 `.env` |
 | 현재 `drizzle.config.ts`의 `dotenv.config()` | 터미널의 기존 환경변수 → 프로젝트 루트의 `.env` |
 
-앱이 읽는 DB와 관리 명령이 변경할 DB가 같아야 합니다. `.env`만 바꾼 뒤 예전 `.env.local`이나 터미널 설정이 적용되는 일을 피하도록, 실행 전에 각 설정의 대상 환경을 확인합니다. 비밀값 전체를 터미널·이슈에 출력할 필요는 없습니다. 우선순위 근거는 [Next.js 환경변수](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order), [Node.js 22의 env-file](https://nodejs.org/download/release/v22.21.0/docs/api/cli.html#--env-filefile) 및 저장소의 `package.json`·`drizzle.config.ts`입니다.
+앱이 읽는 DB와 관리 명령이 변경할 DB가 같아야 합니다. `.env`만 바꾼 뒤 예전 `.env.local`이나 터미널 설정이 적용되는 일을 피하도록, 실행 전에 각 설정의 대상 환경을 확인합니다. 비밀값 전체를 터미널·이슈에 출력할 필요는 없습니다. 우선순위 근거는 [Next.js 환경변수](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order), [Node.js 24의 env-file](https://nodejs.org/download/release/v24.14.0/docs/api/cli.html#--env-filefile) 및 저장소의 `package.json`·`drizzle.config.ts`입니다.
 
 ### 테이블과 추가 함수 확인
 

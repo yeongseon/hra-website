@@ -92,7 +92,7 @@ node scripts/check-release-config.mjs
 
 로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode로 수행한 의미 있는 작업**은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 Oracle 리뷰 조건을 적용합니다. 문서만 수정하는 등 명시된 간단 변경은 면제이며, **Claude 또는 Codex만 사용한 작업에는 Oracle 절차를 적용하지 않습니다.** 일반 리뷰와 필요한 검사는 계속 수행합니다.
 
-리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. CI와 필요한 리뷰가 끝난 뒤 병합합니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
+리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. **현재 PR의 마지막 커밋**에서 GitHub CI와 Vercel Preview가 각각 성공했는지 확인한 뒤 병합합니다. Preview 설치·빌드 실패는 [빌드·배포 가이드](build-and-deploy-safety.md)의 원인 확인과 재검증 절차를 먼저 따릅니다. 최신 `main` 반영이나 수정 커밋 뒤에는 이전 성공 결과를 재사용하지 않습니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
 
 ## 4. 완료와 릴리스
 

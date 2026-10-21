@@ -19,6 +19,8 @@
 
 ## 2. 현재 기본 CI가 실행하는 검사
 
+개발·CI의 Node 버전은 `.nvmrc`의 `24`와 `engines.node`의 `24.x`를 따른다. 빌드의 실제 버전은 로그로 확인하며 현재 운영 Vercel의 런타임 일치 여부는 미확인이다.
+
 `main`에 대한 push와 pull request에서 `.github/workflows/ci.yml`의 한 job이 다음 순서로 실행한다. **기본 CI에는 G1 통합 검사와 브라우저 smoke가 모두 포함되어 있다.**
 
 | 순서 | 명령·단계 | 확인하는 내용 |
@@ -27,14 +29,17 @@
 | 2 | `npm run lint` | ESLint 규칙 검사. 현재 명령에는 경고를 모두 실패로 바꾸는 `--max-warnings=0` 옵션이 없다. |
 | 3 | `npm run typecheck` | `tsc --noEmit`으로 타입 오류 검사 |
 | 4 | PostgreSQL 준비 후 `npm test` | `HRA_TEST_PG_BIN`으로 임시 DB를 만드는 회귀 검사 포함 |
-| 5 | `npm run build` | 실제 `next build --webpack` 성공 여부 |
-| 6 | Chromium 설치 | Playwright 브라우저 검사에 필요한 실행 파일 준비 |
-| 7 | `npm run test:academic-g1` | 실제 Next·credentials 인증·격리 PostgreSQL·Blob SDK·로컬 private HTTP 저장소를 잇는 학사 제출 검사 |
-| 8 | `npm run test:e2e -- tests/e2e/ci-smoke.spec.ts` | 로그인 화면·일부 공개 UI·대표 보호 경로 등 기본 브라우저 검사 |
+| 5 | `npm run build` | `prebuild`의 실제 Node 버전 출력과 `next build --webpack` 성공 여부 |
+| 6 | `npm run verify:auth-proxy` | 실제 Auth.js·격리 DB 세션으로 역할별 Proxy 응답 확인 |
+| 7 | Chromium 설치 | Playwright 브라우저 검사에 필요한 실행 파일 준비 |
+| 8 | `npm run verify:editor-preview` | 실제 에디터 미리보기·키보드·Dialog 회귀 검사 |
+| 9 | `npm run test:academic-g1` | 실제 Next·credentials 인증·격리 PostgreSQL·Blob SDK·로컬 private HTTP 저장소를 잇는 학사 제출 검사 |
+| 10 | `npm run test:e2e -- tests/e2e/ci-smoke.spec.ts --list` | 실행할 smoke 파일·테스트 이름·수집 수를 로그에 남김 |
+| 11 | `npm run test:e2e -- tests/e2e/ci-smoke.spec.ts` | 로그인 화면·공개 UI·보호 경로 등 수집된 브라우저 검사 실행 |
 
 **Smoke**는 주요 화면이 열리고 기본 접근 경계가 작동하는지 빠르게 확인하는 검사다. 현재 기본 CI는 `auth-protection.spec.ts`나 개별 학사 `*.spec.ts` 전체를 선택하지 않는다. G1은 전용 실행기가 별도 시나리오를 실행하므로, 일반 Playwright 파일 전체가 통과했다는 뜻으로 해석하지 않는다. G1의 로컬 저장소 검사는 실제 외부 공급자의 업로드·OAuth 로그인을 확인하는 검사와도 구분한다.
 
-현재 Vitest 검색 범위는 `tests/unit/**/*.test.ts`다. `.test.tsx`를 새로 추가한다면 `vitest.config.mts`의 검색 범위도 함께 검토하고 실제로 수집되는지 확인해야 한다. PostgreSQL 실행 파일이 없으면 일부 DB 검사가 건너뛰어지고, `route-audit-admin-crud.test.ts`처럼 준비 단계에서 실패하는 검사도 있다. DB 준비가 없는 로컬 실행을 전체 단위 검사 통과로 기록하지 않는다.
+`vitest.config.mts` 검색 범위는 `tests/unit/**/*.test.{ts,tsx}`다. `.test.ts`와 `.test.tsx`를 이미 함께 포함하므로 TSX 테스트를 추가하기 위해 설정을 바꿀 필요는 없다. 파일 경로·이름이 패턴과 맞는지 확인하고, 실제 Vitest 출력의 수집 파일과 검사 범위를 기록한다. 수집·skip·통과를 구분하며 테스트 파일 수를 문서의 고정값으로 가정하지 않는다. PostgreSQL 실행 파일이 없으면 일부 DB 검사가 건너뛰어지고, `route-audit-admin-crud.test.ts`처럼 준비 단계에서 실패하는 검사도 있다. DB 준비가 없는 로컬 실행을 전체 단위 검사 통과로 기록하지 않는다.
 
 ## 3. 로컬에서 실행하고 결과 기록하기
 
@@ -106,4 +111,4 @@ PR에는 무엇을 검사했는지와 실제 결과를 함께 적는다.
 
 ## 6. 병합 판단
 
-필수 CI 실패, 변경과 직접 관련된 회귀 실패, 의도치 않은 접근 허용·거부, 공개되어야 할 콘텐츠의 누락, 인쇄 기능의 한글·페이지 분할 오류는 원인을 해결한 뒤 병합한다. 미실행 검사가 있다면 그 범위와 남은 불확실성을 PR에 드러낸다. 테스트 통과만으로 운영 DB 변경이나 미정 학사 정책·기능 활성화가 승인되는 것은 아니며, 해당 [변경·배포 절차](contributing/build-and-deploy-safety.md)를 함께 따른다.
+필수 CI 실패, Vercel Preview 설치·빌드 실패, 변경과 직접 관련된 회귀 실패, 의도치 않은 접근 허용·거부, 공개되어야 할 콘텐츠의 누락, 인쇄 기능의 한글·페이지 분할 오류는 원인을 해결한 뒤 병합한다. **현재 PR의 마지막 커밋**에 대한 CI와 Preview 결과를 각각 확인하며, 최신 `main` 반영 뒤에는 다시 검사한다. 미실행 검사가 있다면 그 범위와 남은 불확실성을 PR에 드러낸다. 테스트·Preview 빌드 통과만으로 운영 DB 변경이나 실제 OAuth·Blob 동작, 미정 학사 정책·기능 활성화가 승인되는 것은 아니며, 해당 [변경·배포 절차](contributing/build-and-deploy-safety.md)를 함께 따른다.
