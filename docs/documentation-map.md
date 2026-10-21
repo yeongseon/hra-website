@@ -11,7 +11,9 @@
 | 정책 초안 | 운영 책임자가 결정해야 하는 규칙 | 승인 여부와 승인된 범위 |
 | 과거 기록 | 특정 날짜·커밋·환경에서 수행한 조사나 검증 | 현재 환경에서도 그대로 성립하는지 |
 
-이 문서 정비는 2026-10-18에 시작했고, 2026-10-21에 앱 스크립트·기본 CI·의존성·배포 안내를 `95c53ad`의 코드와 다시 대조했다. 플랫폼 목표와 환경 분리 경계는 [문서 PR #278](https://github.com/yeongseon/hra-website/pull/278)을 반영했다. 각 문서의 개별 검증 기록은 해당 시점의 근거로 남겨 두었다. **이 검토는 운영 Vercel 런타임, Preview 자원 격리, DB 적용, OAuth·Blob 실제 연결을 확인한 결과가 아니다.** 현재 우선순위와 남은 작업은 [전체 추적 #300](https://github.com/yeongseon/hra-website/issues/300)에서 확인한다.
+이 문서 정비는 2026-10-18에 시작했고, 2026-10-21에 앱 스크립트·기본 CI·의존성·배포 안내를 `15665df`의 코드와 다시 대조했다. 플랫폼 목표와 환경 분리 경계는 [문서 PR #278](https://github.com/yeongseon/hra-website/pull/278)을 반영했다. 각 문서의 개별 검증 기록은 해당 시점의 근거로 남겨 두었다. **이 검토는 운영 Vercel 런타임, Preview 자원 격리, DB 적용, OAuth·Blob 실제 연결을 확인한 결과가 아니다.** 현재 우선순위와 남은 작업은 [전체 추적 #300](https://github.com/yeongseon/hra-website/issues/300)에서 확인한다.
+
+PR #301의 [문서별 검토 기록](developer/document-review-ledger.md)은 원래 기준의 기존 Markdown 66개를 변경·보존으로 구분하고, 각 문서에서 대조한 구현 근거와 남은 운영 확인을 적는다. 이 기록을 실제 배포 검증으로 확대하지 않는다.
 
 ## 1. 시작·수정·협업
 
@@ -31,6 +33,7 @@
 | [AI 도구 사용](contributing/ai-tools.md) | AI가 만든 변경을 어떻게 검토할까? |
 | [빌드·배포 안전 가이드](contributing/build-and-deploy-safety.md) | 빌드가 실패하거나 배포 결과가 다르면 무엇을 확인할까? |
 | [품질 검사](QUALITY-GATE.md) | CI가 검사하는 범위와 별도 검증은 무엇인가? |
+| [GitHub Actions 보안](developer/github-actions-security.md) | CI가 어떤 코드와 권한으로 실행되는가? |
 | [버전·릴리스 관리](contributing/releasing.md) | PR 병합, GitHub Release, 서비스 배포는 어떻게 다른가? |
 
 ## 2. 관리자·DB·배포
@@ -97,6 +100,7 @@ G1은 첫 학사 기능 묶음으로, 학생·수강 이력, 과제 대상, 개�
 | 문서 | 상태·용도 |
 | --- | --- |
 | [전체 경로 감사](developer/site-route-audit.md) | 2026-10-17의 특정 코드·합성 환경 검증 기록 |
+| [문서별 검토 기록](developer/document-review-ledger.md) | PR #301의 기존 문서별 수정·보존 이유와 코드·운영 경계 |
 | [언론 기사 조사](PRESS-ARTICLES.md) | 과거 기사 조사 목록. 등록 전 원문과 현재 링크를 다시 확인 |
 | [CHANGELOG](https://github.com/yeongseon/hra-website/blob/main/CHANGELOG.md) | 이미 기록된 버전 변경 이력 |
 | [README](https://github.com/yeongseon/hra-website/blob/main/README.md) | 저장소에서 처음 만나는 안내 |
