@@ -4,7 +4,8 @@
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer } from "vite";
+// 직접 선언한 Vitest의 공개 서버 API를 사용해 하위 의존성의 호이스팅에 의존하지 않습니다.
+import { createViteServer } from "vitest/node";
 import react from "@vitejs/plugin-react";
 import { chromium, expect } from "@playwright/test";
 
@@ -99,7 +100,7 @@ const cases = [
 ];
 
 try {
-  server = await createServer({ root: join(root, "tests/fixtures/editor-preview"), configFile: false,
+  server = await createViteServer({ root: join(root, "tests/fixtures/editor-preview"), configFile: false,
     envFile: false, envPrefix: "HRA_EDITOR_PREVIEW_PUBLIC_", plugins: [react()],
     resolve: { alias: { "@": join(root, "src") }, dedupe: ["react", "react-dom"] },
     optimizeDeps: { include: ["react", "react-dom/client", "@base-ui/react/dialog", "@base-ui/react/button"] },
