@@ -1,7 +1,7 @@
 /** 수료생 이야기 서버 액션: 글과 사진을 관리하고 직접·서버 업로드의 형식을 검증합니다. */
 "use server";
 
-import { and, eq, isNull, max } from "drizzle-orm";
+import { and, eq, isNull, max, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -326,7 +326,10 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
   redirect("/admin/alumni");
 }
 
-// 수료생 이야기 상단 고정 토글
+/**
+ * 상단 고정 클릭마다 DB의 현재 값을 반전한다. 재전송도 별도 명령으로 다시 반전한다.
+ * 응답은 해당 명령의 저장값이며, 후속 명령까지 같은 상태로 유지됨을 보장하지 않는다.
+ */
 export async function toggleAlumniPin(id: string): Promise<{ success: boolean; message: string }> {
   await requireAdmin();
 
@@ -335,22 +338,17 @@ export async function toggleAlumniPin(id: string): Promise<{ success: boolean; m
     return { success: false, message: "잘못된 ID입니다." };
   }
 
-  const current = await db.query.alumniStories.findFirst({
-    where: eq(alumniStories.id, parsedId.data),
-    columns: { pinned: true },
-  });
+  const [updated] = await db.update(alumniStories)
+    .set({ pinned: sql`NOT ${alumniStories.pinned}` })
+    .where(eq(alumniStories.id, parsedId.data))
+    .returning({ pinned: alumniStories.pinned });
 
-  if (!current) {
+  if (!updated) {
     return { success: false, message: "수료생 이야기를 찾을 수 없습니다." };
   }
 
-  await db
-    .update(alumniStories)
-    .set({ pinned: !current.pinned })
-    .where(eq(alumniStories.id, parsedId.data));
-
   revalidateAlumniPaths();
-  return { success: true, message: current.pinned ? "고정을 해제했습니다." : "상단에 고정했습니다." };
+  return { success: true, message: updated.pinned ? "상단에 고정했습니다." : "고정을 해제했습니다." };
 }
 
 // 수료생 이야기 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
