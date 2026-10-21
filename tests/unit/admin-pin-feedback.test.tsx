@@ -32,7 +32,8 @@ describe.each(cases)("$name 고정 버튼의 실패 안내", ({ Component, actio
     expect((await screen.findByRole("alert")).textContent).toBe(missing);
     expect(action).toHaveBeenCalledWith(id);
     expect(mocks.refresh).not.toHaveBeenCalled();
-    expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false);
+    // 오류 알림이 먼저 표시되어도 비동기 전환이 끝나야 재시도 버튼이 활성화된다.
+    await waitFor(() => expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false));
 
     fireEvent.click(screen.getByRole("button", { name: "상단 고정" }));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
@@ -63,6 +64,7 @@ describe.each(cases)("$name 고정 버튼의 실패 안내", ({ Component, actio
       .toBe("고정 상태를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.");
     expect(document.body.textContent).not.toMatch(/private@example|UPDATE|notices/);
     expect(mocks.refresh).not.toHaveBeenCalled();
-    expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false);
+    // 통신 예외 안내와 전환 완료 시점은 다를 수 있으므로 활성 상태까지 기다린다.
+    await waitFor(() => expect(screen.getByRole("button").hasAttribute("disabled")).toBe(false));
   });
 });
