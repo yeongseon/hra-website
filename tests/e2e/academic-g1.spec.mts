@@ -203,7 +203,8 @@ test("[G1:ROLE_MATRIX] 역할·기수별 페이지·액션·업로드·최종화
     const management = await api(context).get("/admin/academics/assignments");
     expect(management.status(), `G1_MANAGEMENT_${actor}`).toBe(actor === "manager" ? 200 : ["anon", "pending"].includes(actor) ? 302 : 403);
     const list = await api(context).get("/member/assignments");
-    expect(list.status(), `G1_LIST_${actor}`).toBe(actor === "anon" ? 307 : actor === "pending" ? 302 : 200);
+    // Proxy가 익명 회원 경로를 명시적인 302로 거부하므로 하위 페이지의 307과 구분한다.
+    expect(list.status(), `G1_LIST_${actor}`).toBe(["anon", "pending"].includes(actor) ? 302 : 200);
     const listing = await list.text();
     for (const hidden of ["academic-uploads/", "blob.vercel-storage.com", "vercel_blob_"]) expect(listing).not.toContain(hidden);
     if (["anon", "pending"].includes(actor)) {
@@ -217,7 +218,7 @@ test("[G1:ROLE_MATRIX] 역할·기수별 페이지·액션·업로드·최종화
       const ownCohort = assignment === ids.active ? actor === "studentA" || actor === "peerA" : actor === "studentB";
       const detail = await api(context).get(`/member/assignments/${assignment}`), body = await detail.text();
       for (const hidden of ["academic-uploads/", "blob.vercel-storage.com", "vercel_blob_"]) expect(body).not.toContain(hidden);
-      expect(detail.status(), `G1_DETAIL_${actor}`).toBe(actor === "anon" ? 307 : actor === "pending" ? 302 : member && !ownCohort ? 404 : 200);
+      expect(detail.status(), `G1_DETAIL_${actor}`).toBe(["anon", "pending"].includes(actor) ? 302 : member && !ownCohort ? 404 : 200);
       if (["anon", "pending"].includes(actor)) expect(new URL(detail.headers().location, origin).pathname).toBe(actor === "anon" ? "/login" : "/pending");
       else if (!member) expect(body).toContain("학생 과제에 접근할 수 없습니다.");
       if (actor !== "studentA" || assignment !== ids.active) expect(body).not.toContain(filePath);
