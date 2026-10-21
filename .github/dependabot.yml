@@ -11,3 +11,7 @@ updates:
         patterns:
           - next
           - eslint-config-next
+      auth-framework:
+        patterns:
+          - next-auth
+          - "@auth/core"
