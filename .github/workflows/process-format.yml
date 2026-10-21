@@ -26,10 +26,10 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: node scripts/check-process-format.mjs --event
@@ -49,12 +49,12 @@ jobs:
       pull-requests: read
     steps:
       # PR 작성자가 검사 코드를 수정해서 자기 PR을 면제하지 못하게 base SHA를 사용한다.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
       # 최초 PR의 신뢰된 base에는 .nvmrc가 없을 수 있어 파일 대신 메이저 버전을 명시한다.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: node scripts/check-process-format.mjs --event
@@ -67,12 +67,14 @@ jobs:
     if: github.event_name != 'issues'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       # 변경된 규칙 자체도 검증한다. 읽기 전용, 토큰/DB 비밀값/의존성 설치 없이 실행한다.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: node --test scripts/tests/release-policy.test.mjs
@@ -88,10 +90,10 @@ jobs:
       issues: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: node scripts/check-process-format.mjs --all
