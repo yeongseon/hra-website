@@ -8,7 +8,9 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 
-export const qaDatabaseUrl = "postgresql://hra_resource_qa:test-only@ep-resource-qa.resource-qa.invalid/hra_resource_qa";
+// Neon 1.2의 기본 application_name 추가로 정확한 연결 헤더 검사가 달라지지 않도록 명시합니다.
+// 합성 QA 주소만 바꾸며, 외부 연결·다른 DB를 거부하는 기존 전체 문자열 비교는 유지합니다.
+export const qaDatabaseUrl = "postgresql://hra_resource_qa:test-only@ep-resource-qa.resource-qa.invalid/hra_resource_qa?application_name=hra-resource-qa";
 // 설치된 Neon 클라이언트는 첫 DNS 라벨을 api로 바꿔 HTTP 엔드포인트를 만듭니다.
 export const qaNeonEndpoint = "https://api.resource-qa.invalid/sql";
 
