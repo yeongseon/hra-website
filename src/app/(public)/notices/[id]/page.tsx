@@ -3,6 +3,7 @@ import Link from "next/link";
 import { and, eq, lt, gt, asc, desc, sql } from "drizzle-orm";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,14 +66,18 @@ export default async function NoticeDetailPage({ params }: NoticePageProps) {
     notFound();
   }
 
-  // 조회수 증가 (fire-and-forget)
-  void db
-    .update(notices)
-    .set({ viewCount: sql`${notices.viewCount} + 1` })
-    .where(eq(notices.id, notice.id))
-    .catch((err: unknown) => {
+  // 응답을 막지 않되 플랫폼이 SQL 완료를 기다리도록 응답 후 수명주기에 등록한다.
+  // 요청별 원자 갱신이며 방문자 중복 제거·정확히 한 번 집계는 보장하지 않는다.
+  after(async () => {
+    try {
+      await db
+        .update(notices)
+        .set({ viewCount: sql`${notices.viewCount} + 1` })
+        .where(eq(notices.id, notice.id));
+    } catch (err: unknown) {
       logServerError("public/notices/viewCount", err, { id: notice.id });
-    });
+    }
+  });
 
   const [prevNotice] = await db
     .select({ id: notices.id, title: notices.title })
