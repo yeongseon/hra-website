@@ -1,5 +1,9 @@
 # 자료실 파일 접근 정책 (#101)
 
+이 문서는 보호 자료를 어디에 저장하고 어떤 계정에 전달할지 정하는 정책과 전환 절차입니다. **코드 지원, 환경 설정, 기존 파일 이전은 각각 확인해야 할 단계**입니다. 문서 확인일은 2026-10-18이며 운영 설정이나 실물 파일의 현재 상태를 재확인했다는 뜻은 아닙니다. 운영 완료 증거는 [#268](https://github.com/yeongseon/hra-website/issues/268)에서 관리합니다.
+
+Blob은 파일의 실제 내용을 저장하는 곳입니다. 공개 Blob은 주소를 가진 사람이 읽을 수 있고, 비공개 Blob은 서버가 권한을 확인한 뒤 가져와 전달합니다. 여기서 파일 바이트는 PDF·이미지의 실제 내용을 뜻합니다. DB의 제목이나 목록을 가리는 것만으로 파일 내용이 보호되지는 않습니다.
+
 ## 결정
 
 `회원용`과 `교수용`은 화면 목록뿐 아니라 **파일 바이트의 접근 범위**를 뜻한다. 공개 Blob URL의 무작위 접미사는 주소 추측을 어렵게 할 뿐 인가를 제공하지 않는다. 승인 전 계정·비로그인 사용자가 URL만으로 열 수 있는 저장소에는 자료실 파일을 두지 않는다. 자료실 공동 콘텐츠의 열람 범위는 [자료실 공동 자료 접근 정책](resource-access-policy.md)을 따른다.
@@ -12,11 +16,15 @@
 | 공개 모집 포스터, 교수진 사진, 갤러리, 공개 수료생 이야기의 이미지 | 누구나 | 공개 Blob 허용 |
 | 본문 편집기의 이미지 업로드 API에서 만든 이미지 | 공개 페이지에 게시할 자산으로만 취급 | 현재는 공개 Blob이다. 자료실의 비공개 첨부 경로로 재사용하지 않는다. 본문에 외부/공개 이미지 URL을 붙이면 그 이미지는 이 정책으로 보호되지 않는다. |
 
-2026-10-14 읽기 전용 확인 시 DB에 강의자료 1건과 가이드북 1건이 있었다. 2026-10-15 비공개 저장소를 별도 접두어로 프로젝트에 연결했다. 기존 파일의 비공개 전환이 완료됐다는 뜻은 아니다.
+## 과거 확인 기록
+
+2026-10-14 읽기 전용 확인 시 DB에 강의자료 1건과 가이드북 1건이 있었다. 2026-10-15 비공개 저장소를 별도 접두어로 프로젝트에 연결했다. 당시 기록은 `hra-private-resources`를 `hra-website`의 Production, Preview, Development에 `RESOURCE_PRIVATE` 접두어로 연결한 상태를 설명한다. 기존 파일의 비공개 전환이 완료됐다는 뜻은 아니다.
+
+이 과거 연결 기록을 앞으로 모든 환경이 저장소를 공유하라는 지침으로 사용하지 않는다. 새 환경 구성과 분리는 [환경 전략](developer/environment-strategy.md) 및 #279의 검증 결과를 따른다.
 
 ## 비공개 저장소 연결
 
-1. `hra-private-resources` 저장소는 `hra-website`의 Production, Preview, Development에 `RESOURCE_PRIVATE` 접두어로 연결되어 `RESOURCE_PRIVATE_READ_WRITE_TOKEN`을 제공한다. 기존 공개 저장소의 `BLOB_READ_WRITE_TOKEN`은 그대로 둔다.
+1. 대상 환경의 보호 자료용 비공개 저장소를 연결해 `RESOURCE_PRIVATE_READ_WRITE_TOKEN`을 제공한다. 공개 콘텐츠용 `BLOB_READ_WRITE_TOKEN`과 용도를 구분하고, Preview에 운영 저장소 토큰을 복사하지 않는다.
 2. 해당 저장소의 Base URL 호스트만 `RESOURCE_PRIVATE_BLOB_HOST`에 등록한다. 토큰과 URL 전체를 이슈·PR·로그에 기록하지 않는다.
 3. 새 버전의 읽기·쓰기 경로가 배포된 뒤 `RESOURCE_PRIVATE_BLOB_ENABLED=true`를 설정하고 재배포한다. 설정이 완전하지 않으면 보호 자료 업로드를 거부한다. 공개 콘텐츠 업로드는 기존 저장소를 계속 쓴다.
 4. 기존 공개 보호 자료의 복사·검증·DB 조건부 변경·공개 원본 삭제를 순서대로 완료한다. 전환 플래그만 켰다고 기존 공개 URL이 보호되는 것은 아니다.
@@ -30,11 +38,25 @@
 
 ## 역할 변경, 링크, 삭제
 
-- 서버는 파일 요청마다 현재 DB 사용자 역할을 반영한 세션과 해당 파일 행의 대상 범위를 검사한다. 계정 삭제·승인 취소·역할 강등 후 새 요청은 거부한다. 이미 내려받은 사본은 회수할 수 없음을 운영 정책에 명시한다.
+- 서버는 파일 요청마다 현재 DB 사용자 역할을 반영한 세션과 해당 파일 행의 대상 범위를 검사한다. 계정 삭제·승인 취소 후에는 접근을 차단하고, 역할 강등 후에는 줄어든 허용 범위를 적용한다. 이미 내려받은 사본은 회수할 수 없음을 운영 정책에 명시한다.
 - 파일 주소는 공유 링크가 아니다. 자료실 페이지 URL을 공유해도 수신자의 현재 로그인 권한으로 다시 검사한다. 공개 Blob 원본 주소는 마이그레이션 완료 후 삭제하고, 검색 엔진·메신저·브라우저 캐시에 남은 복사본은 기술적으로 회수할 수 없다고 간주한다.
 - 자료 삭제·교체는 새 비공개 Blob을 저장하고 DB 참조를 확정한 뒤 이전 Blob을 정리한다. DB 실패/응답 유실 시 참조 여부와 소유권 원장을 확인하기 전에 파일을 삭제하지 않는다. 삭제 실패는 재시도 대상으로 기록한다. 백업·보존 기간은 별도 운영 정책을 따른다.
 
 ## 이전·배포 순서
+
+아래에서 원장은 서버가 관리하는 파일 기록, 해시는 파일 내용의 일치 여부를 비교하는 값, ETag는 저장소가 제공하는 파일 버전 식별자다. 조건부 변경·삭제는 확인한 뒤 파일이나 DB 값이 달라졌다면 덮어쓰지 않고 중단하는 방식이다.
+
+아래 절차는 DB 참조와 파일을 실제로 바꿀 수 있는 운영 작업이다. [DB 변경 절차](developer/database-change-procedure.md)에 따라 대상·복구 경로·동시 쓰기 조건을 먼저 확인한다. 이 문서 정비 과정에서 운영 명령을 실행했다는 뜻은 아니다.
+
+`scripts/migrate-protected-resource-blobs.mjs`는 다음 모드를 구분한다. 세 모드는 차례와 결과를 확인하며 별도로 실행한다.
+
+| 명령 | 효과 | 다음 단계로 넘어갈 조건 |
+| --- | --- | --- |
+| `npm run blob:migrate-protected` | DB 참조 개수 조회, 파일 변경 없음 | 대상 DB·비공개 호스트와 확인 필요 참조 점검 |
+| `npm run blob:migrate-protected -- --apply` | 복사·바이트 검증·DB 참조 조건부 변경 | 앱에서 비공개 사본을 읽고 참조 변경을 확인 |
+| `npm run blob:migrate-protected -- --delete-public` | 조건을 만족하는 기존 공개 원본 삭제 | 비공개 사본·미참조·소유권·삭제 결과 확인 |
+
+기본 조회도 `DATABASE_URL`과 올바른 `RESOURCE_PRIVATE_BLOB_HOST`가 필요하다. 변경 모드는 비공개 토큰과 `RESOURCE_PRIVATE_BLOB_ENABLED=true`가 필요하며 `--apply`와 `--delete-public`을 동시에 받을 수 없다. `--apply` 성공만으로 공개 원본 삭제까지 끝난 것이 아니다.
 
 1. 현재 공개 파일의 DB 참조와 Blob 소유권을 목록화하고, 비공개 저장소를 별도로 연결한다. 운영 파일 URL·내용은 이슈, PR, 로그에 기록하지 않는다.
 2. 읽기 경로가 공개/비공개 참조를 모두 처리하는 버전을 배포하고, 새 보호 자료 업로드는 비공개 저장소로 전환한다. 공개 원본 URL은 화면에 반환하지 않는다. 이 중간 단계에서 **기존 공개 URL은 여전히 직접 접근 가능**하므로 보안 완료로 표시하지 않는다.
@@ -42,7 +64,11 @@
 4. 모든 DB 참조가 비공개 URL이고 애플리케이션에서 열림을 확인한 후, 새 보호 자료 업로드가 비공개로 전환된 상태에서 비공개 사본의 존재와 공개 원본의 미참조 상태를 삭제 직전에 다시 확인한다. 소유권 원장에 있는 기존 공개 Blob만 원본 ETag 조건으로 삭제한다. 새 본문에 이전 공개 URL을 붙이면 링크가 깨질 수 있으므로 이전 주소 재사용은 금지한다. 재조회로 잔존 공개 참조와 공개 파일을 확인한다. 삭제 실패나 참조 불일치가 있으면 이슈를 열어둔다.
 5. 비로그인·PENDING·MEMBER·FACULTY·ADMIN으로 학생용/교수용 파일의 목록·상세·파일 응답을 검증한다. 역할 강등·계정 삭제 후 재요청, 링크 공유, PDF 인라인·다운로드, 파일 교체·삭제, 기존 공개 URL의 접근 실패까지 확인한다. 운영 자료 URL이나 본문은 테스트 기록에 쓰지 않는다.
 
+**정상 결과:** 필요한 참조가 비공개 저장소를 가리키고, 허용 계정의 파일 응답과 거부 계정의 차단을 확인하며, 이전 공개 원본도 정리된다. **실패하면:** 출력의 단계와 대상 환경을 확인하고 이미 바뀐 참조·사본 상태를 재조회한다. 플래그를 되돌리거나 원본부터 삭제해 문제를 우회하지 않는다.
+
 ## 실제 HTTP 접근 검증
+
+fixture는 실제 사용자 자료 대신 검증에 쓰는 합성 데이터다. 이 검증은 파일 전달 경로의 동작을 확인하며, 기존 운영 자료 전부의 이전 완료를 대신 증명하지 않는다.
 
 `scripts/verify-resource-access-http.mjs`는 운영 회원을 변경하거나 JWT를 직접 발급하지 않고 실제 Next 서버의 CSRF·credentials 로그인과 다운로드 API를 실행한다. 임시 PostgreSQL에 합성 계정 4개와 학생용·교수용·가이드북 fixture만 만들고, 역할 변경·세션 버전 변경·계정 삭제도 그 임시 DB에서 수행한다.
 
@@ -58,9 +84,11 @@
 - 기존 `DATABASE_URL`, `AUTH_SECRET`, 소셜 로그인 설정을 상속하지 않는다. 실행기가 테스트 전용 값과 고유한 HTTP 포트·유닉스 소켓을 만든다.
 
 ```bash
-HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npm test -- tests/unit/neon-psql-transport.test.ts
-HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-resource-access-http.mjs
+HRA_TEST_PG_BIN=/path/to/postgresql/bin npm test -- tests/unit/neon-psql-transport.test.ts
+HRA_TEST_PG_BIN=/path/to/postgresql/bin node scripts/verify-resource-access-http.mjs
 ```
+
+`/path/to/postgresql/bin`은 예시 경로이며 실제 설치된 PostgreSQL의 `initdb`, `pg_ctl`, `psql`이 있는 디렉터리로 바꾼다.
 
 **성공 기준**
 
@@ -78,7 +106,12 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-resource
 저장소 연결 전에는 다음 명령으로 정상 로그인과 차단 matrix 30개를 먼저 검증할 수 있다. 이 모드의 허용 경로는 저장소 미연결 502를 확인하므로 **실물 200 검증이나 이슈 완료 증거로 사용하지 않는다.**
 
 ```bash
-HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-resource-access-http.mjs --authorization-only
+HRA_TEST_PG_BIN=/path/to/postgresql/bin node scripts/verify-resource-access-http.mjs --authorization-only
 ```
 
+## 코드와 서비스 근거
+
+`src/lib/resource-blob-store.ts`, `src/lib/resource-download.ts`, `src/app/api/resources/[kind]/[id]/download/route.ts`, `scripts/migrate-protected-resource-blobs.mjs`, `scripts/verify-resource-access-http.mjs`.
+
 참고: [Vercel 공개 Blob](https://vercel.com/docs/vercel-blob/public-storage), [비공개 Blob](https://vercel.com/docs/vercel-blob/private-storage), [서명 URL](https://vercel.com/docs/vercel-blob/vercel-signed-urls).
+

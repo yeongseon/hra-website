@@ -1,5 +1,9 @@
 # 지정 승인자의 과제 관리 화면
 
+과제를 만드는 화면을 개발·검수할 때 읽는다. 먼저 초안을 저장하고, 공개할 학생 명단을 확인한 뒤 공개한다. **공개 대상 스냅샷**은 그 순간의 대상 명단을 고정한 기록이다. 공개 후 학생이 추가 등록되어도 기존 과제의 명단에 자동으로 들어가지 않는다.
+
+화면과 서버 액션은 구현되어 있다. 운영에서 사용할 수 있는지는 아래 기능 설정·DB 준비·지정 승인자 조건을 함께 확인해야 한다. 화면 변경은 이 문서의 운영 흐름부터, 저장 규칙 변경은 [서버 계약](academic-assignment-actions.md)부터 읽는다. 전체 흐름 검증은 [G1 품질 게이트](academic-g1-quality-gate.md)를 사용한다.
+
 `/admin/academics/assignments`에서 과제를 조회하고 초안을 등록·수정한다. 홈페이지 관리자 역할만으로 권한을 얻지 않는다. 각 페이지와 조회 함수가 지정 승인자를 독립적으로 검사한다. 실제 데이터 SQL도 서버에서 얻은 행위자·지정 계정 ID와 현재 승인 역할을 같은 문장에서 확인한다. 인증 뒤 역할이 철회되면 빈 목록이나 0명으로 성공하지 않고 고정 한국어 메시지와 `status=403`인 조회 오류로 거부한다. 변경은 #149의 서버 액션과 SQL 원자 변경을 사용한다.
 
 ## 준비 상태
@@ -24,7 +28,7 @@
 
 `HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npx vitest run tests/unit/academic-assignment-admin-*.test.ts`로 권한·공개 게이트, 폼 접근성·한국시간·재시도, 공개 후 편집 차단 및 실제 PostgreSQL 대상 미리보기와 #149 공개 함수의 일치를 확인한다. 실제 제출 최종화 함수를 실행하여 목록·상세의 제출수도 검증한다.
 
-브라우저는 `tests/e2e/academic-assignment-admin.spec.ts`를 사용한다. 비로그인 경계는 일반 CI에서 실행한다. 전체 흐름은 운영 환경 파일이 없는 격리 앱에 다음 fixture를 준비한 후 실행한다.
+개별 브라우저 검사는 `tests/e2e/academic-assignment-admin.spec.ts`를 직접 실행한다. 현재 기본 CI는 이 파일 전체를 선택하지 않으며, 별도의 G1 통합 게이트와 `ci-smoke.spec.ts`를 실행한다. 이 개별 검사의 전체 흐름은 운영 환경 파일이 없는 격리 앱에 다음 fixture를 준비한 후 실행한다.
 
 - `installAcademicIdentityFixture` 및 `installAcademicRosterMigrations`로 합성 계정과 명부 기반을 준비한다.
 - `tests/support/academic-assignment-admin-fixture.mjs`의 `installAcademicAssignmentAdminFixture`로 수업·학생 두 명과 실제 #147→#148→#149 SQL을 설치한다.
@@ -39,3 +43,4 @@ fixture는 임시 PostgreSQL에만 사용한다. 운영 계정·운영 Blob·운
 운영 환경 파일이 없는 격리 worktree에서 `HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-academic-assignment-admin-http.mjs`를 실행하면 위 준비와 검증을 자동 수행한다. 임시 PostgreSQL과 실제 Next 서버, 정상 CSRF·credentials 로그인만 사용한다. 미지정 ADMIN·MEMBER·FACULTY의 403, 승인 대기·비로그인 이동, 표가 없는 비활성 준비 안내부터 검증한다.
 
 종료는 서버 확정 뒤 첫 응답을 브라우저에서 잃는 상황을 만든 뒤 확인 상태와 같은 요청 키를 유지해 재시도한다. 최종 DB가 종료 과제 1건·최초 대상 2건·최소 감사 4건(`CREATE`, `UPDATE_DRAFT`, `PUBLISH`, `CLOSE`)인지 확인하여 중복 변경을 배제한다. 사용자의 역할·기수·로그인 정보 보존도 대조한다. 쿠키는 임시 0600 파일에만 저장하고 실행 종료 시 임시 클러스터·파일·서버를 정리한다. trace·스크린샷·영상은 기록하지 않는다.
+

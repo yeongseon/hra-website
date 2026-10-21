@@ -1,12 +1,19 @@
 # G1 과제 제출 품질 게이트 (#158)
 
+학생이 과제를 열고 PDF를 제출한 뒤, 본인 파일과 관리자의 제출 현황까지 이어지는 흐름을 변경할 때 읽는다. **품질 게이트**는 변경을 합치기 전에 반드시 통과해야 하는 검사다. **G1**은 [개인 과제 제출 범위](../ASSIGNMENT-SUBMISSION-SCOPE.md)에 정한 첫 단계이며, **fixture**는 실제 개인정보를 쓰지 않고 검사에 맞춰 만든 합성 자료다.
+
+이 실행기는 기본 CI에 연결되어 있다. 아래는 실행 방법과 통과 조건이며, 이번 문서 정비에서 CI를 새로 실행했다는 결과 보고가 아니다. 실행 환경을 준비한 뒤 명령을 수행하고, 통과·실패·정리 결과를 확인한다. 단순 화면 확인인 smoke와 실제 공급자 QA의 차이는 [전체 품질 점검](../QUALITY-GATE.md)을 함께 읽는다.
+
 이 게이트는 운영 DB·회원·Blob·OAuth 자격정보를 받지 않는다. 실제 Next, 정상 CSRF/credentials 인증, 실제 PostgreSQL, 설치된 Blob SDK와 로컬 private HTTP 저장소를 연결한다. 인증·인가·서비스·SQL 함수를 테스트 모듈로 교체하지 않는다.
 
 ## 실행 계약
 
-`.env*`가 없는 격리 worktree, 설치된 Node 의존성, PostgreSQL 바이너리와 Chromium이 필요하다.
+실제 환경 설정을 담은 `.env*`가 없는 격리 worktree, 설치된 Node 의존성, PostgreSQL 바이너리와 Chromium이 필요하다. `.env.example`은 실행 환경 파일이 아니다. 아래 DB 주소·인증 키는 CI와 같은 합성 값이며 빌드 준비에만 쓴다. G1 실행기는 자신의 임시 DB·인증 키를 다시 만든다. PostgreSQL 경로는 현재 장비에 맞게 바꾼다.
 
 ```sh
+export DATABASE_URL=postgresql://ci:ci@127.0.0.1:1/isolated
+export AUTH_SECRET=ci-only-secret-for-isolated-smoke-tests
+export NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100
 npm ci
 npx playwright install --with-deps chromium
 HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin npm test
@@ -31,7 +38,7 @@ Playwright API 요청은 별도의 정확한 앱 URL 래퍼가 `maxRedirects: 0`
 
 ## 수용 조건 대응
 
-| 범위 문서 §7 | 자동 검증 |
+| [범위 문서](../ASSIGNMENT-SUBMISSION-SCOPE.md) §7 | 자동 검증 |
 | --- | --- |
 | 1. 역할×기수 | A·같은 기수 동료·B·지정 FACULTY·일반 FACULTY·홈페이지 ADMIN·PENDING·익명의 실제 페이지/액션/API 요청 |
 | 2. 미제출 포함 | 미연결 학생 포함 공개 대상3명, 제출 전0건, 제출 뒤 학생 완료와 현황·CSV의 대상/제출/미제출 일치 |
@@ -52,7 +59,7 @@ Playwright API 요청은 별도의 정확한 앱 URL 래퍼가 `maxRedirects: 0`
 
 실제 SQL 적용 순서는 #144 → #145 → #146 → #147 → #148 → #149 → #151 → #152 → #153이다. **각 SQL은 바로 그 단계에서 두 번 실행한다.** 후속 트리거를 설치한 뒤 옛 baseline 전체를 다시 실행할 수 있다고 가정하지 않는다. #144의 기존 구조 검증은 후속 구조를 의도적으로 거부할 수 있다.
 
-dry-run은 폐기 가능한 격리 DB에서 수행한다. 각 migration이 자체 트랜잭션을 가지므로 여러 파일을 바깥 `BEGIN` 하나로 감싸 복구됐다고 주장하지 않는다. dump/restore는 이번 실행의 합성 DB에만 수행하고 메모리에서 전달한다. 운영 복구는 [DB 변경 절차](database-change-procedure.md)에 따른다.
+마이그레이션 적용 연습은 폐기 가능한 격리 DB에 실제로 스키마를 만들어 수행한다. 쓰기를 하지 않는 명령 옵션의 dry-run과 구분한다. 각 migration이 자체 트랜잭션을 가지므로 여러 파일을 바깥 `BEGIN` 하나로 감싸 복구됐다고 주장하지 않는다. dump/restore는 이번 실행의 합성 DB에만 수행하고 메모리에서 전달한다. 운영 복구는 [DB 변경 절차](database-change-procedure.md)에 따른다.
 
 마감은 `pg_sleep_until()` 이후 실제 `clock_timestamp()`가 마감 전/도달 후인지 확인하고 실제 최종화 함수를 호출한다. 정각 도달부터 거부됨을 검증하며 마이크로초가 완전히 같은 시각에 실행됐다고 주장하지 않는다. JS fake timer·SQL 함수 교체·OS 시계 의존성은 사용하지 않는다. KST의 정확한 instant 변환 및 #148/#152의 원자성/잠금 경합 회귀는 기존 Vitest를 함께 실행해 확인한다.
 
@@ -67,3 +74,4 @@ trace·스크린샷·영상·HAR·storageState를 보관하지 않는다. 정상
 정상/실패 종료 모두 브라우저→Next→PostgreSQL을 정리한다. 로컬 저장소는 해당 브라우저 작업자가 닫는다. 임시 디렉터리를 제거한 뒤에만 정리 PASS를 기록한다. 미확정 파일과 최종 제출물의 운영 보존/파기 정책은 이 테스트의 임시 메모리 정리와 별개다.
 
 `test:academic-g1`은 기존 필수 CI job의 빌드·Chromium 설치 뒤 실행한다. job 이름과 기존 smoke를 유지하며 fork/secrets/경로 조건, 새 secrets, 운영 환경, 추가 job 권한, `continue-on-error`를 사용하지 않는다. 설치·빌드 단계와 분리된 게이트 실행 중에는 실제 공급자·Neon·외부 서비스로 요청하지 않는다.
+

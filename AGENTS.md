@@ -30,10 +30,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ```
 src/
 ├── app/
-│   ├── (public)/         # 공개 페이지 (소개, 커리큘럼, 교수진, 기수, 모집, 공지, 언론보도, 갤러리, 수료생, FAQ, 자료실)
+│   ├── (public)/         # 공개 페이지 (소개, 커리큘럼, 교수진, 기수, 모집, 공지, 언론보도, 갤러리, 수료생, FAQ)
 │   ├── (auth)/           # 로그인 페이지
 │   ├── (admin)/admin/    # 관리자 전용 (CRUD 관리)
-│   └── (member)/         # 로그인 필요 (자료실, 마이페이지)
+│   └── (member)/         # 로그인 필요 (자료실, 마이페이지, 본인 과제; 기능별 추가 인가)
 ├── features/             # 비즈니스 로직 — 서버 액션 (CRUD)
 │   ├── alumni/actions/
 │   ├── faculty/actions/
@@ -46,7 +46,7 @@ src/
 │   ├── users/actions/
 │   └── ...
 ├── lib/
-│   ├── db/schema.ts      # Drizzle 스키마 (모든 테이블 정의)
+│   ├── db/schema.ts      # Drizzle 스키마 진입점 (테이블 정의·학사 모델 재수출)
 │   ├── db/index.ts       # DB 연결
 │   ├── admin.ts          # requireAdmin() — 관리자 권한 확인
 │   └── utils.ts          # cn() 등 유틸리티
@@ -78,7 +78,9 @@ src/
 
 ## 4. 데이터 저장 방식
 
-**원칙: "관리자 페이지에서 CRUD하는 텍스트/메타는 DB, 이미지만 Blob"**
+**원칙: "관리자가 수정하는 텍스트·메타데이터는 DB, 이미지·파일 원본은 Blob"**
+
+보고서 양식·가이드는 예외적으로 DB 우선 조회 후 해당 항목 자체가 없을 때 `content/member/`의 내장 기본본을 사용한다. DB의 비공개 항목은 기본본으로 다시 공개하지 않는다. [저장 정책](docs/REPORT-STORAGE-DECISION.md)을 따른다.
 
 | 콘텐츠 | 저장 방식 | 비고 |
 |--------|----------|------|
@@ -93,8 +95,9 @@ src/
 | 지원서, 회원 | DB | |
 
 ### 회원 역할 (Role)
-- **ADMIN**: 관리자 (모든 기능 접근 가능)
-- **FACULTY**: 교수진 (MEMBER 권한 + 강의자료(`classMaterials`) 업로드 권한 — ADMIN 과 함께 유일)
+
+- **ADMIN**: 홈페이지 관리자 (콘텐츠·회원 관리). 학사 운영 권한은 별도로 지정된 승인자 인가를 따른다.
+- **FACULTY**: 교수진 (공동 자료실 열람·작성 및 강의자료(`classMaterials`) 업로드 가능). 학사의 본인 과제 경로는 MEMBER 전용이며 학사 인가는 별도다.
 - **MEMBER**: 일반 멤버 (로그인 후 자료실 접근 가능, 본인 기수의 주차별 텍스트·수업일지 업로드 가능)
 - **PENDING**: 승인 대기 (로그인 가능하나 자료실 접근 불가, 관리자 승인 필요)
 
@@ -125,11 +128,7 @@ src/
 
 기존 `src/features/*/actions`에는 Server Action이 DB를 직접 호출하는 코드가 남아 있지만 **신규/리팩터링 코드는 이 패턴을 복제하지 않는다.**
 
-```text
-Web Server Action ─┐
-                   ├→ Application Service → Repository → PostgreSQL
-/api/v1 Route ─────┘
-```
+Web Server Action과 `/api/v1` Route는 같은 Application Service를 호출한다. Service는 Repository를 통해 PostgreSQL에 접근한다. 웹 서버 내부의 service 호출에 HTTP 요청을 강제하지 않는다.
 
 Server Action의 책임은 입력 변환, Web session→Principal, service 호출, `revalidatePath`/redirect 같은 Web 전용 후처리다. 비즈니스 규칙과 transaction은 service/repository 쪽에 둔다.
 
@@ -180,7 +179,7 @@ src/app/(admin)/admin/[feature]/
 - 빈 catch 블록 `catch(e) {}` 금지
 - `import { z } from "zod"` 금지 — 반드시 `"zod/v4"` 사용
 - 영어 UI 텍스트 금지
-- `content/` 폴더의 파일 기반 CMS는 더 이상 사용하지 않음 — 모든 콘텐츠는 DB 기반
+- 운영 콘텐츠를 `content/` 파일 기반 CMS로 되돌리지 않는다. 보고서 양식·가이드의 기존 내장 기본본(`content/member/`)은 DB 우선 조회의 예외로 유지한다.
 
 ## 8. 문서화 규칙
 
@@ -196,7 +195,7 @@ src/app/(admin)/admin/[feature]/
 - **우선순위**: Integration (서버 액션) > E2E (핵심 플로우) > Unit (순수 함수)
 - **DB**: 단위 테스트는 필요한 경우 mock, DB 경합·제약은 격리 PostgreSQL 사용
 - **Blob**: 대부분 mock, 실제 업로드 검증은 별도 E2E에서 수행
-- **CI(현재)**: `lint → typecheck → vitest → playwright(smoke)`
+- **CI(현재)**: lint/typecheck/Vitest/build·일반 Playwright smoke와 별도 학사 G1 검증(`test:academic-g1`). 모든 E2E 파일이 기본 실행되는 것은 아니다.
 - **CI(목표)**: server integration + API contract/OpenAPI + web build/E2E + mobile typecheck + Android build + iOS compile/build check
 
 ## 10. 배포
@@ -320,3 +319,4 @@ npm install   # husky 가 자동으로 .husky/ 훅을 활성화함 (prepare 스�
 
 - `.github/PULL_REQUEST_TEMPLATE.md` 의 네 섹션 제목을 지우거나 바꾸지 않는다.
 - `관련 이슈` 에 `Closes #번호` / `Refs #번호` / `이슈 없음: 사유` 중 하나를 적는다. CI 가 검사한다.
+
