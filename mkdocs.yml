@@ -98,6 +98,7 @@ nav:
       - 목표 아키텍처: developer/platform-architecture.md
       - 전환 로드맵: PLATFORM-ROADMAP.md
       - 환경 분리와 배포 전략: developer/environment-strategy.md
+      - 환경변수 계약 목록: developer/environment-inventory.md
   - 기록과 문서 관리:
       - 전체 경로 감사 기록: developer/site-route-audit.md
       - 초기 P1 변경 적용 기록: developer/p1-security-rollout.md

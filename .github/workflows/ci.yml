@@ -29,6 +29,12 @@ jobs:
       - name: 의존성 설치
         run: npm ci
 
+      - name: 환경변수 문서·예시 계약 검사
+        # 실제 .env·DB·Blob에 접근하지 않고 설치한 TypeScript로 소스만 읽습니다.
+        run: |
+          node --test scripts/tests/environment-contract.test.mjs
+          node scripts/check-environment-contract.mjs
+
       - name: ESLint 검사
         run: npm run lint
 

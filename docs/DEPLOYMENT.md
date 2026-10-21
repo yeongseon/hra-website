@@ -30,6 +30,8 @@
 
 ## 3. 필요한 설정값
 
+변수별 적용 환경·비밀 여부·필수 조건·누락 동작은 [환경변수 계약 목록](developer/environment-inventory.md)을 정본으로 확인합니다. `node scripts/check-environment-contract.mjs`가 소스·예시·생성 목록의 차이를 검사하며, 실제 배포 환경의 연결·격리까지 검증하지는 않습니다.
+
 로컬 앱과 여러 npm 스크립트는 `.env`를 사용합니다. 새 작업 폴더에서 `.env.example`을 참고해 만들고, 기존 `.env`를 덮어쓰지 않습니다. Vercel에서는 프로젝트의 환경변수 설정에 **대상 환경별로** 등록한 뒤 새 배포에 반영합니다.
 
 ### 웹사이트와 로그인
@@ -38,7 +40,7 @@
 | --- | --- | --- |
 | `DATABASE_URL` | Neon DB 연결 문자열 | DB 기능에 필요. 환경에 맞는 DB를 선택 |
 | `AUTH_SECRET` | 로그인 세션 보호에 사용하는 비밀 키 | 로그인에 필요. 환경별로 관리 |
-| `NEXT_PUBLIC_APP_URL` | 외부 링크 등에 사용할 앱의 기준 주소 | 로컬은 `http://localhost:3000`, 배포 환경은 그 환경의 주소 |
+| `NEXT_PUBLIC_APP_URL` | 개발 환경의 `metadataBase` 주소 fallback | Vercel production URL·배포 URL이 우선이며 production 고정 주소도 덮지 않음. 개발 기본은 `http://localhost:3000` |
 | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | 구글 로그인 | 해당 로그인을 제공할 때 두 값 설정 |
 | `AUTH_KAKAO_ID`, `AUTH_KAKAO_SECRET` | 카카오 로그인 | 해당 로그인을 제공할 때 두 값 설정 |
 | `AUTH_KAKAO_EMAIL_SCOPE` | 카카오 이메일 동의 요청 선택 | 기본 `false`; [이메일 동의 절차](operations/kakao-email-consent.md)의 계정 처리 검토·회귀 확인 뒤 변경 |
