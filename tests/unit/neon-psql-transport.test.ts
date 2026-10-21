@@ -13,6 +13,39 @@ describe("QA SQL 값 바인딩", () => {
     expect(typeof endpoint === "function" ? endpoint(new URL(qaDatabaseUrl).hostname, 5432) : endpoint).toBe(qaNeonEndpoint);
   });
 
+  it.each([false, true])("설치된 Neon의 전송 계약을 유지한다(트랜잭션=%s)", async (transaction) => {
+    const previous = neonConfig.fetchFunction;
+    let requests = 0;
+    // 실제 SDK가 만드는 헤더를 검사하되, 네트워크로 전달하지 않고 합성 결과만 돌려줍니다.
+    neonConfig.fetchFunction = async (input: unknown, options: RequestInit) => {
+      requests++;
+      expect(String(input)).toBe(qaNeonEndpoint);
+      expect(options.method).toBe("POST");
+      expect(new Headers(options.headers).get("Neon-Connection-String")).toBe(qaDatabaseUrl);
+      const payload = JSON.parse(String(options.body));
+      // 정수 OID가 포함된 응답으로 SDK의 단일·배치 결과 복원까지 함께 확인합니다.
+      const result = (number: number) => ({
+        fields: [{ name: "number", dataTypeID: 23 }], rows: [[String(number)]],
+        rowCount: 1, command: "SELECT",
+      });
+      expect(Boolean(payload.queries)).toBe(transaction);
+      return Response.json(transaction ? { results: [result(7), result(8)] } : result(7));
+    };
+    try {
+      const client = neon(qaDatabaseUrl);
+      if (transaction) {
+        const result = await client.transaction([
+          client.query("SELECT $1::integer AS number", [7]),
+          client.query("SELECT $1::integer AS number", [8]),
+        ]);
+        expect(result).toEqual([[{ number: 7 }], [{ number: 8 }]]);
+      } else {
+        expect(await client.query("SELECT $1::integer AS number", [7])).toEqual([{ number: 7 }]);
+      }
+      expect(requests).toBe(1);
+    } finally { neonConfig.fetchFunction = previous; }
+  });
+
   it("따옴표·역슬래시·줄바꿈을 단일 리터럴로 보존한다", () => {
     expect(sqlLiteral("O'Reilly\\자료\n둘째 줄")).toBe("'O''Reilly\\자료\n둘째 줄'");
     expect(sqlLiteral(null)).toBe("NULL");
