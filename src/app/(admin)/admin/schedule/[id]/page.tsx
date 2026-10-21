@@ -38,8 +38,11 @@ export default async function EditSchedulePage({ params }: Props) {
 
   if (!event) notFound();
 
-  const faculties = await db.select().from(faculty).orderBy(asc(faculty.name));
-  const cohortsData = await db.select().from(cohorts).orderBy(asc(cohorts.order));
+  // 선택 목록에는 교수·기수의 내부 메타 대신 화면에 필요한 필드만 전달합니다.
+  const faculties = await db.select({ id: faculty.id, name: faculty.name, category: faculty.category })
+    .from(faculty).orderBy(asc(faculty.name));
+  const cohortsData = await db.select({ id: cohorts.id, name: cohorts.name })
+    .from(cohorts).orderBy(asc(cohorts.order));
 
   // eventDate timestamp → 날짜("YYYY-MM-DD")와 시작 시간("HH:MM") 분리
   const isoStr = event.eventDate.toISOString();

@@ -12,6 +12,8 @@ git diff
 node --version
 ```
 
+[사전 준비](../getting-started/prerequisites.md)에 따라 Node 24를 사용합니다. `.nvmrc`는 `24`, `engines.node`는 `24.x`이며 nvm 사용자는 `nvm use`로 선택하고 실제 `node --version`을 확인합니다.
+
 변경 파일이 요청한 범위에 맞는지 확인합니다. DB·파일 저장소를 사용하는 검사는 개발·검증용 환경을 준비하며, 운영 자격 증명을 일반 테스트에 연결하지 않습니다.
 
 **빌드(build)**는 배포할 프로그램을 만드는 작업이고, **배포(deploy)**는 그 결과를 서버에서 제공하는 작업입니다. **CI(Continuous Integration)**는 GitHub에서 자동 실행하는 검사입니다.
@@ -25,7 +27,7 @@ node --version
 | `npm run lint` | ESLint가 검사하는 코드 규칙 | 오류 파일·규칙과 종료 상태 |
 | `npm run typecheck` | TypeScript 타입 일치 | 타입 오류가 없는지 |
 | `npm test` | Vitest에 등록된 테스트 | 통과·실패뿐 아니라 건너뛴 테스트와 준비 조건 |
-| `npm run build` | `next build --webpack`으로 배포용 결과물 생성 | 빌드 성공 여부와 관련 오류 |
+| `npm run build` | `prebuild`의 실제 Node 버전 출력 뒤 `next build --webpack`으로 결과물 생성 | 실행 버전·빌드 성공 여부와 관련 오류 |
 | `npm run test:academic-g1` | 학사 G1의 실제 앱·격리 DB·로컬 파일 저장 검증 | [G1 품질 게이트](../developer/academic-g1-quality-gate.md)의 조건과 결과 |
 | `npm run test:e2e -- tests/e2e/ci-smoke.spec.ts` | Playwright의 기본 브라우저 확인 | 로그인 화면·보호 경로 등의 결과 |
 
@@ -34,11 +36,16 @@ node --version
 기본 코드 검사는 순서대로 실행합니다. 실패하면 원인을 수정하고 영향을 받는 검사를 다시 확인합니다.
 
 ```bash
+npm ci
 npm run lint
 npm run typecheck
 npm test
 npm run build
 ```
+
+`npm ci`는 PR의 `package-lock.json`으로 처음부터 설치할 수 있는지 확인합니다. 의존성을 바꾼 경우 깨끗한 작업 환경에서도 이 단계가 통과해야 합니다. `ERESOLVE`처럼 peer 의존성 충돌이 나오면 오류에 표시된 패키지와 요구 버전을 `package.json`·잠금 파일에서 대조합니다. 예를 들어 React를 갱신할 때는 `react`·`react-dom`과 두 `@types/react*` 패키지를 함께 검토하고, Tiptap을 갱신할 때는 사용하는 `@tiptap/*` 묶음과 `@tiptap/react`가 요구하는 React 범위를 함께 확인합니다. 수정한 잠금 파일로 다시 `npm ci`를 실행합니다. `--force`나 `--legacy-peer-deps`로 설치 오류를 숨기지 않습니다.
+
+2026-10-21에는 [React 갱신 PR #325](https://github.com/yeongseon/hra-website/pull/325)에서 `react-dom` 19.3.1과 기존 `react` 19.2.4의 peer 불일치로 Preview 설치가 실패했습니다. [Tiptap 묶음 PR #328](https://github.com/yeongseon/hra-website/pull/328)에서도 한 확장만 3.32.0으로 갱신한 조합의 `npm ci` 실패를 재현했습니다. 두 사례의 해결은 요구 범위에 맞는 관련 패키지를 함께 갱신하고 깨끗한 설치와 실제 Preview 결과를 확인하는 것이었습니다. 이 버전 숫자는 당시 원인 기록이며, 새 갱신의 허용 범위는 그때의 패키지 계약과 설치 로그에서 다시 확인합니다.
 
 DB의 제약이나 동시 요청을 검사하는 테스트에는 로컬 PostgreSQL 실행 파일 등 추가 준비가 필요합니다. 명령이 성공 종료했더라도 관련 테스트가 건너뛰어졌다면 DB 동작까지 검증했다고 기록하지 않습니다. 준비와 검사 범위는 [품질 게이트](../QUALITY-GATE.md)를 따릅니다.
 
@@ -46,9 +53,13 @@ DB의 제약이나 동시 요청을 검사하는 테스트에는 로컬 PostgreS
 
 ### 현재 CI 범위
 
-`.github/workflows/ci.yml`은 `main` 대상 PR과 `main` 푸시에서 lint·typecheck·격리 PostgreSQL을 준비한 Vitest·build를 실행합니다. 그다음 **학사 G1 검증을 별도로 실행**하고, 일반 브라우저 검사는 `ci-smoke.spec.ts`를 실행합니다. 모든 E2E 파일을 기본 CI에서 실행하는 설정은 아닙니다.
+`.github/workflows/ci.yml`은 `main` 대상 PR과 `main` 푸시에서 lint·typecheck·격리 PostgreSQL을 준비한 Vitest·build를 실행합니다. 빌드 뒤 Proxy 인증 경계 HTTP 검사, Chromium 설치, 에디터 미리보기 키보드 회귀와 **별도 학사 G1 검증**을 실행합니다. 일반 브라우저 검사는 `ci-smoke.spec.ts`의 수집 목록을 남긴 뒤 실행합니다. 모든 E2E 파일을 기본 CI에서 실행하는 설정은 아닙니다.
 
-CI는 이 검증에 운영 DB·Blob 자격 증명을 전달하지 않습니다. Node.js 버전의 현재 차이와 통일 작업은 [사전 준비](../getting-started/prerequisites.md)에 정리되어 있습니다.
+Vitest 설정은 `tests/unit/**/*.test.{ts,tsx}`를 수집하므로 TSX를 위해 별도 설정을 추가하지 않습니다. 실제 수집·skip·성공 범위는 실행 로그로 확인합니다.
+
+CI는 이 검증에 운영 DB·Blob 자격 증명을 전달하지 않습니다. Node 24 설정과 실제 실행 버전 확인 방법은 [사전 준비](../getting-started/prerequisites.md)에 정리되어 있습니다.
+
+`prebuild`의 Node 버전 로그는 해당 빌드의 실행 버전 증거이며, 현재 운영 Vercel 배포의 런타임이 이미 일치한다는 증거는 아닙니다. 운영 일치 여부는 미확인으로 남깁니다.
 
 형식·릴리스 설정을 바꿨다면 [릴리스 운영](releasing.md)의 Node 테스트와 설정 검사도 확인합니다.
 
@@ -145,6 +156,7 @@ export default async function DetailPage({
 | `Cannot use await in non-async function` | 해당 코드가 서버의 async 함수인지, 클라이언트 코드인지 |
 | `Type X is not assignable to type Y` | 호출부와 반환값의 타입, 누락 가능한 값 |
 | `Module not found` | 파일 경로·대소문자·설치 결과·직접 의존성 선언 |
+| `npm ci`의 `ERESOLVE` 또는 잠금 파일 불일치 | React·React DOM·타입 정의, Tiptap 묶음 등 직접/peer 의존성의 호환 범위와 잠금 파일 |
 | DB 연결·함수 없음 | 대상 환경과 테이블·추가 SQL 준비 상태 |
 | 로컬 통과·CI 실패 | 실행 버전, 필요한 도구, 환경 변수, 실행한 검사 범위 차이 |
 
@@ -153,6 +165,10 @@ export default async function DetailPage({
 ## 6. PR과 배포 후 확인
 
 PR에는 실행한 검사와 실제 결과를 적습니다. 실행하지 못했다면 이유와 필요한 환경을 적고 통과로 표시하지 않습니다. 문서만 수정했다면 내용·명령·링크·문서 빌드 등 무엇을 확인했는지 구체적으로 기록합니다.
+
+병합 전에 **현재 PR의 마지막 커밋**에서 필수 GitHub CI와 Vercel Preview 배포가 각각 성공했는지 확인합니다. 이전 커밋의 성공이나 로컬 빌드 성공을 새 커밋의 결과로 옮기지 않습니다. 최신 `main`을 다시 반영하거나 의존성·코드를 수정했다면 두 검사의 새 실행 결과를 기다립니다. Preview 설치·빌드가 실패하면 먼저 그 배포의 커밋과 로그에서 실패한 단계를 찾고, 원인을 고친 뒤 같은 새 커밋의 CI와 Preview를 재확인합니다. 실패한 Preview를 남긴 채 다음 PR을 병합 대상으로 넘기지 않습니다.
+
+Preview의 **빌드 성공**은 배포용 앱 생성의 증거입니다. 실제 OAuth 로그인, DB 연결·변경, Blob 업로드, 예약 작업, 운영 환경변수 일치는 별도 확인입니다. Preview 자원 격리는 아직 [#279](https://github.com/yeongseon/hra-website/issues/279)의 확인 대상이므로, 연결 대상을 확인하기 전에는 실제 개인정보나 운영 파일로 기능 검사를 하지 않습니다. 환경별 절차는 [배포 안내](../DEPLOYMENT.md)를 따릅니다.
 
 리뷰는 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)을 따릅니다. OpenCode의 의미 있는 작업에는 Oracle 리뷰가 필요하고, 문서만 수정하는 등 명시된 간단 변경은 면제입니다. Claude 또는 Codex만 사용한 작업에는 Oracle 절차가 적용되지 않습니다. 일반 코드 리뷰와 필요한 검사는 계속 수행합니다.
 

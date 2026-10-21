@@ -102,10 +102,15 @@ export default async function PublicApplicationApplyPage({ params }: Props) {
 
         {/* 지원서 폼 */}
         <PublicApplicationForm 
-          form={form} 
+          // 브라우저에는 표시·제출에 필요한 필드만 전달하며 DB 내부 버전·연결 정보는 제외합니다.
+          form={{ id: form.id, title: form.title, description: form.description }}
           questions={questionsData.map(q => ({
-            ...q,
-            options: q.options || [],
+            id: q.id,
+            title: q.title,
+            description: q.description,
+            type: q.type,
+            isRequired: q.isRequired,
+            options: (q.options || []).map(option => ({ id: option.id, value: option.value })),
           }))} 
         />
       </div>

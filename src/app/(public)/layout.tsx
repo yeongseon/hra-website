@@ -23,8 +23,10 @@ export default async function PublicLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-gray-900">
-      {/* 상단 헤더(메뉴) — 로그인 상태를 전달하여 로그인/로그아웃 버튼 표시 */}
-      <Header session={session} />
+      {/* 헤더의 로그인 표시·메뉴에 필요한 필드만 클라이언트로 전달합니다. */}
+      <Header session={session ? {
+        user: { name: session.user.name, email: session.user.email, role: session.user.role },
+      } : null} />
       {/* 각 페이지의 실제 내용이 여기에 표시됨 */}
       <main className="flex-1 pt-16">{children}</main>
       {/* 하단 푸터 */}

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# 검증 작업에는 저장소 읽기만 허용하고 checkout 인증은 후속 명령에 남기지 않습니다.
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Lint · Typecheck · Test · Build
@@ -19,11 +23,14 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      # 기존 v4 태그의 검증한 commit을 고정합니다. 갱신 절차: docs/developer/github-actions-security.md
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          node-version: 20
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
           cache: npm
 
       - name: 의존성 설치
@@ -56,14 +63,27 @@ jobs:
       - name: Next.js 빌드
         run: npm run build
 
+      - name: Proxy 인증 경계 HTTP 회귀
+        # 실제 Auth.js 래퍼와 격리 DB 세션으로 역할별 302/403 응답을 확인합니다.
+        run: npm run verify:auth-proxy
+
       - name: Chromium 설치
         run: npx playwright install --with-deps chromium
+
+      - name: 에디터 미리보기 키보드 회귀
+        # 운영 계정 없이 실제 에디터·CSS·Dialog를 Chromium에서 검증합니다.
+        run: npm run verify:editor-preview
 
       - name: 학사 G1 실제 제출 품질 게이트
         # fork PR에서도 secrets 없이 실제 앱·격리 DB·로컬 private 저장소를 검증합니다.
         timeout-minutes: 10
         run: npm run test:academic-g1
 
-      - name: 브라우저 스모크 테스트
-        # DB가 필요한 공개 홈·자료 상세 테스트는 격리 CI와 분리합니다.
+      - name: 회원 경로·스모크 테스트 수집 (외부 OAuth·Blob 연결 제외)
+        # 실제 수집된 경로·테스트 이름과 개수를 실행 전에 CI 로그로 남깁니다.
+        run: npm run test:e2e -- tests/e2e/ci-smoke.spec.ts --list
+
+      - name: 회원 경로·브라우저 스모크 테스트
+        # 공통 보호 경로 목록 전체를 검사하고, 운영 DB가 필요한 공개 자료 검증은 분리합니다.
+        # 위의 실제 G1·Proxy HTTP 게이트는 그대로 유지합니다.
         run: npm run test:e2e -- tests/e2e/ci-smoke.spec.ts

@@ -159,3 +159,14 @@ describe("제출 최종화 액션",()=>{
     expect(mocks.remove).not.toHaveBeenCalled();
   });
 });
+
+it("최종 검증 차단은 RATE_LIMITED에만 대기 시간을 전달한다",async()=>{
+ mocks.verify.mockRejectedValueOnce(new AcademicUploadError("RATE_LIMITED",37));
+ const limited=await finalizeAssignmentSubmission(request());
+ expect(limited).toMatchObject({success:false,status:429,code:"RATE_LIMITED",retryAfterSeconds:37,message:expect.stringContaining("37초")});
+ expect(mocks.remove).not.toHaveBeenCalled();
+ mocks.verify.mockRejectedValueOnce(new AcademicUploadError("INVALID_FILE",37));
+ mocks.execute.mockReset().mockResolvedValue({rows:[{result:null}]});
+ const invalid=await finalizeAssignmentSubmission(request());
+ expect(invalid).not.toHaveProperty("retryAfterSeconds");
+});

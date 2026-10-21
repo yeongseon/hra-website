@@ -18,10 +18,12 @@ export const dynamic = "force-dynamic";
 export default async function NewSchedulePage() {
   await requireAdmin();
 
-  // 세션 슬롯의 교수/강사 선택 목록
-  const faculties = await db.select().from(faculty).orderBy(asc(faculty.name));
+  // 세션 슬롯 선택에 필요한 식별자·이름·분류만 조회합니다.
+  const faculties = await db.select({ id: faculty.id, name: faculty.name, category: faculty.category })
+    .from(faculty).orderBy(asc(faculty.name));
   // 관련 기수 선택 목록 (최신 기수 먼저)
-  const cohortsData = await db.select().from(cohorts).orderBy(asc(cohorts.order));
+  const cohortsData = await db.select({ id: cohorts.id, name: cohorts.name })
+    .from(cohorts).orderBy(asc(cohorts.order));
 
   return (
     <ScheduleForm

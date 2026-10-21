@@ -1,4 +1,5 @@
 /** 교수 프로필 사진 직접 업로드의 크기·역할·경로·실물 검증을 확인합니다 (#102). */
+import { syntheticPng } from "../support/synthetic-image";
 import { directUploadOriginCases } from "../support/direct-upload-origin-cases";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,7 +60,7 @@ describe("교수 프로필 사진 직접 업로드", () => {
   it("브라우저가 직접 보내고 서버 액션에는 URL만 전달한다", async () => {
     mocks.upload.mockResolvedValue({ url });
     const formData = new FormData();
-    formData.set("image", new File([Uint8Array.of(0x89, 0x50, 0x4e, 0x47)], "사진.png", { type: "image/png" }));
+    formData.set("image", new File([syntheticPng()], "사진.png", { type: "image/png" }));
     const result = await prepareFacultyUpload(formData, targetId, userId);
     expect("formData" in result).toBe(true);
     expect(formData.has("image")).toBe(false);

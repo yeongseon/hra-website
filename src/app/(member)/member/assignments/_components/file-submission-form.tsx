@@ -2,7 +2,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { uploadAssignmentFile } from "@/features/academics/assignment-uploads/client";
-import { assignmentUploadInput } from "@/features/academics/assignment-uploads/contract";
+import { AcademicUploadError, assignmentUploadInput } from "@/features/academics/assignment-uploads/contract";
 import { finalizeAssignmentSubmission } from "@/features/academics/submissions/actions";
 import { cancelMyAssignmentUpload } from "@/features/academics/student-assignments/ui-cancel-upload";
 import { refreshMyAssignment } from "@/features/academics/student-assignments/ui-actions";
@@ -74,10 +74,10 @@ export function FileSubmissionForm({ assignment, open }: { assignment: StudentAs
       if (!current.uploadIntentId) throw new Error("업로드 의도가 없습니다.");
       setStage("finalizing");
       const result = await finalizeAssignmentSubmission({ assignmentId: assignment.assignmentId, uploadIntentId: current.uploadIntentId, submissionKey: current.submissionKey });
-      if (!result.success) { setStage("error"); setMessage(result.message); setReferenceId(readAcademicRequestReference(result.referenceId)); return; }
+      if (!result.success) { setStage("error"); setMessage(result.code==="RATE_LIMITED"?new AcademicUploadError("RATE_LIMITED",result.retryAfterSeconds).message:result.message); setReferenceId(readAcademicRequestReference(result.referenceId)); return; }
       await confirm();
-    } catch {
-      setStage("error"); setMessage("전송 또는 제출 결과를 확인하지 못했습니다. 선택한 파일과 같은 요청으로 다시 시도해 주세요.");
+    } catch (error) {
+      setStage("error"); setMessage(error instanceof AcademicUploadError && error.code==="RATE_LIMITED"?error.message:"전송 또는 제출 결과를 확인하지 못했습니다. 선택한 파일과 같은 요청으로 다시 시도해 주세요.");
     } finally { inFlight.current = false; }
   }
   async function startNewUpload() {

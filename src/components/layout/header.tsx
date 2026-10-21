@@ -7,10 +7,10 @@ import { Menu, X, LogIn, LogOut, ChevronDown, User } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+// 헤더가 실제 표시와 메뉴 분기에 사용하는 사용자 필드만 받습니다.
 type SessionUser = {
   name?: string | null;
   email?: string | null;
-  image?: string | null;
   role?: "ADMIN" | "FACULTY" | "MEMBER" | "PENDING";
 };
 

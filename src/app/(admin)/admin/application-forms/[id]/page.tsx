@@ -82,7 +82,14 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
         {/* 기본 설정 섹션 */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium text-slate-900">기본 설정</h2>
-          <FormSettings form={form} cohorts={cohortList} />
+          {/* 기본 설정에서 편집하는 다섯 필드만 전달하고 질문 revision은 빌더에 별도로 전달합니다. */}
+          <FormSettings form={{
+            id: form.id,
+            title: form.title,
+            description: form.description,
+            cohortId: form.cohortId,
+            isPublished: form.isPublished,
+          }} cohorts={cohortList} />
         </div>
 
         {/* 질문 빌더 섹션 */}
@@ -91,8 +98,14 @@ export default async function AdminApplicationFormDetailPage({ params }: Props) 
           formTitle={form.title}
           initialRevision={form.questionsRevision}
           initialQuestions={questionsData.map(q => ({
-            ...q,
-            options: q.options || [],
+            id: q.id,
+            title: q.title,
+            description: q.description,
+            type: q.type,
+            isRequired: q.isRequired,
+            order: q.order,
+            // 저장에 필요한 기존 ID와 순서는 유지하고 DB의 부모 참조는 전달하지 않습니다.
+            options: (q.options || []).map(option => ({ id: option.id, value: option.value, order: option.order })),
           }))}
         />
       </div>

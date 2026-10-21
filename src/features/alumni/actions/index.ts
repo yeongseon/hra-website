@@ -1,7 +1,7 @@
+/** 수료생 이야기 서버 액션: 글과 사진을 관리하고 직접·서버 업로드의 형식을 검증합니다. */
 "use server";
 
-import { put } from "@vercel/blob";
-import { and, eq, isNull, max } from "drizzle-orm";
+import { and, eq, isNull, max, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -9,13 +9,14 @@ import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { reorderByCase } from "@/lib/db/reorder";
 import { alumniStories, alumniStoryImages } from "@/lib/db/schema";
-import { recordOwnedBlob } from "@/lib/owned-blob";
 import { logServerError } from "@/lib/errors";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
+import { validateAdminImage, type ValidatedAdminImage } from "@/lib/admin-image-validation";
+import { alumniImageRule } from "@/lib/alumni-upload-contract";
 import { validateAlumniImageReference } from "@/lib/alumni-upload-server";
 
 const maxImageSize = 5 * 1024 * 1024;
-const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
 
 const alumniStoryFormSchema = z.object({
   name: z.string().trim().min(1, "이름을 입력해주세요.").max(100, "이름은 100자 이하여야 합니다."),
@@ -63,15 +64,16 @@ function parseAlumniStoryFormData(formData: FormData) {
   });
 }
 
-function validateImageFiles(formData: FormData) {
+async function validateImageFiles(formData: FormData) {
   const files = formData.getAll("images").filter((entry): entry is File => entry instanceof File);
-  const validFiles: File[] = [];
+  const validFiles: ValidatedAdminImage[] = [];
   let totalBytes = 0;
 
   for (const file of files) {
     if (file.size === 0) continue;
 
-    if (!allowedImageTypes.includes(file.type as (typeof allowedImageTypes)[number])) {
+    const image = await validateAdminImage(file, alumniImageRule);
+    if (!image) {
       return {
         success: false as const,
         message: "이미지는 JPG, PNG, WEBP 파일만 업로드할 수 있습니다.",
@@ -87,7 +89,7 @@ function validateImageFiles(formData: FormData) {
       };
     }
     totalBytes += file.size;
-    validFiles.push(file);
+    validFiles.push(image);
   }
 
   // 구형 서버 경유 요청은 플랫폼 본문 한도 아래에서만 허용합니다.
@@ -117,12 +119,15 @@ async function getUploadedImageUrls(formData: FormData, storyId: string, userId:
   return { urls: urls.data };
 }
 
-async function uploadAlumniImage(file: File, uploadedById: string) {
-  const timestamp = Date.now();
-  const safeFileName = `${timestamp}-${file.name.replace(/\s+/g, "-")}`;
-  const blob = await put(`alumni/${safeFileName}`, file, { access: "public", addRandomSuffix: true });
-  await recordOwnedBlob(blob.url, uploadedById);
-  return blob.url;
+/** 실제 형식을 검증한 사진만 UUID 경로와 서버가 정한 MIME으로 원장에 선예약해 저장합니다 (#302). */
+async function uploadAlumniImage(image: ValidatedAdminImage, uploadedById: string) {
+  return uploadWithOwnedIntent({
+    namespace: "alumni",
+    extension: image.extension,
+    body: image.file,
+    contentType: image.contentType,
+    uploadedById,
+  });
 }
 
 function revalidateAlumniPaths() {
@@ -144,7 +149,7 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
     };
   }
 
-  const validatedImages = validateImageFiles(formData);
+  const validatedImages = await validateImageFiles(formData);
   if (!validatedImages.success) {
     return {
       success: false,
@@ -169,9 +174,10 @@ export async function createAlumniStory(formData: FormData): Promise<AlumniStory
       const [{ maxOrder }] = await db.select({ maxOrder: max(alumniStories.order) }).from(alumniStories);
       const nextOrder = (maxOrder ?? 0) + 1;
       const legacyUrls = await uploadBlobsForCreate(
-        validatedImages.files.map((file, index) => ({
-          pathname: `alumni/${id}-${index}-${file.name.replace(/\s+/g, "-")}`,
-          file,
+        validatedImages.files.map((image) => ({
+          pathname: `alumni/${crypto.randomUUID()}.${image.extension}`,
+          file: image.file,
+          contentType: image.contentType,
         })),
         session.user.id,
       );
@@ -248,7 +254,7 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
     };
   }
 
-  const validatedImages = validateImageFiles(formData);
+  const validatedImages = await validateImageFiles(formData);
   if (!validatedImages.success) {
     return {
       success: false,
@@ -320,7 +326,10 @@ export async function updateAlumniStory(id: string, formData: FormData): Promise
   redirect("/admin/alumni");
 }
 
-// 수료생 이야기 상단 고정 토글
+/**
+ * 상단 고정 클릭마다 DB의 현재 값을 반전한다. 재전송도 별도 명령으로 다시 반전한다.
+ * 응답은 해당 명령의 저장값이며, 후속 명령까지 같은 상태로 유지됨을 보장하지 않는다.
+ */
 export async function toggleAlumniPin(id: string): Promise<{ success: boolean; message: string }> {
   await requireAdmin();
 
@@ -329,22 +338,17 @@ export async function toggleAlumniPin(id: string): Promise<{ success: boolean; m
     return { success: false, message: "잘못된 ID입니다." };
   }
 
-  const current = await db.query.alumniStories.findFirst({
-    where: eq(alumniStories.id, parsedId.data),
-    columns: { pinned: true },
-  });
+  const [updated] = await db.update(alumniStories)
+    .set({ pinned: sql`NOT ${alumniStories.pinned}` })
+    .where(eq(alumniStories.id, parsedId.data))
+    .returning({ pinned: alumniStories.pinned });
 
-  if (!current) {
+  if (!updated) {
     return { success: false, message: "수료생 이야기를 찾을 수 없습니다." };
   }
 
-  await db
-    .update(alumniStories)
-    .set({ pinned: !current.pinned })
-    .where(eq(alumniStories.id, parsedId.data));
-
   revalidateAlumniPaths();
-  return { success: true, message: current.pinned ? "고정을 해제했습니다." : "상단에 고정했습니다." };
+  return { success: true, message: updated.pinned ? "상단에 고정했습니다." : "고정을 해제했습니다." };
 }
 
 // 수료생 이야기 순서 일괄 변경 — 드래그앤드롭 결과를 DB에 저장
