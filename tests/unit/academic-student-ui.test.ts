@@ -8,6 +8,7 @@ vi.mock("@/features/academics/submissions/actions", () => ({ finalizeAssignmentS
 vi.mock("@/features/academics/student-assignments/ui-actions", () => ({ refreshMyAssignment: mocks.refresh }));
 import { FileSubmissionForm } from "@/app/(member)/member/assignments/_components/file-submission-form";
 import type { StudentAssignmentDetail } from "@/features/academics/student-assignments/contracts";
+import { AcademicUploadError } from "@/features/academics/assignment-uploads/contract";
 import { readAssignmentAttempt, saveAssignmentAttempt } from "@/features/academics/student-assignments/ui-attempt";
 const assignment: StudentAssignmentDetail = { assignmentId: "10000000-0000-4000-8000-000000000001", targetId: "20000000-0000-4000-8000-000000000001", title: "내 과제", instructions: "안내", status: "PUBLISHED", dueAt: "2026-11-01T00:00:00Z", publishedAt: "2026-10-01T00:00:00Z", submission: null, file: null };
 const intentId = "30000000-0000-4000-8000-000000000001";
@@ -197,4 +198,17 @@ it("객체 없는 업로드 실패도 현재 최종 확인과 안전 취소 뒤 
   await waitFor(() => expect(screen.getByRole("heading", { name: "제출 완료" })).toBeTruthy());
   expect(mocks.upload.mock.calls[1][0].file).toBe(pdf);
   expect(mocks.upload.mock.calls[1][0].requestId).not.toBe(previous);
+});
+
+it.each(["intent","token","verify"])("%s 차단은 대기 시간과 같은 요청·취소 후 새 업로드 안내를 표시하며 키를 보존한다",async phase=>{
+ if(phase==="verify")mocks.finalize.mockResolvedValueOnce({success:false,code:"RATE_LIMITED",retryAfterSeconds:37,message:"서버 차단 안내"});
+ else mocks.upload.mockImplementationOnce(async input=>{if(phase==="token")input.onIntent(intentId);throw new AcademicUploadError("RATE_LIMITED",37);});
+ render(createElement(FileSubmissionForm,{assignment,open:true}));select();fireEvent.click(screen.getByRole("button",{name:"최종 제출"}));
+ await waitFor(()=>expect(screen.getByRole("status").textContent).toContain("37초 후 같은 요청"));
+ expect(screen.getByRole("status").textContent).toContain("기존 업로드를 취소한 뒤 새로");
+ expect(screen.getByText("선택한 파일: 제출.pdf")).toBeTruthy();
+ const saved=readAssignmentAttempt(sessionStorage,`hra-assignment-attempt:${assignment.targetId}`);
+ expect(saved?.requestId).toBe(mocks.upload.mock.calls[0][0].requestId);
+ expect(saved?.uploadIntentId).toBe(phase==="intent"?undefined:intentId);
+ expect(mocks.cancel).not.toHaveBeenCalled();expect(mocks.refresh).not.toHaveBeenCalled();
 });

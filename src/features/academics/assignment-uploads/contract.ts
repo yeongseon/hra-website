@@ -23,7 +23,16 @@ const errors = {
 export type AcademicUploadErrorCode = keyof typeof errors;
 export class AcademicUploadError extends Error {
   readonly status: number;
-  constructor(readonly code: AcademicUploadErrorCode) { super(errors[code][1]); this.status=errors[code][0]; this.name="AcademicUploadError"; }
+  readonly retryAfterSeconds?: number;
+  constructor(readonly code: AcademicUploadErrorCode, retryAfterSeconds?: number) {
+    // 공용 API v1과 같은 필드명을 쓰되, 이 기능의 60초 창 밖 값은 신뢰하지 않습니다.
+    const wait=typeof retryAfterSeconds==="number" && Number.isInteger(retryAfterSeconds) && retryAfterSeconds>=1 && retryAfterSeconds<=60?retryAfterSeconds:60;
+    super(code==="RATE_LIMITED"
+      ? `업로드 요청이 많습니다. ${wait}초 후 같은 요청으로 제출 결과를 다시 확인해 주세요. 전송에 실패했거나 파일을 바꾸려면 기존 업로드를 취소한 뒤 새로 올려 주세요.`
+      : errors[code][1]);
+    this.status=errors[code][0];this.name="AcademicUploadError";
+    if(code==="RATE_LIMITED")this.retryAfterSeconds=wait;
+  }
 }
 export function academicUploadPath(id: string): string { return `academic-uploads/v1/${id.toLowerCase()}/document.pdf`; }
 export function assertAcademicUploadsEnabled(): void {

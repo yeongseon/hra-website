@@ -1,7 +1,7 @@
 /** 네트워크·npm 의존성 없이 PR 형식과 릴리스 정책을 검증한다. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import {
   COMMIT_TYPES, RELEASE_BRANCH, RELEASE_FILES, RELEASE_TITLE_PATTERN,
   validatePullRequestTitle, classifyPullRequest, validateReleaseFiles,
@@ -10,6 +10,68 @@ import {
 const repository = "yeongseon/hra-website";
 const repo = { full_name: repository };
 const files = RELEASE_FILES.map((filename) => ({ filename, status: "modified" }));
+
+// 별도 YAML 의존성 없이 현재 workflow의 명시적 권한 블록과 checkout 단계를 검사합니다.
+// workflow나 권한을 추가할 때는 아래 허용 목록과 실제 YAML 검증을 함께 검토해야 합니다.
+const workflowPermissions = {
+  "ci.yml": [{ contents: "read" }],
+  "process-format.yml": [
+    { contents: "read" },
+    { contents: "read", issues: "write" },
+    { contents: "read", "pull-requests": "read" },
+    { contents: "read" },
+    { contents: "read", issues: "read", "pull-requests": "read" },
+  ],
+  "release-please.yml": [
+    { contents: "read" },
+    { contents: "write", issues: "write", "pull-requests": "write" },
+  ],
+};
+
+/** 이름이 있는 단계의 uses도 동일하게 검사해 가변 태그가 검사를 우회하지 못하게 합니다. */
+function assertPinnedActions(workflow) {
+  const actions = [...workflow.matchAll(/^\s*(?:- )?uses: ([^\s#]+)/gm)].map((match) => match[1]);
+  assert.ok(actions.length > 0);
+  for (const action of actions) {
+    assert.match(action, /^(?:actions\/(?:checkout|setup-node)|googleapis\/release-please-action)@[a-f0-9]{40}$/);
+  }
+}
+
+test("이름이 있는 Action 단계도 고정 SHA만 허용하고 가변 태그·새 저장소를 거부한다", () => {
+  // 정상 단계가 함께 있어 Action 목록의 비어 있음 검사만으로는 누락을 발견할 수 없는 사례입니다.
+  const namedStep = (reference) => `steps:\n  - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262\n  - name: 노드 준비\n    uses: ${reference}\n`;
+  const sha = "49933ea5288caeca8642d1e84afbd3f7d6820020";
+  assert.doesNotThrow(() => assertPinnedActions(namedStep(`actions/setup-node@${sha}`)));
+  assert.throws(() => assertPinnedActions(namedStep("actions/setup-node@v4")), assert.AssertionError);
+  assert.throws(() => assertPinnedActions(namedStep(`unreviewed/setup-node@${sha}`)), assert.AssertionError);
+});
+
+test("새 workflow도 Action·권한 정책 검토 대상에 포함한다", () => {
+  const names = readdirSync(new URL("../../.github/workflows/", import.meta.url))
+    .filter((name) => /\.ya?ml$/.test(name)).sort();
+  assert.deepEqual(names, Object.keys(workflowPermissions).sort());
+});
+for (const [name, expectedPermissions] of Object.entries(workflowPermissions)) {
+  const workflow = readFileSync(new URL(`../../.github/workflows/${name}`, import.meta.url), "utf8");
+  test(`${name}: 기존 신뢰된 Action을 전체 commit SHA로 고정한다`, () => {
+    assertPinnedActions(workflow);
+    assert.doesNotMatch(workflow, /pull_request_target/);
+  });
+  test(`${name}: 읽기 기본 권한과 기존 필요한 쓰기 예외만 허용한다`, () => {
+    assert.match(workflow, /^permissions:\n  contents: read\n/m);
+    const blocks = [...workflow.matchAll(/^( *)permissions:\n((?:\1  [a-z-]+: [a-z]+\n)+)/gm)];
+    assert.equal(blocks.length, [...workflow.matchAll(/^\s*permissions:/gm)].length);
+    const permissions = blocks.map((match) => Object.fromEntries(match[2].trim().split("\n")
+      .map((line) => line.trim().split(": "))));
+    assert.deepEqual(permissions, expectedPermissions);
+  });
+  test(`${name}: checkout 인증을 후속 저장소 명령에 남기지 않는다`, () => {
+    const checkouts = [...workflow.matchAll(/^ {6}- uses: actions\/checkout@[^\n]+\n((?:^ {8,}[^\n]*\n)*)/gm)];
+    assert.equal(checkouts.length, [...workflow.matchAll(/uses: actions\/checkout@/g)].length);
+    for (const checkout of checkouts) assert.match(checkout[1], /^ {10}persist-credentials: false$/m);
+  });
+}
+
 test("릴리스 workflow는 명시적으로 활성화하고 별도 토큰만 사용한다", () => {
   const workflow = readFileSync(new URL("../../.github/workflows/release-please.yml", import.meta.url), "utf8");
   assert.match(workflow, /vars\.RELEASE_PLEASE_ENABLED == 'true'/);
