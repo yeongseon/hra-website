@@ -1,8 +1,46 @@
 /**
  * 운영 DB·Blob 자격 증명 없이 실행하는 CI 브라우저 스모크 테스트입니다.
- * 정적 로그인 화면과 인증 경계만 확인하여 격리 환경에서도 외부 자료를 읽지 않습니다.
+ * 로그인·인증 경계·로컬 이미지·보안 헤더를 확인하며 외부 자료를 읽지 않습니다.
  */
 import { expect, test } from "@playwright/test";
+import sharp from "sharp";
+
+test("응답 보안 헤더를 유지한다", async ({ request }) => {
+  const response = await request.get("/login");
+  expect(response.status()).toBe(200);
+  const headers = response.headers();
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=()");
+  expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'");
+  expect(headers["content-security-policy-report-only"]).toContain("default-src 'self'");
+});
+
+test("Next 이미지 최적화는 로컬 사진을 변환하고 외부 URL과 SVG를 거부한다", async ({ request }) => {
+  const optimized = await request.get("/_next/image", {
+    params: { url: "/images/cohort-17.jpeg", w: "640", q: "75" },
+  });
+  expect(optimized.status()).toBe(200);
+  expect(optimized.headers()["content-type"]).toMatch(/^image\//);
+  expect(await sharp(await optimized.body()).metadata()).toMatchObject({ width: 640 });
+
+  // 프로젝트 Blob 호스트 밖의 URL과 기본적으로 비허용인 SVG를 격리 서버에서 거부합니다.
+  for (const url of ["https://example.invalid/image.png", "/next.svg"]) {
+    const denied = await request.get("/_next/image", { params: { url, w: "640", q: "75" } });
+    expect(denied.status()).toBe(400);
+  }
+});
+
+test("정적 OG 이미지는 외부 입력으로 바뀌지 않는 PNG를 반환한다", async ({ request }) => {
+  const baseline = await request.get("/opengraph-image");
+  expect(baseline.status()).toBe(200);
+  const response = await request.get("/opengraph-image", { params: { title: "합성 입력" } });
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("image/png");
+  expect(await sharp(await response.body()).metadata()).toMatchObject({ format: "png", width: 1200, height: 630 });
+  expect(await response.body()).toEqual(await baseline.body());
+});
 
 test("로그인 화면이 정상 응답한다", async ({ page }) => {
   const response = await page.goto("/login");
