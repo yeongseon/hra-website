@@ -7,6 +7,27 @@
 import { db } from "@/lib/db";
 import { markdownImageAssets } from "@/lib/db/schema";
 import { deleteBlobIfExists } from "@/lib/blob-utils";
+import { inArray } from "drizzle-orm";
+import { logServerError } from "@/lib/errors";
+
+/**
+ * 등록된 URL은 경로·등록자·삭제 표시와 무관하게 현재 참조 기반 유지보수 GC에 맡깁니다 (#290).
+ * 빈 집합은 모두 미등록임을, null은 조회 실패로 정리 자체를 건너뛰어야 함을 뜻합니다.
+ * 이 조회는 레거시 URL에 소유권을 새로 부여하지 않습니다.
+ */
+export async function findOwnedBlobUrls(urls: string[]): Promise<Set<string> | null> {
+  const candidates = [...new Set(urls)];
+  if (candidates.length === 0) return new Set();
+  try {
+    const assets = await db.select({ url: markdownImageAssets.url }).from(markdownImageAssets)
+      .where(inArray(markdownImageAssets.url, candidates));
+    return new Set(assets.map((asset) => asset.url));
+  } catch (error) {
+    // 원문 URL은 로그 문맥에 넣지 않으며 원장 상태를 모르면 삭제하지 않습니다.
+    logServerError("owned-blob/lookup", error, { candidateCount: candidates.length });
+    return null;
+  }
+}
 
 /** 업로드 직후, 콘텐츠 행을 쓰기 전에 호출합니다. */
 export async function recordOwnedBlob(url: string, uploadedById?: string): Promise<void> {

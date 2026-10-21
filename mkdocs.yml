@@ -58,6 +58,7 @@ nav:
       - 배포와 문제 해결: DEPLOYMENT.md
       - DB 변경 절차: developer/database-change-procedure.md
       - 요청 제한: operations/rate-limits.md
+      - 예약 ID 인덱스 변경: developer/rate-limit-reservation-index.md
       - 업로드 파일 원장과 정리: operations/markdown-image-ownership.md
       - 카카오 로그인 설정: KAKAO-LOGIN-SETUP.md
       - 카카오 이메일 동의: operations/kakao-email-consent.md

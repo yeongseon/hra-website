@@ -4,6 +4,9 @@
 
 현재 버전별 마이그레이션 디렉터리와 공통 적용 이력은 없으며, 범위별 SQL·스크립트는 `scripts/migrate-*`에 있습니다. 자동 적용 이력과 Production migration gate는 [#280](https://github.com/yeongseon/hra-website/issues/280)의 후속 작업입니다. 아래 수동 절차가 이미 자동 차단 장치로 구현됐다는 뜻은 아닙니다.
 
+G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
+예약 ID 정리 인덱스는 [#287 변경 절차](rate-limit-reservation-index.md)의 범위 SQL·카탈로그 검증을 따릅니다. **이 SQL과 인덱스가 운영 DB에 적용됐다는 뜻은 아닙니다.** 운영 대상·백업·허용 잠금 시간·적용 승인은 별도로 확인합니다.
+
 ## 1. 대상과 명령의 효과부터 확인하기
 
 | 상황·명령 | 용도 | 현재 주의할 동작 |

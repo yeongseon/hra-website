@@ -1,6 +1,6 @@
 # PR #301 문서별 검토 기록
 
-이 기록은 [문서 정비 이슈 #299](https://github.com/yeongseon/hra-website/issues/299)의 문서별 검토 범위를 보여 준다. 원래 PR #301의 비교 기준 `0e59d362`에 있던 **추적 Markdown 66개**를 파일별로 대조했다. 그중 **59개를 수정하고 7개는 보존**했다. 표의 근거는 읽은 코드·설정·이슈 또는 해당 시점의 기록이며, 배포 환경에서 그 기능을 새로 실행했다는 뜻이 아니다. 이후 `main`의 검증 코드는 `15665df`까지 대조했다. #317·#310·#320의 후속 작업은 이 기준에 포함된 완료 기능으로 적지 않는다.
+이 기록은 [문서 정비 이슈 #299](https://github.com/yeongseon/hra-website/issues/299)의 문서별 검토 범위를 보여 준다. 원래 PR #301의 비교 기준 `0e59d362`에 있던 **추적 Markdown 66개**를 파일별로 대조했다. 그중 **59개를 수정하고 7개는 보존**했다. 표의 근거는 읽은 코드·설정·이슈 또는 해당 시점의 기록이며, 배포 환경에서 그 기능을 새로 실행했다는 뜻이 아니다. `main` `15665df`와 검증된 로컬 통합 `04a35a7`의 코드를 대조했다. 로컬 #317·#310·#320은 `main` 병합이나 운영 적용을 완료한 것으로 적지 않는다.
 
 `현재`는 저장소 코드·작업 규칙, `목표`는 향후 설계, `승인 대기`는 정책 결정이 필요한 내용, `운영 미확인`은 실제 환경의 DB·Blob·OAuth·Preview 설정을 이번 문서 검토에서 확인하지 않았다는 뜻이다. `과거 기록`은 해당 날짜의 조사·테스트 수치를 유지한다. 표의 `수정`은 내용이나 읽기 경로를 고쳤다는 뜻이며, 코드·DB·운영 데이터를 바꿨다는 뜻이 아니다.
 
@@ -55,7 +55,7 @@
 | `docs/developer/academic-submission-finalization.md` | 수정: 검증된 의도를 제출로 원자적으로 확정하는 순서와 재시도·복구를 풀었다. | `scripts/migrate-academic-submission-finalization.sql`, `src/features/academics/submissions/` | 현재·운영 DB 미확인 |
 | `docs/developer/academic-submission-statuses.md` | 수정: 공개 당시 대상 수를 분모로 쓰는 현황·CSV 권한을 설명했다. | `src/features/academics/submission-statuses/` | 현재 |
 | `docs/developer/academic-submissions-migration.md` | 수정: 제출·의도 표/함수의 잠금·권한 검증과 적용 순서를 연결했다. | `scripts/migrate-academic-submissions.sql`, `src/lib/db/schema.ts` | 현재 SQL·운영 미적용 |
-| `docs/developer/database-change-procedure.md` | 수정: 빈 개발 DB의 `db:push`와 기존 DB의 범위 SQL/카탈로그 검증을 구분했다. | `src/lib/db/schema.ts`, `scripts/migrate-*.sql` | 현재 절차·운영 미확인 |
+| `docs/developer/database-change-procedure.md` | 수정: 빈 개발 DB의 `db:push`와 기존 DB의 범위 SQL/카탈로그 검증을 구분하고 #320 예약 인덱스의 별도 안내를 연결했다. | `src/lib/db/schema.ts`, `scripts/migrate-287-rate-limit-reservation-index.sql` | 현재 절차·운영 미적용 |
 | `docs/developer/environment-strategy.md` | 수정: Preview 분리와 migration gate를 목표로 적고 실제 격리·자동화는 확인 대기로 남겼다. | `src/lib/db/index.ts`, 이슈 #279·#280 | 목표·운영 미확인 |
 | `docs/developer/p1-security-rollout.md` | 수정: 과거 P1 FK 적용 기록을 보존하고 Auth.js 보안 버전의 별도 운영 확인을 덧붙였다. | `scripts/migrate-protect-application-answers.sql`, `src/lib/auth.ts` | 과거 기록·운영 미확인 |
 | `docs/developer/platform-architecture.md` | 수정: Web 내부 서비스 호출과 향후 모바일 API, 기수별 어드바이저·조교 출결 인가를 구분했다. | `src/features/academics/`, 이슈 #143·#165 | 목표·승인 대기 |
@@ -81,5 +81,6 @@
 | `docs/getting-started/glossary.md` | PR #301 추가. 처음 등장하는 개발·운영 용어를 풀이한다. | 안내 |
 | `docs/getting-started/project-tour.md` | PR #301 추가. 화면→서버→DB의 현재 파일 경로를 따라간다. | 현재 예시 |
 | `docs/developer/github-actions-security.md` | 후속 `main`에서 도입된 별도 CI 보안 안내. 원래 66개 집계에 넣지 않았고 원문 정책을 유지한다. | 현재 CI 규칙 |
+| `docs/developer/rate-limit-reservation-index.md` | #320의 로컬 통합 안내. 범위 SQL과 인덱스 카탈로그·합성 성능 증거를 설명하며 운영 적용은 미확인이다. | 로컬 코드·운영 미적용 |
 
 `mkdocs.yml`의 메뉴와 `.env.example`은 Markdown 66개 집계 밖의 설정 파일이다. PR #301은 새 안내의 탐색 경로와 안전한 합성 설정 예시를 보강하지만 실제 환경값을 저장하지 않는다. 이 표의 근거 경로는 리뷰 시 실제 저장소와 다시 대조하고, 새 코드·SQL·정책이 병합되면 해당 행의 상태도 갱신한다.
