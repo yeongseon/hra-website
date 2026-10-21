@@ -32,6 +32,7 @@
     "db:migrate-atomic-application-questions": "node --env-file=.env scripts/migrate-atomic-application-questions.mjs",
     "db:migrate-recruitment-singleton": "node --env-file=.env scripts/migrate-recruitment-singleton.mjs",
     "verify:oauth-binding-security": "node --env-file=.env scripts/verify-oauth-binding-security.mjs",
+    "verify:editor-preview": "node scripts/verify-editor-preview.mjs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -70,9 +71,9 @@
     "next": "16.4.2",
     "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.6",
-    "react": "19.2.4",
+    "react": "19.3.1",
     "react-day-picker": "^10.0.1",
-    "react-dom": "19.2.4",
+    "react-dom": "19.3.1",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
