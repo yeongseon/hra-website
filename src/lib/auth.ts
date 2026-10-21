@@ -336,20 +336,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return Response.redirect(loginUrl);
         }
 
-        return auth?.user?.role === "ADMIN";
+        if (auth.user.role !== "ADMIN") {
+          // 사용자 middleware가 실행되는 래퍼에서도 로그인한 사용자의 권한 부족을 명시적으로 거부한다.
+          return new Response("관리자만 접근할 수 있습니다.", {
+            status: 403,
+            headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+          });
+        }
+        return true;
       }
 
-       if (MEMBER_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-         if (!auth?.user) {
-           return false;
-         }
+      if (MEMBER_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+        if (!auth?.user) {
+          // 요청 쿼리의 callbackUrl을 신뢰하지 않고 현재 내부 경로만 로그인 복귀 대상으로 전달한다.
+          const loginUrl = new URL("/login", request.url);
+          loginUrl.searchParams.set("callbackUrl", pathname);
+          return Response.redirect(loginUrl);
+        }
 
-         if (auth.user.role === "PENDING") {
-           return Response.redirect(new URL("/pending", request.url));
-         }
+        if (auth.user.role === "PENDING") {
+          return Response.redirect(new URL("/pending", request.url));
+        }
 
-         return auth.user.role === "MEMBER" || auth.user.role === "ADMIN" || auth.user.role === "FACULTY";
-       }
+        if (auth.user.role !== "MEMBER" && auth.user.role !== "ADMIN" && auth.user.role !== "FACULTY") {
+          // 세션의 역할 검증과 별개로 이 경계에서도 허용 목록 밖의 역할은 응답으로 차단한다.
+          return new Response("승인된 회원만 접근할 수 있습니다.", {
+            status: 403,
+            headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+          });
+        }
+        return true;
+      }
 
       return true;
     },

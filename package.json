@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:academic-g1": "node scripts/verify-academic-g1.mjs",
+    "verify:auth-proxy": "node scripts/verify-auth-proxy-http.mjs",
     "issues:check": "node scripts/check-process-format.mjs",
     "spell-check": "node scripts/spell-check.mjs",
     "spell-fix": "node scripts/spell-check.mjs --fix",

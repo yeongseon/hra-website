@@ -50,6 +50,10 @@ jobs:
       - name: Next.js 빌드
         run: npm run build
 
+      - name: Proxy 인증 경계 HTTP 회귀
+        # 실제 Auth.js 래퍼와 격리 DB 세션으로 역할별 302/403 응답을 확인합니다.
+        run: npm run verify:auth-proxy
+
       - name: Chromium 설치
         run: npx playwright install --with-deps chromium
 
