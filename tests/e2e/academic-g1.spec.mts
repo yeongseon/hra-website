@@ -337,12 +337,18 @@ test("[G1:FAILURE_RECOVERY] PUT·원본·파일 INSERT 실패와 커밋 후 응�
     if (fault === "PUT") {
       await page.getByRole("button", { name: "업로드 취소 후 다시 시작", exact: true }).click();
       await expect(page.getByRole("status")).toContainText("기존 업로드를 취소했습니다");
-      // 새 의도로 재전송하기 전에 실제 60초 제한 창을 기다리며 원장을 삭제하지 않는다.
-      await delay(61_000);
+      // 같은 제한 창 안에서 취소 후 새 의도로 복구하며 중간에 예산을 초기화하지 않습니다.
       await page.getByRole("button", { name: "최종 제출", exact: true }).click();
     } else await page.getByRole("button", { name: "같은 요청으로 제출 다시 확인", exact: true }).click();
     await expect(page.getByRole("heading", { name: "제출 완료", exact: true }), `G1_RECOVER_${fault}`).toBeVisible();
     expect(await finalCount(assignment)).toBe(1);
+    // 의도·외부 작업은 별도 계산하고, 복구 도중 원장 초기화나 60초 창 경과가 없었음을 확인합니다.
+    expect(await sql("SELECT count(*) FROM rate_limit_events WHERE scope='academic-upload-intent-target'"))
+      .toBe(fault === "PUT" ? "2" : "1");
+    expect(await sql("SELECT count(*) FROM rate_limit_events WHERE scope='academic-upload-target'"))
+      .toBe(fault === "RESPONSE" ? "2" : "3");
+    expect(await sql("SELECT max(attempted_at)-min(attempted_at)<interval '60 seconds' FROM rate_limit_events WHERE scope IN ('academic-upload-intent-target','academic-upload-target')"))
+      .toBe("t");
     await page.reload(); await expect(page.getByRole("heading", { name: "제출 완료", exact: true })).toBeVisible();
     await page.close();
   }

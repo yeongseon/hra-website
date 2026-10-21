@@ -19,7 +19,7 @@ export async function createAssignmentUploadIntent(input:unknown, observation = 
   const target=await requireAssignmentTarget({assignmentId:parsed.data.assignmentId});
   observation.authenticated(target.userId);assertOpen(target);
   academicSubmissionStore();
-  await reserveAssignmentUploadAttempt(target.userId,target.targetId);
+  await reserveAssignmentUploadAttempt(target.userId,target.targetId,"intent");
   const id=await issueUploadRecord({...parsed.data,targetId:target.targetId,userId:target.userId});
   const record=await authorizeUploadRecord(id,target.userId);
   observation.identify({requestId:parsed.data.requestId,resourceId:id});
@@ -37,7 +37,7 @@ export async function authorizeAssignmentUploadToken(input:unknown,pathname:stri
   observation.identify({resourceId:parsed.data.uploadIntentId});
   const record=await authorizeUploadRecord(parsed.data.uploadIntentId,target.userId);
   if(record.target_id!==target.targetId || record.state!=="INTENDED" || multipart || record.storage_key!==academicUploadPath(record.intent_id) || pathname!==record.storage_key) throw new AcademicUploadError("CONFLICT");
-  await reserveAssignmentUploadAttempt(target.userId,target.targetId);
+  await reserveAssignmentUploadAttempt(target.userId,target.targetId,"external");
   observation.emit("AUTHORIZED");
   return {allowedContentTypes:["application/pdf"],maximumSizeInBytes:record.expected_size,
     validUntil:record.expires_at.getTime(),addRandomSuffix:false,allowOverwrite:false,
@@ -56,7 +56,7 @@ export async function verifyAssignmentUploadIntent(input:{assignmentId:string;up
   const record=await authorizeUploadRecord(parsed.data.uploadIntentId,target.userId);
   if(record.target_id!==target.targetId || record.storage_key!==academicUploadPath(record.intent_id)) throw new AcademicUploadError("NOT_FOUND");
   observation.emit("AUTHORIZED");
-  await reserveAssignmentUploadAttempt(target.userId,target.targetId);
+  await reserveAssignmentUploadAttempt(target.userId,target.targetId,"external");
   const store=academicSubmissionStore();
   try {
     const metadata=await head(record.storage_key,{token:store.token,abortSignal:AbortSignal.timeout(15_000)});
