@@ -1,182 +1,111 @@
-# 🌟 HRA (Human Renaissance Academy) 프로젝트 가이드
+# HRA 웹사이트 개발 안내
 
-안녕하세요! 대학 연합 교육 프로그램 **HRA (Human Renaissance Academy)**의 공식 웹사이트 프로젝트에 오신 것을 환영합니다. 👋
+HRA(Human Renaissance Academy)의 프로그램 소개, 회원 자료실, 관리자 화면을 운영하는 프로젝트입니다. 학생 명부와 개인 과제 제출을 위한 학사 기능도 코드에 포함되어 있습니다.
 
-이 가이드는 코딩이 처음인 고등학생이나 대학생분들도 "나도 웹사이트를 만들 수 있겠는데?"라는 생각이 들 정도로 쉽고 친절하게 작성되었습니다. 우리 함께 멋진 웹사이트를 만들어봐요!
+개발을 전공하지 않은 참여자도 **무엇을 수정할지 찾고, 내 컴퓨터에서 확인한 뒤, 다른 사람의 검토를 받아 반영하는 과정**을 따라갈 수 있도록 문서를 구성했습니다.
 
-- 🌐 **실제 서비스 구경하기**: [https://hra-website-theta.vercel.app](https://hra-website-theta.vercel.app)
-- 📚 **개발 가이드 문서 (MkDocs)**: [https://yeongseon.github.io/hra-website/](https://yeongseon.github.io/hra-website/) — 처음 기여하는 분은 여기부터!
-- 💻 **코드 저장소**: [https://github.com/yeongseon/hra-website.git](https://github.com/yeongseon/hra-website.git)
+- [개발 문서 시작 페이지](docs/index.md)
+- [웹사이트](https://hra-website-theta.vercel.app)
+- [문서 사이트](https://yeongseon.github.io/hra-website/)
+- [전체 작업 우선순위](https://github.com/yeongseon/hra-website/issues/300)
 
----
+## 1. 지금 구현된 것과 앞으로 할 것
 
-## 1. 🏫 프로젝트 소개
-HRA 웹사이트는 교육 프로그램의 정보를 널리 알리고, 공부하는 친구들이 필요한 자료를 쉽게 찾을 수 있도록 돕는 '온라인 본부'예요.
+| 구분 | 코드에 있는 기능 | 사용할 때 확인할 조건 |
+| --- | --- | --- |
+| 공개 웹사이트 | 소개, 모집, 공지, 언론보도, 갤러리, 수료생 이야기, FAQ | 관리자가 공개한 콘텐츠와 모집 설정 |
+| 로그인과 회원 자료 | Google·Kakao·비밀번호 로그인, 회원 승인, 자료실, 보고서 양식·가이드 | 계정 역할과 자료별 권한. 로그인만으로 모든 자료를 볼 수 있는 것은 아님 |
+| 홈페이지 관리 | 콘텐츠·회원·지원서 관리 | 홈페이지 관리자 권한 |
+| 학사 G1 | 학생 명부, 검증된 계정 연결, 과제 공개, 개인 PDF 제출, 제출 현황, 비공개 파일 다운로드 | 별도 기능 설정, DB 적용, 지정된 학사 운영 책임자, 운영 정책 확인 |
+| 학사 G2/G3 | 출결, 교수 과제 피드백, 수료 처리의 설계 문서 | 후속 구현과 정책 결정이 필요 |
+| Android·iOS | 공통 서버 계약과 모바일 앱의 목표 문서 | 아직 현재 앱에 구현된 것으로 안내하지 않음 |
 
-- **누구나**: HRA가 어떤 곳인지 소개를 보고, 공지사항이나 갤러리를 구경할 수 있어요.
-- **멤버**: 로그인하면 수업 자료나 보고서 양식을 내려받을 수 있어요.
-- **관리자**: 복잡한 코드 없이도 버튼 클릭만으로 공지사항을 올리고, 사진을 등록하고, 회원을 관리할 수 있는 '비밀 대시보드'를 가지고 있어요.
+**코드가 있다는 사실과 운영에서 사용할 준비가 끝났다는 사실은 다릅니다.** 학사 설정은 `.env.example`에서 기본 비활성이며, 실제 배포 환경의 상태는 운영 담당자가 별도로 확인합니다. 학사 단계는 [학사관리 로드맵](docs/ACADEMIC-MANAGEMENT-ROADMAP.md), 모바일 계획은 [플랫폼 전환 로드맵](docs/PLATFORM-ROADMAP.md)을 참고하세요.
 
-### 🌐 앞으로의 플랫폼 방향
+## 2. 내 작업에 맞는 읽기 순서
 
-HRA는 Web만 제공하는 사이트에서 **Web + Android + iOS**를 지원하는 플랫폼으로 확장할 예정입니다. 모바일은 Android/iOS를 따로 만들지 않고 **React Native + Expo 하나의 코드베이스**로 개발하며, 출시 순서는 **Web 구조 개편 → Android → iOS**입니다.
+| 하려는 일 | 먼저 읽을 문서 | 다음 문서 |
+| --- | --- | --- |
+| 처음 프로젝트 실행하기 | [사전 준비](docs/getting-started/prerequisites.md) | [코드와 설정 준비](docs/getting-started/clone-and-setup.md) → [첫 실행](docs/getting-started/first-run.md) |
+| 코드가 어떻게 연결되는지 이해하기 | [화면부터 DB까지 따라가기](docs/getting-started/project-tour.md) | [폴더별 역할](docs/GUIDE.md), [용어집](docs/getting-started/glossary.md) |
+| 문구·화면·기능 수정하기 | [수정 위치 찾기](docs/CUSTOMIZATION.md) | [협업 절차](docs/contributing/workflow.md) → [검증과 배포 구분](docs/contributing/build-and-deploy-safety.md) |
+| 관리자 화면으로 콘텐츠 운영하기 | [관리자 안내](docs/ADMIN-GUIDE.md) | [자료 접근 정책](docs/resource-file-access-policy.md) |
+| DB·배포 설정 다루기 | [환경 분리](docs/developer/environment-strategy.md) | [DB 변경 절차](docs/developer/database-change-procedure.md) → [배포 안내](docs/DEPLOYMENT.md) |
 
-서버는 microservice로 쪼개지 않고 **API-first modular monolith**로 정리합니다. 현재 코드와 목표 구조는 다르므로, 구조 변경 작업은 [플랫폼 아키텍처](docs/developer/platform-architecture.md)와 [전환 로드맵](docs/PLATFORM-ROADMAP.md), 추적 이슈 [#277](https://github.com/yeongseon/hra-website/issues/277)을 기준으로 진행합니다.
+찾는 문서가 보이지 않으면 [전체 문서 지도](docs/documentation-map.md)를 사용하세요. 처음부터 모든 설계 문서를 읽을 필요는 없습니다.
 
----
+## 3. 처음 실행할 때
 
-## 2. 🛠️ 기술 스택 (쉬운 설명)
-웹사이트를 만드는 데 사용된 도구들이에요. 이름은 어렵지만 실제로는 우리가 익숙한 것들과 비슷하답니다!
+상세 절차는 시작 안내 세 문서가 담당합니다. 아래는 전체 순서입니다.
 
-- **Next.js 16**: **"웹사이트를 만드는 튼튼한 뼈대"**예요. 레고 조립 설명서처럼 웹사이트의 전체적인 구조를 잡아줘요.
-- **React 19**: **"화면을 부품처럼 조립하는 도구"**예요. 버튼 하나, 메뉴 하나를 따로 만들어서 조립할 수 있게 해줘요.
-- **TypeScript**: **"똑똑한 맞춤법 검사기"**예요. 코드를 쓰다가 오타가 나면 실행하기 전에 미리 알려줘서 실수를 줄여줘요.
-- **Tailwind CSS**: **"붓과 팔레트"**예요. HTML 코드에 직접 색칠하고 디자인을 입히는 아주 간편한 스타일 도구예요.
-- **Drizzle ORM**: **"데이터베이스 번역기"**예요. 컴퓨터가 이해하는 복잡한 데이터 언어를 우리가 이해하기 쉬운 말로 바꿔줘요.
-- **Neon Postgres**: **"인터넷 보물 창고"**예요. 엑셀 시트 같은 데이터들이 구글 드라이브처럼 클라우드(인터넷)에 저장되어 있다고 생각하면 돼요.
-- **NextAuth**: **"우리 집 문지기"**예요. 로그인하고 회원가입 하는 까다로운 과정을 대신 처리해 주는 든든한 도우미예요.
-- **Vercel Blob**: **"무한 창고"**예요. 사진이나 무거운 파일들을 인터넷에 안전하게 올려두고 필요할 때 꺼내 쓸 수 있게 해줘요.
-- **Zod**: **"철저한 검문소"**예요. 사용자가 이름 칸에 숫자를 쓰진 않았는지, 이메일 형식을 잘 지켰는지 꼼꼼하게 검사해요.
+1. Node.js, Git, 편집기를 준비합니다. 이 프로젝트는 지원 중인 LTS인 **Node.js 24.x**를 사용합니다. `.nvmrc`와 `package.json`의 `engines.node`가 기준입니다.
+2. 저장소를 내려받고, 버전이 기록된 `package-lock.json`을 기준으로 의존성을 설치합니다.
 
----
+   ```bash
+   git clone https://github.com/yeongseon/hra-website.git
+   cd hra-website
+   node --version
+   npm ci
+   ```
 
-## 3. 📁 현재 폴더 구조
-아래는 **현재 main 기준 구조**입니다. #277 전환이 완료되면 Web/Mobile/공용 계약을 포함한 monorepo 구조로 바뀝니다. 목표 구조는 [플랫폼 아키텍처](docs/developer/platform-architecture.md)를 참고하세요.
+   nvm을 사용한다면 설치 전에 `nvm install` → `nvm use`로 `.nvmrc`의 24를 선택합니다. `node --version`은 `v24.`로 시작해야 합니다. **운영 Vercel의 실제 런타임 일치 여부는 미확인**이며, 실행 환경 확인은 [사전 준비](docs/getting-started/prerequisites.md)를 따릅니다.
 
-```text
-src/
-├── app/                  # 화면에 보이는 '페이지'들이 모여 있어요.
-│   ├── (public)/         # 누구나 볼 수 있는 페이지 (홈, 소개, 공지사항 등)
-│   ├── (auth)/           # 로그인과 회원가입 관련 페이지
-│   ├── (admin)/admin/    # 관리자 선생님들만 들어가는 비밀 관리 페이지
-│   └── (member)/         # 멤버들만 볼 수 있는 페이지 (자료실, 마이페이지)
-├── features/             # 실제 기능을 담당하는 '일꾼'들이 있어요.
-│   ├── alumni/           # 수료생 이야기 기능
-│   ├── faculty/          # 교수진 소개 기능
-│   ├── gallery/          # 사진첩 기능
-│   ├── recruitment/      # 신입생 모집 기능
-│   ├── users/            # 회원 관리 기능 (역할 변경, 삭제 등)
-│   └── ...               # (공지사항, 보도자료, 자료실 등 더 많은 기능이 있어요!)
-├── lib/                  # 도구 상자예요. DB 연결 방법이나 공통 도구들이 들어있어요.
-│   ├── db/schema.ts      # 데이터 보물 창고(DB)에 어떤 정보를 담을지 적어둔 명세서예요.
-│   └── admin.ts          # "너 관리자 맞니?" 하고 확인해 주는 도구예요.
-├── components/           # 버튼, 입력창 같은 '작은 부품'들을 모아둔 곳이에요.
-└── scripts/              # 관리자 계정을 만들거나 맞춤법을 검사하는 '특수 도구'예요.
-```
+3. `.env.example`을 `.env`로 복사하고 **개발용** DB·인증 설정을 준비합니다. 운영 DB·Blob·OAuth 자격 증명은 개발용으로 복사하지 않습니다.
+4. [첫 실행 안내](docs/getting-started/first-run.md)에 따라 DB 준비 여부를 확인하고 개발 서버를 실행합니다.
 
----
+   ```bash
+   npm run dev
+   ```
 
-## 4. 🔒 사이트 구조 및 권한
-누가 어디까지 들어갈 수 있는지 정해져 있어요. 이번에 '승인 대기(PENDING)' 상태가 추가되었답니다!
+5. 터미널에 표시된 로컬 주소를 엽니다. 홈 표시, 로그인, 보호 화면의 접근 결과는 각각 확인합니다. 홈 하나가 보인다고 모든 기능의 준비가 끝난 것은 아닙니다.
 
-| 영역 | 들어갈 수 있는 사람 | 주요 페이지 |
-| :--- | :--- | :--- |
-| **공개 영역** | 누구나 | 홈, HRA 소개, 커리큘럼, 공지사항, 갤러리, FAQ 등 |
-| **대기(PENDING)** | 가입 직후 상태 | 기본 정보는 보이지만, **자료실은 아직 볼 수 없어요.** (승인 대기 중!) |
-| **회원(MEMBER)** | 승인된 멤버 | **자료실(수업 자료, 보고서 양식)**을 마음껏 이용할 수 있어요. |
-| **관리자(ADMIN)** | 운영진 | 대시보드, 회원 승인/삭제, 모든 콘텐츠 등록/수정/삭제 |
+`db:push`와 `seed-admin`은 데이터를 쓰는 명령입니다. 첫 실행을 위해 무조건 실행하지 말고, 지정된 개발 DB에 무엇이 준비되어 있는지 확인한 뒤 각 안내의 조건에 맞게 사용합니다.
 
----
+## 4. 수정하고 확인하는 기본 흐름
 
-## 5. 💾 데이터 저장 방식
-정보의 종류에 따라 저장하는 장소가 달라요.
+**이슈 → 작업 브랜치 → 수정 → 검증 → Pull Request(PR) → 리뷰와 병합 → 배포 확인** 순서로 진행합니다. 브랜치는 작업을 분리하는 이름이고, PR은 변경을 검토받는 요청입니다.
 
-| 콘텐츠 내용 | 저장 장소 | 비고 |
-| :--- | :--- | :--- |
-| 교수진 이름, 기수 정보, 모집 날짜 | **DB (인터넷 저장소)** | 글자로 된 정보들 |
-| 공지사항 본문, FAQ 내용 | **DB (인터넷 저장소)** | 긴 글 내용도 안전하게! |
-| **모집 포스터 이미지** | **Vercel Blob (사진 창고)** | 용량이 큰 이미지는 전용 창고에! 📸 |
-| 갤러리 사진, 자료실 파일 | **Vercel Blob (사진 창고)** | 사진과 파일 원본은 여기서 관리해요. |
-| 회원 정보 및 지원서 | **DB (인터넷 저장소)** | 개인 정보와 신청 내역 |
+| 명령 | 확인하는 것 | 통과해도 별도로 확인할 것 |
+| --- | --- | --- |
+| `npm run lint` | 코드 규칙과 정적 오류 | 실제 화면·권한 동작 |
+| `npm run typecheck` | 값과 함수의 타입이 맞는지 | DB에 필요한 테이블·함수가 적용됐는지 |
+| `npm test` | Vitest 테스트에 정의한 동작 | 테스트에 포함되지 않은 사용 흐름 |
+| `npm run build` | 배포용 앱을 만들 수 있는지 | 실제 배포 환경 설정과 배포 후 응답 |
+| `npm run test:e2e` | Playwright 브라우저 테스트 | 실행 환경과 선택한 테스트의 범위 |
+| `npm run test:academic-g1` | 격리 DB·앱·저장소를 사용하는 학사 G1 검증 | 운영 데이터·스토리지 이행과 운영 승인 |
+| `npm run issues:check` | 열린 이슈의 제목·본문·라벨 형식 | 이슈 내용의 사실성과 완료 여부 |
 
----
+현재 CI는 일반 브라우저 smoke 검사와 별도의 G1 검증을 사용합니다. 모든 E2E 파일이 항상 실행되는 것은 아닙니다. 설치 도구, 테스트 DB 등 준비 조건은 [품질 확인 안내](docs/QUALITY-GATE.md)에서 확인하세요.
 
-## 6. 🔑 환경변수 (.env)
-웹사이트가 돌아가기 위해 필요한 '비밀 열쇠'들이에요. `.env`라는 파일에 적어줘야 해요.
+검증에 실패하면 오류가 난 단계와 재현 순서를 PR에 적습니다. 실제 비밀번호, 토큰, 학생 자료, 세션 쿠키는 붙여 넣지 않습니다.
 
-- `DATABASE_URL`: 인터넷 보물 창고(Neon) 주소예요.
-- `AUTH_SECRET`: 문지기가 쓸 보안용 비밀번호예요.
-- `BLOB_READ_WRITE_TOKEN`: 사진 창고(Vercel Blob)에 접근하는 열쇠예요.
-- `NEXT_PUBLIC_APP_URL`: 우리 웹사이트의 진짜 주소예요.
+## 5. 현재 코드의 위치
 
-> 👉 자세한 발급 방법은 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)를 확인하세요!
+| 위치 | 역할 | 수정 예 |
+| --- | --- | --- |
+| `src/app/` | URL에 대응하는 페이지와 API 진입점 | 페이지 구성, 요청·응답 연결 |
+| `src/components/` | 여러 화면에서 쓰는 부품 | 버튼, 입력창, 에디터, Markdown 표시 |
+| `src/features/` | 공지·자료·학사 등 기능별 처리 | 입력 검증, 서버 액션, 서비스 |
+| `src/lib/` | 인증, DB 연결, 파일 저장 등 공통 처리 | 공통 권한·파일·오류 처리 |
+| `src/lib/db/schema.ts` | DB 테이블·관계의 코드 정의 | 필드와 관계를 바꿀 때 확인 |
+| `scripts/` | DB 준비, 운영 점검, 검증 도구 | 실행 전에 읽기/쓰기 여부 확인 |
+| `tests/` | 단위·통합·브라우저 테스트 | 수정한 동작의 회귀 확인 |
+| `docs/` | 사용법, 개발 절차, 정책·설계 | 코드 변경과 함께 관련 안내 갱신 |
+| `content/member/` | 보고서 양식·가이드의 내장 기본본 | DB에 해당 항목이 없을 때의 기본 내용 |
 
----
+`scripts/`는 `src/` 안이 아니라 **저장소 최상위**에 있습니다. 목표 monorepo의 `apps/web`, `apps/mobile` 경로는 [별도 설계](docs/developer/platform-architecture.md)에 있으며 현재 경로와 구분합니다. 신규·재편 기능은 해당 설계의 서비스/저장소 경계를 따릅니다.
 
-## 7. ⌨️ 주요 명령어
-터미널이라는 검은 창에 입력해서 컴퓨터를 시키는 명령어예요.
+## 6. 데이터와 권한을 다룰 때
 
-- `npm install`: "필요한 도구들 다 가져와!" (처음 시작할 때 딱 한 번)
-- `npm run dev`: "테스트용 웹사이트 띄워줘!" (코딩하면서 결과를 바로 볼 때)
-- `npm run build`: "진짜 서비스용으로 튼튼하게 만들어줘!" (배포하기 전 필수)
-- `npm run db:push`: 새 빈 개발용 데이터베이스에 테이블을 만들어요. 추가 SQL과 확인 절차는 [DB 변경 절차](docs/developer/database-change-procedure.md)를 따르세요.
-- `npm run seed-admin`: "첫 번째 대장 관리자를 한 명 만들어줘!"
-- `npm run spell-check`: "한국어 맞춤법 틀린 거 있나 봐줘!"
+글과 메타데이터는 PostgreSQL DB에, 이미지·파일 원본은 Vercel Blob에 저장합니다. 보고서 양식·가이드는 DB 항목을 먼저 사용하고, 해당 항목 자체가 없을 때만 `content/member/`의 기본본을 사용합니다. DB에서 비공개로 바꾼 항목을 기본본으로 다시 공개하지 않습니다.
 
----
+회원 역할은 `PENDING`(승인 대기), `MEMBER`(회원), `FACULTY`(교수진), `ADMIN`(홈페이지 관리자)입니다. 자료 종류·소속·파일 소유 관계에 따른 추가 검사가 있습니다. **홈페이지 관리자 역할과 학사 운영 승인자는 서로 다른 권한**입니다.
 
-## 8. 🚀 시작하기 (로컬 실행 10단계)
-내 컴퓨터에서 이 웹사이트를 직접 띄워보는 방법이에요!
+DB나 파일 저장 방식을 바꿀 때는 [DB 안내](docs/DATABASE.md), [자료 파일 접근 정책](docs/resource-file-access-policy.md), [학사 데이터 모델](docs/ACADEMIC-DATA-MODEL.md)을 함께 확인합니다. 이미 발표된 보안 공지의 후속 수정은 [전체 우선순위](https://github.com/yeongseon/hra-website/issues/300)에 따릅니다.
 
-1.  **엔진 설치**: [Node.js](https://nodejs.org/ko/) **24.x**를 설치하세요. 이 프로젝트가 사용하는 지원 중인 LTS 버전이에요.
-2.  **스마트 메모장**: [VS Code](https://code.visualstudio.com/)를 설치하세요.
-3.  **코드 가져오기**: 터미널을 열고 `git clone https://github.com/yeongseon/hra-website.git`을 입력하세요.
-4.  **폴더 들어가기**: `cd hra-website`를 입력해 프로젝트 폴더로 이동하세요.
-5.  **도구 설치**: nvm을 사용한다면 `nvm install` → `nvm use`로 `.nvmrc`의 Node 24를 선택한 뒤 `npm ci`를 실행하세요. nvm 없이 설치했다면 `node --version`이 `v24.x`인지 먼저 확인하세요.
-6.  **비밀 설정**: 폴더 안의 `.env.example` 파일을 복사해서 이름을 `.env`로 바꾸세요.
-7.  **열쇠 채우기**: `.env` 파일 안에 `DATABASE_URL` 등 필수 항목들을 채워 넣으세요. (관리자에게 문의!)
-8.  **창고 정리**: 새 빈 개발 DB에서 [DB 변경 절차](docs/developer/database-change-procedure.md)에 따라 테이블·추가 SQL을 준비하세요.
-9.  **관리자 생성**: `npm run seed-admin`으로 로그인할 계정을 만드세요.
-10. **실행!**: `npm run dev`를 입력하고, 인터넷 창에 `http://localhost:3000`을 치면 끝! 🎉
+## 7. 버전과 문서의 기준
 
-- **💡 힌트**: 빨간 글씨로 에러가 나면 대부분 `npm install`을 안 했거나 `.env` 설정이 틀린 경우예요.
-- **성공하면?**: 예쁜 HRA 메인 화면이 짠! 하고 나타날 거예요.
+실제 설치 버전은 `package.json`과 `package-lock.json`, 실제 검증 명령은 `package.json`의 `scripts`, DB 구조는 `schema.ts`와 별도 SQL을 함께 확인합니다. README의 소개만 보고 의존성이나 DB를 임의로 갱신하지 않습니다.
 
----
+이 안내는 2026-10-18에 정비를 시작했고 2026-10-21에 설치·CI 명령을 다시 대조했습니다. 특정 날짜의 테스트 결과는 당시 기록이며, 운영 설정 확인과 향후 기능 완료 여부는 각 추적 이슈에 남깁니다. 문서를 고칠 때의 확인 항목은 [문서 지도와 유지 방법](docs/documentation-map.md)에 있습니다.
 
-## 9. 🏗️ 핵심 패턴 (코드 작성 규칙)
-개발자 친구들은 이 규칙을 꼭 지켜주세요!
-
-> 아래 Server Action 패턴은 현재 코드 이해를 위한 **기존 구조**입니다. 새 기능과 구조 개편 대상 기능은 Page/Server Action에서 DB를 직접 호출하지 않고 **Application Service → Repository** 경계를 사용합니다. 자세한 기준은 [플랫폼 아키텍처](docs/developer/platform-architecture.md)를 따릅니다.
-
-### 1️⃣ 기존 서버 액션 패턴 (전환 대상)
-`src/features/*/actions/index.ts`의 기존 기능은 대체로 이 순서를 사용합니다.
-```typescript
-"use server";
-
-import { z } from "zod/v4";              // 1. 검문소(Zod) 통과!
-import { requireAdmin } from "@/lib/admin"; // 2. "너 관리자니?" 확인!
-import { db } from "@/lib/db";           // 3. 데이터 창고(DB) 작업 시작!
-import { revalidatePath } from "next/cache"; // 4. "화면 새로고침해!" 하고 알려주기
-```
-
----
-
-## 10. ✨ 최근의 멋진 변화들 (Recent Changes)
-최근에 우리 웹사이트가 이렇게 더 똑똑해졌어요!
-
-- **👀 얼마나 봤을까?**: 공지사항과 자료실에 **조회수** 기능이 생겼어요. 어떤 글이 인기 있는지 알 수 있죠!
-- **🛤️ 멋진 여정**: 커리큘럼 페이지의 '여정' 디자인이 더 예쁘고 보기 편하게 바뀌었어요.
-- **📰 최신 뉴스**: 언론보도가 항상 최신순으로 정렬되어 가장 따끈따끈한 소식을 먼저 보여줘요.
-- **👥 꼼꼼한 회원 관리**: '승인 대기' 상태가 추가되어 운영진이 확인한 분들만 멤버로 승인할 수 있고, 역할 변경도 드롭다운으로 톡! 선택할 수 있어요.
-- **📄 서류 양식 통합**: 자료실에서 보고서 양식을 한눈에 모아볼 수 있게 탭으로 정리했답니다.
-- **🖼️ 포스터 업로드**: 이제 신입생 모집 포스터를 컴퓨터에서 바로 업로드하거나 주소만 넣어서 등록할 수 있어요.
-
----
-
-## 11. 🚢 배포
-- **우리 사이트**: Vercel을 통해 전 세계 어디서든 접속할 수 있게 되어 있어요.
-- **개발 가이드 문서**: [https://yeongseon.github.io/hra-website/](https://yeongseon.github.io/hra-website/) — MkDocs로 운영 중인 풀 가이드 (처음 기여하는 분 필독!)
-- **주의사항**: 코드를 고친 뒤에는 꼭 `npm run build`를 해서 문제가 없는지 확인해야 해요!
-- **Node.js 기준**: 개발·CI·배포 선언은 24.x예요. 빌드 시작에 실제 Node 버전을 출력하지만, 현재 운영 Vercel 배포의 실행 버전 일치는 아직 확인하지 못했어요. 확인 범위는 [빌드·배포 안전 가이드](docs/contributing/build-and-deploy-safety.md#2-5-nodejs-버전-맞추기)를 참고하세요.
-- **자동 안전망**: `npm install` 한 번이면 `pre-commit`(타입 검사) + `pre-push`(빌드 검증) 훅이 자동으로 켜져요. 이게 있으면 깨진 코드를 push 하려고 해도 컴퓨터가 막아줍니다. 자세한 내용은 👉 **[빌드·배포 안전 가이드](https://yeongseon.github.io/hra-website/contributing/build-and-deploy-safety/)** 를 꼭 읽어주세요. (10분이면 다 읽어요!)
-
----
-
-## 🙋‍♀️ 도움이 필요해요!
-더 자세한 내용은 `docs/` 폴더를 확인해 보세요.
-- [관리자용 가이드](docs/ADMIN-GUIDE.md): 사이트 운영 방법이 궁금할 때 ⭐
-- [배포 가이드](docs/DEPLOYMENT.md): 내 사이트를 인터넷에 직접 올리고 싶을 때
-- [시작하기 가이드](docs/getting-started/prerequisites.md): 도구 설치부터 차근차근 배우고 싶을 때
-
-여러분의 멋진 기여를 기다릴게요! 즐거운 코딩 되세요! 🎈

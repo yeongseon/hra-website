@@ -2,6 +2,10 @@
 
 관련: #168. 웹앱 기능/학적/DB/배포 정책이 아니라 **변경 이력과 버전 관리**를 다룬다.
 
+**릴리스(release)**는 특정 코드 상태에 버전과 변경 설명을 붙여 기록하는 일이다. **태그(tag)**는 그 코드 상태를 가리키는 이름이고, **배포(deploy)**는 프로그램을 서버에서 제공하는 일이다. 태그를 만들었다고 DB 변경이나 운영 확인까지 완료되는 것은 아니다.
+
+일반 기여자는 PR 제목·본문과 변경 설명을 확인한다. 저장소 관리자는 release-please 활성화·토큰·첫 릴리스 결과를 확인한다. **release-please**는 병합된 변경 이력을 읽고 버전·CHANGELOG 변경을 PR로 제안하는 도구다.
+
 ## 1. 이슈 → PR → 릴리스의 역할
 
 | 대상 | 형식 | 예 |
@@ -16,6 +20,8 @@
 
 ## 2. PR 제목과 버전
 
+버전 `X.Y.Z`는 차례로 major·minor·patch이다. 보통 호환성을 깨는 변경, 기능 추가, 수정의 크기를 구분한다. 현재 0.x 단계에서는 아래 저장소 설정에 따라 증가 폭을 정한다. 업무의 긴급도와는 별개다.
+
 | type | 의미 | 기본 릴리스 영향 |
 | --- | --- | --- |
 | `feat` | 새 기능 | minor |
@@ -27,11 +33,13 @@
 
 scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변경 대상을 짧게 쓴다. scope 없는 `fix: ...`도 허용한다. 설명은 한글을 우선하며, 영문 타입만 소문자로 고정한다. 형식이 맞는다고 변경 내용의 의미까지 자동 검증되는 것은 아니므로 리뷰가 필요하다.
 
-일반 PR은 squash merge를 기본으로 운영한다. **최종 squash commit 제목이 검증된 PR 제목이어야 release-please가 올바르게 분류한다.** 커밋 목록 전체를 무조건 본문에 넣지 말고, 필요한 설명·이슈 참조·BREAKING CHANGE를 보존한다. 작업 브랜치의 WIP 커밋마다 Conventional Commits를 강제하지는 않는다.
+일반 PR은 **squash merge**, 즉 브랜치의 변경을 한 커밋으로 묶어 병합하는 방식을 기본으로 운영한다. **최종 squash commit 제목이 검증된 PR 제목이어야 release-please가 올바르게 분류한다.** 커밋 목록 전체를 무조건 본문에 넣지 말고, 필요한 설명·이슈 참조·BREAKING CHANGE를 보존한다. 작업 브랜치의 임시(WIP) 커밋마다 Conventional Commits를 강제하지는 않는다.
 
 권장 GitHub 설정(관리자 확인 필요): squash 허용, 기본 squash 제목=PR 제목, 기본 본문=PR 본문. Merge/rebase 사용을 계속 허용하면 모든 main 유입 커밋의 형식과 의미를 별도로 점검해야 한다. 이 변경은 저장소 설정을 자동 수정하지 않는다.
 
 ## 3. 최초 도입과 버전 정본
+
+**Manifest(매니페스트)**는 패키지별 기준 버전을 기록하는 파일이다. **bootstrap-sha**는 최초 도입 시 과거 이력을 어디까지 이미 처리한 것으로 볼지 정하는 커밋 ID다. 기준 설정은 `release-please-config.json`과 `.release-please-manifest.json`에 있다.
 
 - 현재 package 버전 **0.1.0**을 `.release-please-manifest.json`의 기준으로 사용한다. 이미 공개한 릴리스가 있다는 뜻이 아니다.
 - 도입 직전 main `b6b5f7d1608d14e0f647b0929211ceec5db855b2`을 `bootstrap-sha`로 지정했다. 이 커밋까지의 과거 변경 이력은 재수집하지 않는다.
@@ -54,19 +62,23 @@ scope는 `auth`, `academic`, `attendance`, `upload`, `ci`, `release`처럼 변�
 
 ## 5. 토큰과 CI 실행
 
+**PAT(Personal Access Token)**는 GitHub 작업 권한을 부여하는 비밀 토큰이다. **fine-grained** 토큰은 대상 저장소와 허용 작업을 제한할 수 있다. 실제 토큰 값은 저장소의 Actions Secret으로 관리하며, PR 본문이나 로그에 적지 않는다.
+
 활성화 전 저장소 한정 `RELEASE_PLEASE_TOKEN`(최소 권한 fine-grained PAT)을 설정한다. release-please에는 contents/issues/pull-requests 쓰기 권한이 필요하다. `GITHUB_TOKEN`으로 대체하지 않는다. 워크플로별 최소 권한을 사용하고 DB/Blob/배포 토큰은 전달하지 않는다. GitHub App을 사용하려면 별도 단계에서 단기 설치 토큰을 발급하도록 workflow를 변경해야 한다.
 
-관리자 설정의 **Allow GitHub Actions to create and approve pull requests**가 허용되어 있어야 한다. 이 옵션은 자동 승인을 하라는 뜻이 아니며, workflow는 승인/병합을 수행하지 않는다.
+관리자 설정의 **Allow GitHub Actions to create and approve pull requests**는 `GITHUB_TOKEN`의 PR 생성·승인 권한을 제어한다. 현재 workflow가 사용하는 별도 PAT의 저장소 권한과 구분한다. 이 옵션만 켠다고 PAT 권한이 생기는 것은 아니다. 조직 정책과 실제 토큰의 허용 범위를 확인하며, workflow는 PR 승인·병합을 수행하지 않는다. 설정의 적용 대상은 [GitHub 공식 안내](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)를 따른다.
 
-GitHub와 release-please의 공식 문서에 따르면 `GITHUB_TOKEN`이 만든 PR·태그의 후속 이벤트는 일반적인 workflow를 시작하지 않는다. 따라서 release PR의 CI가 실제로 실행되도록 현재 workflow에는 최소 권한 PAT를 사용하고, 첫 PR에서 실행 결과를 확인한다. 토큰 작성자의 PR에 별도 승인 정책이 적용되면 승인 후 CI를 확인한다.
+2026-10-18에 확인한 [GitHub 공식 문서](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)는 `GITHUB_TOKEN`의 후속 실행 제한에 예외를 설명한다. `pull_request`의 `opened`·`synchronize`·`reopened` 이벤트는 **사용자 승인 대기 상태의 workflow**를 만들 수 있다. 다른 PR 활동과 태그의 push 등은 같은 예외가 아니므로, “GITHUB_TOKEN이면 모든 CI가 자동 실행된다”거나 “PR CI를 전혀 실행할 수 없다”고 단정하지 않는다.
 
-저장소 변수 `RELEASE_PLEASE_BOT_LOGIN`에 실제 PR 작성자 login을 정확히 지정한다. 토큰 자체를 변수나 문서에 기록하지 않는다. Actions PR 생성 허용·토큰·작성자 변수를 확인한 뒤에만 `RELEASE_PLEASE_ENABLED=true`로 전환한다.
+현재 저장소 workflow는 여전히 `RELEASE_PLEASE_TOKEN`을 필수로 요구한다. 토큰 방식을 바꾸려면 작성자 검증과 CI 시작·승인 절차를 함께 검토하는 별도 변경이 필요하다. 첫 release PR에서는 실제 작성자·필수 검사·실행 결과를 확인하고, 별도 승인 정책이 적용되면 승인 후 CI를 확인한다.
+
+저장소 변수 `RELEASE_PLEASE_BOT_LOGIN`에 실제 PR 작성자 login을 정확히 지정한다. 토큰 자체를 변수나 문서에 기록하지 않는다. 대상 저장소 정책·토큰 권한·작성자 변수·CI 실행 방법을 확인한 뒤에만 `RELEASE_PLEASE_ENABLED=true`로 전환한다.
 
 ## 6. 생성형 PR 예외와 재발 방지
 
 릴리스 PR은 다음 조건을 모두 만족해야만 수동 본문 템플릿을 면제한다.
 
-- 신뢰된 작성자, 같은 저장소 head/base, main 대상
+- 신뢰된 작성자, 작업 브랜치와 병합 대상이 같은 저장소, main 대상
 - 정확한 `release-please--branches--main` 브랜치
 - `chore(release): release X.Y.Z` 제목과 `autorelease: pending` 라벨
 - 변경 파일 전체가 CHANGELOG.md, package.json, package-lock.json, .release-please-manifest.json 네 파일이며 삭제/이름 변경 없음
@@ -90,7 +102,7 @@ node scripts/check-release-config.mjs
 실제 GitHub 점검은 gh CLI 로그인과 저장소 read 권한이 필요하다. Actions의 `이슈·PR 형식` 수동 실행도 일괄 점검을 제공한다. 위반 항목만 필요한 범위에서 고치고 의미·우선순위·담당자를 자동으로 바꾸지 않는다. 닫힌 이슈/PR은 형식 통일만을 이유로 재작성하지 않는다.
 
 - [ ] 도입 PR의 CI와 코드 리뷰 확인
-- [ ] Actions PR 생성 설정 확인
+- [ ] 대상 저장소의 Actions·토큰 정책과 PAT의 저장소 범위·권한 확인
 - [ ] `RELEASE_PLEASE_TOKEN`·작성자 변수·CI 승인 방법 확인 후 `RELEASE_PLEASE_ENABLED=true` 설정
 - [ ] squash 기본 메시지와 main 보호/필수 체크 설정 확인
 - [ ] 첫 release PR의 작성자·파일·버전·CI 실행 검증
@@ -104,3 +116,4 @@ node scripts/check-release-config.mjs
 - [Manifest와 bootstrap](https://github.com/googleapis/release-please/blob/main/docs/manifest-releaser.md)
 - [워크플로가 다른 워크플로를 실행할 때의 토큰 동작](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
 - [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+

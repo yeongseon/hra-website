@@ -2,9 +2,9 @@
 title: Markdown 문법 가이드
 category: guide
 visibility: member
-version: 1.0.0
+version: 1.0.1
 description: HRA 보고서 작성에 필요한 Markdown 기본 문법을 정리한 문서입니다.
-updatedAt: 2026-04-26
+updatedAt: 2026-10-18
 ---
 
 # Markdown 문법 가이드
@@ -81,7 +81,7 @@ updatedAt: 2026-04-26
 
 ```markdown
 [표시할 글자](https://hra.example.com)
-[보고서 양식](/member/templates)
+[보고서 양식](/resources)
 ```
 
 ## 7. 이미지
@@ -90,8 +90,8 @@ updatedAt: 2026-04-26
 ![대체 텍스트](https://...)
 ```
 
-- 허용 출처: Vercel Blob 업로드 이미지, 동일 출처(`/...`) 상대 경로
-- 외부 도메인 이미지는 보안 정책상 차단됩니다. 자료실에 업로드 후 해당 URL을 사용하세요.
+- 화면에서 지원하는 이미지 업로드 기능을 사용하고 미리보기에서 표시를 확인하세요.
+- 외부 이미지 주소는 허용된 출처만 표시됩니다. 표시되지 않거나 업로드 권한이 없다면 담당자에게 사용 방법을 확인하세요. 보호된 자료의 주소를 공개 이미지 주소로 바꾸지 않습니다.
 
 ## 8. 코드 블록
 
@@ -135,4 +135,5 @@ print("언어 지정 가능")
 - 한 줄 띄어쓰기로 문단을 구분합니다.
 - 제목 위·아래에는 빈 줄을 넣어 가독성을 확보합니다.
 - HTML 태그는 일부만 허용됩니다(`<br>` 등). 보안 정책상 `<script>`, `<iframe>` 등은 차단됩니다.
-- 자세한 단계 구분 규칙은 [보고서 작성 가이드 §6](/member/guides/report-writing-guide#6-기존-hwp-서식의-markdown-변환-기준)을 참고하세요.
+- 자세한 단계 구분 규칙은 [보고서 작성 가이드](/member/guides/report-writing-guide)의 6절을 참고하세요.
+

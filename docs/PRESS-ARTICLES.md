@@ -1,6 +1,8 @@
 # HRA 관련 언론 기사 조사 결과
 
-> 2026-04-26 기준, HRA(Human Renaissance Academy) 관련 외부 언론 기사를 전수 검색한 결과입니다.
+> **2026-04-26 당시의 기사 조사 기록**입니다. 아래 조사 결과와 판단은 그 시점의 기록으로 보존합니다. 2026-10-18 문서 정비에서 외부 기사 본문이나 현재 등록 상태를 다시 확인한 것은 아닙니다.
+
+현재 언론보도는 [관리자 안내](ADMIN-GUIDE.md)에 따라 `/admin/press`에서 관리합니다. 등록·수정 전 원문 제목·게시일·URL과 해당 기사 관련성을 확인하세요. 이 기록만으로 현재 모집 일정이나 프로그램 운영 내용을 확정하지 않습니다.
 
 ---
 
@@ -91,3 +93,4 @@
 | 매체 | 교수신문 | 제주대신문 | 국민일보 | 제주의소리 |
 | URL | https://www.kyosu.net/news/articleView.html?idxno=203971 | https://news.jejunu.ac.kr/news/articleView.html?idxno=15181 | https://www.kmib.co.kr/article/view.asp?arcid=0011982704 | https://www.jejusori.net/news/articleView.html?idxno=176885 |
 | 날짜 | 2026-04-16 | 2021-05-26 | 2017-12-14 | 2016-04-20 |
+

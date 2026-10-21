@@ -1,5 +1,9 @@
 # 학생 명부 등록과 승인 감사
 
+학생 등록 화면을 개발하거나 등록 결과를 검수할 때 읽는다. **학생 명부**는 교육생 자체의 기록이고, **회원 계정**은 로그인에 쓰는 기록이다. 한 학생은 여러 기수에 등록될 수 있으며 로그인 계정과 아직 연결되지 않을 수도 있다. 같은 이름만으로 두 기록을 같은 사람으로 판단하지 않는다.
+
+명부 목록·상세·신규 등록은 구현되어 있다. 이 문서는 지정 승인자 조건과 등록 절차를 설명하며 운영 기능을 켜라는 지시가 아니다. DB를 처음 준비한다면 [학생 스키마 적용](academic-students-migration.md)을 먼저 읽고, 등록 후 계정을 연결할 때는 [검증 연결 절차](academic-enrollment-backfill.md)를 따른다.
+
 학생 명부 화면은 `/admin/academics/students`에 있다. 홈페이지의 `ADMIN` 역할만으로는 접근할 수 없다. 지정 승인자 검증은 #145의 `requireAcademicApprover()`가 담당하고 목록·상세·기수 조회와 등록 액션이 각각 이를 호출한다. 마이페이지의 학사관리 링크도 지정 승인자에게만 표시한다.
 
 ## 제공 기능
@@ -15,7 +19,7 @@
 
 [데이터베이스 변경 절차](database-change-procedure.md)에 따라 백업·격리 검증 후 범위를 제한하여 적용한다. 먼저 #144 `scripts/migrate-academic-students.sql`을 적용하고, 이어 `scripts/migrate-academic-roster.sql`을 적용한다. 이 파일은 등록 감사 표와 `register_academic_roster` 함수를 한 트랜잭션에 설치한다. 표의 기존 구조가 다르면 중단한다. 일반 표 여부, RLS·강제 RLS 비활성, 사용자 트리거 없음, 기본 인덱스 2개의 개수와 유효·준비·생존 상태를 검사한다. `created_at`의 `now()` 외에는 열 기본값을 허용하지 않는다. 임의 자동 보정은 하지 않는다.
 
-Drizzle 스키마 정본 `src/lib/db/schema.ts`에서 `academicRosterRegistrations`를 `./academic-roster`로부터 내보내야 한다. 새 빈 개발 DB의 `db:push`로 표를 생성한 경우에도 SQL 함수를 설치하려면 이 migration을 별도 적용해야 한다.
+현재 Drizzle 스키마 정본 `src/lib/db/schema.ts`는 `academicRosterRegistrations`를 `./academic-roster`에서 재수출한다. 새 빈 개발 DB의 `db:push`로 표를 생성한 경우에도 SQL 함수를 설치하려면 이 migration을 별도 적용해야 한다.
 
 함수는 `SECURITY INVOKER`이며 PUBLIC 실행 권한을 제거한다. 앱 연결 역할이 함수 소유자와 다르면 필요한 표 권한과 해당 함수 EXECUTE만 검토하여 부여한다. 광범위한 권한 추가는 하지 않는다.
 
@@ -39,7 +43,7 @@ Drizzle 스키마 정본 `src/lib/db/schema.ts`에서 `academicRosterRegistratio
 - `HRA_ACADEMIC_QA_STATE`: 격리 승인자의 Playwright storageState JSON 파일 경로
 - `HRA_ACADEMIC_QA_COHORT_ID`: 격리 기수 UUID
 
-승인자 상태가 없는 실행은 비로그인 직접 접근 차단만 확인한다. 상태와 기수 UUID를 함께 주면 신규 등록, 목록·미연결 확인, 동일 학생 중복 기수 등록 거부, 재조회 흐름까지 실행한다. 전체 공개 및 등록 쓰기 설정은 이 격리 앱에서 모두 활성화해야 한다. 비승인 MEMBER/FACULTY/ADMIN의 실제 HTTP 접근 거부와 승인자 FACULTY의 좁은 경로 허용은 통합 QA에서 별도로 확인한다.
+승인자 상태가 없는 실행은 비로그인 직접 접근 차단만 확인한다. 상태와 기수 UUID를 함께 주면 신규 등록, 목록·미연결 확인, 동일 학생 중복 기수 등록 거부, 재조회 흐름까지 실행한다. 전체 공개 및 등록 쓰기 설정은 이 격리 앱에서 모두 활성화해야 한다. 비승인 MEMBER/FACULTY/ADMIN의 실제 HTTP 접근 거부와 승인자 FACULTY의 좁은 경로 허용은 통합 QA에서 별도로 확인한다. 이 개별 Playwright 파일 전체가 기본 CI에 자동 포함되는 것은 아니며, CI의 연결 검증은 [G1 품질 게이트](academic-g1-quality-gate.md)를 따른다.
 
 ### 격리 HTTP·브라우저 실행기
 
@@ -60,3 +64,4 @@ HRA_TEST_PG_BIN=/opt/homebrew/opt/postgresql@18/bin node scripts/verify-academic
 5. 실제 DB의 학생·학적·승인 감사가 각각 한 행이고 학생은 계정 미연결이며, 감사 행위자는 지정 승인자이고 기존 사용자 역할·기수·로그인 정보가 바뀌지 않았는지 확인한다. 정상 로그인 요청 제한 예약도 성공 후 삭제되어야 한다.
 
 Playwright 쿠키 상태는 고유 임시 디렉터리 안의 0600 파일로만 전달한다. 실행 전용 설정에서 trace·스크린샷·영상을 모두 끄며, 종료 시 이 실행의 서버·임시 DB·쿠키와 브라우저 산출물을 정리한다. 출력에는 검증 이름과 통과 여부, 실패한 locator·기대 문구·소스 위치·합성 행 수만 남기고 쿠키·SQL·개인정보·원문 HTTP 헤더는 기록하지 않는다. 이 실행기를 돌리는 동안 같은 worktree에서 Next 빌드나 다른 개발 서버를 함께 실행하지 않는다.
+

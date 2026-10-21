@@ -1,6 +1,8 @@
 # 협업 워크플로우 — 이슈부터 릴리스까지
 
-작업 관리는 **GitHub 이슈 → 작업 브랜치 → PR → CI·리뷰 → 완료 확인**으로 합니다. 버전은 이후 **release-please PR → 검토·병합 → GitHub Release**로 기록합니다. 별도의 프로젝트 보드나 마일스톤은 필요하지 않습니다. [릴리스 운영](releasing.md)을 함께 확인하세요.
+작업 관리는 **GitHub 이슈 → 작업 브랜치 → PR → CI·리뷰 → 완료 확인**으로 합니다. 이슈는 작업의 목표와 완료 조건, 브랜치는 변경을 따로 기록하는 작업 흐름, PR(Pull Request)은 변경을 검토하고 병합해 달라는 요청입니다. CI(Continuous Integration)는 GitHub에서 자동 실행하는 검사입니다.
+
+버전 기록은 release-please를 활성화한 뒤 **릴리스 PR → 검토·병합 → GitHub Release**로 진행합니다. 기능 배포와 버전 기록의 차이, 최초 활성화 조건은 [릴리스 운영](releasing.md)을 확인하세요. 현재 작업 관리에 별도 프로젝트 보드나 마일스톤을 추가할 필요는 없습니다.
 
 ## 1. 이슈로 작업 정하기
 
@@ -48,21 +50,24 @@ node scripts/check-process-format.mjs --all  # 열린 이슈와 PR, 읽기 전�
 gh issue create --title "요약" --label bug --label P2 --label 기능 --body-file 본문.md
 ```
 
+위 GitHub 조회·작성 명령에는 `gh`(GitHub CLI) 설치와 해당 계정의 저장소 접근 권한이 필요합니다. `issues:check`, `--pull-requests`, `--all` 검사는 읽기 전용입니다. 검사에서 위반이 0건인지 확인하고, 위반이 있으면 지적된 제목·라벨·본문을 고친 뒤 다시 검사합니다.
+
 이슈·일반 PR 본문 규칙은 `scripts/_lib/process-format.mjs`, PR 제목·생성형 PR·릴리스 계약은 `scripts/_lib/release-policy.mjs`가 각각 소유합니다. 폼(`.github/ISSUE_TEMPLATE/*.yml`), PR 템플릿, 문서를 바꾸면 해당 규칙과 테스트도 함께 확인합니다. 기존 본문 정합성은 `tests/unit/process-format.test.ts`, 새 제목·릴리스 정책은 `scripts/tests/release-policy.test.mjs`로 검증합니다.
 
 **착수할 때** 담당자 한 명을 지정합니다. 담당자가 없는 열린 이슈는 대기 중인 작업입니다. 막히면 이슈 댓글에 막힌 이유와 다음 필요한 결정을 남깁니다.
 
 ## 2. 작업 브랜치와 PR
 
-`main`에서 직접 작업하지 말고, 최신 `main`에서 브랜치를 만듭니다.
+`main`에서 직접 작업하지 말고, 최신 `main`에서 브랜치를 만듭니다. 먼저 `git status --short`에서 진행 중인 변경이 없는지 확인합니다. 변경이 있으면 해당 작업부터 정리하고, 브랜치 이름의 번호와 설명을 실제 작업에 맞게 바꿉니다.
 
 ```bash
+git status --short
 git switch main
-git pull origin main
+git pull --ff-only origin main
 git switch -c fix/issue-번호-짧은설명
 ```
 
-새 기능은 `feature/`, 버그는 `fix/`, 문서는 `docs/`, 자동화는 `ci/`로 시작합니다. PR 제목은 **`type(scope)!: 설명`** 형식입니다. 예: `fix(auth): 카카오 로그인 오류 처리`, `feat(academic): 학생별 과제 제출`, `ci(release): 릴리스 자동화 도입`. scope와 `!`는 필요한 경우만 씁니다. 허용 type과 버전 영향은 [릴리스 규칙](releasing.md#2-pr-제목과-버전)을 따릅니다.
+새 기능은 `feature/`, 버그는 `fix/`, 문서는 `docs/`, 자동화는 `ci/`로 시작합니다. PR 제목은 **`type(scope)!: 설명`** 형식입니다. 예: `fix(auth): 카카오 로그인 오류 처리`, `feat(academic): 학생별 과제 제출`, `ci(release): 릴리스 자동화 도입`. scope와 `!`는 필요한 경우만 씁니다. 허용 type과 버전 영향은 [릴리스 규칙의 2절](releasing.md)을 따릅니다.
 
 일반 PR은 템플릿의 네 섹션(관련 이슈, 변경 내용, 검증 결과, 배포 영향과 리뷰)을 지우지 않고 채웁니다. 관련 이슈에는 `Closes #번호`나 `Refs #번호`를, 이슈가 없는 변경이면 `이슈 없음: 사유`를 적습니다. 병합만으로 완료되는 작업은 `Closes #번호`, **DB 마이그레이션이나 운영 확인이 남으면** `Refs #번호`를 사용하고 적용 확인 후 이슈를 닫습니다.
 
@@ -72,7 +77,7 @@ release-please/Dependabot의 본문은 검증된 생성형 PR에 한해서만 �
 
 ## 3. 검증과 리뷰
 
-현재 [앱 CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 PR과 `main` 푸시에서 **lint → typecheck → 격리 PostgreSQL을 쓰는 Vitest → build → Playwright 브라우저 스모크**를 실행합니다. 브라우저 스모크는 로그인 화면과 보호 경로를 확인하며 운영 DB·Blob 자격 증명을 사용하지 않습니다. 별도 `형식·릴리스 계약 테스트`는 Node 기본 테스트 및 버전 정합성을 검사합니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
+현재 [앱 CI](https://github.com/yeongseon/hra-website/actions/workflows/ci.yml)는 `main` 대상 PR과 `main` 푸시에서 **lint → typecheck → 격리 PostgreSQL을 쓰는 Vitest → build → 학사 G1 검증 → Playwright 브라우저 스모크**를 실행합니다. 학사 G1 검증은 `npm run test:academic-g1`, 일반 브라우저 스모크는 `ci-smoke.spec.ts`이며 모든 E2E 파일을 실행하는 설정은 아닙니다. 이 CI에는 운영 DB·Blob 자격 증명을 전달하지 않습니다. 별도 `형식·릴리스 계약 테스트`는 Node 기본 테스트 및 버전 정합성을 검사합니다. PR에서 실패한 검사를 원인 확인 없이 건너뛰지 않습니다.
 
 ```bash
 npm run lint
@@ -83,9 +88,11 @@ node --test scripts/tests/release-policy.test.mjs
 node scripts/check-release-config.mjs
 ```
 
-인증·라우팅 등 브라우저 동작을 바꿨다면 `npm run test:e2e`와 실제 화면도 확인합니다. 결과나 미실행 사유를 PR에 남깁니다. 로컬 훅은 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. 의미 있는 변경은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md#11-코드-리뷰-정책-oracle-필수)의 Oracle 리뷰 조건도 적용합니다.
+인증·라우팅 등 브라우저 동작을 바꿨다면 [빌드·배포 가이드](build-and-deploy-safety.md)의 환경 조건을 준비하고 관련 E2E와 실제 화면도 확인합니다. 결과나 미실행 사유를 PR에 남깁니다. `npm test`의 성공 종료만 보지 말고 관련 DB 테스트가 건너뛰어졌는지도 확인합니다.
 
-리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. CI와 필요한 리뷰가 끝난 뒤 병합합니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
+로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode로 수행한 의미 있는 작업**은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 Oracle 리뷰 조건을 적용합니다. 문서만 수정하는 등 명시된 간단 변경은 면제이며, **Claude 또는 Codex만 사용한 작업에는 Oracle 절차를 적용하지 않습니다.** 일반 리뷰와 필요한 검사는 계속 수행합니다.
+
+리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. **현재 PR의 마지막 커밋**에서 GitHub CI와 Vercel Preview가 각각 성공했는지 확인한 뒤 한 건을 병합합니다. 새 `main` 병합 커밋의 Production 배포 성공을 확인한 다음 PR을 갱신·푸시합니다. Preview 설치·빌드 실패나 Production 배포 대기·실패·횟수 제한은 [빌드·배포 가이드](build-and-deploy-safety.md)의 중단·원인 확인 절차를 먼저 따릅니다. 최신 `main` 반영이나 수정 커밋 뒤에는 이전 성공 결과를 재사용하지 않습니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
 
 ## 4. 완료와 릴리스
 
@@ -94,3 +101,4 @@ node scripts/check-release-config.mjs
 릴리스는 release-please가 제안하는 PR의 버전·CHANGELOG와 CI/리뷰를 확인한 뒤 사람이 병합합니다. 태그는 `vX.Y.Z`. npm 배포나 Vercel 배포 전략은 바꾸지 않습니다. 토큰·봇 PR 검사 승인·첫 릴리스 운영 확인은 [릴리스 운영 안내](releasing.md)를 따릅니다.
 
 빌드·배포 시 주의할 점은 [빌드·배포 안전 가이드](build-and-deploy-safety.md)를 참고합니다.
+
