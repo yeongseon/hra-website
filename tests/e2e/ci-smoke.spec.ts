@@ -4,6 +4,7 @@
  */
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
+import { anonymousProtectedPaths } from "../support/auth-protected-paths";
 
 test("응답 보안 헤더를 유지한다", async ({ request }) => {
   const response = await request.get("/login");
@@ -69,7 +70,7 @@ test("소개 화면에 실제 활동 사진이 보이고 이미지 자리 문구
   await expect(page.locator("body")).not.toContainText("HRA 활동 사진");
 });
 
-for (const path of ["/admin", "/admin/templates", "/admin/resources/templates", "/admin/users", "/resources", "/mypage"]) {
+for (const path of anonymousProtectedPaths) {
   test(`비로그인 ${path} 접근은 로그인 화면으로 이동한다`, async ({ page }) => {
     const response = await page.goto(path);
     expect(response?.status()).toBeLessThan(400);

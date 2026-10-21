@@ -27,13 +27,18 @@ export async function withUploadDatabaseErrors<T>(operation:()=>Promise<T>):Prom
     throw new AcademicUploadError("UNAVAILABLE");
   }
 }
-export async function reserveAssignmentUploadAttempt(userId:string,targetId:string):Promise<void> {
+/** 고유 의도 수가 아닌 발급 요청만 별도 계산하며, 토큰·검증의 기존 외부 작업 합계 상한은 유지합니다. */
+export async function reserveAssignmentUploadAttempt(userId:string,targetId:string,phase:"intent"|"external"):Promise<void> {
   await withUploadDatabaseErrors(async()=>{
     const hash=(scope:string,value:string)=>createHash("sha256").update(scope).update("\0").update(value).digest("hex");
-    const result=await db.execute(sql`SELECT allowed FROM reserve_rate_limit(
-      ARRAY['academic-upload-user','academic-upload-target']::text[],
+    // 기존 외부 scope는 그대로 두어 배포 전 예약도 만료될 때까지 보수적으로 적용합니다.
+    const scopes=phase==="intent"?["academic-upload-intent-user","academic-upload-intent-target"]:["academic-upload-user","academic-upload-target"];
+    const result=await db.execute(sql`SELECT allowed, retry_after_sec FROM reserve_rate_limit(
+      ARRAY[${scopes[0]},${scopes[1]}]::text[],
       ARRAY[${hash("user",userId)},${hash("target",targetId)}]::text[],ARRAY[6,4]::integer[],ARRAY[60,60]::integer[])`);
-    if(result.rows[0]?.allowed!==true) throw new AcademicUploadError("RATE_LIMITED");
+    // 잘못된 결과나 DB 장애는 검증·토큰 발급으로 이어지지 않게 차단합니다.
+    const row=z.object({allowed:z.boolean(),retry_after_sec:z.number().int().min(0).max(60)}).parse(result.rows[0]);
+    if(!row.allowed) throw new AcademicUploadError("RATE_LIMITED",row.retry_after_sec);
   });
 }
 export async function issueUploadRecord(input:{requestId:string;targetId:string;userId:string;originalName:string;sizeBytes:number}):Promise<string> {
