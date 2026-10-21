@@ -1,5 +1,6 @@
 "use client";
 
+/** 관리자 본문을 Markdown으로 편집·저장하고 표·이미지 크기와 공개 미리보기를 제공하는 에디터입니다. */
 import { useEditor, EditorContent, useEditorState, NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Paragraph } from "@tiptap/extension-paragraph";
@@ -9,7 +10,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
 // Table, TableRow 등은 단일 패키지에서 named export로 제공됨
 import { Table, TableRow, TableCell, TableHeader, renderTableToMarkdown } from "@tiptap/extension-table";
-import type { JSONContent, MarkdownToken } from "@tiptap/core";
+import { decodeHtmlEntities, type JSONContent, type MarkdownToken } from "@tiptap/core";
 import { uploadEditorImage } from "@/lib/editor-image-upload-client";
 
 /** 이미지 크기 조정 프리셋 — null 은 "원본(크기 제한 없음)"을 의미한다 */
@@ -457,10 +458,41 @@ const MarkdownTable = Table.configure({ resizable: true }).extend({
   },
 });
 
-// @tiptap/extension-image 는 TipTap 렌더링만 처리하고 @tiptap/markdown 직렬화 훅이 없다.
-// 그 결과 editor.getMarkdown() 호출 시 이미지가 조용히 누락되어 DB에 저장되지 않는다.
-// Image.extend()로 renderMarkdown / parseMarkdown 을 추가해 직렬화를 활성화하고,
-// width 속성과 NodeView(ImageResizeView)를 추가해 크기 조정 기능을 지원한다.
+/** 이미지 크기 조정 UI와 같은 1~100% 범위만 저장·복원하며 다른 CSS 단위·선언은 버립니다. */
+function normalizeImageWidth(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?%$/.test(value)) return null;
+  const width = Number(value.slice(0, -1));
+  return width >= 1 && width <= 100 ? `${width}%` : null;
+}
+
+/** Markdown 이미지의 설명·주소·제목에서 구분자가 되는 문자는 문자 참조로 저장합니다. */
+function encodeMarkdownImageValue(value: string): string {
+  return value.replace(/[&<>"'\\[\]()*_`~!|\s]/g, (character) => `&#${character.charCodeAt(0)};`);
+}
+
+/**
+ * marked의 이미지 토큰은 문자 참조를 그대로 주므로 저장 시 인코딩한 값을 한 번만 복원합니다.
+ * Tiptap의 기존 named entity 헬퍼를 재사용하고 숫자 참조만 보완합니다. `&amp;lt;` 같은 실제
+ * 설명을 다시 `<`로 바꾸지 않도록 숫자·이름 참조를 한 번의 치환에서 처리합니다.
+ */
+function decodeMarkdownImageValue(value: string): string {
+  return value.replace(/&#(x[\da-f]+|\d+);|&(?:amp|lt|gt|quot);/gi, (entity: string, numeric: string | undefined) => {
+    if (!numeric) return decodeHtmlEntities(entity.toLowerCase());
+    const code = numeric.toLowerCase().startsWith("x") ? parseInt(numeric.slice(1), 16) : Number(numeric);
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : "\uFFFD";
+  });
+}
+
+/** 이미지 설명은 marked가 나눈 escape·인라인 토큰을 재사용해 문법 기호와 실제 글자를 구분합니다. */
+function parseMarkdownImageAlt(tokens: MarkdownToken[]): string {
+  return tokens.map((token) => {
+    if (token.tokens) return parseMarkdownImageAlt(token.tokens);
+    if (token.type === "escape" || token.type === "codespan") return token.text ?? "";
+    return decodeMarkdownImageValue(token.text ?? "");
+  }).join("");
+}
+
+// 이미지의 Markdown·크기 지정 HTML 양쪽에 저장 규칙을 적용하고, NodeView로 크기 조정 UI를 제공합니다.
 const MarkdownImage = Image.extend({
   addAttributes() {
     const parent = this.parent?.() ?? {};
@@ -470,10 +502,12 @@ const MarkdownImage = Image.extend({
       width: {
         default: null,
         // <img style="width: 50%"> 로부터 파싱
-        parseHTML: (element: HTMLElement) => element.style.width || null,
+        parseHTML: (element: HTMLElement) => normalizeImageWidth(element.style.width),
         // TipTap 에디터 내부 HTML 직렬화 (붙여넣기·드래그 용)
-        renderHTML: (attrs: Record<string, unknown>) =>
-          attrs.width ? { style: `width: ${attrs.width as string}` } : {},
+        renderHTML: (attrs: Record<string, unknown>) => {
+          const width = normalizeImageWidth(attrs.width);
+          return width ? { style: `width: ${width}` } : {};
+        },
       },
     };
   },
@@ -483,14 +517,19 @@ const MarkdownImage = Image.extend({
   renderMarkdown(node) {
     const src = (node.attrs?.src as string) ?? "";
     const alt = (node.attrs?.alt as string) ?? "";
-    const width = node.attrs?.width as string | null;
+    const width = normalizeImageWidth(node.attrs?.width);
     const title = node.attrs?.title as string | null;
 
     if (width) {
-      const altAttr = alt ? ` alt="${alt}"` : "";
-      return `<img src="${src}"${altAttr} style="width: ${width}" />`;
+      // 기존 표 헬퍼로 속성을 인코딩하고 HTML 파서가 줄바꿈으로 정규화하는 CR도 문자 참조로 보존한다.
+      const encodeAttribute = (value: string) => escapeHtmlAttr(escapeHtml(value)).replace(/\r/g, "&#13;");
+      const srcAttr = encodeAttribute(src);
+      const altAttr = encodeAttribute(alt);
+      const titleAttr = title != null ? ` title="${encodeAttribute(title)}"` : "";
+      return `<img src="${srcAttr}" alt="${altAttr}"${titleAttr} style="width: ${width}" />`;
     }
-    return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`;
+    const titlePart = title != null ? ` "${encodeMarkdownImageValue(title)}"` : "";
+    return `![${encodeMarkdownImageValue(alt)}](${encodeMarkdownImageValue(src)}${titlePart})`;
   },
 
   // 마크다운 image 토큰 → TipTap 이미지 노드
@@ -498,9 +537,9 @@ const MarkdownImage = Image.extend({
     return {
       type: "image",
       attrs: {
-        src: token.href ?? "",
-        alt: token.text ?? null,
-        title: token.title ?? null,
+        src: decodeMarkdownImageValue(token.href ?? ""),
+        alt: token.tokens ? parseMarkdownImageAlt(token.tokens) : token.text != null ? decodeMarkdownImageValue(token.text) : null,
+        title: token.title != null ? decodeMarkdownImageValue(token.title) : null,
       },
     };
   },
