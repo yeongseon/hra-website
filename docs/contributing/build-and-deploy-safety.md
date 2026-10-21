@@ -168,6 +168,10 @@ PR에는 실행한 검사와 실제 결과를 적습니다. 실행하지 못했�
 
 병합 전에 **현재 PR의 마지막 커밋**에서 필수 GitHub CI와 Vercel Preview 배포가 각각 성공했는지 확인합니다. 이전 커밋의 성공이나 로컬 빌드 성공을 새 커밋의 결과로 옮기지 않습니다. 최신 `main`을 다시 반영하거나 의존성·코드를 수정했다면 두 검사의 새 실행 결과를 기다립니다. Preview 설치·빌드가 실패하면 먼저 그 배포의 커밋과 로그에서 실패한 단계를 찾고, 원인을 고친 뒤 같은 새 커밋의 CI와 Preview를 재확인합니다. 실패한 Preview를 남긴 채 다음 PR을 병합 대상으로 넘기지 않습니다.
 
+Vercel이 `Deployment rate limited — retry in 24 hours`처럼 배포 횟수 제한을 알리면 재배포·의미 없는 수정 푸시·후속 PR 병합 시도를 중단합니다. PR에는 제한 메시지, 현재 커밋, 마지막으로 **CI와 Preview가 함께 성공한 커밋**, 재시도 가능한 시각을 기록합니다. 마지막 성공 커밋은 현재 커밋의 성공 증거가 아닙니다. 제한이 풀린 뒤 현재 커밋의 Preview를 다시 확인하고, 그 사이 코드나 `main`을 반영했다면 새 커밋의 CI와 Preview를 모두 확인한 다음 병합합니다.
+
+PR을 한 건 병합한 뒤에는 **새 `main` 병합 커밋의 Production 배포 성공**을 확인하고 다음 PR을 갱신·푸시합니다. PR Preview가 성공했어도 병합 커밋의 Production 배포는 별도 실행입니다. Production 상태가 대기·실패·횟수 제한이면 다음 PR의 푸시와 병합을 멈추고 현재 `main` 커밋과 마지막 Production 성공 커밋을 구분해 기록합니다. 2026-10-21에는 PR #326의 Preview·CI가 통과한 뒤 병합된 `15665df`의 Production 배포가 횟수 제한에 걸렸고, 직전 성공 배포의 커밋은 `b0d5d0d`였습니다. 이 수치는 당시 기록이며 이후 배포 상태를 대신하지 않습니다.
+
 Preview의 **빌드 성공**은 배포용 앱 생성의 증거입니다. 실제 OAuth 로그인, DB 연결·변경, Blob 업로드, 예약 작업, 운영 환경변수 일치는 별도 확인입니다. Preview 자원 격리는 아직 [#279](https://github.com/yeongseon/hra-website/issues/279)의 확인 대상이므로, 연결 대상을 확인하기 전에는 실제 개인정보나 운영 파일로 기능 검사를 하지 않습니다. 환경별 절차는 [배포 안내](../DEPLOYMENT.md)를 따릅니다.
 
 리뷰는 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)을 따릅니다. OpenCode의 의미 있는 작업에는 Oracle 리뷰가 필요하고, 문서만 수정하는 등 명시된 간단 변경은 면제입니다. Claude 또는 Codex만 사용한 작업에는 Oracle 절차가 적용되지 않습니다. 일반 코드 리뷰와 필요한 검사는 계속 수행합니다.

@@ -111,8 +111,8 @@ DB 변경이 필요하면 **앱 배포보다 먼저 적용해야 할 항목**을
 2. 작업 브랜치의 PR과 Preview를 준비합니다. 실제 자동 배포 조건은 프로젝트 설정에서 확인합니다. **현재 PR 마지막 커밋**의 GitHub CI와 Vercel Preview 결과를 각각 확인합니다.
 3. Preview 설치·빌드가 실패하면 해당 커밋의 로그에서 첫 실패 단계를 확인하고 수정한 커밋으로 두 검사를 다시 통과시킵니다. `npm ci`의 peer 충돌은 [빌드·배포 안전 가이드](contributing/build-and-deploy-safety.md)의 의존성 확인 절차를 따릅니다.
 4. #279에 따라 Preview 자원이 Production과 분리된 것을 확인한 뒤 아래 확인표를 Preview의 합성 계정·자료로 검사합니다. 격리가 확인되지 않았다면 실사용 자료를 넣지 않고 미검증으로 기록합니다.
-5. 리뷰와 필요한 검증을 통과한 변경을 프로젝트 절차에 따라 병합합니다.
-6. DB 변경 순서와 운영 설정을 확인한 뒤 Production 배포 또는 승격을 진행합니다.
+5. 리뷰와 필요한 검증을 통과한 PR **한 건**을 프로젝트 절차에 따라 병합합니다.
+6. DB 변경 순서와 운영 설정을 확인한 뒤 Production 배포 또는 승격을 진행합니다. 새 `main` 병합 커밋의 Production 배포 성공을 확인한 다음에만 다음 PR을 갱신·푸시합니다. 배포가 대기·실패·횟수 제한이면 다음 작업의 푸시·병합을 멈추고 마지막 성공 배포 커밋을 따로 기록합니다.
 
 브랜치에 `git push`했다고 반드시 운영이 갱신되는 것은 아닙니다. 연결된 Production Branch와 Preview 설정에 따라 대상이 달라집니다. [Vercel 배포 환경 문서](https://vercel.com/docs/deployments/environments)를 참고합니다.
 
@@ -143,6 +143,7 @@ Preview가 `Ready`여도 실제 로그인 제공자·DB·Blob 연결과 운영 �
 | 학사 준비 안내 | 기능·쓰기 gate 및 책임자 지정 | 정책과 DB 준비 상태 확인 후 필요한 기능만 활성화 |
 | Cron 503 또는 401 | secret 누락 또는 호출 인증 실패 | [요청 제한 운영 절차](operations/rate-limits.md) 확인 |
 | `/api/health` 503 | 환경 설정과 DB 연결 | 허용된 상세 점검과 서버 로그로 원인 분리 |
+| `Deployment rate limited` | 배포 플랫폼의 제한 메시지와 재시도 가능 시각 | 재배포·수정 푸시·병합 반복을 멈추고 현재 PR 및 `main` 커밋과 마지막 Preview·Production 성공 커밋을 구분해 기록; 제한 해제 뒤 대상 커밋의 배포를 확인 |
 
 상태 점검 HTTP 200은 로그인·업로드·전체 학사 기능의 성공까지 보장하지 않습니다. `HEALTH_CHECK_SECRET`과 일치하는 `x-health-check-secret` 헤더를 보내면 DB 상태와 시각을 포함한 상세 응답을 확인할 수 있습니다.
 

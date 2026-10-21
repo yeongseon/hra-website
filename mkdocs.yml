@@ -49,6 +49,7 @@ nav:
       - 작업 난이도와 첫 기여: contributing/tasks-by-level.md
       - AI 도구 사용: contributing/ai-tools.md
       - 품질 검사와 CI 범위: QUALITY-GATE.md
+      - GitHub Actions 보안: developer/github-actions-security.md
       - 빌드·배포 안전 가이드: contributing/build-and-deploy-safety.md
       - 버전과 릴리스: contributing/releasing.md
   - 관리자와 운영:
@@ -101,6 +102,7 @@ nav:
       - 환경변수 계약 목록: developer/environment-inventory.md
   - 기록과 문서 관리:
       - 전체 경로 감사 기록: developer/site-route-audit.md
+      - 문서별 검토 기록: developer/document-review-ledger.md
       - 초기 P1 변경 적용 기록: developer/p1-security-rollout.md
       - 언론 기사 조사 기록: PRESS-ARTICLES.md
       - 전체 문서 지도: documentation-map.md
