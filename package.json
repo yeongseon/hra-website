@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node --version",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -111,5 +112,8 @@
     "unified": "^11.0.5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }
