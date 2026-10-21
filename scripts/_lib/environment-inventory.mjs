@@ -64,6 +64,7 @@ export const environmentInventory = {
     variable("RELEASE_PLEASE_BOT_LOGIN", "tooling", "정확한 릴리스 PR 작성자 login", false, "별도 릴리스 token 작성자를 사용할 때", "미설정이면 github-actions[bot]. 이름에 bot이 있다는 이유만으로 면제하지 않음"),
     variable("PGPORT", "qa", "격리 실행기가 생성한 로컬 PG 소켓 포트", false, "QA preload에서만 전달", "없거나 격리 scope와 다르면 QA 연결 실패; 운영 앱 설정 아님"),
     variable("HRA_TEST_PG_BIN", "qa", "격리 테스트 PostgreSQL 실행 파일 디렉터리", false, "로컬 PG 기반 회귀 검사", "미설정 시 실행기/테스트별 실패·skip 가능; 통과로 간주하지 않음", commented("/path/to/postgresql/bin")),
+    variable("HRA_QA_CHROME", "qa", "Markdown 경계 브라우저 검증에 사용할 Chrome 실행 파일 경로", false, "전용 Markdown 브라우저 검증에서 설치한 Chrome 위치가 기본값과 다를 때", "미설정이면 /usr/bin/google-chrome 사용; 지정 경로를 신뢰할 수 없거나 실행할 수 없으면 검증 실패"),
     variable("HRA_TEST_DATABASE_URL", "qa", "OAuth binding 검증 전용 DB", true, "전용 검증 스크립트 실행", "없거나 운영 DB 대상과 같으면 검증 중단"),
     variable("HRA_QA_PRIVATE_BLOB_URL", "qa", "승인된 합성 보호 자료의 private QA URL", false, "실제 공급자 resource QA 실행", "미설정·허용 호스트 불일치 시 검증 중단; 실제 자료 URL 공개 금지"),
     variable("HRA_QA_PRIVATE_BLOB_SHA256", "qa", "합성 QA PDF의 선택 기준 해시", false, "알려진 QA PDF 해시를 명시할 때", "없으면 내장 합성 PDF 기준 사용; 다르면 중단"),
@@ -204,6 +205,18 @@ export const environmentInventory = {
       "TEMP",
       "SYSTEMROOT"
     ]
+  },
+  {
+    "path": "scripts/verify-auth-proxy-http.mjs",
+    "expression": "Object.fromEntries([\"PATH\", \"HOME\", \"TMPDIR\", \"TMP\", \"TEMP\", \"SYSTEMROOT\"]\n    .filter((name) => process.env[name]).map((name) => [name, process.env[name]]))",
+    "reason": "Proxy HTTP 격리 실행기의 기존 여섯 시스템 값만 새 자식 환경으로 복사",
+    "names": ["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"]
+  },
+  {
+    "path": "scripts/verify-markdown-boundary.mjs",
+    "expression": "Object.fromEntries([\"PATH\", \"HOME\", \"TMPDIR\", \"TMP\", \"TEMP\", \"SYSTEMROOT\"]\n    .filter(key => process.env[key]).map(key => [key, process.env[key]]))",
+    "reason": "Markdown 경계 검증 실행기의 기존 여섯 시스템 값만 새 자식 환경으로 복사; 작업 디렉터리의 .env 파일 로딩까지 차단한다는 뜻은 아님",
+    "names": ["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"]
   },
   {
     "path": "tests/support/qa-schema-export.mjs",

@@ -126,6 +126,24 @@ test("기존 시스템 복사의 정확한 구조만 허용하며 새 동적 키
   assert.ok(validateEnvironmentContract(input).some((error) => error.includes("동적")));
 });
 
+for (const path of ["scripts/verify-auth-proxy-http.mjs", "scripts/verify-markdown-boundary.mjs"]) {
+  test(`${path}: 여섯 시스템 값 복사만 허용하고 추가 환경 접근은 거부한다`, () => {
+    const input = fixture();
+    const exception = structuredClone(environmentInventory.dynamicAccess.find((entry) => entry.path === path));
+    input.inventory.dynamicAccess.push(exception);
+    input.inventory.variables.push(...exception.names.map(record));
+    input.sources.push({ path, text: `const inherited = ${exception.expression};` });
+    input.document = renderEnvironmentReference(input.inventory);
+    assert.deepEqual(validateEnvironmentContract(input), []);
+
+    input.sources.at(-1).text = `const inherited = ${exception.expression.replace('"PATH"', '"NEW_DYNAMIC_SETTING"')};`;
+    assert.ok(validateEnvironmentContract(input).some((error) => error.includes("동적")));
+
+    input.sources.at(-1).text = `const inherited = ${exception.expression}; const extra = process.env[extraName];`;
+    assert.ok(validateEnvironmentContract(input).some((error) => error.includes("동적")));
+  });
+}
+
 test("기존 운영 환경 전달 예외는 같은 파일의 다른 spread를 허용하지 않는다", () => {
   const input = fixture();
   const exception = structuredClone(environmentInventory.dynamicAccess.find((entry) => entry.path === "scripts/migrate-rate-limit-reservations.mjs"));
