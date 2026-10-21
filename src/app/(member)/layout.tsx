@@ -31,7 +31,10 @@ export default async function MemberLayout({
     <div className="flex min-h-screen flex-col bg-white text-gray-900">
       {/* 페이지 맨 위에 네비게이션 바 표시 — 로그인 세션을 전달해야
           관리자/자료실 메뉴가 표시됩니다 (전달하지 않으면 비로그인 메뉴만 노출) */}
-      <Header session={session} />
+      {/* 회원 인가에 사용한 세션 전체 대신 헤더 표시용 필드만 전달합니다. */}
+      <Header session={{
+        user: { name: session.user.name, email: session.user.email, role: session.user.role },
+      }} />
       {/* main: 페이지의 주요 내용 영역
           flex-1: 중간 공간을 최대한 활용해 Header와 Footer 사이를 채움
           pt-16: 상단 패딩 추가 (헤더 아래 공간)

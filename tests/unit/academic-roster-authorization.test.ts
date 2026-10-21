@@ -61,8 +61,15 @@ describe("학사 경로의 명시적인 인증 거부 응답", () => {
     expect(location.searchParams.get("callbackUrl")).toBe("/admin/academics/students");
   });
   it("비슷한 접두어는 일반 홈페이지 관리자 경계를 유지한다", async () => {
-    expect(await authorize("/admin/academics-extra", session("FACULTY"))).toBe(false);
-    expect(await authorize("/admin/users", session("FACULTY"))).toBe(false);
+    // 학사 경로와 비슷한 접두어도 일반 관리자 전용이며 실제 래퍼가 처리할 응답으로 거부한다.
+    for (const path of ["/admin/academics-extra", "/admin/users"]) {
+      const result = await authorize(path, session("FACULTY"));
+      expect(result).toBeInstanceOf(Response);
+      if (!(result instanceof Response)) throw new Error("명시적인 관리자 거부 응답이 필요합니다.");
+      expect(result.status).toBe(403);
+      expect(result.headers.get("cache-control")).toBe("no-store");
+      expect(await result.text()).toBe("관리자만 접근할 수 있습니다.");
+    }
     expect(await authorize("/admin/users", session("ADMIN", other))).toBe(true);
   });
   it("학사 기본 경로와 상세 하위 경로 모두 같은 응답으로 거부한다", async () => {

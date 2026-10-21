@@ -1,4 +1,4 @@
-# P1 보안 수정 적용 절차 (#88, #89, #91)
+# P1 보안 수정 적용 절차 (#88, #89, #91, #267)
 
 > 문서 성격: 초기 수정 범위와 답변 보호 FK의 적용 기록. 아래의 이슈 번호와 당시 범위는 보존한다. 현재 전체 DB 적용 기준은 [DB 변경 절차](database-change-procedure.md), 자료 파일의 비공개 전환은 [파일 접근 정책](../resource-file-access-policy.md), 구현된 소유권 원장·정리는 [파일 정리 절차](../operations/markdown-image-ownership.md)를 따른다. 과거에 “후속 작업”으로 적은 내용이 지금도 미구현이라는 뜻은 아니다.
 
@@ -57,7 +57,34 @@ npm run build
 인가 SQL, 마이그레이션 재실행, 답변 보호, 질문·양식·기수·제출 삭제,
 두 연결의 FK 잠금 경합을 검사합니다. 운영 계정·파일로 파괴적 테스트를 하지 않습니다.
 
-
 ## 적용 후 판단
 
 **정상 결과:** 대상 FK의 카탈로그 값이 위 기대와 같고, 필요한 격리 회귀 테스트가 건너뛰어지지 않고 통과합니다. **실패하면:** SQL의 적용 대상·트랜잭션 결과·카탈로그를 먼저 확인하고 [DB 변경 절차](database-change-procedure.md)의 복구 판단을 따릅니다. 이 문서의 과거 범위를 새 환경 전체 설치 목록으로 사용하지 않습니다.
+
+## Auth.js 보안 수정 확인 (#267)
+
+`next-auth`는 `5.0.0-beta.32`, 실제 사용하는 `@auth/core`는 `0.41.3`으로 갱신합니다.
+[공식 보안 공지](https://github.com/nextauthjs/next-auth/security/advisories/GHSA-x445-f3h2-j279)의
+수정 버전입니다. 이 변경은 현재 HRA에서 계정 탈취를 재현했다는 의미가 아닙니다.
+
+현재 `src/lib/auth.ts`는 Google·Kakao 제공자의 `checks`를 덮어쓰지 않습니다.
+이 버전의 기본 검사는 PKCE이며, `redirectProxyUrl`이 적용되면 state 검사가 추가됩니다.
+state·nonce가 모든 환경에서 기본 활성화된다고 가정하지 않습니다([업스트림 기본값](https://github.com/nextauthjs/next-auth/blob/next-auth%405.0.0-beta.32/packages/core/src/lib/utils/providers.ts)).
+수정 버전은 PKCE·state·nonce 검사 쿠키를 생성한 제공자와 callback의 제공자가 같은지 확인합니다([검사 쿠키 처리](https://github.com/nextauthjs/next-auth/blob/next-auth%405.0.0-beta.32/packages/core/src/lib/actions/callback/oauth/checks.ts)).
+배포 전에 시작한 OAuth 흐름의 쿠키에는 이 정보가 없을 수 있으므로,
+업데이트 직후 실패한 로그인은 로그인 화면에서 새로 시작합니다.
+
+HRA는 Auth.js 저장 어댑터를 설정하지 않고 `handleOAuthSignIn`에서 DB 계정 바인딩을 검증합니다.
+이메일만으로 다른 제공자의 계정을 병합하지 않으며, 로그인 뒤 JWT도 제공자·계정 식별자 또는
+검증한 사용자 ID로 조회합니다. 향후 #273에서 계정 연결이나 저장 어댑터를 도입한다면
+로그인 상태의 추가 계정 연결 경로까지 공식 공지의 전제와 다시 대조해야 합니다.
+
+검증할 때는 다음 결과를 구분합니다.
+
+- `npm ls next-auth @auth/core`: 실제 설치가 위 수정 버전 조합인지 확인합니다.
+- 기본 CI의 보안 버전 하한 검사와 격리 OAuth 테스트: 합성 응답으로 정상 처리와 제공자 혼동 거부를 확인합니다.
+- 기존 계정 바인딩·placeholder 이메일·sessionVersion 및 학사 G1 검사: 앱의 저장·세션·권한 계약을 확인합니다.
+- 실제 Google·Kakao 로그인: 운영 또는 승인된 검증 환경에서 각 콘솔의 callback URI·동의 항목·앱 설정과 함께 별도로 확인합니다.
+
+격리 테스트의 성공이 실제 제공자 콘솔 설정이나 운영 로그인 성공을 증명하지는 않습니다.
+실제 제공자 확인이 남으면 PR에 `Refs #267`을 사용하고, 패키지 병합만으로 이슈를 닫지 않습니다.

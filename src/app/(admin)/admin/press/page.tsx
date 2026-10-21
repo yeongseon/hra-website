@@ -15,9 +15,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminPressPage() {
   await requireAdmin();
 
-  // order 오름차순, 동일 order는 게시일 내림차순으로 초기 정렬
+  // order 오름차순, 동일 order는 생성일 오름차순으로 초기 정렬 (목록 표시에 필요한 네 컬럼만 조회)
   const articles = await db
-    .select()
+    .select({
+      id: pressArticles.id,
+      title: pressArticles.title,
+      source: pressArticles.source,
+      publishedAt: pressArticles.publishedAt,
+    })
     .from(pressArticles)
     .orderBy(asc(pressArticles.order), asc(pressArticles.createdAt));
 
@@ -32,7 +37,15 @@ export default async function AdminPressPage() {
       </div>
 
       {/* key를 items.length에 연결해 항목 추가 후 서버 재렌더 시 상태 초기화 */}
-      <PressSortableList key={articles.length} initialItems={articles} />
+      <PressSortableList
+        key={articles.length}
+        initialItems={articles.map((article) => ({
+          id: article.id,
+          title: article.title,
+          source: article.source,
+          publishedAt: article.publishedAt,
+        }))}
+      />
     </section>
   );
 }

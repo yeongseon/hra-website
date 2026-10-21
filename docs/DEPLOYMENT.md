@@ -2,6 +2,8 @@
 
 이 문서는 개발한 웹사이트를 검증 환경에 올리고, 확인한 버전을 운영에 반영하는 순서를 설명합니다. **배포 성공은 코드가 실행된다는 뜻이며, DB 변경·파일 보호·로그인 설정까지 완료됐다는 뜻은 아닙니다.**
 
+운영 환경 분리의 **목표 정책**은 [환경 분리 및 배포 전략](developer/environment-strategy.md)을 따릅니다. 목표 흐름은 **Local Development → PR Preview/Test → Production**이며, 모바일 내부 테스트 목적이 생기기 전에는 상시 Staging을 기본으로 두지 않습니다. Preview/Test는 Production DB·Blob·개인정보·운영 세션과 토큰을 사용하지 않아야 합니다. **현재 Preview 자원과 환경변수의 실제 격리 상태는 미확인입니다.** Preview 사용 전 [환경 분리 #279](https://github.com/yeongseon/hra-website/issues/279)에 따라 연결 대상을 확인합니다.
+
 문서 확인일: 2026-10-18. 현재 앱은 저장소 루트의 `package.json`과 `src/`를 사용합니다. `apps/web` 전환과 자동 migration gate는 [환경 분리 및 배포 전략](developer/environment-strategy.md)의 목표이며, 실제 구축 여부는 각각의 이슈에서 확인합니다.
 
 ## 1. 먼저 구분할 세 가지

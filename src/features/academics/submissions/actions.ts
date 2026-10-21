@@ -28,7 +28,8 @@ export async function finalizeAssignmentSubmission(input: unknown) {
       sqlState:academicSqlState(error),
     });
     if (known) {
-      return { success: false as const, status: error.status, code: error.code, message: error.message, referenceId:observation.correlationId };
+      return { success: false as const, status: error.status, code: error.code, message: error.message,
+        ...(error instanceof AcademicUploadError && error.code==="RATE_LIMITED"?{retryAfterSeconds:error.retryAfterSeconds}:{}), referenceId:observation.correlationId };
     }
     // 원본 오류에는 SQL·params·파일명이 있어 고정 오류만 로그에 전달합니다.
     return { success: false as const, status: 503, code: "UNAVAILABLE" as const,
