@@ -17,6 +17,12 @@ HRA 웹사이트는 교육 프로그램의 정보를 널리 알리고, 공부하
 - **멤버**: 로그인하면 수업 자료나 보고서 양식을 내려받을 수 있어요.
 - **관리자**: 복잡한 코드 없이도 버튼 클릭만으로 공지사항을 올리고, 사진을 등록하고, 회원을 관리할 수 있는 '비밀 대시보드'를 가지고 있어요.
 
+### 🌐 앞으로의 플랫폼 방향
+
+HRA는 Web만 제공하는 사이트에서 **Web + Android + iOS**를 지원하는 플랫폼으로 확장할 예정입니다. 모바일은 Android/iOS를 따로 만들지 않고 **React Native + Expo 하나의 코드베이스**로 개발하며, 출시 순서는 **Web 구조 개편 → Android → iOS**입니다.
+
+서버는 microservice로 쪼개지 않고 **API-first modular monolith**로 정리합니다. 현재 코드와 목표 구조는 다르므로, 구조 변경 작업은 [플랫폼 아키텍처](docs/developer/platform-architecture.md)와 [전환 로드맵](docs/PLATFORM-ROADMAP.md), 추적 이슈 [#277](https://github.com/yeongseon/hra-website/issues/277)을 기준으로 진행합니다.
+
 ---
 
 ## 2. 🛠️ 기술 스택 (쉬운 설명)
@@ -34,8 +40,8 @@ HRA 웹사이트는 교육 프로그램의 정보를 널리 알리고, 공부하
 
 ---
 
-## 3. 📁 폴더 구조
-프로젝트 폴더를 열었을 때 보이는 이름들의 역할이에요.
+## 3. 📁 현재 폴더 구조
+아래는 **현재 main 기준 구조**입니다. #277 전환이 완료되면 Web/Mobile/공용 계약을 포함한 monorepo 구조로 바뀝니다. 목표 구조는 [플랫폼 아키텍처](docs/developer/platform-architecture.md)를 참고하세요.
 
 ```text
 src/
@@ -131,8 +137,10 @@ src/
 ## 9. 🏗️ 핵심 패턴 (코드 작성 규칙)
 개발자 친구들은 이 규칙을 꼭 지켜주세요!
 
-### 1️⃣ 서버 일꾼 패턴 (Server Actions)
-`src/features/*/actions/index.ts`에 기능을 만들 때는 이 순서를 지켜요.
+> 아래 Server Action 패턴은 현재 코드 이해를 위한 **기존 구조**입니다. 새 기능과 구조 개편 대상 기능은 Page/Server Action에서 DB를 직접 호출하지 않고 **Application Service → Repository** 경계를 사용합니다. 자세한 기준은 [플랫폼 아키텍처](docs/developer/platform-architecture.md)를 따릅니다.
+
+### 1️⃣ 기존 서버 액션 패턴 (전환 대상)
+`src/features/*/actions/index.ts`의 기존 기능은 대체로 이 순서를 사용합니다.
 ```typescript
 "use server";
 

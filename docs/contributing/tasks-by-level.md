@@ -45,13 +45,12 @@ HRA 웹사이트 프로젝트에 기여하는 방법은 다양해요. 본인의 
 Next.js와 데이터베이스를 다뤄본 분들을 위한 작업입니다. 핵심 기능을 개발하거나 관리 시스템을 개선합니다.
 
 ### 주요 작업
-*   **신규 기능 개발**: 데이터 모델 설계 및 핵심 로직 구현
-    *   경로: `src/lib/db/schema.ts` (DB), `src/features/` (로직)
-*   **API 엔드포인트 추가**: 서버 통신 로직 작성
-    *   경로: `src/app/api/` 또는 `src/features/` 내 서버 액션
-*   **관리자 기능 고도화**: 운영진용 관리 도구 기능 추가
-    *   경로: `src/app/(admin)/` 폴더
-*   **테스트 작성**: 기능 검증을 위한 테스트 코드 작성
+*   **신규 기능 개발**: 데이터 모델·Application Service·Repository 경계를 설계하고 구현
+    *   현재 legacy 경로를 그대로 복제하지 말고 [플랫폼 아키텍처](../developer/platform-architecture.md)를 먼저 확인
+*   **API 엔드포인트 추가**: `/api/v1`과 OpenAPI contract를 먼저 정의하고 같은 Application Service를 호출
+*   **모바일 기능 개발**: React Native + Expo의 `apps/mobile` 공통 기능으로 구현하며 Android/iOS 별도 앱을 만들지 않음
+*   **관리자 기능 고도화**: 운영진용 관리 도구는 우선 Web Admin에 유지
+*   **테스트 작성**: Service+PostgreSQL integration, API contract, Web/Mobile E2E를 변경 범위에 맞게 추가
 
 ### 💡 도구 활용
 *   **Claude/Codex**: "Drizzle ORM 스키마에 새로운 테이블을 추가하는 코드를 작성해줘" 또는 "이 함수의 보안 취약점을 점검해줘"와 같은 기술적인 도움을 받아보세요.
