@@ -4,7 +4,7 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# HRA Website — Agent Rules
+# HRA Platform — Agent Rules
 
 ## 1. 언어 규칙
 
@@ -56,6 +56,26 @@ src/
 │   └── admin/            # 관리자 전용 컴포넌트
 ```
 
+### 목표 아키텍처 전환 규칙
+
+현재 디렉터리 구조는 #277 전환 전의 legacy 구조다. 신규 기능과 구조 개편 대상은 [플랫폼 아키텍처](docs/developer/platform-architecture.md)를 따른다.
+
+- 목표: **API-first modular monolith + monorepo**
+- 클라이언트: `apps/web`(Next.js) + `apps/mobile`(React Native + Expo, Android/iOS 공통)
+- 서버 핵심 로직: Application Service
+- DB 접근: Repository/infrastructure가 소유
+- 공용 HTTP 계약: `/api/v1` + OpenAPI
+- 운영 전용 API: `/api/internal`
+- Web Server Action과 API route는 같은 Application Service를 호출한다.
+- 신규/리팩터링 대상 Page·Server Action·API route에서 Drizzle/DB를 직접 호출하지 않는다.
+- DB row 타입을 API DTO로 그대로 노출하지 않는다.
+- Web UI와 React Native UI를 강제로 공유하지 않는다. contract/schema/pure utility/design token만 선택적으로 공유한다.
+- Android/iOS 별도 앱을 만들지 않는다. 하나의 React Native 코드베이스를 유지한다.
+- Microservice, 메시지 브로커, 분산 트랜잭션은 실제 독립 확장 요구가 생기기 전까지 도입하지 않는다.
+- 기존 학사 DB 제약·인가·Private Blob·rate limit·audit·통합 테스트를 구조 개편 편의를 위해 완화하지 않는다.
+
+> untouched legacy 코드는 #271에서 module 단위로 이동하기 전까지 기존 경로를 유지할 수 있다. 새 코드는 legacy 직접 DB 패턴을 복제하지 않는다.
+
 ## 4. 데이터 저장 방식
 
 **원칙: "관리자 페이지에서 CRUD하는 텍스트/메타는 DB, 이미지만 Blob"**
@@ -101,31 +121,29 @@ src/
 
 ## 5. 코딩 패턴
 
-### 서버 액션 패턴 (`src/features/*/actions/index.ts`)
-```typescript
-"use server";
+### 서버 액션 패턴
 
-import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { z } from "zod/v4";              // ← zod/v4 필수
-import { requireAdmin } from "@/lib/admin";
-import { db } from "@/lib/db";
-import { 테이블 } from "@/lib/db/schema";
+기존 `src/features/*/actions`에는 Server Action이 DB를 직접 호출하는 코드가 남아 있지만 **신규/리팩터링 코드는 이 패턴을 복제하지 않는다.**
 
-// 1. Zod 스키마로 validation
-// 2. requireAdmin()으로 권한 확인
-// 3. DB CRUD
-// 4. revalidatePath()로 캐시 무효화
-// 5. redirect()로 목록 페이지 이동
+```text
+Web Server Action ─┐
+                   ├→ Application Service → Repository → PostgreSQL
+/api/v1 Route ─────┘
 ```
+
+Server Action의 책임은 입력 변환, Web session→Principal, service 호출, `revalidatePath`/redirect 같은 Web 전용 후처리다. 비즈니스 규칙과 transaction은 service/repository 쪽에 둔다.
+
+검증은 contract/application 입력에서 수행하고, 서버 전용 검증은 `zod/v4`를 유지한다. 클라이언트와 공유할 순수 schema는 향후 `packages/schemas` 경계로 이동할 수 있다.
 
 ### 공개 페이지 패턴
+
+legacy Page의 직접 DB 조회는 #271 전환 대상이다. 신규/리팩터링 Page는 DB/Drizzle을 직접 import하지 않고 module query/service를 호출한다.
+
 ```typescript
-import { db } from "@/lib/db";
-export const dynamic = "force-dynamic";  // DB 기반 페이지 필수
-export const metadata: Metadata = { title: "페이지명" };
+const notices = await listPublishedNotices(/* ... */);
 ```
+
+Web page는 presentation과 Web cache/metadata에 집중한다.
 
 ### 관리자 페이지 패턴
 ```
@@ -178,7 +196,8 @@ src/app/(admin)/admin/[feature]/
 - **우선순위**: Integration (서버 액션) > E2E (핵심 플로우) > Unit (순수 함수)
 - **DB**: 단위 테스트는 필요한 경우 mock, DB 경합·제약은 격리 PostgreSQL 사용
 - **Blob**: 대부분 mock, 실제 업로드 검증은 별도 E2E에서 수행
-- **CI**: `lint → typecheck → vitest → playwright(smoke)`
+- **CI(현재)**: `lint → typecheck → vitest → playwright(smoke)`
+- **CI(목표)**: server integration + API contract/OpenAPI + web build/E2E + mobile typecheck + Android build + iOS compile/build check
 
 ## 10. 배포
 

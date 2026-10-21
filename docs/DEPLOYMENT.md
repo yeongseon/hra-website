@@ -1,5 +1,10 @@
 # HRA 웹사이트 배포 & 문제 해결 가이드
 
+> 운영 환경 분리의 **목표 정책**은 [환경 분리 및 배포 전략](developer/environment-strategy.md)을 따릅니다.
+> 목표 흐름은 **Local Development → PR Preview/Test → Production**이며, 모바일 내부 테스트 등 실제 목적이 생기기 전에는 별도 상시 Staging을 기본으로 두지 않습니다.
+> 이 정책에서 Preview/Test는 Production DB·Blob·PII·운영 session/token을 사용하지 않아야 합니다.
+> **현재 Preview 자원과 환경변수의 실제 격리 상태는 미확인입니다.** Preview/Test 사용 전 [환경 분리 #279](https://github.com/yeongseon/hra-website/issues/279)에 따라 자원·설정·접근 경계를 확인해야 합니다.
+
 > ⭐ **배포가 뭔가요?**
 >
 > 내 컴퓨터에서만 보이는 사이트를 **인터넷에 올려서 다른 사람도 볼 수 있게** 만드는 거예요.
