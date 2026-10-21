@@ -15,7 +15,6 @@
  */
 "use server";
 
-import { put } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
@@ -32,7 +31,8 @@ import { validateDocumentUpload, validateImageUpload } from "@/lib/upload-file-v
 import { validateResourceUploadReference } from "@/lib/resource-upload-server";
 import { validateWeeklyTextImageReference } from "@/lib/weekly-text-image-upload";
 import { resourceBlobAccess } from "@/lib/resource-download";
-import { resourceUploadStore } from "@/lib/resource-blob-store";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
+import { findOwnedBlobUrls } from "@/lib/owned-blob";
 
 export type WeeklyTextActionState = {
   success: boolean;
@@ -408,9 +408,14 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
       return { success: false, error: "업로드한 파일을 확인할 수 없습니다." };
     }
 
+    // 파일을 만들기 전에 날짜 검증을 끝내 불필요한 예약·객체 생성을 피합니다.
+    const classDateObj = parsed.data.classDate ? new Date(`${parsed.data.classDate}T00:00:00`) : null;
+    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
+      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
+    }
+
     let fileUrl = existing.fileUrl;
     let fileName = existing.fileName;
-    let uploadedNewBlobUrl: string | null = null;
 
     if (directFile && "url" in directFile) {
       fileUrl = directFile.url;
@@ -418,57 +423,33 @@ export async function updateWeeklyText(id: string, formData: FormData): Promise<
     }
 
     if (validatedFile.file) {
-      // 순서 원칙: 새 blob 업로드 → DB update → 옛 blob cleanup (best-effort).
-      // 옛 blob 을 먼저 지우면 이후 단계 실패 시 되돌릴 수 없다.
-      const store = resourceUploadStore();
-      const blob = await put(
-        `weekly-texts/${normalizeFileName(validatedFile.file.name)}`,
-        validatedFile.file,
-        { access: store.access, addRandomSuffix: true, contentType: validatedFile.contentType,
-          ...(store.token ? { token: store.token } : {}) },
-      );
-      uploadedNewBlobUrl = blob.url;
-      fileUrl = blob.url;
+      // UUID URL을 먼저 예약해 업로드 중단·응답 유실 이후에도 기존 원장으로 추적합니다.
+      fileUrl = await uploadWithOwnedIntent({
+        namespace: "weekly-texts", extension: validatedFile.file.name.split(".").pop()?.toLowerCase() ?? "",
+        body: validatedFile.file, contentType: validatedFile.contentType,
+        uploadedById: session.user.id, protectedResource: true,
+      });
       fileName = validatedFile.file.name;
     }
 
-    const classDateObj = parsed.data.classDate
-      ? new Date(`${parsed.data.classDate}T00:00:00`)
-      : null;
+    // DB 응답만 유실되어 이미 참조 중일 수 있으므로 실패해도 새 객체를 즉시 삭제하지 않습니다.
+    await db
+      .update(weeklyTexts)
+      .set({
+        title: parsed.data.title,
+        cohortId: parsed.data.cohortId || null,
+        textType: parsed.data.textType ?? null,
+        classDate: classDateObj,
+        body: parsed.data.body ?? existing.body,
+        fileUrl,
+        fileName,
+      })
+      .where(eq(weeklyTexts.id, parsedId.data));
 
-    if (classDateObj && Number.isNaN(classDateObj.getTime())) {
-      // 업로드 성공 후 검증 실패 → 새 blob 은 참조되지 않으므로 되지운다.
-      if (uploadedNewBlobUrl) {
-        await deleteBlobIfExists(uploadedNewBlobUrl);
-      }
-      return { success: false, error: "유효한 수업 날짜를 입력해주세요." };
-    }
-
-    try {
-      await db
-        .update(weeklyTexts)
-        .set({
-          title: parsed.data.title,
-          cohortId: parsed.data.cohortId || null,
-          textType: parsed.data.textType ?? null,
-          classDate: classDateObj,
-          body: parsed.data.body ?? existing.body,
-          fileUrl,
-          fileName,
-        })
-        .where(eq(weeklyTexts.id, parsedId.data));
-    } catch (dbError) {
-      // 업로드 성공 후 DB 실패 → 새 blob 은 참조되지 않으므로 되지운다.
-      if (uploadedNewBlobUrl) {
-        await deleteBlobIfExists(uploadedNewBlobUrl);
-      }
-      throw dbError;
-    }
-
-    // DB update 성공 → 옛 blob cleanup (best-effort).
-    // uploadedNewBlobUrl 이 있을 때만 = 실제로 교체가 일어난 경우만 삭제 대상.
+    // 직접 업로드의 기존 보존 규칙에 더해 원장 등록된 서버·레거시 객체도 유지보수 GC에 맡깁니다.
     if (fileUrl !== existing.fileUrl && existing.fileUrl && !isDirectWeeklyUpload(existing.fileUrl)) {
-      await deleteBlobIfExists(existing.fileUrl);
+      const ownedUrls = await findOwnedBlobUrls([existing.fileUrl]);
+      if (ownedUrls && !ownedUrls.has(existing.fileUrl)) await deleteBlobIfExists(existing.fileUrl);
     }
 
     // 본문 URL은 소유권을 증명하지 않으므로 본문에서 제거되어도 파일은 보존합니다.
@@ -519,11 +500,11 @@ export async function deleteWeeklyText(id: string): Promise<WeeklyTextActionStat
     // weeklyTextImages 는 onDelete: "cascade" 로 자동 삭제된다.
     await db.delete(weeklyTexts).where(eq(weeklyTexts.id, parsedId.data));
 
-    // cleanup 실패는 로그만 남고 액션은 성공으로 끝난다 (orphan blob 만 남을 뿐 사용자 영향 없음).
-    await Promise.all([
-      ...(target.fileUrl && !isDirectWeeklyUpload(target.fileUrl) ? [deleteBlobIfExists(target.fileUrl)] : []),
-      ...attachedImageRows.filter((img) => !isDirectWeeklyUpload(img.url)).map((img) => deleteBlobIfExists(img.url)),
-    ]);
+    // 경로만으로 등록 여부를 추정하지 않습니다. 원장 조회 실패 시에도 삭제 전체를 건너뜁니다.
+    const legacyUrls = [target.fileUrl, ...attachedImageRows.map((img) => img.url)]
+      .filter((url) => url && !isDirectWeeklyUpload(url));
+    const ownedUrls = await findOwnedBlobUrls(legacyUrls);
+    if (ownedUrls) await cleanupCreatedBlobs(legacyUrls.filter((url) => !ownedUrls.has(url)));
 
     revalidateWeeklyTextPaths();
 

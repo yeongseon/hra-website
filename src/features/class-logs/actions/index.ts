@@ -20,11 +20,9 @@
 
 "use server";
 
-import { put } from "@vercel/blob";
 import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
-import { deleteBlobIfExists } from "@/lib/blob-utils";
 import { db } from "@/lib/db";
 import { classLogImages, classLogs, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/admin";
@@ -32,8 +30,9 @@ import { auth } from "@/lib/auth";
 import { logServerError } from "@/lib/errors";
 import { buildImageAlt } from "@/lib/image-alt";
 import { cleanupCreatedBlobs, uploadBlobsForCreate } from "@/lib/create-with-blobs";
-import { resourceUploadStore } from "@/lib/resource-blob-store";
 import { validateImageUpload } from "@/lib/upload-file-validation";
+import { uploadWithOwnedIntent } from "@/lib/server-upload-intent";
+import { findOwnedBlobUrls } from "@/lib/owned-blob";
 
 /**
  * 수업일지 ID 유효성 검사 스키마
@@ -387,7 +386,7 @@ export async function updateClassLog(
   formData: FormData
 ): Promise<ClassLogActionState> {
   // 1️⃣ 관리자 권한 확인
-  await requireAdmin();
+  const session = await requireAdmin();
 
   // 2️⃣ 수정할 수업일지의 ID 유효성 검사
   const parsedId = classLogIdSchema.safeParse(id);
@@ -471,47 +470,30 @@ export async function updateClassLog(
         .from(classLogImages)
         .where(eq(classLogImages.classLogId, parsedId.data));
 
-      // 3단계) 새 이미지를 순차 업로드.
-      //   Promise.all 을 쓰지 않는 이유: 중간 실패 시 이미 업로드된 URL 을 회수하기 위함.
-      //   실패 시 uploadedUrls 를 best-effort 로 되지운 뒤 예외를 재throw 한다.
-      const uploadedUrls: string[] = [];
+      // 3단계) 검증된 파일마다 UUID URL을 선예약합니다. 중단·응답 유실도 기존 원장으로 추적합니다.
       const newRows: (typeof classLogImages.$inferInsert)[] = [];
 
-      try {
-        for (let i = 0; i < validatedImages.files.length; i += 1) {
-          const file = validatedImages.files[i];
-          const store = resourceUploadStore();
-          const blob = await put(
-            `class-logs/${Date.now()}-${i}-${normalizeFileName(file.name)}`,
-            file,
-            { access: store.access, addRandomSuffix: true, contentType: validatedImages.contentTypes[i],
-              ...(store.token ? { token: store.token } : {}) },
-          );
-          uploadedUrls.push(blob.url);
-          newRows.push({
-            classLogId: parsedId.data,
-            url: blob.url,
-            alt: buildImageAlt(parsed.data.title, i + 1),
-            order: i,
-          });
-        }
-      } catch (uploadError) {
-        // 업로드 도중 실패 → 새 blob 은 아무데도 참조되지 않으므로 안전하게 정리한다.
-        await Promise.all(uploadedUrls.map((url) => deleteBlobIfExists(url)));
-        throw uploadError;
+      for (let i = 0; i < validatedImages.files.length; i += 1) {
+        const file = validatedImages.files[i];
+        const url = await uploadWithOwnedIntent({
+          namespace: "class-logs", extension: file.name.split(".").pop()?.toLowerCase() ?? "",
+          body: file, contentType: validatedImages.contentTypes[i], uploadedById: session.user.id,
+          protectedResource: true,
+        });
+        newRows.push({
+          classLogId: parsedId.data,
+          url,
+          alt: buildImageAlt(parsed.data.title, i + 1),
+          order: i,
+        });
       }
 
       // 4단계) 새 이미지 row 를 먼저 insert 한다.
       //   과거 구현처럼 "old delete → new insert" 순서면 insert 실패 시 이미지가 아예 사라진 상태가 되어
       //   사용자 관점에서 데이터 유실과 동일하다.
       //   여기서는 짧게나마 old+new 가 함께 보이는 창을 감수하고 참조 유지를 우선한다.
-      try {
-        await db.insert(classLogImages).values(newRows);
-      } catch (insertError) {
-        // insert 실패 → 새 blob 은 아직 참조되지 않으므로 되지운다.
-        await Promise.all(uploadedUrls.map((url) => deleteBlobIfExists(url)));
-        throw insertError;
-      }
+      // 커밋 후 응답만 유실될 수 있으므로 오류가 나도 새 객체를 즉시 삭제하지 않습니다.
+      await db.insert(classLogImages).values(newRows);
 
       // 5단계) 기존 row 만 id 기준으로 정확히 삭제.
       //   삭제 실패 시 옛 blob cleanup 은 절대 하지 않는다 (DB 가 여전히 옛 URL 을 참조 중).
@@ -532,10 +514,10 @@ export async function updateClassLog(
           throw deleteError;
         }
 
-        // 6단계) 옛 blob cleanup (best-effort).
-        //   deleteBlobIfExists 는 내부에서 예외를 삼키므로 여기서 실패해도 액션은 성공으로 끝난다.
-        //   최악의 경우 orphan blob 이 남을 뿐이며, DB 참조는 이미 새 URL 로 전환되어 있다.
-        await Promise.all(oldImageRows.map((img) => deleteBlobIfExists(img.url)));
+        // 6단계) 원장 등록 객체는 공유 참조를 확인하는 유지보수 GC에 맡기고 미등록 레거시만 기존처럼 정리합니다.
+        const oldUrls = oldImageRows.map((img) => img.url);
+        const ownedUrls = await findOwnedBlobUrls(oldUrls);
+        if (ownedUrls) await cleanupCreatedBlobs(oldUrls.filter((url) => !ownedUrls.has(url)));
       }
     }
 
@@ -609,10 +591,10 @@ export async function deleteClassLog(id: string): Promise<ClassLogActionState> {
     // classLogImages 는 onDelete: "cascade" 로 자동 삭제된다.
     await db.delete(classLogs).where(eq(classLogs.id, parsedId.data));
 
-    // cleanup 실패는 로그만 남고 액션은 성공으로 끝난다 (orphan blob 만 남을 뿐 사용자 영향 없음).
-    await Promise.all([
-      ...attachedImageRows.map((img) => deleteBlobIfExists(img.url)),
-    ]);
+    // 전체 삭제에서도 등록된 객체는 다른 콘텐츠가 공유할 수 있으므로 현재 참조 기반 GC로 보존합니다.
+    const attachedUrls = attachedImageRows.map((img) => img.url);
+    const ownedUrls = await findOwnedBlobUrls(attachedUrls);
+    if (ownedUrls) await cleanupCreatedBlobs(attachedUrls.filter((url) => !ownedUrls.has(url)));
 
     revalidateClassLogPaths();
 
