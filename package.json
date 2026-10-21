@@ -32,6 +32,7 @@
     "db:migrate-atomic-application-questions": "node --env-file=.env scripts/migrate-atomic-application-questions.mjs",
     "db:migrate-recruitment-singleton": "node --env-file=.env scripts/migrate-recruitment-singleton.mjs",
     "verify:oauth-binding-security": "node --env-file=.env scripts/verify-oauth-binding-security.mjs",
+    "verify:editor-preview": "node scripts/verify-editor-preview.mjs",
     "prepare": "husky"
   },
   "dependencies": {

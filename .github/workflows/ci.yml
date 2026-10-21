@@ -64,6 +64,10 @@ jobs:
       - name: Chromium 설치
         run: npx playwright install --with-deps chromium
 
+      - name: 에디터 미리보기 키보드 회귀
+        # 운영 계정 없이 실제 에디터·CSS·Dialog를 Chromium에서 검증합니다.
+        run: npm run verify:editor-preview
+
       - name: 학사 G1 실제 제출 품질 게이트
         # fork PR에서도 secrets 없이 실제 앱·격리 DB·로컬 private 저장소를 검증합니다.
         timeout-minutes: 10
