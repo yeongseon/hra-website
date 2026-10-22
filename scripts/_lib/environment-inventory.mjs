@@ -94,6 +94,12 @@ export const environmentInventory = {
   ],
   dynamicAccess: [
   {
+    "path": "scripts/measure-authentication.mjs",
+    "expression": "Object.fromEntries([\"PATH\", \"HOME\", \"TMPDIR\", \"TMP\", \"TEMP\", \"SYSTEMROOT\"].filter(key => process.env[key]).map(key => [key, process.env[key]]))",
+    "reason": "인증 비용 측정기의 여섯 시스템 값만 별도 합성 DB·서버 자식 환경으로 복사",
+    "names": ["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"]
+  },
+  {
     "path": "scripts/backfill-academic-enrollments.mjs",
     "expression": "pgEnvironment = {\n    // PGHOSTADDR·PGSERVICE 등 상속 접속 옵션이 확인한 DB 대상을 바꾸지 못하게 합니다.\n    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith(\"PG\"))),\n    PGHOST: target.hostname,\n    PGPORT: target.port || \"5432\",\n    PGUSER: decodeURIComponent(target.username),\n    PGPASSWORD: decodeURIComponent(target.password),\n    PGDATABASE: decodeURIComponent(target.pathname.slice(1)),\n    PGSSLMODE: target.searchParams.get(\"sslmode\") || \"require\",\n    PGCHANNELBINDING: target.searchParams.get(\"channel_binding\") || \"prefer\",\n    PGCONNECT_TIMEOUT: \"10\",\n    PGOPTIONS: \"-c statement_timeout=30000 -c lock_timeout=10000 -c standard_conforming_strings=on\",\n  }",
     "reason": "기존 PG 접속 상속값을 제외한 뒤 확인한 접속 필드를 생성하는 운영 명령",

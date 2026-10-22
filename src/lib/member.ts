@@ -6,14 +6,15 @@
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { canReadSharedResource } from "@/features/resources/access";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session";
 import { logServerError } from "@/lib/errors";
 
+// 각 페이지의 데이터 조회 전에 현재 세션의 승인 역할을 검사합니다.
 export async function requireMember(): Promise<Session> {
   let session: Session | null;
 
   try {
-    session = await auth();
+    session = await getRequestSession();
   } catch (error) {
     logServerError("member/requireMember", error);
     redirect("/system-error");
