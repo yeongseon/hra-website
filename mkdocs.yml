@@ -57,6 +57,7 @@ nav:
       - 관리자 메뉴: ADMIN-GUIDE.md
       - 데이터베이스: DATABASE.md
       - 배포와 문제 해결: DEPLOYMENT.md
+      - 운영 공개 경로 점검: operations/production-smoke.md
       - DB 변경 절차: developer/database-change-procedure.md
       - 요청 제한: operations/rate-limits.md
       - 예약 ID 인덱스 변경: developer/rate-limit-reservation-index.md

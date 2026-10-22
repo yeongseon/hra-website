@@ -12,6 +12,7 @@
 | --- | --- | --- |
 | 앱 CI / 형식 계약 테스트 | `contents: read` | 저장소 코드 검증 |
 | 확장 E2E 회귀 | `contents: read` | 격리 브라우저 검증과 정제한 JSON artifact 보관 |
+| 운영 가용성 점검 | `contents: read` | 공개 GET·비운영 알림 검증과 정제 JSON만 기록 |
 | 이슈 형식 | `contents: read`, `issues: write` | 기존 형식 위반 알림 댓글 관리 |
 | PR 형식 | `contents: read`, `pull-requests: read` | 신뢰된 base 코드로 PR 메타데이터 조회 |
 | 수동 일괄 검사 | `contents: read`, `issues: read`, `pull-requests: read` | 이슈·PR 조회 |

@@ -1,0 +1,80 @@
+# 공개 GET만 수행합니다. 배포 성공과 실제 HTTP 성공은 다른 결과로 기록합니다.
+name: 운영 가용성 점검
+run-name: ${{ inputs.fixture_alert && '합성 알림 경로 검증 — 의도된 실패' || 'Production 읽기 전용 점검' }}
+
+on:
+  deployment_status:
+  schedule:
+    # 정각 부하를 피하며 시간당 4개 요청부터 시작합니다(배포·수동 실행은 별도).
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      fixture_alert:
+        description: 운영 접속 없이 health 503과 실제 실패 알림 경로 검증(의도된 실패)
+        type: boolean
+        required: false
+        default: false
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/production-smoke.yml
+      - scripts/verify-production-smoke*.mjs
+      - scripts/tests/production-smoke*.test.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    # Preview·실패 배포 이벤트에는 운영 점검을 붙이지 않습니다.
+    if: github.event_name != 'deployment_status' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    name: 격리 점검·알림 보고서 계약
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: 외부 서비스 없는 HTTP·실패 요약 계약
+        # npm 설치·DB·Blob·OAuth 없이 Node 내장 기능과 루프백 서버만 사용합니다.
+        run: node --test scripts/tests/production-smoke*.test.mjs
+
+  smoke:
+    needs: contract
+    # PR 코드는 운영 사이트를 호출하지 않고 위 합성 계약만 검사합니다.
+    if: github.event_name != 'pull_request'
+    name: ${{ inputs.fixture_alert && '알림 경로 합성 검증 (의도된 실패)' || 'Production 읽기 점검' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: production-smoke
+      cancel-in-progress: false
+    env:
+      # 메타데이터도 셸 코드에 보간하지 않습니다. CLI가 40자리 SHA를 다시 검증합니다.
+      SMOKE_SOURCE_SHA: ${{ github.event.deployment.sha || github.sha }}
+      SMOKE_SHA_KIND: ${{ github.event_name == 'deployment_status' && 'deployment' || 'main' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: 공개 Production HTTP 점검
+        if: inputs.fixture_alert != true
+        run: node scripts/verify-production-smoke.mjs --sha "$SMOKE_SOURCE_SHA" --sha-kind "$SMOKE_SHA_KIND" --output test-results/production-smoke.json
+      - name: 운영 접속 없는 합성 실패 알림 경로
+        if: inputs.fixture_alert == true
+        # 이 수동 모드의 job/run failure가 기대 결과입니다. 실패를 성공으로 바꾸지 않습니다.
+        run: node scripts/verify-production-smoke-fixture.mjs --sha "$SMOKE_SOURCE_SHA"
+      - name: 정제한 상태 결과 보관
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-smoke-result
+          path: test-results/production-smoke.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -63,6 +63,7 @@ export const environmentInventory = {
     variable("HRA_PUBLIC_E2E_LIST", "qa", "확장 공개 reporter의 수집 전용 구분", false, "격리 실행기의 --list 단계에서만 true", "true가 아니면 필수 12개 사례의 실제 완료까지 검증"),
     variable("GITHUB_EVENT_PATH", "tooling", "GitHub event JSON 파일 경로", false, "process-format --event를 GitHub runner에서 실행", "runner가 제공하지 않으면 event 모드 읽기 실패"),
     variable("GITHUB_REPOSITORY", "tooling", "형식 검사 대상 저장소 이름", false, "GitHub runner 또는 명시한 대상", "미설정이면 gh repo view로 저장소 조회"),
+    variable("GITHUB_STEP_SUMMARY", "tooling", "Actions가 제공하는 단계별 Markdown 요약 파일", false, "운영 smoke 또는 명시적 합성 알림 경로의 요약 작성", "없으면 정제 JSON과 종료 코드만 제공; 이메일 수신을 의미하지 않음"),
     variable("RELEASE_PLEASE_BOT_LOGIN", "tooling", "정확한 릴리스 PR 작성자 login", false, "별도 릴리스 token 작성자를 사용할 때", "미설정이면 github-actions[bot]. 이름에 bot이 있다는 이유만으로 면제하지 않음"),
     variable("PGPORT", "qa", "격리 실행기가 생성한 로컬 PG 소켓 포트", false, "QA preload에서만 전달", "없거나 격리 scope와 다르면 QA 연결 실패; 운영 앱 설정 아님"),
     variable("HRA_TEST_PG_BIN", "qa", "격리 테스트 PostgreSQL 실행 파일 디렉터리", false, "로컬 PG 기반 회귀 검사", "미설정 시 실행기/테스트별 실패·skip 가능; 통과로 간주하지 않음", commented("/path/to/postgresql/bin")),
