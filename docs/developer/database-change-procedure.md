@@ -4,6 +4,12 @@
 
 현재 버전별 마이그레이션 디렉터리와 공통 적용 이력은 없으며, 범위별 SQL·스크립트는 `scripts/migrate-*`에 있습니다. 자동 적용 이력과 Production migration gate는 [#280](https://github.com/yeongseon/hra-website/issues/280)의 후속 작업입니다. 아래 수동 절차가 이미 자동 차단 장치로 구현됐다는 뜻은 아닙니다.
 
+`scripts/db/source-inventory.json`은 **현재 소스 스냅샷**입니다. Git이 추적하는 SQL 17개(읽기 전용 학사 preflight 포함)의 역할·원본 바이트 해시와 이름 패턴으로 관리하는 MJS 18개의 기본 동작·적용 인자를 기록합니다. `node scripts/check-db-source-inventory.mjs`는 Git 추적 파일과 로컬의 미추적·비무시 SQL/MJS를 대조합니다. CI에서는 PR에 포함된 새 SQL이 Git 추적 파일이므로 목록 밖이면 실패합니다. 로컬의 무시된 미추적 파일은 검사하지 않으며, 임의 이름의 JS·앱 내 SQL·직접 `psql` 명령을 전수 탐지하는 장치는 아닙니다.
+
+이 목록은 **DB에 적용됐다는 ledger나 전체 설치 순서가 아닙니다.** 뷰의 현행 정의처럼 정상적으로 갱신하는 파일도 새 바이트와 목록 해시를 함께 검토합니다. 같은 PR에서 SQL과 해시를 둘 다 수정하면 검사가 통과할 수 있으므로 변경 의미는 리뷰어가 확인합니다. G1의 9개 순서는 기존 테스트 배열과 정확히 대조하며 적용기는 대체하지 않습니다. #287 인덱스 SQL은 `public.rate_limit_events`와 UUID `reservation_id`가 필요하지만, 그 준비가 특정 SQL 파일의 운영 적용을 증명하지는 않습니다. 잠금 방식·대상·백업을 검토하기 전에는 운영 자동 적용 대상이 아닙니다. 새 DB 적용·재실행·catalog 확인, 운영 백업·승격 차단은 여전히 #280 후속 단계입니다.
+
+검사는 `npm ci` 뒤에 실행합니다. 이미 사용하는 TypeScript 파서로 G1의 실제 최상위 `export const` 문자열 배열만 읽으며, 주석·문자열 속 가짜 선언과 실행식·중복 선언·문법 오류는 인정하지 않습니다. 소스 모듈이나 SQL을 실행하지 않으며 새 의존성도 추가하지 않습니다.
+
 G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
 예약 ID 정리 인덱스는 [#287 변경 절차](rate-limit-reservation-index.md)의 범위 SQL·카탈로그 검증을 따릅니다. **이 SQL과 인덱스가 운영 DB에 적용됐다는 뜻은 아닙니다.** 운영 대상·백업·허용 잠금 시간·적용 승인은 별도로 확인합니다.
 

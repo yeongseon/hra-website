@@ -164,3 +164,62 @@ test("Sonner의 빈 style 삽입만 추가 hash로 허용하며 이후 임의 CS
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+/** 실제 스트림을 끝내지 않아도 새 DOM이 커밋되었는지 확인하고 옛 DOM의 오통과를 막습니다. */
+async function streamingRefreshFixture(t, commit, prefetch = false) {
+  const marker = "합성 새 문서 커밋";
+  let refreshRequests = 0, refreshEnded = false;
+  const server = createServer((request, response) => {
+    if (request.headers.rsc === "1") {
+      refreshRequests++;
+      response.on("finish", () => { refreshEnded = true; });
+      response.writeHead(200, { "content-type": "text/x-component" });
+      response.write(marker + "\n");
+      if (!commit) response.end();
+      return;
+    }
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(`<html><body><h1>이전 문서</h1><script>window.next={router:{refresh(){void fetch(location.href,{headers:${JSON.stringify({ rsc: '1', ...(prefetch ? { 'next-router-prefetch': '1' } : {}) })}}).then(async response=>{const reader=response.body.getReader();const first=await reader.read();if(${commit})document.querySelector('h1').textContent=new TextDecoder().decode(first.value).trim();})}}}</script></body></html>`);
+  });
+  let browser;
+  // 브라우저 실행이 실패해도 이미 소유한 HTTP 서버는 반드시 회수합니다.
+  t.after(async () => {
+    try { await browser?.close(); }
+    finally {
+      server.closeAllConnections();
+      if (server.listening) await new Promise(resolve => server.close(resolve));
+    }
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage(); await page.goto(`http://127.0.0.1:${server.address().port}`);
+  return { page, marker, requests: () => refreshRequests, ended: () => refreshEnded };
+}
+test("RSC 응답 본문이 열린 상태에서도 실제 새 DOM 커밋을 확인", { timeout: 10000 }, async t => {
+  const { refreshDocument } = await import("../../tests/support/csp-browser.mjs");
+  const { page, marker, requests, ended } = await streamingRefreshFixture(t, true);
+  let timer;
+  try { await Promise.race([refreshDocument(page, { marker, timeoutMs: 500 }), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("TEST_REFRESH_STALLED")), 2000); })]); }
+  finally { clearTimeout(timer); }
+  assert.equal(await page.getByText(marker, { exact: true }).isVisible(), true);
+  assert.equal(requests(), 1); assert.equal(ended(), false);
+});
+test("HTTP 응답만 받고 옛 DOM이면 짧은 고정 오류로 실패", { timeout: 10000 }, async t => {
+  const { refreshDocument } = await import("../../tests/support/csp-browser.mjs");
+  const { page, marker, requests, ended } = await streamingRefreshFixture(t, false);
+  await assert.rejects(refreshDocument(page, { marker, timeoutMs: 150 }), /CSP_BROWSER_REFRESH_COMMIT_TIMEOUT/);
+  assert.equal(requests(), 1); assert.equal(ended(), true);
+});
+
+test("이미 표시된 marker는 새 refresh 커밋으로 인정하지 않음", { timeout: 10000 }, async t => {
+  const { refreshDocument } = await import("../../tests/support/csp-browser.mjs");
+  const { page, requests } = await streamingRefreshFixture(t, true);
+  await assert.rejects(refreshDocument(page, { marker: "이전 문서", timeoutMs: 150 }), /CSP_BROWSER_REFRESH_MARKER_PRESENT/);
+  assert.equal(requests(), 0);
+});
+test("prefetch 응답은 새 marker가 보여도 명시적 refresh 응답으로 인정하지 않음", { timeout: 10000 }, async t => {
+  const { refreshDocument } = await import("../../tests/support/csp-browser.mjs");
+  const { page, marker, requests } = await streamingRefreshFixture(t, true, true);
+  await assert.rejects(refreshDocument(page, { marker, timeoutMs: 200 }), /CSP_BROWSER_REFRESH_COMMIT_TIMEOUT/);
+  assert.equal(requests(), 1); assert.equal(await page.getByText(marker, { exact: true }).isVisible(), true);
+});
