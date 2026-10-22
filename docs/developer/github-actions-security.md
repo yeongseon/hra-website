@@ -11,6 +11,7 @@
 | 작업 | 명시적 권한 | 이유 |
 | --- | --- | --- |
 | 앱 CI / 형식 계약 테스트 | `contents: read` | 저장소 코드 검증 |
+| 확장 E2E 회귀 | `contents: read` | 격리 브라우저 검증과 정제한 JSON artifact 보관 |
 | 이슈 형식 | `contents: read`, `issues: write` | 기존 형식 위반 알림 댓글 관리 |
 | PR 형식 | `contents: read`, `pull-requests: read` | 신뢰된 base 코드로 PR 메타데이터 조회 |
 | 수동 일괄 검사 | `contents: read`, `issues: read`, `pull-requests: read` | 이슈·PR 조회 |
@@ -27,6 +28,7 @@ release-please의 활성화 조건과 별도 `RELEASE_PLEASE_TOKEN` 전달을 �
 | `actions/checkout@v4` | `11d5960a326750d5838078e36cf38b85af677262` | [태그 API](https://api.github.com/repos/actions/checkout/git/ref/tags/v4), [commit](https://github.com/actions/checkout/commit/11d5960a326750d5838078e36cf38b85af677262) |
 | `actions/setup-node@v4` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | [태그 API](https://api.github.com/repos/actions/setup-node/git/ref/tags/v4), [commit](https://github.com/actions/setup-node/commit/49933ea5288caeca8642d1e84afbd3f7d6820020) |
 | `googleapis/release-please-action@v4.4.1` | `5c625bfb5d1ff62eadeeb3772007f7f66fdcf071` | [태그 API](https://api.github.com/repos/googleapis/release-please-action/git/ref/tags/v4.4.1), [commit](https://github.com/googleapis/release-please-action/commit/5c625bfb5d1ff62eadeeb3772007f7f66fdcf071) |
+| `actions/upload-artifact@v4` (2026-10-22 추가 확인) | `ea165f8d65b6e75b540449e92b4886f43607fa02` | [태그 API](https://api.github.com/repos/actions/upload-artifact/git/ref/tags/v4), [commit](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02) |
 
 태그는 나중에 이동할 수 있으므로 위 API는 확인 시점의 출처이고 workflow의 전체 SHA가 실제 실행 대상을 고정합니다. SHA 고정은 해당 코드가 안전하다는 보증을 대신하지 않습니다.
 

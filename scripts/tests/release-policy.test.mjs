@@ -15,6 +15,7 @@ const files = RELEASE_FILES.map((filename) => ({ filename, status: "modified" })
 // workflow나 권한을 추가할 때는 아래 허용 목록과 실제 YAML 검증을 함께 검토해야 합니다.
 const workflowPermissions = {
   "ci.yml": [{ contents: "read" }],
+  "expanded-e2e.yml": [{ contents: "read" }],
   "process-format.yml": [
     { contents: "read" },
     { contents: "read", issues: "write" },
@@ -33,7 +34,7 @@ function assertPinnedActions(workflow) {
   const actions = [...workflow.matchAll(/^\s*(?:- )?uses: ([^\s#]+)/gm)].map((match) => match[1]);
   assert.ok(actions.length > 0);
   for (const action of actions) {
-    assert.match(action, /^(?:actions\/(?:checkout|setup-node)|googleapis\/release-please-action)@[a-f0-9]{40}$/);
+    assert.match(action, /^(?:actions\/(?:checkout|setup-node|upload-artifact)|googleapis\/release-please-action)@[a-f0-9]{40}$/);
   }
 }
 
