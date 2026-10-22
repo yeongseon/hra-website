@@ -120,6 +120,7 @@ Production·Preview·Development는 DB·공개/비공개 Blob·OAuth·세션 비
 | `CI` | Playwright CI 실행 모드 | Development 합성 검증 / CI 격리 실행; 합성 계정·격리 DB; 공급자 QA는 승인한 전용 namespace·원장만 | 아니요 | CI 도구가 제공 | 없으면 로컬 설정; 있으면 forbidOnly·재시도·worker 제한 적용 | 앱 예시에 넣지 않음 |
 | `GITHUB_EVENT_PATH` | GitHub event JSON 파일 경로 | Development 합성 검증 / CI 격리 실행; 합성 계정·격리 DB; 공급자 QA는 승인한 전용 namespace·원장만 | 아니요 | process-format --event를 GitHub runner에서 실행 | runner가 제공하지 않으면 event 모드 읽기 실패 | 앱 예시에 넣지 않음 |
 | `GITHUB_REPOSITORY` | 형식 검사 대상 저장소 이름 | Development 합성 검증 / CI 격리 실행; 합성 계정·격리 DB; 공급자 QA는 승인한 전용 namespace·원장만 | 아니요 | GitHub runner 또는 명시한 대상 | 미설정이면 gh repo view로 저장소 조회 | 앱 예시에 넣지 않음 |
+| `GITHUB_STEP_SUMMARY` | Actions가 제공하는 단계별 Markdown 요약 파일 | Development 합성 검증 / CI 격리 실행; 합성 계정·격리 DB; 공급자 QA는 승인한 전용 namespace·원장만 | 아니요 | 운영 smoke 또는 명시적 합성 알림 경로의 요약 작성 | 없으면 정제 JSON과 종료 코드만 제공; 이메일 수신을 의미하지 않음 | 앱 예시에 넣지 않음 |
 | `RELEASE_PLEASE_BOT_LOGIN` | 정확한 릴리스 PR 작성자 login | Development 합성 검증 / CI 격리 실행; 합성 계정·격리 DB; 공급자 QA는 승인한 전용 namespace·원장만 | 아니요 | 별도 릴리스 token 작성자를 사용할 때 | 미설정이면 github-actions[bot]. 이름에 bot이 있다는 이유만으로 면제하지 않음 | 앱 예시에 넣지 않음 |
 
 ## 허용한 시스템 전달 값
