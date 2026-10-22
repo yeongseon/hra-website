@@ -409,7 +409,20 @@ try {
     if (cspBrowser) {
       phase = "CSP_BROWSER";
       await verifyCspApiBoundaries(origin, sessions);
-      cspSummary = await runCspBrowser({ repository, origin, sessions, fixtureRoot: cluster.root, signal: controller.signal });
+      cspSummary = await runCspBrowser({ repository, origin, sessions, fixtureRoot: cluster.root, signal: controller.signal,
+        // 소유한 합성 행의 표시 값만 바꿔 RSC 새 DOM 커밋을 검증합니다. 인가 값은 변경하지 않습니다.
+        refreshFixture: async id => {
+          const fixtures = {
+            "editor-navigation": { sql: `UPDATE users SET name='합성 CSP 새 관리자 이름' WHERE id='${academicG1Actors.admin.id}';`, marker: "합성 CSP 새 관리자 이름" },
+            "print-log": { sql: `UPDATE class_logs SET title='합성 CSP 새 수업일지 제목' WHERE id='${siteFixtureIds.log}';`, marker: "합성 CSP 새 수업일지 제목" },
+            "print-weekly": { sql: `UPDATE weekly_texts SET title='합성 CSP 새 주차텍스트 제목' WHERE id='${siteFixtureIds.weekly}';`, marker: "합성 CSP 새 주차텍스트 제목" },
+            "print-template": { sql: `UPDATE report_templates SET title='합성 CSP 새 보고서양식 제목' WHERE id='${siteFixtureIds.template}';`, marker: "합성 CSP 새 보고서양식 제목" },
+          };
+          check(Object.hasOwn(fixtures, id), "SITE_ROUTE_CSP_REFRESH_FIXTURE");
+          cluster.sql(fixtures[id].sql);
+          return fixtures[id].marker;
+        },
+      });
       check(cspSummary?.completed === true && cspSummary.cleanupComplete === true, "SITE_ROUTE_CSP_INCOMPLETE");
     } else if (publicBrowser) {
       const { configPath, summaryPath } = await prepareExpandedPublicBrowser({ repository, fixtureRoot: cluster.root, origin });
@@ -441,6 +454,8 @@ try {
 } catch (error) {
   diagnostics.add(error instanceof Error && (/^SITE_ROUTE_[A-Z_]+$/.test(error.message) ||
     cspBrowser && /^CSP_BROWSER_[A-Z0-9_]+$/.test(error.message)) ? error.message : "SITE_ROUTE_EXECUTION_FAILED");
+  // 최초 단계 실패와 cleanup 실패를 별도 고정 진단으로 보존합니다.
+  if (error?.cause instanceof Error && error.cause.message === "CSP_BROWSER_CLEANUP_FAILED") diagnostics.add("CSP_BROWSER_CLEANUP_FAILED");
   process.exitCode = 1;
 } finally {
   clearTimeout(deadline);

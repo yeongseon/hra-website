@@ -42,7 +42,7 @@ export function summarizeCspViolations(events) {
 
 /** 임의 script·style은 차단하고 올바른 nonce만 허용하는지 확인한다. */
 export async function runCspCanaries(page) {
-  await page.evaluate(() => {
+  await evaluate(page, () => {
     const nonce = document.querySelector("script[nonce]")?.nonce;
     if (!nonce) throw new Error("CSP_CANARY_NONCE_MISSING");
     // strict-dynamic의 신뢰 전파와 혼동하지 않도록 parser가 읽는 srcdoc에서 검사한다.
@@ -56,7 +56,7 @@ export async function runCspCanaries(page) {
     const child = document.querySelector("#csp-canary-frame")?.contentWindow;
     return child?.__cspAllowedScript === true && child.__canaryEvents.some(event => event.directive === "script-src-elem") && child.__canaryEvents.some(event => event.directive === "style-src-elem");
   }, undefined, { timeout: 10000 });
-  const result = await page.evaluate(() => {
+  const result = await evaluate(page, () => {
     const child = document.querySelector("#csp-canary-frame").contentWindow;
     const style = child.getComputedStyle(child.document.querySelector("#csp-canary"));
     return { script: child.__cspBlockedScript !== true && child.__cspAllowedScript === true,
@@ -68,7 +68,7 @@ export async function runCspCanaries(page) {
 
 /** 문서 시작 시 관찰자를 등록하고 CSP 이벤트의 원본 URL은 즉시 버린다. */
 export async function installCspBrowserObserver(context) {
-  await context.addInitScript(() => {
+  await bounded(context.addInitScript(() => {
     window.__cspEvents = [];
     window.__cspPrintCalls = 0;
     window.print = () => { window.__cspPrintCalls++; };
@@ -81,7 +81,7 @@ export async function installCspBrowserObserver(context) {
       window.__cspEvents.push(sanitized);
       if (window.__hraCspViolation) void window.__hraCspViolation(sanitized);
     });
-  });
+  }), 20000);
 }
 
 /** 실행이 멈춰도 소유 브라우저를 유한 시간 안에 종료한다. */
@@ -89,6 +89,11 @@ async function bounded(promise, milliseconds) {
   let timer;
   try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("CSP_BROWSER_TIMEOUT")), milliseconds); })]); }
   finally { clearTimeout(timer); }
+}
+
+/** evaluate에는 Playwright 기본 timeout이 적용되지 않아 별도 상한을 둡니다. */
+async function evaluate(page, ...args) {
+  return bounded(page.evaluate(...args), 20000);
 }
 
 /** 세션 헤더를 브라우저의 같은 출처 쿠키로만 변환한다. */
@@ -154,13 +159,13 @@ export function createCspSdkMock(origin) {
 
 /** 각 route 처리를 추적하고 종료 중에도 차단 규칙을 유지한다. */
 async function guardedContext(browser, origin, cookie, bundle, sdk, record, signal) {
-  const context = await browser.newContext({ serviceWorkers: "block", acceptDownloads: false });
+  const context = await bounded(browser.newContext({ serviceWorkers: "block", acceptDownloads: false }), 20000);
   const pending = new Set(), events = [];
-  await context.exposeBinding("__hraCspViolation", (_source, event) => { summarizeCspViolations([event]); events.push(event); });
+  await bounded(context.exposeBinding("__hraCspViolation", (_source, event) => { summarizeCspViolations([event]); events.push(event); }), 20000);
   let closing = false;
-  await context.addCookies(browserCookies(cookie, origin));
+  await bounded(context.addCookies(browserCookies(cookie, origin)), 20000);
   await installCspBrowserObserver(context);
-  await context.routeWebSocket(/.*/, socket => { record.denied++; socket.close(); });
+  await bounded(context.routeWebSocket(/.*/, socket => { record.denied++; socket.close(); }), 20000);
   const handle = async route => {
     const request = route.request(), url = new URL(request.url());
     if (closing || signal?.aborted) return route.abort();
@@ -172,14 +177,14 @@ async function guardedContext(browser, origin, cookie, bundle, sdk, record, sign
     const response = await route.fetch({ maxRedirects: 0, timeout: 30000 });
     return route.fulfill({ response });
   };
-  await context.route("**/*", route => {
+  await bounded(context.route("**/*", route => {
     const task = handle(route).catch(async () => { record.routeErrors++; await route.abort().catch(() => { record.closeErrors++; }); }).finally(() => pending.delete(task));
     pending.add(task);
     return task;
-  });
+  }), 20000);
   return { context, events, async close() {
     closing = true;
-    await context.route("**/*", route => route.abort());
+    await bounded(context.route("**/*", route => route.abort()), 5000);
     await bounded(Promise.all([...pending]), 10000);
     await bounded(context.close(), 10000);
   } };
@@ -190,7 +195,7 @@ async function documentNonce(page, response) {
   const csp = response?.headers()["content-security-policy"];
   const nonce = /'nonce-([^']+)'/.exec(csp ?? "")?.[1];
   check(nonce && !/unsafe-eval/.test(csp) && !csp.split(";").find(value => value.trim().startsWith("script-src "))?.includes("unsafe-inline"), "CSP_BROWSER_POLICY");
-  const result = await page.evaluate(expected => {
+  const result = await evaluate(page, expected => {
     const scripts = [...document.querySelectorAll("script")].filter(script => script.textContent || script.src);
     return { scripts: scripts.length, match: scripts.every(script => script.nonce === expected) };
   }, nonce);
@@ -200,7 +205,7 @@ async function documentNonce(page, response) {
 
 /** RSC 갱신 뒤 새 앱 style도 초기 문서 nonce를 사용하는지 확인한다. */
 async function assertAppStyles(page, nonce) {
-  const result = await page.evaluate(expected => {
+  const result = await evaluate(page, expected => {
     const styles = [...document.querySelectorAll("style")].filter(style => style.textContent.includes("@page") || style.textContent.includes(".ProseMirror"));
     return { count: styles.length, matches: styles.every(style => style.nonce === expected), tiptapMissing: styles.some(style => style.hasAttribute("data-tiptap-style") && !style.nonce) };
   }, nonce);
@@ -209,27 +214,38 @@ async function assertAppStyles(page, nonce) {
   check(result.matches, "CSP_BROWSER_STYLE_MISMATCH");
 }
 
-/** refresh 응답 본문과 두 프레임을 기다려 이전 DOM만 읽고 통과하는 검증을 피한다. */
-async function refreshDocument(page) {
-  const expectedPath = new URL(page.url()).pathname;
-  const [response] = await Promise.all([
-    page.waitForResponse(value => value.request().headers().rsc === "1" && new URL(value.url()).pathname === expectedPath),
-    page.evaluate(() => window.next.router.refresh()),
-  ]);
-  await response.finished();
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+/** 새 합성 DB 값이 실제 DOM에 반영되어야 refresh 커밋으로 인정합니다. */
+export async function refreshDocument(page, { marker, timeoutMs = 20000 } = {}) {
+  check(typeof marker === "string" && marker.length > 0 && marker.length <= 100 && Number.isInteger(timeoutMs) && timeoutMs >= 100 && timeoutMs <= 20000, "CSP_BROWSER_REFRESH_INPUT");
+  try {
+    check(await bounded(page.getByText(marker, { exact: true }).count(), timeoutMs) === 0, "CSP_BROWSER_REFRESH_MARKER_PRESENT");
+    const expectedPath = new URL(page.url()).pathname;
+    const [response] = await bounded(Promise.all([
+      page.waitForResponse(value => {
+        const headers = value.request().headers();
+        return headers.rsc === "1" && !Object.hasOwn(headers, "next-router-prefetch") && !Object.hasOwn(headers, "next-router-segment-prefetch") && new URL(value.url()).pathname === expectedPath;
+      }, { timeout: timeoutMs }),
+      evaluate(page, () => window.next.router.refresh()),
+    ]), timeoutMs);
+    check(response.status() === 200, "CSP_BROWSER_REFRESH_STATUS");
+    // RSC 응답 전체 종료·애니메이션 프레임 대신 새로운 서버 값의 가시성을 직접 검증합니다.
+    await bounded(page.getByText(marker, { exact: true }).first().waitFor({ state: "visible", timeout: timeoutMs }), timeoutMs);
+  } catch (error) {
+    if (/^CSP_BROWSER_REFRESH_[A-Z_]+$/.test(error?.message ?? "")) throw error;
+    throw new Error("CSP_BROWSER_REFRESH_COMMIT_TIMEOUT");
+  }
 }
 
 /** 실제 브라우저 SDK를 같은 출처 script로 로드하고 단일·10MiB 업로드를 실행한다. */
 export async function runCspSdkProbe(page) {
-  await bounded(page.evaluate(route => new Promise((resolve, reject) => {
+  await bounded(evaluate(page, route => new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.nonce = document.querySelector("script[nonce]").nonce;
     script.src = route;
     script.onload = () => resolve(); script.onerror = () => reject(new Error("CSP_SDK_LOAD"));
     document.body.append(script);
   }), bundlePath), 15000);
-  return bounded(page.evaluate(async handleUploadUrl => {
+  return bounded(evaluate(page, async handleUploadUrl => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
@@ -243,29 +259,30 @@ export async function runCspSdkProbe(page) {
 }
 
 /** 원문 로그·세션을 출력하지 않고 production 모드 CSP 사례를 실행한다. */
-export async function runCspBrowser({ repository, origin, sessions, fixtureRoot, signal }) {
+export async function runCspBrowser({ repository, origin, sessions, fixtureRoot, signal, refreshFixture }) {
   origin = validatePublicBrowserOrigin(origin);
+  check(typeof refreshFixture === "function", "CSP_BROWSER_REFRESH_FIXTURE");
   check(path.isAbsolute(repository) && path.isAbsolute(fixtureRoot) && sessions && ["studentA", "admin", "manager"].every(actor => typeof sessions[actor] === "string" && sessions[actor]), "CSP_BROWSER_INPUT");
   const routerSource = await readFile(path.join(repository, "node_modules/next/dist/client/components/app-router-instance.js"), "utf8");
   check(routerSource.includes("window.next.router = publicAppRouterInstance"), "CSP_BROWSER_ROUTER_SOURCE");
   const bundle = await sdkBundle(repository);
   const sdk = createCspSdkMock(origin), record = { denied: 0, routeErrors: 0, closeErrors: 0, pageErrors: 0 };
-  let server, browser, stage = "START", cleanupComplete = false, normalViolations = 0, negativeCanaries;
+  let server, browser, stage = "START", cleanupComplete = false, normalViolations = 0, negativeCanaries, primaryError;
   const contexts = new Set(), cases = [];
   const safeEnvironment = Object.fromEntries(["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
-  const abort = () => { void server?.kill().catch(() => { record.closeErrors++; }); };
+  const abort = () => { void bounded(server?.kill(), 5000).catch(() => { record.closeErrors++; }); };
   signal?.addEventListener("abort", abort, { once: true });
   const makePage = async actor => {
     check(!signal?.aborted, "CSP_BROWSER_ABORTED");
     const guarded = await guardedContext(browser, origin, sessions[actor] ?? "", bundle, sdk, record, signal);
     contexts.add(guarded);
-    const page = await guarded.context.newPage();
+    const page = await bounded(guarded.context.newPage(), 20000);
     page.setDefaultTimeout(20000);
     page.on("pageerror", () => { record.pageErrors++; });
     return { page, guarded };
   };
   const finish = async (page, guarded, negative = false) => {
-    await page.evaluate(() => Promise.resolve());
+    await evaluate(page, () => Promise.resolve());
     const events = guarded.events;
     if (!negative) {
       const enforced = summarizeCspViolations(events).filter(event => event.disposition === "enforce");
@@ -279,8 +296,8 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
   };
   const pass = id => { check(caseIds.includes(id), "CSP_BROWSER_CASE"); cases.push({ id, status: "passed" }); };
   try {
-    server = await chromium.launchServer({ headless: true, timeout: 30000, env: safeEnvironment });
-    if (signal?.aborted) { await server.kill(); throw new Error("CSP_BROWSER_ABORTED"); }
+    server = await chromium.launchServer({ headless: true, timeout: 30000, env: safeEnvironment, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false });
+    if (signal?.aborted) { await bounded(server.kill(), 5000); throw new Error("CSP_BROWSER_ABORTED"); }
     browser = await chromium.connect(server.wsEndpoint(), { timeout: 30000 });
     stage = "HTML";
     for (const [actor, route, status] of [["anonymous", "/login", 200], ["anonymous", "/system-error", 200], ["anonymous", "/missing.csp-test", 404], ["anonymous", "/curriculum", 200], ["studentA", "/mypage", 200], ["admin", "/admin/docs", 200], ["manager", "/admin/academics", 200]]) {
@@ -306,7 +323,7 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
       const { page, guarded } = await makePage("admin");
       const nonce = await documentNonce(page, await page.goto(origin + "/admin/notices", { waitUntil: "networkidle" }));
       const editPath = `/admin/notices/${ids.notice}/edit`;
-      await page.evaluate(route => window.next.router.prefetch(route), editPath);
+      await evaluate(page, route => window.next.router.prefetch(route), editPath);
       await page.locator(`a[href="${editPath}"]`).click();
       await page.waitForURL(origin + editPath);
       await page.locator(".tiptap").waitFor();
@@ -317,7 +334,7 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
       await page.getByRole("button", { name: "✕ 편집으로 돌아가기", exact: true }).click();
       await page.goBack(); await page.waitForURL(origin + "/admin/notices");
       await page.goForward(); await page.waitForURL(origin + editPath);
-      await refreshDocument(page);
+      await refreshDocument(page, { marker: await refreshFixture("editor-navigation") });
       await page.locator(".tiptap").waitFor();
       await assertAppStyles(page, nonce);
       await finish(page, guarded);
@@ -329,7 +346,7 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
       const nonce = await documentNonce(page, await page.goto(origin + "/resources", { waitUntil: "networkidle" }));
       stage = id.toUpperCase().replaceAll("-", "_") + "_CATEGORY";
       await page.getByRole("button", { name: category, exact: true }).click();
-      await page.evaluate(route => window.next.router.prefetch(route), detail);
+      await evaluate(page, route => window.next.router.prefetch(route), detail);
       stage = id.toUpperCase().replaceAll("-", "_") + "_DETAIL_LINK";
       await page.locator(`a[href="${detail}"]`).first().click();
       await page.waitForURL(origin + detail);
@@ -340,14 +357,14 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
       await page.waitForFunction(() => window.__cspPrintCalls >= 1);
       await assertAppStyles(page, nonce);
       stage = id.toUpperCase().replaceAll("-", "_") + "_BUTTON";
-      const before = await page.evaluate(() => window.__cspPrintCalls);
+      const before = await evaluate(page, () => window.__cspPrintCalls);
       await page.getByRole("button", { name: "다시 인쇄", exact: true }).click();
-      check(await page.evaluate(() => window.__cspPrintCalls) === before + 1, "CSP_BROWSER_PRINT_BUTTON");
+      check(await evaluate(page, () => window.__cspPrintCalls) === before + 1, "CSP_BROWSER_PRINT_BUTTON");
       stage = id.toUpperCase().replaceAll("-", "_") + "_HISTORY";
       await page.goBack(); await page.waitForURL(origin + detail);
       await page.goForward(); await page.waitForURL(origin + detail + "/print");
       stage = id.toUpperCase().replaceAll("-", "_") + "_REFRESH";
-      await refreshDocument(page);
+      await refreshDocument(page, { marker: await refreshFixture(id) });
       await assertAppStyles(page, nonce);
       await finish(page, guarded);
       pass(id);
@@ -376,7 +393,7 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
     check(cases.length === caseIds.length, "CSP_BROWSER_CASE_MISSING");
   } catch (error) {
     // 직접 정의한 고정 코드만 유지하고 Playwright의 URL·DOM·헤더 원문은 버린다.
-    throw new Error(/^CSP_BROWSER_[A-Z_]+$/.test(error?.message ?? "") ? `CSP_BROWSER_${stage}_${error.message.slice("CSP_BROWSER_".length)}` : `CSP_BROWSER_${stage}_FAILED`);
+    primaryError = new Error(/^CSP_BROWSER_[A-Z_]+$/.test(error?.message ?? "") ? `CSP_BROWSER_${stage}_${error.message.slice("CSP_BROWSER_".length)}` : `CSP_BROWSER_${stage}_FAILED`);
   } finally {
     signal?.removeEventListener("abort", abort);
     let failed = false;
@@ -387,7 +404,12 @@ export async function runCspBrowser({ repository, origin, sessions, fixtureRoot,
       if (server.process().exitCode === null && server.process().signalCode === null) failed = true;
     }
     cleanupComplete = !failed;
-    if (failed) throw new Error("CSP_BROWSER_CLEANUP_FAILED");
+    if (failed) {
+      const cleanupError = new Error("CSP_BROWSER_CLEANUP_FAILED");
+      if (primaryError) primaryError.cause = cleanupError;
+      else primaryError = cleanupError;
+    }
   }
+  if (primaryError) throw primaryError;
   return { completed: true, cases, normalViolations, negativeCanaries, sdk: { single: true, multipart: true }, cleanupComplete };
 }
