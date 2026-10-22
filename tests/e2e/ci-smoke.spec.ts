@@ -18,7 +18,9 @@ test("응답 보안 헤더를 유지한다", async ({ request }) => {
   expect(policy).toContain("frame-ancestors 'none'");
   expect(policy).toContain("default-src 'self'");
   expect(policy).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/]{43}=' 'strict-dynamic'/);
-  expect(policy.split(";").find((directive) => directive.trim().startsWith("script-src "))).not.toMatch(/unsafe-inline|unsafe-eval/);
+  // 공통 smoke는 Next 개발 서버도 실행하므로 개발 도구의 eval 예외를 금지하지 않습니다.
+  // production의 unsafe-eval 금지는 별도 verify:csp의 실제 빌드와 정책 단위 검사에서 확인합니다.
+  expect(policy.split(";").find((directive) => directive.trim().startsWith("script-src "))).not.toContain("unsafe-inline");
   expect(headers["content-security-policy-report-only"]).toBeUndefined();
 });
 
