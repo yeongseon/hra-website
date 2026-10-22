@@ -4,7 +4,7 @@
  */
 import "server-only";
 import { z } from "zod/v4";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session";
 import { canManageAcademics } from "@/lib/academic-access";
 
 // 계정 ID를 추정하거나 최초 관리자를 자동 선택하지 않고 설정 누락 시 차단합니다.
@@ -14,8 +14,9 @@ export function getAcademicApproverId(): string {
   return result.data;
 }
 
+// 전역 역할에 더해 서버에 지정된 책임자 ID를 호출마다 대조합니다.
 export async function requireAcademicApprover(): Promise<string> {
-  const session = await auth();
+  const session = await getRequestSession();
   const configuredId = getAcademicApproverId();
   if (!canManageAcademics(session?.user, configuredId)) {
     throw new Error("학사 운영 책임자만 승인할 수 있습니다.");

@@ -140,6 +140,7 @@ Production·Preview·Development는 DB·공개/비공개 Blob·OAuth·세션 비
 
 | 경로 | 검토한 이유 | 수집할 이름 |
 | --- | --- | --- |
+| `scripts/measure-authentication.mjs` | 인증 비용 측정기의 여섯 시스템 값만 별도 합성 DB·서버 자식 환경으로 복사 | `PATH`, `HOME`, `TMPDIR`, `TMP`, `TEMP`, `SYSTEMROOT` |
 | `scripts/backfill-academic-enrollments.mjs` | 기존 PG 접속 상속값을 제외한 뒤 확인한 접속 필드를 생성하는 운영 명령 | 새 설정 이름을 만들지 않는 전달 |
 | `scripts/migrate-rate-limit-reservations.mjs` | 기존 운영 명령의 환경 상속 후 접속 필드를 덮어쓰는 구문; 실행·보안 변경은 이 계약의 범위 밖 | 새 설정 이름을 만들지 않는 전달 |
 | `scripts/verify-academic-assignment-admin-http.mjs` | 기존 여섯 시스템 값만 새 격리 자식 환경으로 복사 | `PATH`, `HOME`, `TMPDIR`, `TMP`, `TEMP`, `SYSTEMROOT` |

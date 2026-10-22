@@ -1,0 +1,73 @@
+# 인증에 영향을 주는 변경만 합성 계정·격리 DB에서 기준 commit과 비교합니다.
+name: 인증 비용·권한 회수 회귀
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: 비교할 조상 commit의 전체 SHA 40자
+        required: true
+        type: string
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/authentication-measurement.yml
+      - scripts/measure-authentication.mjs
+      - scripts/tests/auth-measurement*.test.mjs
+      - tests/support/auth-measurement-*.mjs
+      - src/lib/auth*.ts
+      - src/lib/request-session.ts
+      - src/lib/admin.ts
+      - src/lib/member.ts
+      - src/lib/academic-admin.ts
+      - src/proxy.ts
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authentication-measurement-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: 전후 비용 · 200개 계정 · 즉시 권한 회수
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # 기준 commit을 조상으로 확인하고 소유한 detached worktree에서 빌드합니다.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 의존성 설치
+        run: npm ci
+      - name: 격리 PostgreSQL 준비
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          pg_bin="$(pg_config --bindir)"
+          test -x "$pg_bin/initdb"
+          test -x "$pg_bin/pg_ctl"
+          printf 'HRA_TEST_PG_BIN=%s\n' "$pg_bin" >> "$GITHUB_ENV"
+      - name: 계측 계약·공급자 바인딩 회귀
+        run: |
+          node --test scripts/tests/auth-measurement*.test.mjs
+          npx vitest run tests/unit/oauth-provider-boundary.test.ts tests/unit/auth-signin-io.test.ts tests/unit/auth-jwt-session.test.ts
+      - name: 같은 의존성으로 기준·현재 production 빌드 비교
+        env:
+          # 표현식은 셸 코드로 보간하지 않고 인수로만 전달하며 실행기가 SHA를 검증합니다.
+          BASELINE_REF: ${{ github.event.pull_request.base.sha || inputs.baseline_ref }}
+        run: npm run verify:auth-measurement -- --compare --baseline-ref "$BASELINE_REF" --output test-results/authentication-measurement.json
+      - name: 식별자 없는 비용·회귀 결과 보관
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: authentication-measurement
+          path: test-results/authentication-measurement.json
+          if-no-files-found: warn
+          retention-days: 7

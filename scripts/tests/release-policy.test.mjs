@@ -15,6 +15,7 @@ const files = RELEASE_FILES.map((filename) => ({ filename, status: "modified" })
 // workflow나 권한을 추가할 때는 아래 허용 목록과 실제 YAML 검증을 함께 검토해야 합니다.
 const workflowPermissions = {
   "ci.yml": [{ contents: "read" }],
+  "authentication-measurement.yml": [{ contents: "read" }],
   "expanded-e2e.yml": [{ contents: "read" }],
   "production-smoke.yml": [{ contents: "read" }],
   "process-format.yml": [

@@ -8,10 +8,16 @@
  */
 
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  // Next 빌드가 검사하는 서버 전용 표식은 테스트에서 설치된 빈 서버 구현으로 해석합니다.
+  // 앱의 클라이언트 경계 검증은 실제 Next production 빌드에서 그대로 수행합니다.
+  resolve: {
+    alias: { "server-only": fileURLToPath(new URL("./node_modules/next/dist/compiled/server-only/empty.js", import.meta.url)) },
+  },
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: "jsdom",
