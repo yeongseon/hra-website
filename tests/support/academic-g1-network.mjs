@@ -2,7 +2,7 @@
  * 테스트 프로세스의 SDK 네트워크만 loopback 저장소로 전달한다.
  * 허용한 앱·저장소 외 주소는 차단하며 원본 URL·토큰을 오류에 포함하지 않는다.
  */
-import { Agent, Dispatcher, getGlobalDispatcher, setGlobalDispatcher } from "undici";
+import { Agent, Dispatcher, Pool, getGlobalDispatcher, setGlobalDispatcher } from "undici";
 import { academicBlobApiOrigin, academicBlobApiPath } from "./academic-private-store.mjs";
 
 function loopbackOrigin(value) {
@@ -32,7 +32,13 @@ function requestHeaders(input) {
 export function installAcademicGateNetwork({ appOrigin, storeOrigin, blobHost, onBlocked = () => undefined }) {
   const app = loopbackOrigin(appOrigin), store = loopbackOrigin(storeOrigin);
   if (!/^[a-z0-9-]+\.private\.blob\.vercel-storage\.com$/.test(blobHost)) throw new Error("QA_NETWORK_SCOPE");
-  const original = getGlobalDispatcher(), agent = new Agent();
+  const original = getGlobalDispatcher();
+  // 설치 Agent는 close 시작 때 내부 목록을 비운다. 대기 후 강제 종료도 가능하도록
+  // 공개 factory API로 자신이 만든 기본 Pool 참조를 유지하며 동시 전송 설정은 보존한다.
+  const ownedPools = new Set();
+  const agent = new Agent({ factory(origin, options) {
+    const pool = new Pool(origin, options); ownedPools.add(pool); return pool;
+  } });
   const counts = { forwarded: 0, local: 0, blocked: 0 };
   class GateDispatcher extends Dispatcher {
     dispatch(options, handler) {
@@ -62,7 +68,14 @@ export function installAcademicGateNetwork({ appOrigin, storeOrigin, blobHost, o
   let restored = false;
   return {
     snapshot: () => ({ ...counts }),
-    async close() { if (!restored) { restored = true; setGlobalDispatcher(original); await agent.close(); } },
+    async close() { if (!restored) { restored = true; setGlobalDispatcher(original); await agent.close(); ownedPools.clear(); } },
+    // 응답을 기다리는 연결이 종료 기한을 넘기면 소유 Agent만 강제로 닫는다.
+    async destroy() {
+      if (!restored) { restored = true; setGlobalDispatcher(original); }
+      await Promise.all([...ownedPools].map(pool => pool.destroy()));
+      ownedPools.clear();
+      await agent.destroy();
+    },
   };
 }
 

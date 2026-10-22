@@ -70,8 +70,13 @@ jobs:
         if: inputs.fixture_alert == true
         # 이 수동 모드의 job/run failure가 기대 결과입니다. 실패를 성공으로 바꾸지 않습니다.
         run: node scripts/verify-production-smoke-fixture.mjs --sha "$SMOKE_SOURCE_SHA"
-      - name: 정제한 상태 결과 보관
+      - name: 공개 산출물의 허용 필드·민감 정보 위험 검사
+        id: artifact_safety
         if: always()
+        # 실패 보고서도 검사하며 누락·검사 실패 때 업로드하지 않습니다.
+        run: node scripts/check-public-artifact.mjs --kind production-smoke --file test-results/production-smoke.json
+      - name: 정제한 상태 결과 보관
+        if: always() && steps.artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-smoke-result

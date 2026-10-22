@@ -61,8 +61,13 @@ jobs:
       - name: 공개 E2E 수집·실행 및 학사 G1 필수 사례
         # 공개 전체 스키마 fixture와 G1 축소 스키마는 서로 다른 폐기 가능한 DB입니다.
         run: npm run test:e2e:expanded
-      - name: 개인정보 없는 공개 사례 결과 보관
+      - name: 공개 산출물의 허용 필드·민감 정보 위험 검사
+        id: artifact_safety
         if: always()
+        # 실패 보고서도 검사하며 누락·검사 실패 때 업로드하지 않습니다.
+        run: node scripts/check-public-artifact.mjs --kind expanded-public --file test-results/expanded-public.json
+      - name: 개인정보 없는 공개 사례 결과 보관
+        if: always() && steps.artifact_safety.outcome == 'success'
         # 공식 v4 태그를 2026-10-22 Git refs·commit API로 확인했습니다.
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

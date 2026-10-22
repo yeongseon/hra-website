@@ -2,11 +2,11 @@
  * 환경 파일 없는 격리 worktree에서 실제 production 빌드의 전체 읽기 경로를 감사한다.
  * 빌드의 공개 글꼴 읽기는 허용하고 next start·HTTP의 외부 요청은 차단한다.
  * 두 단계 모두 합성 계정·격리 PG를 사용하며 제품 5xx는 실패 종료한다.
- * 명시적 --browser public 모드는 같은 환경에서 공개 브라우저 회귀만 실행한다.
- * 실제 Blob 업로드와 정상 CRUD는 별도 G1 검증의 책임이다.
+ * --browser public은 공개 회귀, --browser csp는 실제 문서·에디터·인쇄·SDK CSP를 검사한다.
+ * 실제 공급자 연결은 별도 운영 QA, 정상 학사 CRUD는 별도 G1 검증의 책임이다.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -15,12 +15,18 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createQaPostgres } from "../tests/support/resource-qa-postgres.mjs";
 import { academicG1Actors, concreteSiteRoute, installSiteRouteFixture, siteRoutePassword } from "../tests/support/site-route-fixture.mjs";
 import { prepareExpandedPublicBrowser } from "../tests/support/expanded-public-browser.mjs";
+import { runCspBrowser } from "../tests/support/csp-browser.mjs";
+import { generateClientTokenFromReadWriteToken, put } from "@vercel/blob/client";
+import { ids as siteFixtureIds } from "../tests/support/site-route-fixture.mjs";
+import { createAcademicPrivateStore } from "../tests/support/academic-private-store.mjs";
+import { installAcademicGateNetwork } from "../tests/support/academic-g1-network.mjs";
+import { resourceQaPdfBytes } from "../tests/support/resource-qa-pdf.mjs";
 
 const harnessRepository = dirname(dirname(fileURLToPath(import.meta.url)));
 let repository = harnessRepository;
 let only = null;
 // 공개 브라우저 모드는 HTTP 전수 검사와 구분하며 결과에도 실행 범위를 남긴다.
-let publicBrowser = false, browserSummary = null;
+let publicBrowser = false, cspBrowser = false, reuseBuild = false, browserSummary = null, cspSummary = null;
 const argumentsList = process.argv.slice(2);
 const controller = new AbortController();
 const diagnostics = new Set();
@@ -31,11 +37,19 @@ const children = new Map();
 const actors = ["anonymous", "pending", "studentA", "faculty", "admin", "manager"];
 let cleanupFailed = false;
 let cluster, output, phase = "INPUT", completed = false, cleanupComplete = false, sourceSha = null;
+let cspStore, cspNetwork;
 const limitations = ["실제 Blob 업로드·파일 스트림 미검증", "정상 CRUD·서버 액션 쓰기 미검증", "브라우저 상호작용 미검증", "알려진 동적 경로 외 합성 식별자는 fixture 제약"];
 
 /** 외부 오류 메시지를 출력 계약으로 사용하지 않고 직접 만든 고정 코드만 던진다. */
 const check = (value, code) => { if (!value) throw new Error(code); };
 const signal = (milliseconds = 45_000) => AbortSignal.any([controller.signal, AbortSignal.timeout(milliseconds)]);
+/** 정리 Promise가 영원히 대기해 다음 자원 정리까지 막지 않도록 기한을 둔다. */
+async function boundedCleanup(promise, milliseconds) {
+  let timer;
+  try {
+    await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("SITE_ROUTE_CSP_CLEANUP_TIMEOUT")), milliseconds); })]);
+  } finally { clearTimeout(timer); }
+}
 const basic = Object.fromEntries(["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"]
   .filter(key => process.env[key]).map(key => [key, process.env[key]]));
 
@@ -88,7 +102,7 @@ function launch(args, environment, browserOutput = false) {
   });
   child.stderr.on("data", chunk => {
     const text = String(chunk);
-    for (const match of text.matchAll(/(?:QA_TRANSPORT_FAILURE|SITE_ROUTE_NETWORK):([A-Z0-9_]+)/g)) { diagnostics.add(match[1]); failureSequence++; }
+    for (const match of text.matchAll(/(?:QA_TRANSPORT_FAILURE|SITE_ROUTE_NETWORK|QA_G1_NETWORK_BLOCKED):([A-Z0-9_]+)/g)) { diagnostics.add(match[1]); failureSequence++; }
     if (text.includes("Functions cannot be passed")) diagnostics.add("SERVER_ACTION_SERIALIZATION");
     if (text.includes("Attempted to call") && text.includes("buttonVariants")) diagnostics.add("CLIENT_FUNCTION_ON_SERVER");
     if (/Could not parse content as FormData|Content-Type was not one of|Request\.formData/.test(text)) diagnostics.add("FORM_DATA_PARSE_FAILURE");
@@ -118,6 +132,46 @@ function collectCookies(response, cookies) {
   }
 }
 const cookieHeader = cookies => [...cookies].map(([name, value]) => `${name}=${value}`).join("; ");
+
+/** 실제 private SDK PUT/GET을 기존 G1 로컬 저장소에만 보내 정상 PDF 응답을 검증한다. */
+async function prepareCspPrivateStore(origin) {
+  const host = "cspfixture.private.blob.vercel-storage.com";
+  const token = `${["vercel", "blob", "rw", "cspfixture"].join("_")}_${randomBytes(32).toString("hex")}`;
+  cspStore = await createAcademicPrivateStore({ host, token });
+  cspNetwork = installAcademicGateNetwork({ appOrigin: origin, storeOrigin: cspStore.origin, blobHost: host,
+    onBlocked: () => { diagnostics.add("CSP_STORE_NETWORK_BLOCKED"); failureSequence++; } });
+  const key = `academic-uploads/v1/${randomUUID()}/document.pdf`;
+  const bytes = resourceQaPdfBytes();
+  const clientToken = await generateClientTokenFromReadWriteToken({ token, pathname: key, validUntil: Date.now() + 600_000,
+    allowOverwrite: false, addRandomSuffix: false, maximumSizeInBytes: bytes.length, allowedContentTypes: ["application/pdf"] });
+  await put(key, bytes, { access: "private", token: clientToken, contentType: "application/pdf", multipart: false, abortSignal: signal() });
+  // 이 실행의 합성 행 두 개만 수정한다. 실제 운영 파일·자료는 읽거나 변경하지 않는다.
+  cluster.sql(`UPDATE class_materials SET file_url='https://${host}/${key}' WHERE id='${siteFixtureIds.material}';
+    UPDATE guidebooks SET file_url='https://${host}/${key}' WHERE id='${siteFixtureIds.guidebook}';`);
+  return { HRA_G1_APP_ORIGIN: origin, HRA_G1_STORE_ORIGIN: cspStore.origin,
+    RESOURCE_PRIVATE_BLOB_ENABLED: "true", RESOURCE_PRIVATE_BLOB_HOST: host, RESOURCE_PRIVATE_READ_WRITE_TOKEN: token,
+    ACADEMIC_SUBMISSION_BLOB_HOST: host, ACADEMIC_SUBMISSION_READ_WRITE_TOKEN: token };
+}
+
+/** config와 Route 응답의 우선순위를 실제 200 PDF 바이트 및 API 응답에서 검사한다. */
+async function verifyCspApiBoundaries(origin, sessions) {
+  const apiPolicy = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'";
+  for (const path of ["/api/auth/session", "/api/auth/error?error=Configuration"]) {
+    const response = await fetch(origin + path, { redirect: "manual", signal: signal(), headers: { Cookie: sessions.studentA } });
+    check(response.headers.get("content-security-policy") === apiPolicy, "SITE_ROUTE_CSP_API_BASELINE");
+    await response.body?.cancel();
+  }
+  const expectedHash = createHash("sha256").update(resourceQaPdfBytes()).digest("hex");
+  for (const [kind, id] of [["class-materials", siteFixtureIds.material], ["guidebooks", siteFixtureIds.guidebook]]) {
+    const response = await fetch(`${origin}/api/resources/${kind}/${id}/download?inline=1`, { redirect: "manual", signal: signal(), headers: { Cookie: sessions.studentA } });
+    check(response.status === 200 && response.headers.get("content-type") === "application/pdf", "SITE_ROUTE_CSP_PDF_STATUS");
+    check(response.headers.get("content-security-policy") === "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'" &&
+      response.headers.get("x-frame-options") === "SAMEORIGIN" && response.headers.get("cache-control") === "private, no-store" &&
+      response.headers.get("content-disposition")?.startsWith("inline;") && response.headers.get("x-content-type-options") === "nosniff", "SITE_ROUTE_CSP_PDF_HEADERS");
+    check(createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex") === expectedHash, "SITE_ROUTE_CSP_PDF_BYTES");
+  }
+  check(cspNetwork.snapshot().blocked === 0 && cspStore.snapshot().GET >= 2, "SITE_ROUTE_CSP_STORE_SCOPE");
+}
 
 /** 인증은 앱의 실제 CSRF·credentials·DB 세션 조회를 모두 통과해야 한다. */
 async function login(origin, actor) {
@@ -229,7 +283,10 @@ function report() {
   const classifications = results.reduce((counts, record) => {
     counts[record.classification] = (counts[record.classification] ?? 0) + 1; return counts;
   }, {});
-  const value = { sourceSha, scope: { appRoot: repository, only, publicBrowser }, browser: browserSummary, completed, cleanupComplete,
+  // 공개 artifact에는 로컬 사용자·checkout의 절대 경로를 포함하지 않는다.
+  const value = { sourceSha, scope: { appRoot: publicBrowser || cspBrowser ? "." : repository, only, publicBrowser,
+    ...(cspBrowser ? { reusedBuild: reuseBuild } : {}) }, browser: browserSummary,
+    ...(cspBrowser ? { csp: cspSummary } : {}), completed, cleanupComplete,
     coverageHealthy: completed && cleanupComplete && ![...diagnostics].some(isFailureDiagnostic) && !results.some(record => ["PRODUCT_ERROR", "INFRASTRUCTURE_ERROR"].includes(record.classification)),
     phase, limitations,
     summary: { routes: new Set(results.map(record => record.route)).size, records: results.length, classifications },
@@ -250,13 +307,13 @@ deadline.unref();
 
 try {
   if (argumentsList.length === 1 && argumentsList[0] === "--help") {
-    console.log("사용법: HRA_TEST_PG_BIN=<PostgreSQL bin> node scripts/verify-site-routes.mjs [--app-root 절대worktree경로] [--only manifest경로 | --browser public] [--output 결과.json]");
+    console.log("사용법: HRA_TEST_PG_BIN=<PostgreSQL bin> node scripts/verify-site-routes.mjs [--app-root 절대worktree경로] [--only manifest경로 | --browser public|csp] [--output 결과.json]");
     console.log("환경 파일 없는 worktree에서 production 빌드·격리 DB·읽기 HTTP 또는 공개 브라우저를 검사합니다. 실제 Blob·정상 CRUD는 별도 G1을 실행합니다.");
   } else {
     const options = new Map();
     for (let index = 0; index < argumentsList.length; index += 2) {
       const key = argumentsList[index], value = argumentsList[index + 1];
-      check(["--app-root", "--only", "--output", "--browser"].includes(key) && typeof value === "string" && value.length > 0 && !options.has(key), "SITE_ROUTE_ARGUMENTS");
+      check(["--app-root", "--only", "--output", "--browser", "--reuse-build"].includes(key) && typeof value === "string" && value.length > 0 && !options.has(key), "SITE_ROUTE_ARGUMENTS");
       options.set(key, value);
     }
     if (options.has("--app-root")) {
@@ -268,9 +325,18 @@ try {
       check(only.startsWith("/") && !/[?#\\]/.test(only), "SITE_ROUTE_ONLY_INVALID");
     }
     if (options.has("--browser")) {
-      check(options.get("--browser") === "public" && !only, "SITE_ROUTE_BROWSER_ARGUMENTS");
-      publicBrowser = true;
-      limitations.splice(limitations.indexOf("브라우저 상호작용 미검증"), 1, "공개 4개 spec 외 브라우저는 별도 G1 검증 결과를 확인");
+      check(["public", "csp"].includes(options.get("--browser")) && !only, "SITE_ROUTE_BROWSER_ARGUMENTS");
+      publicBrowser = options.get("--browser") === "public";
+      cspBrowser = options.get("--browser") === "csp";
+      limitations.splice(limitations.indexOf("브라우저 상호작용 미검증"), 1, publicBrowser
+        ? "공개 4개 spec 외 브라우저는 별도 G1 검증 결과를 확인"
+        : "CSP의 합성 업로드는 실제 공급자 검증이 아니며 학사 쓰기는 별도 G1로 확인");
+      if (cspBrowser) limitations[0] = "실제 공급자 Blob 업로드·파일 스트림 미검증";
+    }
+    // 반복 UI 진단만 기존 빌드를 허용한다. CI와 최종 검증은 이 옵션 없이 새로 빌드한다.
+    if (options.has("--reuse-build")) {
+      check(cspBrowser && options.get("--reuse-build") === "true", "SITE_ROUTE_REUSE_ARGUMENTS");
+      reuseBuild = true;
     }
     if (options.has("--output")) {
       check(options.get("--output").endsWith(".json"), "SITE_ROUTE_OUTPUT_INVALID");
@@ -292,7 +358,8 @@ try {
     await new Promise((resolveReady, reject) => { listener.once("error", reject); listener.listen(0, "127.0.0.1", resolveReady); });
     const port = listener.address().port;
     await new Promise(resolveClosed => listener.close(resolveClosed));
-    const origin = `http://${publicBrowser ? "127.0.0.1" : "localhost"}:${port}`;
+    const origin = `http://${publicBrowser || cspBrowser ? "127.0.0.1" : "localhost"}:${port}`;
+    const cspEnvironment = cspBrowser ? await prepareCspPrivateStore(origin) : {};
     const environment = { ...basic, ...cluster.environment, LC_ALL: "C", NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1",
       HRA_SITE_ROUTE_ORIGIN: origin, AUTH_SECRET: randomBytes(48).toString("hex"), AUTH_TRUST_HOST: "true", AUTH_URL: origin, NEXTAUTH_URL: origin, NEXT_PUBLIC_APP_URL: origin,
       AUTH_GOOGLE_ID: "", AUTH_GOOGLE_SECRET: "", AUTH_KAKAO_ID: "", AUTH_KAKAO_SECRET: "", BLOB_READ_WRITE_TOKEN: "", RESOURCE_PRIVATE_READ_WRITE_TOKEN: "",
@@ -300,6 +367,8 @@ try {
       // 합성 비밀키는 앱에만 전달한다. cron 요청에는 넣지 않아 정리 쓰기를 실행하지 않는다.
       CRON_SECRET: randomBytes(32).toString("hex"),
       NODE_OPTIONS: `--import=${pathToFileURL(join(harnessRepository, "tests/support/site-route-preload.mjs")).href}`,
+      ...cspEnvironment,
+      ...(cspBrowser ? { NODE_OPTIONS: `--import=${pathToFileURL(join(harnessRepository, "tests/support/academic-g1-preload.mjs")).href}` } : {}),
     };
     phase = "BUILD";
     console.log("격리 스키마·합성 fixture 설치 완료. 실제 production 빌드를 확인합니다.");
@@ -309,12 +378,14 @@ try {
     const buildEnvironment = { ...environment,
       NODE_OPTIONS: `--import=${pathToFileURL(join(harnessRepository, "tests/support/resource-qa-preload.mjs")).href}`,
     };
-    const build = launch([join(repository, "node_modules/next/dist/bin/next"), "build", "--webpack"], buildEnvironment);
-    await Promise.race([children.get(build).done, new Promise(resolveAbort => { if (controller.signal.aborted) resolveAbort(); else controller.signal.addEventListener("abort", resolveAbort, { once: true }); })]);
-    controller.signal.throwIfAborted();
-    check(children.get(build).code === 0, "SITE_ROUTE_BUILD_FAILED");
-    await stopChild(build);
-    check(!cleanupFailed, "SITE_ROUTE_BUILD_CLEANUP_FAILED");
+    if (!reuseBuild) {
+      const build = launch([join(repository, "node_modules/next/dist/bin/next"), "build", "--webpack"], buildEnvironment);
+      await Promise.race([children.get(build).done, new Promise(resolveAbort => { if (controller.signal.aborted) resolveAbort(); else controller.signal.addEventListener("abort", resolveAbort, { once: true }); })]);
+      controller.signal.throwIfAborted();
+      check(children.get(build).code === 0, "SITE_ROUTE_BUILD_FAILED");
+      await stopChild(build);
+      check(!cleanupFailed, "SITE_ROUTE_BUILD_CLEANUP_FAILED");
+    }
     check(existsSync(join(repository, ".next/BUILD_ID")), "SITE_ROUTE_BUILD_OUTPUT_MISSING");
     const inventory = compiledRoutes();
     check(inventory.length > 0, "SITE_ROUTE_EMPTY_MANIFEST");
@@ -335,7 +406,12 @@ try {
     const sessions = { anonymous: "" };
     for (const actor of actors.filter(actor => actor !== "anonymous")) sessions[actor] = await login(origin, actor);
     console.log(`정상 credentials 5역할 확인. compiled 경로 ${routes.length}개를 확인했습니다.`);
-    if (publicBrowser) {
+    if (cspBrowser) {
+      phase = "CSP_BROWSER";
+      await verifyCspApiBoundaries(origin, sessions);
+      cspSummary = await runCspBrowser({ repository, origin, sessions, fixtureRoot: cluster.root, signal: controller.signal });
+      check(cspSummary?.completed === true && cspSummary.cleanupComplete === true, "SITE_ROUTE_CSP_INCOMPLETE");
+    } else if (publicBrowser) {
       const { configPath, summaryPath } = await prepareExpandedPublicBrowser({ repository, fixtureRoot: cluster.root, origin });
       const browserEnvironment = { ...basic, CI: "true", NODE_OPTIONS: "", HRA_PUBLIC_E2E_ORIGIN: origin };
       // 수집과 실행은 별도 프로세스이며 목록 출력만으로 실행 성공을 주장하지 않는다.
@@ -363,11 +439,24 @@ try {
     if (results.some(record => record.classification === "PRODUCT_ERROR")) process.exitCode = 1;
   }
 } catch (error) {
-  diagnostics.add(error instanceof Error && /^SITE_ROUTE_[A-Z_]+$/.test(error.message) ? error.message : "SITE_ROUTE_EXECUTION_FAILED");
+  diagnostics.add(error instanceof Error && (/^SITE_ROUTE_[A-Z_]+$/.test(error.message) ||
+    cspBrowser && /^CSP_BROWSER_[A-Z0-9_]+$/.test(error.message)) ? error.message : "SITE_ROUTE_EXECUTION_FAILED");
   process.exitCode = 1;
 } finally {
   clearTimeout(deadline);
   for (const child of children.keys()) await stopChild(child);
+  // 서버 종료 뒤 자신의 SDK 연결과 private fixture 저장소를 각각 정리한다.
+  for (const close of [async () => {
+    if (!cspNetwork) return;
+    try { await boundedCleanup(cspNetwork.close(), 5_000); }
+    catch {
+      await boundedCleanup(cspNetwork.destroy(), 2_000);
+      throw new Error("SITE_ROUTE_CSP_CLEANUP_TIMEOUT");
+    }
+  }, () => boundedCleanup(Promise.resolve(cspStore?.close()), 5_000)]) {
+    try { await close(); }
+    catch { cleanupFailed = true; diagnostics.add("SITE_ROUTE_CSP_STORE_CLEANUP_FAILED"); process.exitCode = 1; }
+  }
   try { cluster?.close(); cleanupComplete = !cleanupFailed; if (cleanupFailed) process.exitCode = 1; }
   catch { diagnostics.add("SITE_ROUTE_DATABASE_CLEANUP_FAILED"); process.exitCode = 1; }
   process.removeListener("SIGINT", onInterrupt);

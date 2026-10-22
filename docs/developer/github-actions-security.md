@@ -1,6 +1,6 @@
 # GitHub Actions 권한과 외부 Action 고정
 
-관련: [#269](https://github.com/yeongseon/hra-website/issues/269)의 CI 실행 경계에 한정한 부분 작업입니다. CSP·HSTS, secret 검사, 취약점 차단 정책, LICENSE 결정은 이 문서의 적용 범위에 포함되지 않으며 #269 전체 완료를 뜻하지 않습니다.
+관련: [#269](https://github.com/yeongseon/hra-website/issues/269). 이 문서는 CI 권한·도구 무결성 경계를 설명합니다. [저장소 secret·dependency 게이트](repository-security-gates.md), [공개 artifact 검사](public-artifact-safety.md), [CSP·HSTS](browser-security-policy.md), [LICENSE·noreply 운영 확인표](../operations/public-repository-security.md)의 구체 범위와 함께 확인합니다.
 
 ## 권한 경계
 
@@ -12,6 +12,8 @@
 | --- | --- | --- |
 | 앱 CI / 형식 계약 테스트 | `contents: read` | 저장소 코드 검증 |
 | 확장 E2E 회귀 | `contents: read` | 격리 브라우저 검증과 정제한 JSON artifact 보관 |
+| 저장소 보안·브라우저 CSP | `contents: read` | fetched history·추적 소스·dependency 원장·격리 production CSP 검사. scanner 원문 artifact 없음 |
+| 인증 비용·권한 회수 | `contents: read` | 같은 의존성의 합성 계정 전후 비교와 업로드 직전 검사한 JSON 보관 |
 | 운영 가용성 점검 | `contents: read` | 공개 GET·비운영 알림 검증과 정제 JSON만 기록 |
 | 이슈 형식 | `contents: read`, `issues: write` | 기존 형식 위반 알림 댓글 관리 |
 | PR 형식 | `contents: read`, `pull-requests: read` | 신뢰된 base 코드로 PR 메타데이터 조회 |

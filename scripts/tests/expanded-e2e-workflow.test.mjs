@@ -48,10 +48,13 @@ test("수집만 성공한 것으로 끝내지 않고 공개 실행 뒤 G1을 필
   }
 });
 
-test("실패 artifact도 정제한 JSON 한 파일만 짧게 보관한다", () => {
+test("실패 보고서도 사전 검사를 통과한 JSON 한 파일만 짧게 보관한다", () => {
   const upload = steps.find(step => step.uses?.startsWith("actions/upload-artifact@"));
   assert.match(upload.uses, /@[a-f0-9]{40}$/);
-  assert.equal(upload.if, "always()");
+  const safety = steps.find(step => step.id === "artifact_safety");
+  assert.equal(safety?.if, "always()");
+  assert.match(safety?.run ?? "", /check-public-artifact\.mjs --kind expanded-public --file test-results\/expanded-public\.json/);
+  assert.equal(upload.if, "always() && steps.artifact_safety.outcome == 'success'");
   assert.equal(upload.with.path, "test-results/expanded-public.json");
   assert.equal(upload.with["retention-days"], 7);
   assert.doesNotMatch(upload.with.path, /\*|trace|video|storage/);

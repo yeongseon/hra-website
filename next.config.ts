@@ -19,21 +19,18 @@
 import type { NextConfig } from "next";
 import { projectBlobHost } from "./src/lib/blob-host";
 
-// 실행에 영향이 적은 CSP 지시어부터 강제하고, 리소스 출처 제한은 보고 모드로 관찰한다.
-const enforcedCsp = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'";
-const reportOnlyCsp = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self'",
-  `img-src 'self' data: blob: https://${projectBlobHost}`,
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  "frame-src 'self' https://view.officeapps.live.com",
-].join("; ");
+// HTML nonce 정책은 Proxy가 요청별로 제공한다. 파일 API의 임베드 경계만 정적으로 둔다.
+const downloadCsp = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'";
+// Auth.js의 API HTML 응답에도 기존 정적 보호를 유지한다. HTML nonce 경로와는 겹치지 않는다.
+const apiCsp = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'";
 
 const nextConfig: NextConfig = {
   async headers() {
     return [
+      {
+        source: "/api/:path*",
+        headers: [{ key: "Content-Security-Policy", value: apiCsp }],
+      },
       {
         source: "/:path*",
         headers: [
@@ -41,8 +38,6 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          { key: "Content-Security-Policy", value: enforcedCsp },
-          { key: "Content-Security-Policy-Report-Only", value: reportOnlyCsp },
         ],
       },
       {
@@ -50,8 +45,13 @@ const nextConfig: NextConfig = {
         source: "/api/resources/:kind/:id/download",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Content-Security-Policy", value: enforcedCsp.replace("frame-ancestors 'none'", "frame-ancestors 'self'") },
+          { key: "Content-Security-Policy", value: downloadCsp },
         ],
+      },
+      {
+        // Next의 정적 헤더가 Route 응답보다 우선하므로 학사 파일 sandbox를 마지막에 고정한다.
+        source: "/api/academic/submissions/:id/file/:fileId",
+        headers: [{ key: "Content-Security-Policy", value: "sandbox; default-src 'none'" }],
       },
     ];
   },

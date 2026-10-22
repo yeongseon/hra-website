@@ -94,6 +94,12 @@ export const environmentInventory = {
   ],
   dynamicAccess: [
   {
+    "path": "tests/support/csp-browser.mjs",
+    "expression": "Object.fromEntries([\"PATH\", \"HOME\", \"TMPDIR\", \"TMP\", \"TEMP\", \"SYSTEMROOT\"].filter(key => process.env[key]).map(key => [key, process.env[key]]))",
+    "reason": "CSP 합성 Chromium 프로세스에 기존 여섯 시스템 값만 전달; 세션·운영 자격정보는 환경으로 전달하지 않음",
+    "names": ["PATH", "HOME", "TMPDIR", "TMP", "TEMP", "SYSTEMROOT"]
+  },
+  {
     "path": "scripts/measure-authentication.mjs",
     "expression": "Object.fromEntries([\"PATH\", \"HOME\", \"TMPDIR\", \"TMP\", \"TEMP\", \"SYSTEMROOT\"].filter(key => process.env[key]).map(key => [key, process.env[key]]))",
     "reason": "인증 비용 측정기의 여섯 시스템 값만 별도 합성 DB·서버 자식 환경으로 복사",

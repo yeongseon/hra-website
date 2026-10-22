@@ -1,5 +1,7 @@
 "use client";
 
+import { useCspNonce } from "@/components/security/csp-nonce-provider";
+
 /**
  * 양식 인쇄 뷰 (클라이언트 컴포넌트)
  *
@@ -19,6 +21,7 @@ type Props = {
 };
 
 export function PrintView({ title, fileTitle, version, description, body }: Props) {
+  const nonce = useCspNonce();
   const printedRef = useRef(false);
 
   useEffect(() => {
@@ -35,7 +38,7 @@ export function PrintView({ title, fileTitle, version, description, body }: Prop
   return (
     <>
       {/* A4 인쇄 전용 스타일 — 화면 폭 제한과 페이지 여백을 함께 정의한다 */}
-      <style>{`
+      <style nonce={nonce}>{`
         @page {
           size: A4;
           margin: 20mm 18mm;

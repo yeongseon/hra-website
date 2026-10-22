@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { CspNonceProvider } from "@/components/security/csp-nonce-provider";
+import { requireCspNonce } from "@/lib/security/csp";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -48,16 +51,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // headers()는 요청별 동적 렌더를 보장하며 Proxy 누락 시 안전하게 실패한다.
+  const nonce = requireCspNonce((await headers()).get("x-nonce"));
   return (
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
-        {children}
-        <Toaster />
+        <CspNonceProvider nonce={nonce}>
+          {children}
+          <Toaster />
+        </CspNonceProvider>
       </body>
     </html>
   );
