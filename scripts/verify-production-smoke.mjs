@@ -49,8 +49,38 @@ async function readBounded(response) {
   return bytes;
 }
 
+// 플랫폼의 2년 설정과 별개로 최소 1년의 단일 정수 max-age를 요구합니다.
+// 중복 헤더는 Fetch가 쉼표로 합치므로 거부하며 preload 목록 등재는 판정하지 않습니다.
+function validHsts(value) {
+  if (typeof value !== 'string' || value.includes(',')) return false;
+  let maximumAge = null;
+  const names = new Set();
+  for (const directive of value.split(';').map(part => part.replace(/^[ \t]+|[ \t]+$/g, '')).filter(Boolean)) {
+    const match = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+)(?:[ \t]*=[ \t]*(.+))?$/.exec(directive);
+    if (!match) return false;
+    const name = match[1].toLowerCase();
+    // RFC 6797 §6.1에서 중복 지시어가 있는 전체 필드는 무효이므로 확장 이름도 검사합니다.
+    if (names.has(name)) return false;
+    names.add(name);
+    if (name === 'max-age') {
+      let seconds = match[2] ?? '';
+      // §6.1.1은 quoted-string을 해제한 뒤 숫자인 max-age도 허용합니다.
+      if (/^"(?:[\x20-\x21\x23-\x5b\x5d-\x7e]|\\[\x20-\x7e])*"$/.test(seconds)) seconds = seconds.slice(1, -1).replace(/\\([\x20-\x7e])/g, '$1');
+      if (maximumAge !== null || !/^\d+$/.test(seconds)) return false;
+      maximumAge = Number(seconds);
+      if (!Number.isSafeInteger(maximumAge)) return false;
+    } else if (name === 'includesubdomains' || name === 'preload') {
+      if (match[2] !== undefined) return false;
+    } else {
+      // 알려지지 않은 확장도 문법이 명확한 token 또는 quoted-string일 때만 허용합니다.
+      if (match[2] !== undefined && !/^(?:[!#$%&'*+.^_`|~0-9A-Za-z-]+|"(?:[\x20-\x21\x23-\x5b\x5d-\x7e]|\\[\x20-\x7e])*")$/.test(match[2])) return false;
+    }
+  }
+  return maximumAge !== null && maximumAge >= 31536000;
+}
+
 // 각 검사는 응답 헤더·원문·예외 메시지를 외부로 내보내지 않는다.
-async function checkPath(origin, path, timeoutMs) {
+async function checkPath(origin, path, timeoutMs, requireHsts) {
   const started = performance.now();
   let status = null;
   let code = 'NETWORK';
@@ -61,7 +91,10 @@ async function checkPath(origin, path, timeoutMs) {
       method: 'GET', credentials: 'omit', redirect: 'manual', signal: controller.signal,
     });
     status = response.status;
-    if (status !== 200) {
+    if (requireHsts && !validHsts(response.headers.get('strict-transport-security'))) {
+      await response.body?.cancel();
+      code = 'HSTS_INVALID';
+    } else if (status !== 200) {
       await response.body?.cancel();
       code = 'HTTP_STATUS';
     } else {
@@ -96,7 +129,7 @@ export async function runProductionSmoke({ origin = productionSmokeOrigin, sha, 
   const startedAt = new Date().toISOString();
   const checks = [];
   for (let index = 0; index < paths.length; index += 2) {
-    checks.push(...await Promise.all(paths.slice(index, index + 2).map((path) => checkPath(origin, path, timeoutMs))));
+    checks.push(...await Promise.all(paths.slice(index, index + 2).map((path) => checkPath(origin, path, timeoutMs, !fixture))));
   }
   return {
     environment: fixture ? 'fixture' : 'Production', sha: sha.toLowerCase(), shaKind,

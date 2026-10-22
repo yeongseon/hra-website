@@ -1,0 +1,110 @@
+[
+  {
+    "file": "tests/unit/api-v1-contracts.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "5e4ae6e3a7cb87e8eca6210c68beaa34fdd56bc5a1aa74017c41246caeb7c991",
+    "reason": "/api/v1/me mapper의 제공 이메일 유지 및 내부 placeholder 제거를 검사하는 inline 합성 사용자 DTO입니다."
+  },
+  {
+    "file": "tests/unit/auth-email.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "31d2082a909f2c6b0b28b51175b0f8f231f8781c3620693c1a0a47ab6f129498",
+    "reason": "getDisplayEmail의 제공 이메일 표시 계약에 입력과 예상값으로 직접 작성한 합성 주소입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "b972b3805b538e19fe8eaced33daaad03eec0f961973de3b471ece4e5cffb084",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "9293c9abc55b4cebee3c8b7c134f2389e4fcef4d6cb0160997d0f36abd117c51",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "85dc83275f45264380a1485d9bf082aa41a35bf062f6c32a8b4ed14909d5a173",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "fbacbc4a5f91d417cccb8120da5ecab336f31ce17a5ad0a15f932dbc27ae3e25",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "e07c05a8e77ced5616f86ea1b549bc9756f5525441e684765f04591b18b93b34",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "964dfc23ae185fdbb28a281c63b68d7e24f4f902ac7542804ba7ac5d124220af",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "e60124f2fe2045215abda1ae912aa80bb66dab5fc231a758387682c9c0e70c01",
+    "reason": "redactMessage·redactFailingRow·parameter dump·redactBlobUrl의 원문 제거를 검증하는 inline SQL/파일명 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/application-submission-atomicity.test.ts",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "8784c90d4a0106d3f67e67a3545103740560bf5347c3d947bb75d1ce81f6c590",
+    "reason": "지원서 제출 배치 #97의 mock row 및 FormData에 직접 작성한 합성 지원자 전화 표본입니다."
+  },
+  {
+    "file": "tests/unit/faq-press-gallery-props.test.tsx",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "e07c05a8e77ced5616f86ea1b549bc9756f5525441e684765f04591b18b93b34",
+    "reason": "#272 공개 FAQ props 최소 투영의 mock contactPhone/contactText에 직접 작성한 합성 연락처입니다."
+  },
+  {
+    "file": "tests/unit/public-application-form.test.ts",
+    "rule": "SOURCE_KR_MOBILE",
+    "sha256": "e07c05a8e77ced5616f86ea1b549bc9756f5525441e684765f04591b18b93b34",
+    "reason": "제출 실패 뒤 입력 유지·재전송을 검사하는 DOM 입력과 예상값의 합성 전화 표본입니다."
+  },
+  {
+    "file": ".env.example",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "2bba8b0ad9dc2bdbedddf310d8460e8442bf40d1a0bc0acde38f838d39c54c83",
+    "reason": "공개 환경 템플릿 DATABASE_URL의 user/password와 합성 Neon 호스트 예시이며 실제 접속정보가 아닙니다."
+  },
+  {
+    "file": "tests/unit/academic-submission-file.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "30ec2c0196566c7f74da107881486d5af8cf00fe9b1647a9bbbb0dc96f94e33d",
+    "reason": "Blob 메타데이터 URL의 userinfo를 거부하는 단위 테스트의 직접 작성된 잘못된 SDK 응답 합성 표본입니다."
+  },
+  {
+    "file": "tests/unit/errors.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "8799ee23b572cba55a96159935dd284fc31a2aadfb8ae40eaf603f69d44708fb",
+    "reason": "postgres 연결 거부 오류에서 연결 문자열 전체를 제거하는 redactMessage 테스트의 직접 작성 합성 URL입니다."
+  },
+  {
+    "file": "tests/unit/one-off-script-safety.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "37c880f518261976102101cc655faa1ac882bf84103a5e1f3f438fbfaede0cd7",
+    "reason": "동일 Neon 저장소의 직접 연결 URL을 식별하는 단발성 스크립트 안전성 테스트의 합성 baseUrl입니다."
+  },
+  {
+    "file": "tests/unit/one-off-script-safety.test.ts",
+    "rule": "SOURCE_EMAIL",
+    "sha256": "284add6fba6fb171ec6f650bc7136ecf87fb7d5a8839d9191ab744f19a7aca85",
+    "reason": "동일 Neon 저장소의 pooler 연결 URL을 식별하는 단발성 스크립트 안전성 테스트의 합성 poolerUrl입니다."
+  }
+]

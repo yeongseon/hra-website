@@ -1,5 +1,7 @@
 "use client";
 
+import { useCspNonce } from "@/components/security/csp-nonce-provider";
+
 /**
  * 주차별 텍스트 인쇄 뷰 (클라이언트 컴포넌트)
  *
@@ -21,6 +23,7 @@ type Props = {
 
 
 export function PrintView({ title, fileTitle, createdAt, cohortName, textType, body }: Props) {
+  const nonce = useCspNonce();
   const printedRef = useRef(false);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export function PrintView({ title, fileTitle, createdAt, cohortName, textType, b
 
   return (
     <>
-      <style>{`
+      <style nonce={nonce}>{`
         @page {
           size: A4;
           margin: 20mm 18mm;

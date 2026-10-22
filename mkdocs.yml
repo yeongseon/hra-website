@@ -51,6 +51,9 @@ nav:
       - 품질 검사와 CI 범위: QUALITY-GATE.md
       - 확장 E2E 회귀: developer/expanded-e2e-quality-gate.md
       - 인증 비용·권한 회수: developer/authentication-measurement.md
+      - 브라우저 CSP·HSTS: developer/browser-security-policy.md
+      - 저장소 secret·dependency 게이트: developer/repository-security-gates.md
+      - 공개 산출물 안전 검사: developer/public-artifact-safety.md
       - GitHub Actions 보안: developer/github-actions-security.md
       - 빌드·배포 안전 가이드: contributing/build-and-deploy-safety.md
       - 버전과 릴리스: contributing/releasing.md
@@ -59,6 +62,7 @@ nav:
       - 데이터베이스: DATABASE.md
       - 배포와 문제 해결: DEPLOYMENT.md
       - 운영 공개 경로 점검: operations/production-smoke.md
+      - 공개 저장소 보안 확인표: operations/public-repository-security.md
       - DB 변경 절차: developer/database-change-procedure.md
       - 요청 제한: operations/rate-limits.md
       - 예약 ID 인덱스 변경: developer/rate-limit-reservation-index.md

@@ -63,8 +63,13 @@ jobs:
           # 표현식은 셸 코드로 보간하지 않고 인수로만 전달하며 실행기가 SHA를 검증합니다.
           BASELINE_REF: ${{ github.event.pull_request.base.sha || inputs.baseline_ref }}
         run: npm run verify:auth-measurement -- --compare --baseline-ref "$BASELINE_REF" --output test-results/authentication-measurement.json
-      - name: 식별자 없는 비용·회귀 결과 보관
+      - name: 공개 산출물의 허용 필드·민감 정보 위험 검사
+        id: artifact_safety
         if: always()
+        # 실패 보고서도 검사하며 누락·검사 실패 때 업로드하지 않습니다.
+        run: node scripts/check-public-artifact.mjs --kind authentication-measurement --file test-results/authentication-measurement.json
+      - name: 식별자 없는 비용·회귀 결과 보관
+        if: always() && steps.artifact_safety.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: authentication-measurement

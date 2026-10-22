@@ -1,5 +1,7 @@
 "use client";
 
+import { useCspNonce } from "@/components/security/csp-nonce-provider";
+
 /** 관리자 본문을 Markdown으로 편집·저장하고 표·이미지 크기와 공개 미리보기를 제공하는 에디터입니다. */
 import { useEditor, EditorContent, useEditorState, NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -608,6 +610,8 @@ export function RichTextEditor({
   required,
   previewTitle,
 }: RichTextEditorProps) {
+  // RSC 탐색 뒤에도 현재 문서가 허용한 nonce를 유지한다.
+  const nonce = useCspNonce();
   const [internalValue, setInternalValue] = useState(value ?? defaultValue);
 
   // 에디터 표시 모드
@@ -642,6 +646,8 @@ export function RichTextEditor({
   const [dragInfo, setDragInfo] = useState<{ edge: TableEdge; delta: number } | null>(null);
 
   const editor = useEditor({
+    // TipTap 자체 주입 CSS도 현재 문서 CSP가 허용한 nonce를 사용한다.
+    injectNonce: nonce,
     extensions: [
       // paragraph: false — MarkdownParagraph(빈 줄 &nbsp; 직렬화)로 대체
       StarterKit.configure({ paragraph: false }),
@@ -1164,7 +1170,7 @@ export function RichTextEditor({
   return (
     <Dialog open={mode === "preview"} onOpenChange={(open) => setMode(open ? "preview" : "edit")} modal>
     {/* 에디터 내부 표 스타일 — prose 기본값을 보완해 셀 테두리·선택 하이라이트를 명시적으로 지정 */}
-    <style>{`
+    <style nonce={nonce}>{`
       .ProseMirror .tableWrapper { overflow-x: auto; }
       .ProseMirror table { border-collapse: collapse; table-layout: fixed; margin: 0; }
       .ProseMirror table td, .ProseMirror table th { border: 1px solid #D9D9D9; padding: 3px 8px; vertical-align: top; min-width: 40px; position: relative; box-sizing: border-box; }

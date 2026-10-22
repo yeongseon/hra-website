@@ -269,6 +269,8 @@ test("[G1:FILES] private 직접 URL·타인 ID 거부와 허용 파일 해시·�
     expect(response.headers()["cache-control"]).toBe("private, no-store");
     expect(response.headers()["x-content-type-options"]).toBe("nosniff");
     expect(response.headers()["content-type"]).toBe("application/octet-stream");
+    // config 정적 헤더가 Route의 더 엄격한 파일 정책을 덮어쓰는 회귀도 실제 200에서 잡는다.
+    expect(response.headers()["content-security-policy"]).toBe("sandbox; default-src 'none'");
     expect(response.headers()["content-disposition"]).toContain("filename*=UTF-8''");
   }
   expect(Number(await sql("SELECT count(*) FROM academic_submission_file_reads")) - before).toBe(2);

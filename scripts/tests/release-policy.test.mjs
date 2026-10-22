@@ -16,6 +16,7 @@ const files = RELEASE_FILES.map((filename) => ({ filename, status: "modified" })
 const workflowPermissions = {
   "ci.yml": [{ contents: "read" }],
   "authentication-measurement.yml": [{ contents: "read" }],
+  "repository-security.yml": [{ contents: "read" }],
   "expanded-e2e.yml": [{ contents: "read" }],
   "production-smoke.yml": [{ contents: "read" }],
   "process-format.yml": [

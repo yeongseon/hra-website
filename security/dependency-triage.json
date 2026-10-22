@@ -1,0 +1,1760 @@
+{
+  "schemaVersion": 1,
+  "note": "P2는 코드 사용면 평가이며 owner의 P1 위험 수용 승인이 아니다. advisory 집합과 nodes는 독립적이며 모든 조합이 실제 영향 경로라는 뜻이 아니다. 독립 리뷰에서 재검토한다.",
+  "packages": [
+    {
+      "name": "@esbuild-kit/core-utils",
+      "severity": "moderate",
+      "range": "*",
+      "nodes": [
+        {
+          "path": "node_modules/@esbuild-kit/core-utils",
+          "version": "3.3.2",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "dependency": "esbuild"
+        }
+      ]
+    },
+    {
+      "name": "@esbuild-kit/esm-loader",
+      "severity": "moderate",
+      "range": "*",
+      "nodes": [
+        {
+          "path": "node_modules/@esbuild-kit/esm-loader",
+          "version": "2.6.5",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@esbuild-kit/core-utils"
+        }
+      ]
+    },
+    {
+      "name": "@next/eslint-plugin-next",
+      "severity": "high",
+      "range": ">=14.3.0-canary.0",
+      "nodes": [
+        {
+          "path": "node_modules/@next/eslint-plugin-next",
+          "version": "16.4.2",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "dependency": "fast-glob"
+        }
+      ]
+    },
+    {
+      "name": "@shadcn/registry",
+      "severity": "high",
+      "range": "<=0.0.0-rc-20261007105214 || >=0.1.0",
+      "nodes": [
+        {
+          "path": "node_modules/@shadcn/registry",
+          "version": "0.2.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "fast-glob"
+        }
+      ]
+    },
+    {
+      "name": "@tailwindcss/typography",
+      "severity": "moderate",
+      "range": "<=0.0.0-insiders.fda8ce5 || >=0.5.5",
+      "nodes": [
+        {
+          "path": "node_modules/@tailwindcss/typography",
+          "version": "0.5.20",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "postcss-selector-parser"
+        }
+      ]
+    },
+    {
+      "name": "@ts-morph/common",
+      "severity": "high",
+      "range": "0.2.0 - 0.24.0 || 0.26.0 - 0.27.0",
+      "nodes": [
+        {
+          "path": "node_modules/@ts-morph/common",
+          "version": "0.27.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "fast-glob"
+        }
+      ]
+    },
+    {
+      "name": "argparse",
+      "severity": "moderate",
+      "range": "1.0.0 - 1.0.10",
+      "nodes": [
+        {
+          "path": "node_modules/gray-matter/node_modules/argparse",
+          "version": "1.0.10",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "sprintf-js"
+        }
+      ]
+    },
+    {
+      "name": "brace-expansion",
+      "severity": "high",
+      "range": "<=1.1.20 || 3.0.0 - 5.0.11",
+      "nodes": [
+        {
+          "path": "node_modules/@ts-morph/common/node_modules/brace-expansion",
+          "version": "5.0.6",
+          "development": false
+        },
+        {
+          "path": "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+          "version": "5.0.6",
+          "development": true
+        },
+        {
+          "path": "node_modules/brace-expansion",
+          "version": "1.1.15",
+          "development": true
+        },
+        {
+          "path": "node_modules/hanspell/node_modules/brace-expansion",
+          "version": "5.0.7",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "source": 1123897,
+          "id": "GHSA-3jxr-9vmj-r5cp",
+          "severity": "high",
+          "range": "<1.1.16",
+          "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups"
+        },
+        {
+          "source": 1123898,
+          "id": "GHSA-3jxr-9vmj-r5cp",
+          "severity": "high",
+          "range": ">=3.0.0 <5.0.7",
+          "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups"
+        },
+        {
+          "source": 1130588,
+          "id": "GHSA-mh99-v99m-4gvg",
+          "severity": "high",
+          "range": "<1.1.17",
+          "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+        },
+        {
+          "source": 1130591,
+          "id": "GHSA-mh99-v99m-4gvg",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.8",
+          "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash"
+        },
+        {
+          "source": 1130734,
+          "id": "GHSA-rgw5-rvv9-x895",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.9",
+          "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation"
+        },
+        {
+          "source": 1130737,
+          "id": "GHSA-rgw5-rvv9-x895",
+          "severity": "high",
+          "range": "<1.1.18",
+          "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation"
+        },
+        {
+          "source": 1240100,
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "severity": "moderate",
+          "range": "<1.1.21",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service"
+        },
+        {
+          "source": 1240103,
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "severity": "moderate",
+          "range": ">=4.0.0 <5.0.12",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service"
+        },
+        {
+          "source": 1240104,
+          "id": "GHSA-qhr7-859c-m2p7",
+          "severity": "high",
+          "range": "<1.1.20",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion"
+        },
+        {
+          "source": 1240107,
+          "id": "GHSA-qhr7-859c-m2p7",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.11",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion"
+        },
+        {
+          "source": 1240108,
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "severity": "high",
+          "range": "<1.1.19",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion"
+        },
+        {
+          "source": 1240111,
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.10",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion"
+        }
+      ]
+    },
+    {
+      "name": "braces",
+      "severity": "high",
+      "range": "*",
+      "nodes": [
+        {
+          "path": "node_modules/braces",
+          "version": "3.0.3",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1240992,
+          "id": "GHSA-vfj7-8cjw-p6xm",
+          "severity": "high",
+          "range": "<=3.0.3",
+          "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns"
+        }
+      ]
+    },
+    {
+      "name": "drizzle-kit",
+      "severity": "moderate",
+      "range": "0.19.0 - 1.0.0-beta.1-fd8bfcc",
+      "nodes": [
+        {
+          "path": "node_modules/drizzle-kit",
+          "version": "0.31.10",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@esbuild-kit/esm-loader"
+        }
+      ]
+    },
+    {
+      "name": "esbuild",
+      "severity": "moderate",
+      "range": "<=0.24.2 || 0.27.3 - 0.28.0",
+      "nodes": [
+        {
+          "path": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild",
+          "version": "0.18.20",
+          "development": true
+        },
+        {
+          "path": "node_modules/esbuild",
+          "version": "0.28.0",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "source": 1102341,
+          "id": "GHSA-67mh-4wv8-2f99",
+          "severity": "moderate",
+          "range": "<=0.24.2",
+          "title": "esbuild enables any website to send any requests to the development server and read the response"
+        },
+        {
+          "source": 1120680,
+          "id": "GHSA-g7r4-m6w7-qqqr",
+          "severity": "low",
+          "range": ">=0.27.3 <0.28.1",
+          "title": "esbuild allows arbitrary file read when running the development server on Windows"
+        }
+      ]
+    },
+    {
+      "name": "eslint-config-next",
+      "severity": "high",
+      "range": ">=14.3.0-canary.0",
+      "nodes": [
+        {
+          "path": "node_modules/eslint-config-next",
+          "version": "16.4.2",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@next/eslint-plugin-next"
+        }
+      ]
+    },
+    {
+      "name": "fast-glob",
+      "severity": "high",
+      "range": "*",
+      "nodes": [
+        {
+          "path": "node_modules/@shadcn/registry/node_modules/fast-glob",
+          "version": "3.3.3",
+          "development": false
+        },
+        {
+          "path": "node_modules/@ts-morph/common/node_modules/fast-glob",
+          "version": "3.3.3",
+          "development": false
+        },
+        {
+          "path": "node_modules/fast-glob",
+          "version": "3.3.1",
+          "development": true
+        },
+        {
+          "path": "node_modules/shadcn/node_modules/fast-glob",
+          "version": "3.3.3",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "micromatch"
+        }
+      ]
+    },
+    {
+      "name": "js-yaml",
+      "severity": "high",
+      "range": "<=4.3.1",
+      "nodes": [
+        {
+          "path": "node_modules/gray-matter/node_modules/js-yaml",
+          "version": "3.14.2",
+          "development": false
+        },
+        {
+          "path": "node_modules/js-yaml",
+          "version": "4.2.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "argparse"
+        },
+        {
+          "source": 1121859,
+          "id": "GHSA-h67p-54hq-rp68",
+          "severity": "moderate",
+          "range": "<3.15.0",
+          "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases"
+        },
+        {
+          "source": 1123911,
+          "id": "GHSA-52cp-r559-cp3m",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.0",
+          "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
+        },
+        {
+          "source": 1123912,
+          "id": "GHSA-52cp-r559-cp3m",
+          "severity": "high",
+          "range": ">=3.0.0 <3.15.0",
+          "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
+        },
+        {
+          "source": 1138114,
+          "id": "GHSA-5p4m-2wfm-xmqj",
+          "severity": "high",
+          "range": ">=3.0.0 <3.15.1",
+          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported"
+        },
+        {
+          "source": 1138115,
+          "id": "GHSA-5p4m-2wfm-xmqj",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.1",
+          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported"
+        },
+        {
+          "source": 1193726,
+          "id": "GHSA-2883-xcg3-v3hh",
+          "severity": "high",
+          "range": ">=3.0.0 <3.15.2",
+          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources"
+        },
+        {
+          "source": 1193727,
+          "id": "GHSA-2883-xcg3-v3hh",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.2",
+          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources"
+        }
+      ]
+    },
+    {
+      "name": "micromatch",
+      "severity": "high",
+      "range": ">=0.2.0",
+      "nodes": [
+        {
+          "path": "node_modules/micromatch",
+          "version": "4.0.8",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "braces"
+        }
+      ]
+    },
+    {
+      "name": "postcss-selector-parser",
+      "severity": "moderate",
+      "range": "<7.1.6",
+      "nodes": [
+        {
+          "path": "node_modules/postcss-selector-parser",
+          "version": "6.0.10",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1241232,
+          "id": "GHSA-rj75-hqrm-r3gf",
+          "severity": "moderate",
+          "range": "<7.1.6",
+          "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion"
+        }
+      ]
+    },
+    {
+      "name": "shadcn",
+      "severity": "high",
+      "range": "<=0.0.0-rc-20261007105214 || >=2.0.0",
+      "nodes": [
+        {
+          "path": "node_modules/shadcn",
+          "version": "4.22.1",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@shadcn/registry"
+        },
+        {
+          "dependency": "fast-glob"
+        },
+        {
+          "dependency": "ts-morph"
+        }
+      ]
+    },
+    {
+      "name": "source-map-js",
+      "severity": "high",
+      "range": "1.0.0 - 1.2.1",
+      "nodes": [
+        {
+          "path": "node_modules/source-map-js",
+          "version": "1.2.1",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1241209,
+          "id": "GHSA-68fv-2mgg-jv7q",
+          "severity": "high",
+          "range": ">=1.0.0 <1.2.2",
+          "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets"
+        }
+      ]
+    },
+    {
+      "name": "sprintf-js",
+      "severity": "moderate",
+      "range": "*",
+      "nodes": [
+        {
+          "path": "node_modules/sprintf-js",
+          "version": "1.0.3",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1241202,
+          "id": "GHSA-hp3w-g68c-fv3c",
+          "severity": "moderate",
+          "range": "<=1.1.3",
+          "title": "sprintf-js vulnerable to denial of service through unbounded precision specifiers"
+        }
+      ]
+    },
+    {
+      "name": "ts-morph",
+      "severity": "high",
+      "range": "6.0.1 - 23.0.0 || 25.0.0 - 26.0.0",
+      "nodes": [
+        {
+          "path": "node_modules/ts-morph",
+          "version": "26.0.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@ts-morph/common"
+        }
+      ]
+    },
+    {
+      "name": "undici",
+      "severity": "high",
+      "range": "<=6.28.0 || 7.0.0 - 7.29.0",
+      "nodes": [
+        {
+          "path": "node_modules/jsdom/node_modules/undici",
+          "version": "7.27.2",
+          "development": true
+        },
+        {
+          "path": "node_modules/undici",
+          "version": "6.26.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1121187,
+          "id": "GHSA-vmh5-mc38-953g",
+          "severity": "high",
+          "range": ">=7.23.0 <7.28.0",
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent"
+        },
+        {
+          "source": 1121241,
+          "id": "GHSA-p88m-4jfj-68fv",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.28.0",
+          "title": "undici vulnerable to HTTP header injection via Set-Cookie percent-decoding"
+        },
+        {
+          "source": 1121242,
+          "id": "GHSA-p88m-4jfj-68fv",
+          "severity": "moderate",
+          "range": "<6.27.0",
+          "title": "undici vulnerable to HTTP header injection via Set-Cookie percent-decoding"
+        },
+        {
+          "source": 1121244,
+          "id": "GHSA-vxpw-j846-p89q",
+          "severity": "high",
+          "range": ">=7.0.0 <7.28.0",
+          "title": "undici WebSocket client vulnerable to denial of service via fragment count bypass"
+        },
+        {
+          "source": 1121245,
+          "id": "GHSA-vxpw-j846-p89q",
+          "severity": "high",
+          "range": "<6.27.0",
+          "title": "undici WebSocket client vulnerable to denial of service via fragment count bypass"
+        },
+        {
+          "source": 1121247,
+          "id": "GHSA-hm92-r4w5-c3mj",
+          "severity": "high",
+          "range": ">=7.23.0 <7.28.0",
+          "title": "undici vulnerable to cross-origin request routing via SOCKS5 proxy pool reuse"
+        },
+        {
+          "source": 1121254,
+          "id": "GHSA-g8m3-5g58-fq7m",
+          "severity": "low",
+          "range": ">=7.0.0 <7.28.0",
+          "title": "undici vulnerable to Set-Cookie SameSite attribute downgrade via permissive substring matching"
+        },
+        {
+          "source": 1121255,
+          "id": "GHSA-g8m3-5g58-fq7m",
+          "severity": "low",
+          "range": "<6.27.0",
+          "title": "undici vulnerable to Set-Cookie SameSite attribute downgrade via permissive substring matching"
+        },
+        {
+          "source": 1121428,
+          "id": "GHSA-pr7r-676h-xcf6",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.28.0",
+          "title": "undici vulnerable to cross-user information disclosure via shared cache whitespace bypass"
+        },
+        {
+          "source": 1130715,
+          "id": "GHSA-8xcm-r25x-g524",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.0",
+          "title": "undici vulnerable to downstream response desynchronization via retry interceptor"
+        },
+        {
+          "source": 1130716,
+          "id": "GHSA-8xcm-r25x-g524",
+          "severity": "moderate",
+          "range": "<6.28.0",
+          "title": "undici vulnerable to downstream response desynchronization via retry interceptor"
+        },
+        {
+          "source": 1130718,
+          "id": "GHSA-4cwx-7wf7-3272",
+          "severity": "high",
+          "range": ">=7.0.0 <7.29.0",
+          "title": "undici vulnerable to cross-user information disclosure and parse-time crash via degenerate private cache directives"
+        },
+        {
+          "source": 1130726,
+          "id": "GHSA-m8rv-5g2x-5cg5",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.0",
+          "title": "undici vulnerable to CRLF Injection via blob-like body 'type' property"
+        },
+        {
+          "source": 1130727,
+          "id": "GHSA-m8rv-5g2x-5cg5",
+          "severity": "moderate",
+          "range": "<6.28.0",
+          "title": "undici vulnerable to CRLF Injection via blob-like body 'type' property"
+        },
+        {
+          "source": 1130729,
+          "id": "GHSA-jr45-8vmc-qm54",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.0",
+          "title": "undici vulnerable to cross-user information disclosure via whitespace around equals in Cache-Control directives"
+        },
+        {
+          "source": 1130731,
+          "id": "GHSA-v3r7-h72x-cjcm",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.0",
+          "title": "undici vulnerable to cookie attribute injection via unsanitized domain and unparsed setCookie fields"
+        },
+        {
+          "source": 1130732,
+          "id": "GHSA-v3r7-h72x-cjcm",
+          "severity": "moderate",
+          "range": "<6.28.0",
+          "title": "undici vulnerable to cookie attribute injection via unsanitized domain and unparsed setCookie fields"
+        },
+        {
+          "source": 1137242,
+          "id": "GHSA-35p6-xmwp-9g52",
+          "severity": "low",
+          "range": ">=7.0.0 <7.28.0",
+          "title": "undici vulnerable to HTTP response queue poisoning via keep-alive socket reuse"
+        },
+        {
+          "source": 1137243,
+          "id": "GHSA-35p6-xmwp-9g52",
+          "severity": "low",
+          "range": "<6.27.0",
+          "title": "undici vulnerable to HTTP response queue poisoning via keep-alive socket reuse"
+        },
+        {
+          "source": 1239934,
+          "id": "GHSA-3wwx-pv8p-q78v",
+          "severity": "moderate",
+          "range": ">=6.25.0 <6.28.1",
+          "title": "undici vulnerable to Denial of Service via unhandled error in WebSocket permessage-deflate decompression"
+        },
+        {
+          "source": 1240036,
+          "id": "GHSA-pmjh-fq2x-6v4x",
+          "severity": "moderate",
+          "range": ">=7.11.0 <7.29.1",
+          "title": "undici vulnerable to Denial of Service via orphaned RetryHandler response body"
+        },
+        {
+          "source": 1240038,
+          "id": "GHSA-r53p-7pc4-xj5r",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "title": "undici vulnerable to downstream response splitting via retry interceptor"
+        },
+        {
+          "source": 1240039,
+          "id": "GHSA-r53p-7pc4-xj5r",
+          "severity": "low",
+          "range": "<6.28.1",
+          "title": "undici vulnerable to downstream response splitting via retry interceptor"
+        },
+        {
+          "source": 1240041,
+          "id": "GHSA-rfgv-xxqx-mfg5",
+          "severity": "high",
+          "range": ">=7.0.0 <7.29.1",
+          "title": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol"
+        },
+        {
+          "source": 1240042,
+          "id": "GHSA-rfgv-xxqx-mfg5",
+          "severity": "high",
+          "range": ">=6.7.0 <6.28.1",
+          "title": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol"
+        },
+        {
+          "source": 1240044,
+          "id": "GHSA-3xpg-4rpp-hhhm",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.29.1",
+          "title": "undici vulnerable to Denial of Service via unbounded decompression of compressed responses"
+        },
+        {
+          "source": 1240046,
+          "id": "GHSA-2jfj-6hjv-fm6j",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "title": "undici vulnerable to cross-user cookie disclosure via Set-Cookie caching in shared caches"
+        },
+        {
+          "source": 1240048,
+          "id": "GHSA-2gqq-gqf2-x968",
+          "severity": "low",
+          "range": ">=7.1.0 <7.29.1",
+          "title": "undici vulnerable to response truncation via oversized chunked responses in the dump interceptor"
+        },
+        {
+          "source": 1240050,
+          "id": "GHSA-w293-vg96-wgc3",
+          "severity": "high",
+          "range": ">=7.24.1 <7.29.1",
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool"
+        },
+        {
+          "source": 1240052,
+          "id": "GHSA-8436-99hf-9mmv",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "title": "undici vulnerable to caching and replay of unsafe HTTP method responses"
+        },
+        {
+          "source": 1240055,
+          "id": "GHSA-rx4f-c7p8-82vq",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "title": "undici vulnerable to Denial of Service via WebSocketStream unclean close"
+        }
+      ]
+    },
+    {
+      "name": "vite",
+      "severity": "high",
+      "range": "8.0.0 - 8.1.5",
+      "nodes": [
+        {
+          "path": "node_modules/vite",
+          "version": "8.0.16",
+          "development": true
+        }
+      ],
+      "via": [
+        {
+          "source": 1242624,
+          "id": "GHSA-698v-4r3x-3vcv",
+          "severity": "moderate",
+          "range": ">=8.0.0 <=8.1.5",
+          "title": "launch-editor: escapeCmdArgs() omits % escaping on Windows"
+        },
+        {
+          "source": 1242653,
+          "id": "GHSA-r825-w8mm-5pxw",
+          "severity": "moderate",
+          "range": ">=8.0.0 <=8.1.5",
+          "title": "launch-editor: Editor CLI flag misinterpretation causing arbitrary command execution for some editors"
+        },
+        {
+          "source": 1242660,
+          "id": "GHSA-587h-7wmj-h5pm",
+          "severity": "high",
+          "range": ">=8.0.0 <=8.1.5",
+          "title": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows"
+        },
+        {
+          "source": 1242726,
+          "id": "GHSA-9jrq-w75r-8gcw",
+          "severity": "low",
+          "range": ">=8.0.0 <=8.1.5",
+          "title": "Vite: Cross origin script execution through Vite custom middleware"
+        },
+        {
+          "source": 1242732,
+          "id": "GHSA-rq7h-c2jc-7f22",
+          "severity": "moderate",
+          "range": ">=8.0.0 <=8.1.5",
+          "title": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine"
+        }
+      ]
+    }
+  ],
+  "assessments": [
+    {
+      "key": "@esbuild-kit/core-utils:esbuild",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "esbuild 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "key": "@esbuild-kit/esm-loader:@esbuild-kit/core-utils",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@esbuild-kit/core-utils 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "key": "@next/eslint-plugin-next:fast-glob",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "@shadcn/registry:fast-glob",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "@tailwindcss/typography:postcss-selector-parser",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "postcss-selector-parser 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
+      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
+      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
+      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+    },
+    {
+      "key": "@ts-morph/common:fast-glob",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "argparse:sprintf-js",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "sprintf-js 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "brace-expansion:1123897",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, <1.1.16",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1123898",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, >=3.0.0 <5.0.7",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1130588",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, <1.1.17",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1130591",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, >=4.0.0 <5.0.8",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1130734",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, >=4.0.0 <5.0.9",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1130737",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, <1.1.18",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240100",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, <1.1.21",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240103",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, >=4.0.0 <5.0.12",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240104",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, <1.1.20",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240107",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, >=4.0.0 <5.0.11",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240108",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, <1.1.19",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "brace-expansion:1240111",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, >=4.0.0 <5.0.10",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "braces:1240992",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns — GHSA-vfj7-8cjw-p6xm, <=3.0.3",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "drizzle-kit:@esbuild-kit/esm-loader",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@esbuild-kit/esm-loader 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "key": "esbuild:1102341",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "esbuild enables any website to send any requests to the development server and read the response — GHSA-67mh-4wv8-2f99, <=0.24.2",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "key": "esbuild:1120680",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "esbuild allows arbitrary file read when running the development server on Windows — GHSA-g7r4-m6w7-qqqr, >=0.27.3 <0.28.1",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "key": "eslint-config-next:@next/eslint-plugin-next",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@next/eslint-plugin-next 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "fast-glob:micromatch",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "micromatch 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "js-yaml:argparse",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "argparse 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1121859",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases — GHSA-h67p-54hq-rp68, <3.15.0",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1123911",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=4.0.0 <4.3.0",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1123912",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=3.0.0 <3.15.0",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1138114",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=3.0.0 <3.15.1",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1138115",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=4.0.0 <4.3.1",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1193726",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=3.0.0 <3.15.2",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "js-yaml:1193727",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=4.0.0 <4.3.2",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "micromatch:braces",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "braces 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "postcss-selector-parser:1241232",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion — GHSA-rj75-hqrm-r3gf, <7.1.6",
+      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
+      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
+      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
+      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+    },
+    {
+      "key": "shadcn:@shadcn/registry",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@shadcn/registry 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "shadcn:fast-glob",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "shadcn:ts-morph",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "ts-morph 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "source-map-js:1241209",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "source-map-js allows event-loop denial of service through indexed source-map section offsets — GHSA-68fv-2mgg-jv7q, >=1.0.0 <1.2.2",
+      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
+      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
+      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
+      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+    },
+    {
+      "key": "sprintf-js:1241202",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "sprintf-js vulnerable to denial of service through unbounded precision specifiers — GHSA-hp3w-g68c-fv3c, <=1.1.3",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "key": "ts-morph:@ts-morph/common",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@ts-morph/common 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "key": "undici:1121187",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent — GHSA-vmh5-mc38-953g, >=7.23.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 명시적 해당 proxy/pool과 TLS 옵션의 사용이다. Blob fetch 경로는 SOCKS ProxyAgent/ BalancedPool을 설정하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121241",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to HTTP header injection via Set-Cookie percent-decoding — GHSA-p88m-4jfj-68fv, >=7.0.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121242",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to HTTP header injection via Set-Cookie percent-decoding — GHSA-p88m-4jfj-68fv, <6.27.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121244",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici WebSocket client vulnerable to denial of service via fragment count bypass — GHSA-vxpw-j846-p89q, >=7.0.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121245",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici WebSocket client vulnerable to denial of service via fragment count bypass — GHSA-vxpw-j846-p89q, <6.27.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121247",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cross-origin request routing via SOCKS5 proxy pool reuse — GHSA-hm92-r4w5-c3mj, >=7.23.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 명시적 해당 proxy/pool과 TLS 옵션의 사용이다. Blob fetch 경로는 SOCKS ProxyAgent/ BalancedPool을 설정하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121254",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Set-Cookie SameSite attribute downgrade via permissive substring matching — GHSA-g8m3-5g58-fq7m, >=7.0.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121255",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Set-Cookie SameSite attribute downgrade via permissive substring matching — GHSA-g8m3-5g58-fq7m, <6.27.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1121428",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cross-user information disclosure via shared cache whitespace bypass — GHSA-pr7r-676h-xcf6, >=7.0.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 shared cache interceptor 사용과 악의적 응답 지시어이다. Blob 호출 경로는 undici cache interceptor를 구성하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130715",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to downstream response desynchronization via retry interceptor — GHSA-8xcm-r25x-g524, >=7.0.0 <7.29.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130716",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to downstream response desynchronization via retry interceptor — GHSA-8xcm-r25x-g524, <6.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130718",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cross-user information disclosure and parse-time crash via degenerate private cache directives — GHSA-4cwx-7wf7-3272, >=7.0.0 <7.29.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 shared cache interceptor 사용과 악의적 응답 지시어이다. Blob 호출 경로는 undici cache interceptor를 구성하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130726",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to CRLF Injection via blob-like body 'type' property — GHSA-m8rv-5g2x-5cg5, >=7.0.0 <7.29.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 CRLF type을 가진 임의 blob-like 객체다. 서버 업로드는 검증된 File/Buffer와 고정 MIME 정책을 사용하며 임의 type 객체를 넘기지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130727",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to CRLF Injection via blob-like body 'type' property — GHSA-m8rv-5g2x-5cg5, <6.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 CRLF type을 가진 임의 blob-like 객체다. 서버 업로드는 검증된 File/Buffer와 고정 MIME 정책을 사용하며 임의 type 객체를 넘기지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130729",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cross-user information disclosure via whitespace around equals in Cache-Control directives — GHSA-jr45-8vmc-qm54, >=7.0.0 <7.29.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 shared cache interceptor 사용과 악의적 응답 지시어이다. Blob 호출 경로는 undici cache interceptor를 구성하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130731",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cookie attribute injection via unsanitized domain and unparsed setCookie fields — GHSA-v3r7-h72x-cjcm, >=7.0.0 <7.29.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1130732",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cookie attribute injection via unsanitized domain and unparsed setCookie fields — GHSA-v3r7-h72x-cjcm, <6.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 cookie 파싱/직렬화 도우미 또는 공유 cookie cache 사용이다. Blob fetch는 이 API로 사용자의 cookie를 조작/공유하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1137242",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to HTTP response queue poisoning via keep-alive socket reuse — GHSA-35p6-xmwp-9g52, >=7.0.0 <7.28.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "fetch도 keep-alive socket을 재사용하므로 영향 없음으로 배제하지 않는다. 공격자는 신뢰 Blob HTTPS upstream의 악의적 응답/연결 타이밍을 제어해야 하며 이 침해 전제를 P2로 추적한다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1137243",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to HTTP response queue poisoning via keep-alive socket reuse — GHSA-35p6-xmwp-9g52, <6.27.0",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "fetch도 keep-alive socket을 재사용하므로 영향 없음으로 배제하지 않는다. 공격자는 신뢰 Blob HTTPS upstream의 악의적 응답/연결 타이밍을 제어해야 하며 이 침해 전제를 P2로 추적한다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1239934",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via unhandled error in WebSocket permessage-deflate decompression — GHSA-3wwx-pv8p-q78v, >=6.25.0 <6.28.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240036",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via orphaned RetryHandler response body — GHSA-pmjh-fq2x-6v4x, >=7.11.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240038",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to downstream response splitting via retry interceptor — GHSA-r53p-7pc4-xj5r, >=7.0.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240039",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to downstream response splitting via retry interceptor — GHSA-r53p-7pc4-xj5r, <6.28.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240041",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol — GHSA-rfgv-xxqx-mfg5, >=7.0.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240042",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol — GHSA-rfgv-xxqx-mfg5, >=6.7.0 <6.28.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240044",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via unbounded decompression of compressed responses — GHSA-3xpg-4rpp-hhhm, >=7.15.0 <7.29.1",
+      "usedApi": "공격 대상 API는 undici interceptors.decompress()이다. 설치 7.x는 jsdom 개발 경로이며 Blob SDK의 일반 fetch와 구분한다.",
+      "callLocations": "node_modules/jsdom/node_modules/undici; Vitest jsdom 환경. 조사한 앱/Blob 호출 경로에 interceptors.decompress() 설정은 없다.",
+      "assessment": "공격 조건은 interceptors.decompress()를 구성하고 악의적인 압축 응답을 처리하는 것이다. 이 명시적 interceptor는 조사한 앱과 jsdom 테스트 구성에서 설정하지 않으므로 일반 fetch가 영향받는다고 주장하지 않는다.",
+      "residualAssumptions": "향후 decompress interceptor를 구성하거나 테스트 도구가 해당 API를 도입하면 재검토한다. 7.x 개발 경로도 악성 입력에 대한 일반적 안전을 보장하지 않는다."
+    },
+    {
+      "key": "undici:1240046",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to cross-user cookie disclosure via Set-Cookie caching in shared caches — GHSA-2jfj-6hjv-fm6j, >=7.0.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 shared cache interceptor 사용과 악의적 응답 지시어이다. Blob 호출 경로는 undici cache interceptor를 구성하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240048",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to response truncation via oversized chunked responses in the dump interceptor — GHSA-2gqq-gqf2-x968, >=7.1.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 해당 RetryHandler/retry/dump interceptor 경로이다. 조사한 SDK fetch에는 해당 interceptor를 구성하는 코드가 없다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240050",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool — GHSA-w293-vg96-wgc3, >=7.24.1 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 명시적 해당 proxy/pool과 TLS 옵션의 사용이다. Blob fetch 경로는 SOCKS ProxyAgent/ BalancedPool을 설정하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240052",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to caching and replay of unsafe HTTP method responses — GHSA-8436-99hf-9mmv, >=7.0.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격 조건은 shared cache interceptor 사용과 악의적 응답 지시어이다. Blob 호출 경로는 undici cache interceptor를 구성하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "undici:1240055",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-10-29",
+      "attackCondition": "undici vulnerable to Denial of Service via WebSocketStream unclean close — GHSA-rx4f-c7p8-82vq, >=7.0.0 <7.29.1",
+      "usedApi": "@vercel/blob 2.4.0은 undici.fetch를 사용하며 jsdom 7.x 경로는 Vitest 개발 환경이다.",
+      "callLocations": "node_modules/@vercel/blob/dist/index.js:85,146; src/lib/server-upload-intent.ts; src/features/academics/submission-files/service.ts; Vitest jsdom",
+      "assessment": "공격자가 WebSocket peer 또는 압축 frame을 제어해야 한다. 조사한 Blob SDK는 fetch만 사용하고 앱은 undici WebSocket API를 사용하지 않는다.",
+      "residualAssumptions": "신뢰 HTTPS 공급자 또는 개발 입력이 침해되면 전제가 달라진다. keep-alive fetch 자체가 모든 advisory에 안전하다는 판단이 아니다."
+    },
+    {
+      "key": "vite:1242624",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "launch-editor: escapeCmdArgs() omits % escaping on Windows — GHSA-698v-4r3x-3vcv, >=8.0.0 <=8.1.5",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    },
+    {
+      "key": "vite:1242653",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "launch-editor: Editor CLI flag misinterpretation causing arbitrary command execution for some editors — GHSA-r825-w8mm-5pxw, >=8.0.0 <=8.1.5",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    },
+    {
+      "key": "vite:1242660",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows — GHSA-587h-7wmj-h5pm, >=8.0.0 <=8.1.5",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    },
+    {
+      "key": "vite:1242726",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "Vite: Cross origin script execution through Vite custom middleware — GHSA-9jrq-w75r-8gcw, >=8.0.0 <=8.1.5",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    },
+    {
+      "key": "vite:1242732",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-22",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine — GHSA-rq7h-c2jc-7f22, >=8.0.0 <=8.1.5",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    }
+  ]
+}
