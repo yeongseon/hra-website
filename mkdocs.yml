@@ -49,6 +49,7 @@ nav:
       - 작업 난이도와 첫 기여: contributing/tasks-by-level.md
       - AI 도구 사용: contributing/ai-tools.md
       - 품질 검사와 CI 범위: QUALITY-GATE.md
+      - 확장 E2E 회귀: developer/expanded-e2e-quality-gate.md
       - GitHub Actions 보안: developer/github-actions-security.md
       - 빌드·배포 안전 가이드: contributing/build-and-deploy-safety.md
       - 버전과 릴리스: contributing/releasing.md

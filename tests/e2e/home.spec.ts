@@ -6,9 +6,9 @@
  * - 향후 핵심 플로우 E2E를 추가할 때 시작점으로 사용합니다.
  */
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/expanded-public-test";
 
-test("홈 화면이 정상적으로 렌더링된다", async ({ page }) => {
+test("[PUBLIC:HOME] 홈 화면이 정상적으로 렌더링된다", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/HRA/i);
 });

@@ -1,8 +1,8 @@
 /** 홈 달력의 실제 경계 폭과 월 이동·날짜 선택 동작을 브라우저에서 검증한다. */
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/expanded-public-test";
 
 for (const width of [390, 768, 800, 1024, 1280]) {
-  test(`홈 달력이 ${width}px에서 넘치지 않고 날짜 탐색을 유지한다`, async ({ page }) => {
+  test(`[PUBLIC:CALENDAR_${width}] 홈 달력이 ${width}px에서 넘치지 않고 날짜 탐색을 유지한다`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/?year=2030&month=5");
     const calendar = page.getByRole("heading", { name: "HRA 일정", exact: true }).locator("xpath=ancestor::section");

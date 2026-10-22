@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:expanded": "node scripts/verify-site-routes.mjs --browser public --output test-results/expanded-public.json && npm run test:academic-g1",
     "test:academic-g1": "node scripts/verify-academic-g1.mjs",
     "verify:auth-proxy": "node scripts/verify-auth-proxy-http.mjs",
     "issues:check": "node scripts/check-process-format.mjs",

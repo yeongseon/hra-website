@@ -2,21 +2,25 @@
  * 환경 파일 없는 격리 worktree에서 실제 production 빌드의 전체 읽기 경로를 감사한다.
  * 빌드의 공개 글꼴 읽기는 허용하고 next start·HTTP의 외부 요청은 차단한다.
  * 두 단계 모두 합성 계정·격리 PG를 사용하며 제품 5xx는 실패 종료한다.
- * Blob 실물 업로드, 정상 CRUD, 브라우저 상호작용의 검증을 대신하지 않는다.
+ * 명시적 --browser public 모드는 같은 환경에서 공개 브라우저 회귀만 실행한다.
+ * 실제 Blob 업로드와 정상 CRUD는 별도 G1 검증의 책임이다.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createQaPostgres } from "../tests/support/resource-qa-postgres.mjs";
 import { academicG1Actors, concreteSiteRoute, installSiteRouteFixture, siteRoutePassword } from "../tests/support/site-route-fixture.mjs";
+import { prepareExpandedPublicBrowser } from "../tests/support/expanded-public-browser.mjs";
 
 const harnessRepository = dirname(dirname(fileURLToPath(import.meta.url)));
 let repository = harnessRepository;
 let only = null;
+// 공개 브라우저 모드는 HTTP 전수 검사와 구분하며 결과에도 실행 범위를 남긴다.
+let publicBrowser = false, browserSummary = null;
 const argumentsList = process.argv.slice(2);
 const controller = new AbortController();
 const diagnostics = new Set();
@@ -61,7 +65,7 @@ async function stopChild(child) {
 }
 
 /** 프레임워크 stdout/stderr 원문은 저장하지 않고 고정 분류만 관찰한다. */
-function launch(args, environment) {
+function launch(args, environment, browserOutput = false) {
   const child = spawn(process.execPath, args, { cwd: repository, env: environment,
     detached: true, stdio: ["ignore", "pipe", "pipe"] });
   const state = { exited: false, code: null, done: null };
@@ -69,7 +73,19 @@ function launch(args, environment) {
     child.once("error", () => { state.exited = true; diagnostics.add("CHILD_START_FAILED"); resolveDone(); });
     child.once("exit", code => { state.exited = true; state.code = code; resolveDone(); });
   });
-  child.stdout.resume();
+  // 브라우저 오류 원문 대신 reporter가 만든 파일·줄·고정 결과 코드만 내보낸다.
+  let pending = "";
+  child.stdout.on("data", chunk => {
+    if (!browserOutput) return;
+    pending += String(chunk);
+    const lines = pending.split(/\r?\n/); pending = lines.pop() ?? "";
+    for (const line of lines) {
+      if (/^(?:COLLECT|PASS|FAIL) E2E_PUBLIC:[A-Za-z0-9_.:-]+$/.test(line) ||
+          /^FAIL E2E_PUBLIC_ERROR:[A-Z0-9_]+:[A-Z_]+:\d+$/.test(line) ||
+          /^(?:COLLECT|PASS|FAIL) E2E_PUBLIC_REQUIRED(?::12)?$/.test(line)) console.log(line);
+    }
+    if (pending.length > 4096) pending = "";
+  });
   child.stderr.on("data", chunk => {
     const text = String(chunk);
     for (const match of text.matchAll(/(?:QA_TRANSPORT_FAILURE|SITE_ROUTE_NETWORK):([A-Z0-9_]+)/g)) { diagnostics.add(match[1]); failureSequence++; }
@@ -213,12 +229,15 @@ function report() {
   const classifications = results.reduce((counts, record) => {
     counts[record.classification] = (counts[record.classification] ?? 0) + 1; return counts;
   }, {});
-  const value = { sourceSha, scope: { appRoot: repository, only }, completed, cleanupComplete,
+  const value = { sourceSha, scope: { appRoot: repository, only, publicBrowser }, browser: browserSummary, completed, cleanupComplete,
     coverageHealthy: completed && cleanupComplete && ![...diagnostics].some(isFailureDiagnostic) && !results.some(record => ["PRODUCT_ERROR", "INFRASTRUCTURE_ERROR"].includes(record.classification)),
     phase, limitations,
     summary: { routes: new Set(results.map(record => record.route)).size, records: results.length, classifications },
     diagnostics: [...diagnostics].sort(), results };
-  if (output) writeFileSync(output, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
+  if (output) {
+    mkdirSync(dirname(output), { recursive: true });
+    writeFileSync(output, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
+  }
   return value;
 }
 
@@ -231,13 +250,13 @@ deadline.unref();
 
 try {
   if (argumentsList.length === 1 && argumentsList[0] === "--help") {
-    console.log("사용법: HRA_TEST_PG_BIN=<PostgreSQL bin> node scripts/verify-site-routes.mjs [--app-root 절대worktree경로] [--only manifest경로] [--output 결과.json]");
-    console.log("환경 파일 없는 worktree에서 production 빌드·격리 DB·읽기 HTTP를 검사합니다. Blob 실물·정상 CRUD·브라우저 상호작용은 포함하지 않습니다.");
+    console.log("사용법: HRA_TEST_PG_BIN=<PostgreSQL bin> node scripts/verify-site-routes.mjs [--app-root 절대worktree경로] [--only manifest경로 | --browser public] [--output 결과.json]");
+    console.log("환경 파일 없는 worktree에서 production 빌드·격리 DB·읽기 HTTP 또는 공개 브라우저를 검사합니다. 실제 Blob·정상 CRUD는 별도 G1을 실행합니다.");
   } else {
     const options = new Map();
     for (let index = 0; index < argumentsList.length; index += 2) {
       const key = argumentsList[index], value = argumentsList[index + 1];
-      check(["--app-root", "--only", "--output"].includes(key) && typeof value === "string" && value.length > 0 && !options.has(key), "SITE_ROUTE_ARGUMENTS");
+      check(["--app-root", "--only", "--output", "--browser"].includes(key) && typeof value === "string" && value.length > 0 && !options.has(key), "SITE_ROUTE_ARGUMENTS");
       options.set(key, value);
     }
     if (options.has("--app-root")) {
@@ -247,6 +266,11 @@ try {
     if (options.has("--only")) {
       only = options.get("--only");
       check(only.startsWith("/") && !/[?#\\]/.test(only), "SITE_ROUTE_ONLY_INVALID");
+    }
+    if (options.has("--browser")) {
+      check(options.get("--browser") === "public" && !only, "SITE_ROUTE_BROWSER_ARGUMENTS");
+      publicBrowser = true;
+      limitations.splice(limitations.indexOf("브라우저 상호작용 미검증"), 1, "공개 4개 spec 외 브라우저는 별도 G1 검증 결과를 확인");
     }
     if (options.has("--output")) {
       check(options.get("--output").endsWith(".json"), "SITE_ROUTE_OUTPUT_INVALID");
@@ -268,7 +292,7 @@ try {
     await new Promise((resolveReady, reject) => { listener.once("error", reject); listener.listen(0, "127.0.0.1", resolveReady); });
     const port = listener.address().port;
     await new Promise(resolveClosed => listener.close(resolveClosed));
-    const origin = `http://localhost:${port}`;
+    const origin = `http://${publicBrowser ? "127.0.0.1" : "localhost"}:${port}`;
     const environment = { ...basic, ...cluster.environment, LC_ALL: "C", NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1",
       HRA_SITE_ROUTE_ORIGIN: origin, AUTH_SECRET: randomBytes(48).toString("hex"), AUTH_TRUST_HOST: "true", AUTH_URL: origin, NEXTAUTH_URL: origin, NEXT_PUBLIC_APP_URL: origin,
       AUTH_GOOGLE_ID: "", AUTH_GOOGLE_SECRET: "", AUTH_KAKAO_ID: "", AUTH_KAKAO_SECRET: "", BLOB_READ_WRITE_TOKEN: "", RESOURCE_PRIVATE_READ_WRITE_TOKEN: "",
@@ -310,9 +334,30 @@ try {
     phase = "AUTH";
     const sessions = { anonymous: "" };
     for (const actor of actors.filter(actor => actor !== "anonymous")) sessions[actor] = await login(origin, actor);
-    console.log(`정상 credentials 5역할 확인. compiled 경로 ${routes.length}개를 검사합니다.`);
-    phase = "HTTP";
-    await audit(origin, sessions, routes);
+    console.log(`정상 credentials 5역할 확인. compiled 경로 ${routes.length}개를 확인했습니다.`);
+    if (publicBrowser) {
+      const { configPath, summaryPath } = await prepareExpandedPublicBrowser({ repository, fixtureRoot: cluster.root, origin });
+      const browserEnvironment = { ...basic, CI: "true", NODE_OPTIONS: "", HRA_PUBLIC_E2E_ORIGIN: origin };
+      // 수집과 실행은 별도 프로세스이며 목록 출력만으로 실행 성공을 주장하지 않는다.
+      for (const listing of [true, false]) {
+        phase = listing ? "BROWSER_COLLECTION" : "BROWSER_EXECUTION";
+        console.log(listing ? "공개 E2E 수집 목록 확인" : "공개 E2E 실제 실행 시작");
+        const browser = launch([join(repository, "node_modules/@playwright/test/cli.js"), "test", "--config", configPath,
+          ...(listing ? ["--list"] : [])], { ...browserEnvironment, HRA_PUBLIC_E2E_LIST: String(listing) }, true);
+        await Promise.race([children.get(browser).done, new Promise(resolveAbort => {
+          if (controller.signal.aborted) resolveAbort(); else controller.signal.addEventListener("abort", resolveAbort, { once: true });
+        })]);
+        controller.signal.throwIfAborted();
+        if (existsSync(summaryPath)) browserSummary = JSON.parse(readFileSync(summaryPath, "utf8"));
+        check(children.get(browser).code === 0, "SITE_ROUTE_BROWSER_FAILED");
+        await stopChild(browser);
+        check(!cleanupFailed, "SITE_ROUTE_BROWSER_CLEANUP_FAILED");
+      }
+      check(browserSummary?.status === "passed" && browserSummary.completed === 12, "SITE_ROUTE_BROWSER_INCOMPLETE");
+    } else {
+      phase = "HTTP";
+      await audit(origin, sessions, routes);
+    }
     completed = true;
     phase = "COMPLETE";
     if (results.some(record => record.classification === "PRODUCT_ERROR")) process.exitCode = 1;
