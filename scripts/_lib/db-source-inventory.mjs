@@ -3,6 +3,7 @@
  * 파일·Git·환경변수·DB에 직접 접근하지 않고 호출자가 건넨 현재 바이트만 비교합니다.
  */
 import { createHash } from "node:crypto";
+import ts from "typescript";
 
 const sqlRoles = new Set(["versioned_candidate", "current_definition_or_installer", "read_only_preflight"]);
 const effects = new Set(["db_schema", "db_schema_and_data", "db_data", "seed_db", "blob_and_db", "blob_cleanup"]);
@@ -17,15 +18,28 @@ function safePath(value, suffix) {
     value.split("/").every((part) => part !== "" && part !== "." && part !== "..");
 }
 
-/** G1의 현재 이중 따옴표 문자열 배열만 읽으며 JS 식을 평가하지 않습니다. */
+/** 기존 TypeScript 파서로 실제 최상위 export만 읽으며 주석·문자열·JS 식은 실행하지 않습니다. */
 export function parseG1LiteralOrder(source) {
   if (typeof source !== "string") return null;
-  const match = source.match(/^export const academicG1Migrations\s*=\s*\[([\s\S]*?)\]\s*;/m);
-  if (!match) return null;
-  const parts = match[1].split(",").map((part) => part.trim());
-  if (parts.at(-1) === "") parts.pop();
-  if (parts.length === 0 || parts.some((part) => !/^"[a-z0-9-]+\.sql"$/.test(part))) return null;
-  return parts.map((part) => `scripts/${part.slice(1, -1)}`);
+  const file = ts.createSourceFile("academic-g1-fixture.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  if (file.parseDiagnostics.length) return null;
+  const bindings = [];
+  for (const statement of file.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (ts.isIdentifier(declaration.name) && declaration.name.text === "academicG1Migrations") {
+        bindings.push({ statement, declaration });
+      }
+    }
+  }
+  if (bindings.length !== 1) return null;
+  const { statement, declaration } = bindings[0];
+  if (!(statement.declarationList.flags & ts.NodeFlags.Const) ||
+      !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ||
+      !declaration.initializer || !ts.isArrayLiteralExpression(declaration.initializer)) return null;
+  const elements = declaration.initializer.elements;
+  if (elements.length === 0 || elements.some((element) => !ts.isStringLiteral(element) || !/^[a-z0-9-]+\.sql$/.test(element.text))) return null;
+  return elements.map((element) => `scripts/${element.text}`);
 }
 
 /** ID 관계는 후보 SQL끼리만 허용하고 순환을 거부합니다. */

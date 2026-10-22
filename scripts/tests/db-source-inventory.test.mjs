@@ -111,6 +111,29 @@ test("G1 중간 순서 변경과 실행 식을 거부한다", async () => {
   await rejects(expression, "G1_LITERAL_REQUIRED");
 });
 
+test("주석 속 옛 G1 배열 뒤의 실제 실행식을 거부한다", async () => {
+  const input = fixture();
+  input.g1Source = `/*\n${g1Source}\n*/\nexport const academicG1Migrations = [...runtimeMigrations];`;
+  await rejects(input, "G1_LITERAL_REQUIRED");
+});
+
+test("주석·문자열 속 옛 선언 대신 실제 G1 순서 변경을 확인한다", async () => {
+  const reordered = g1Source.replace('"migrate-one.sql", "migrate-two.sql"', '"migrate-two.sql", "migrate-one.sql"');
+  for (const prefix of [`/*\n${g1Source}\n*/`, `const note = ${JSON.stringify(g1Source)};`, 'const note = `\n' + g1Source + '\n`;']) {
+    const input = fixture();
+    input.g1Source = `${prefix}\n${reordered}`;
+    await rejects(input, "G1_ORDER_MISMATCH");
+  }
+});
+
+test("문자열의 가짜 선언만 있거나 실제 선언이 중복·비정상이면 거부한다", async () => {
+  for (const source of [`const note = ${JSON.stringify(g1Source)};`, `${g1Source}\n${g1Source}`, g1Source.replace('];', ', ;')]) {
+    const input = fixture();
+    input.g1Source = source;
+    await rejects(input, "G1_LITERAL_REQUIRED");
+  }
+});
+
 test("선행 ID 누락과 순환을 거부한다", async () => {
   const unknown = fixture();
   unknown.inventory.sql[1].predecessors = ["missing"];
