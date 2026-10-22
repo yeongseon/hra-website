@@ -29,7 +29,7 @@ function fixture() {
         { id: "g1-two", path: two, role: "versioned_candidate", sha256: sha256("TWO"), predecessors: ["g1-one"] },
       ],
       g1Order: [one, two],
-      scripts: [{ path: command, effect: "db_schema", defaultBehavior: "writes", writeOptions: [], commands: ["db:migrate-one"] }],
+      scripts: [{ path: command, sha256: sha256("// 합성 스크립트"), effect: "db_schema", defaultBehavior: "writes", writeOptions: [], commands: ["db:migrate-one"] }],
     },
     trackedSqlPaths: [one, two],
     untrackedSqlPaths: [],
@@ -136,17 +136,42 @@ test("현재 인벤토리는 읽기 전용 preflight·현행 뷰와 알려진 �
   const inventory = JSON.parse(readFileSync(join(root, "scripts/db/source-inventory.json"), "utf8"));
   assert.equal(inventory.sql.length, 17);
   assert.equal(inventory.scripts.length, 18);
+  assert.equal(inventory.g1Order.length, 9);
   assert.equal(inventory.sql.find((entry) => entry.path === "scripts/preflight-academic-students.sql")?.role, "read_only_preflight");
   assert.equal(inventory.sql.find((entry) => entry.path === "scripts/sql/markdown-image-references.sql")?.role, "current_definition_or_installer");
-  assert.equal(inventory.scripts.find((entry) => entry.path === "scripts/migrate-html-to-markdown.mjs")?.defaultBehavior, "writes");
-  assert.equal(inventory.scripts.find((entry) => entry.path === "scripts/migrate-rate-limit-reservations.mjs")?.defaultBehavior, "read_only");
-  assert.equal(inventory.scripts.find((entry) => entry.path === "scripts/seed-admin.mjs")?.defaultBehavior, "rejects");
+  assert.equal(inventory.sql.find((entry) => entry.path === "scripts/migrate-287-rate-limit-reservation-index.sql")?.id, "287-reservation-index");
+  const preflight = readFileSync(join(root, "scripts/preflight-academic-students.sql"), "utf8");
+  assert.equal(preflight.split("\n").map((line) => line.trim()).find((line) => line && !line.startsWith("--")), "BEGIN READ ONLY;");
+  // 동작 분류는 자동 SQL 분석 결과가 아니므로 검토한 18개 진입점의 현재 의미를 테스트로 고정합니다.
+  const expected = {
+    "backfill-academic-enrollments": ["db_data", "read_only"],
+    "cleanup-markdown-image-assets": ["blob_cleanup", "read_only"],
+    "migrate-add-alumni-featured": ["db_schema", "writes"],
+    "migrate-add-application-submissions-unique": ["db_schema", "writes"],
+    "migrate-add-markdown-image-assets": ["db_schema", "writes"],
+    "migrate-add-rate-limit-tables": ["db_schema", "writes"],
+    "migrate-add-user-session-version": ["db_schema", "writes"],
+    "migrate-atomic-application-questions": ["db_schema", "writes"],
+    "migrate-backfill-kakao-legacy-bindings": ["db_data", "read_only"],
+    "migrate-html-to-markdown": ["db_data", "writes"],
+    "migrate-protected-resource-blobs": ["blob_and_db", "read_only"],
+    "migrate-rate-limit-reservations": ["db_schema", "read_only"],
+    "migrate-recruitment-singleton": ["db_schema_and_data", "writes"],
+    "seed-admin": ["seed_db", "rejects"],
+    "seed-alumni": ["seed_db", "writes"],
+    "seed-cohorts": ["seed_db", "writes"],
+    "seed-faculty": ["seed_db", "writes"],
+    "seed-press": ["seed_db", "writes"],
+  };
+  assert.deepEqual(Object.fromEntries(inventory.scripts.map((entry) => [
+    entry.path.slice("scripts/".length, -".mjs".length), [entry.effect, entry.defaultBehavior],
+  ])), expected);
 });
 
 test("가짜 DB 주소가 있어도 CLI는 소스만 검사하고 통과한다", () => {
   const result = spawnSync(process.execPath, ["scripts/check-db-source-inventory.mjs"], {
     cwd: root,
-    env: { PATH: process.env.PATH ?? "", DATABASE_URL: "postgresql://ci:ci@127.0.0.1:1/isolated" },
+    env: { DATABASE_URL: "postgresql://ci:ci@127.0.0.1:1/isolated" },
     encoding: "utf8",
     timeout: 10_000,
   });

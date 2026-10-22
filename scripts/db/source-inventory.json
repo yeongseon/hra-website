@@ -1,0 +1,326 @@
+{
+  "version": 1,
+  "sql": [
+    {
+      "path": "scripts/migrate-287-rate-limit-reservation-index.sql",
+      "role": "versioned_candidate",
+      "sha256": "5d7bc2a6cdd62396e7f73d8dde14e9af210226ac0af1bc8387fa963b683b45d7",
+      "id": "287-reservation-index",
+      "predecessors": []
+    },
+    {
+      "path": "scripts/migrate-academic-assignment-actions.sql",
+      "role": "versioned_candidate",
+      "sha256": "b1d51af3fbe81172d0dc4d86b54e2909dadfcab3e7eff4b8c683c4a27144392a",
+      "id": "g1-assignment-actions",
+      "predecessors": [
+        "g1-submissions"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-assignments.sql",
+      "role": "versioned_candidate",
+      "sha256": "aa25c42c7dcce712530131753642a6ed7615ba251e5d4d8fa14f5796cc47f23f",
+      "id": "g1-assignments",
+      "predecessors": [
+        "g1-roster"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-enrollment-links.sql",
+      "role": "versioned_candidate",
+      "sha256": "d7567c9ec71226c345abde64965b18f5d28dd6addee59f6445572d8fb789eee1",
+      "id": "g1-enrollment-links",
+      "predecessors": [
+        "g1-students"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-roster.sql",
+      "role": "versioned_candidate",
+      "sha256": "fef40d568310b9b2949dd410324e1237ac26a0268e189eaf6b3380b8e18242f1",
+      "id": "g1-roster",
+      "predecessors": [
+        "g1-enrollment-links"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-students.sql",
+      "role": "versioned_candidate",
+      "sha256": "2ca8845821ccf17c5f5268c1975ec025837e5e1f268e4ffd39d7bf191dd1c378",
+      "id": "g1-students",
+      "predecessors": []
+    },
+    {
+      "path": "scripts/migrate-academic-submission-file-reads.sql",
+      "role": "versioned_candidate",
+      "sha256": "44debf100ca98a103502f93b71c18213f3dfba8184b8ae5b0c6eafd922723e46",
+      "id": "g1-submission-file-reads",
+      "predecessors": [
+        "g1-submission-finalization"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-submission-finalization.sql",
+      "role": "versioned_candidate",
+      "sha256": "4157af03e6ff2c4c8ae8d3efeb9538fecf63425c126cd5a66bf7833d02446c62",
+      "id": "g1-submission-finalization",
+      "predecessors": [
+        "g1-upload-authorizations"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-submissions.sql",
+      "role": "versioned_candidate",
+      "sha256": "8171ee9346ba02bdc887cf9b9703ae643fe2f10935808719aca47a6c4fc0fad3",
+      "id": "g1-submissions",
+      "predecessors": [
+        "g1-assignments"
+      ]
+    },
+    {
+      "path": "scripts/migrate-academic-upload-authorizations.sql",
+      "role": "versioned_candidate",
+      "sha256": "b6aa05b84fb03aad6c50db25c2f55d85ef5d5167346986a6954d9a8a24864947",
+      "id": "g1-upload-authorizations",
+      "predecessors": [
+        "g1-assignment-actions"
+      ]
+    },
+    {
+      "path": "scripts/migrate-assert-application-question-revision.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "4719807b9000ff99932abb5dbc5fd7fa272eb34a44ea20a9178e44e426db1289"
+    },
+    {
+      "path": "scripts/migrate-atomic-application-questions.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "b4a0dafe75e7a55b3431949748903fc16c0adae2aa92f45ac1a057dc5c305c94"
+    },
+    {
+      "path": "scripts/migrate-protect-application-answers.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "c6adf77dd7563349315211345b7adab540e24026271a6261c5e72e15a5547b13"
+    },
+    {
+      "path": "scripts/migrate-protect-application-submissions.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "a2edb42bac46ae9caa3127e9fbef386796be96f3149a606cc0320046d333993e"
+    },
+    {
+      "path": "scripts/preflight-academic-students.sql",
+      "role": "read_only_preflight",
+      "sha256": "105a53efd4d9c0edace99dfbad08172743723b1995078f7bdf6a526f6dbed498"
+    },
+    {
+      "path": "scripts/sql/markdown-image-references.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "40b8f37eada067050ee534e27bf4b150051030356cc964ac7a2dab3b5a541070"
+    },
+    {
+      "path": "scripts/sql/rate-limit-reservations.sql",
+      "role": "current_definition_or_installer",
+      "sha256": "0e7a39c0f1eda058024ae1678b8e76781f0277be4ffbab7f33d89155e75a014e"
+    }
+  ],
+  "g1Order": [
+    "scripts/migrate-academic-students.sql",
+    "scripts/migrate-academic-enrollment-links.sql",
+    "scripts/migrate-academic-roster.sql",
+    "scripts/migrate-academic-assignments.sql",
+    "scripts/migrate-academic-submissions.sql",
+    "scripts/migrate-academic-assignment-actions.sql",
+    "scripts/migrate-academic-upload-authorizations.sql",
+    "scripts/migrate-academic-submission-finalization.sql",
+    "scripts/migrate-academic-submission-file-reads.sql"
+  ],
+  "scripts": [
+    {
+      "path": "scripts/backfill-academic-enrollments.mjs",
+      "sha256": "cede77331364ca729e4d9a72caaabff52310cc06121d411571c70ddfd1d60eba",
+      "effect": "db_data",
+      "defaultBehavior": "read_only",
+      "writeOptions": [
+        "--apply + --plan=<file> + --confirm-target=<fingerprint> + --expect=<count>"
+      ],
+      "commands": [
+        "academic:backfill"
+      ]
+    },
+    {
+      "path": "scripts/cleanup-markdown-image-assets.mjs",
+      "sha256": "f31e41645ab02a84161dac83b1e74dbe7c03efde4988ff23a1ff51b7af59cffa",
+      "effect": "blob_cleanup",
+      "defaultBehavior": "read_only",
+      "writeOptions": [
+        "--apply + HRA_CONTENT_WRITES_STOPPED=1"
+      ],
+      "commands": [
+        "blob:cleanup-markdown-images"
+      ]
+    },
+    {
+      "path": "scripts/migrate-add-alumni-featured.mjs",
+      "sha256": "a09b9b82c5eb55ed30a440ead4a47556a8a09528cd6f82c2e3e27c358f46fdfa",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-alumni-featured"
+      ]
+    },
+    {
+      "path": "scripts/migrate-add-application-submissions-unique.mjs",
+      "sha256": "00caf1ed1fc6aaf255a800f9ce79e1b89ffb71d5db629a04f762abc34362c100",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-add-application-unique"
+      ]
+    },
+    {
+      "path": "scripts/migrate-add-markdown-image-assets.mjs",
+      "sha256": "3e362b83f8e63e0ff665a17734b4c0289e6eb56744446b4529b17404b5ac24f0",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-add-markdown-image-assets"
+      ]
+    },
+    {
+      "path": "scripts/migrate-add-rate-limit-tables.mjs",
+      "sha256": "e8566d9e28eb27b1036f7691c3889a0a939c6b483eaa6755e0697f0b3bf8cfa3",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-add-rate-limit-tables"
+      ]
+    },
+    {
+      "path": "scripts/migrate-add-user-session-version.mjs",
+      "sha256": "8fd1893765388e054bbbec6397be45d3b80256da23bcd919672bfa52342da7df",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-user-session-version"
+      ]
+    },
+    {
+      "path": "scripts/migrate-atomic-application-questions.mjs",
+      "sha256": "451c45693adcdc88d01301d513859824029719aa0d600568a3471c94a0fa8454",
+      "effect": "db_schema",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-atomic-application-questions"
+      ]
+    },
+    {
+      "path": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+      "sha256": "9aa1856023578025195920d2463489983f583958a779cc13d07a52e32582d2b6",
+      "effect": "db_data",
+      "defaultBehavior": "read_only",
+      "writeOptions": [
+        "--apply + --expect=<count>"
+      ],
+      "commands": []
+    },
+    {
+      "path": "scripts/migrate-html-to-markdown.mjs",
+      "sha256": "609a943b5eabe5a944952e4ada3d5ab14e791fcb8e7fe25bc15e77c90304d07c",
+      "effect": "db_data",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [],
+      "previewOptions": [
+        "--dry-run"
+      ]
+    },
+    {
+      "path": "scripts/migrate-protected-resource-blobs.mjs",
+      "sha256": "e21c93762ee09f15fbb23c6025201f17ab67977488583d2b1731e229272108f4",
+      "effect": "blob_and_db",
+      "defaultBehavior": "read_only",
+      "writeOptions": [
+        "--apply",
+        "--delete-public"
+      ],
+      "commands": [
+        "blob:migrate-protected"
+      ]
+    },
+    {
+      "path": "scripts/migrate-rate-limit-reservations.mjs",
+      "sha256": "a7970c350e27e3f4e95918d6e813651f698faed1a9ea7f1478782adc60cf9181",
+      "effect": "db_schema",
+      "defaultBehavior": "read_only",
+      "writeOptions": [
+        "--confirm-apply"
+      ],
+      "commands": [
+        "db:migrate-rate-limit-reservations"
+      ]
+    },
+    {
+      "path": "scripts/migrate-recruitment-singleton.mjs",
+      "sha256": "5c1506e71ed1e4ab6d992a3fc8bab10acfc2e2b2064ab59857d20d96e2079e92",
+      "effect": "db_schema_and_data",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "db:migrate-recruitment-singleton"
+      ]
+    },
+    {
+      "path": "scripts/seed-admin.mjs",
+      "sha256": "5ec08f2f9f3e624fccfccf4be547be2a3ebf412541cf8df480736c1fabd2e729",
+      "effect": "seed_db",
+      "defaultBehavior": "rejects",
+      "writeOptions": [
+        "--confirm-create",
+        "--confirm-promote=<email>"
+      ],
+      "commands": [
+        "seed-admin"
+      ]
+    },
+    {
+      "path": "scripts/seed-alumni.mjs",
+      "sha256": "91cbf79078b3e095fab6060829c7a10430b50e2590357950c501953938829ce2",
+      "effect": "seed_db",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": []
+    },
+    {
+      "path": "scripts/seed-cohorts.mjs",
+      "sha256": "911836dd86f5e53067ebf5e0a35fa8519c0a1df13e292d69a110f3f809b28d31",
+      "effect": "seed_db",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": [
+        "seed-cohorts"
+      ]
+    },
+    {
+      "path": "scripts/seed-faculty.mjs",
+      "sha256": "4c07300a670c07cf14c07ccfbbde9de28351084484bebcbfbd2e3861467e74cb",
+      "effect": "seed_db",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": []
+    },
+    {
+      "path": "scripts/seed-press.mjs",
+      "sha256": "bebd3a5e38c01080e4c774af063e6b34cfb83144d39ce277b79f87ef95a35b64",
+      "effect": "seed_db",
+      "defaultBehavior": "writes",
+      "writeOptions": [],
+      "commands": []
+    }
+  ]
+}
