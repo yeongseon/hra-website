@@ -187,9 +187,18 @@ async function measure(repository, label, options) {
     const pending = await request(origin, "/mypage", cookie(changed));
     check([302,307].includes(pending.response.status) && new URL(pending.response.headers.get("location"), origin).pathname === "/pending", "PENDING_REVOKE"); result.regressions.pendingRevocation = true;
     cluster.sql(`DELETE FROM users WHERE id='${deleted.id}';`); await deniedSession(deleted); result.regressions.deletedUser = true;
+    const failurePath = `/api/academic/submissions/${academicG1Ids.active}/file/${academicG1Ids.draft}`;
+    // 정상 쿠키는 기능 게이트의 404까지 도달해야 하며 DB 장애 응답과 명확히 구분합니다.
+    const beforeDatabaseFailure = await request(origin, failurePath, cookie(actor.studentA));
+    check(beforeDatabaseFailure.response.status === 404, "DATABASE_PRECONDITION");
     cluster.sql("ALTER TABLE users RENAME TO auth_measure_users_unavailable;");
-    try { const value = await request(origin, `/api/academic/submissions/${academicG1Ids.active}/file/${academicG1Ids.draft}`, cookie(actor.studentA)); check([401,403,404].includes(value.response.status), "DATABASE_FAIL_CLOSED"); }
-    finally { cluster.sql("ALTER TABLE auth_measure_users_unavailable RENAME TO users;"); }
+    try {
+      const value = await request(origin, failurePath, cookie(actor.studentA));
+      // 장애 중에도 404가 나오면 인증 생략일 수 있으므로 정확한 인증·가용성 오류만 인정합니다.
+      const plainText = /^text\/plain(?:;|$)/i.test(value.response.headers.get("content-type") ?? "");
+      check(plainText && (value.response.status === 401 && value.body === "로그인이 필요합니다." ||
+        value.response.status === 503 && value.body === "파일을 제공할 수 없습니다. 잠시 후 다시 시도해 주세요."), "DATABASE_FAIL_CLOSED");
+    } finally { cluster.sql("ALTER TABLE auth_measure_users_unavailable RENAME TO users;"); }
     result.regressions.databaseErrorFailClosed = true;
     stage = "AGGREGATE";
     const eventPath = join(cluster.root, "auth-measurement-events.jsonl");
