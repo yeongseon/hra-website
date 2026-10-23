@@ -41,7 +41,7 @@ const validResponse = {
 describe("#272 공개 일정 OpenAPI 3.1 계약", () => {
   it("구현된 GET 경로만 추가하고 필수 year/month의 범위와 중복·미등록 key 거부를 기록한다", () => {
     expect(openapi.openapi).toBe("3.1.1");
-    expect(Object.keys(openapi.paths).sort()).toEqual(["/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}", "/api/v1/schedule"]);
+    expect(Object.keys(openapi.paths).sort()).toEqual(["/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}", "/api/v1/resources/guidebooks", "/api/v1/schedule"]);
     expect(Object.keys(openapi.paths["/api/v1/schedule"])).toEqual(["get"]);
     expect(operation.operationId).toBe("listPublicScheduleMonth");
     expect(operation.description).toMatch(/중복/);

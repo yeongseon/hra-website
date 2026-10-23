@@ -23,7 +23,7 @@ describe("#272 본인 프로필 OpenAPI 3.1 계약", () => {
   it("Web 세션 쿠키만 설명하고 query·고정 쿠키 이름·Bearer 지원을 주장하지 않는다", () => {
     expect(openapi.openapi).toBe("3.1.1");
     expect(openapi.info.description).toContain("각 경로의 설명");
-    expect(Object.keys(openapi.paths).sort()).toEqual(["/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}", "/api/v1/schedule"]);
+    expect(Object.keys(openapi.paths).sort()).toEqual(["/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}", "/api/v1/resources/guidebooks", "/api/v1/schedule"]);
     expect(Object.keys(openapi.paths["/api/v1/me"])).toEqual(["get"]);
     expect(operation.operationId).toBe("getCurrentUser");
     expect(operation.parameters).toEqual([]);
