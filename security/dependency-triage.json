@@ -37,40 +37,6 @@
       ]
     },
     {
-      "name": "@next/eslint-plugin-next",
-      "severity": "high",
-      "range": ">=14.3.0-canary.0",
-      "nodes": [
-        {
-          "path": "node_modules/@next/eslint-plugin-next",
-          "version": "16.4.2",
-          "development": true
-        }
-      ],
-      "via": [
-        {
-          "dependency": "fast-glob"
-        }
-      ]
-    },
-    {
-      "name": "@shadcn/registry",
-      "severity": "high",
-      "range": "<=0.0.0-rc-20261007105214 || >=0.1.0",
-      "nodes": [
-        {
-          "path": "node_modules/@shadcn/registry",
-          "version": "0.2.0",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "fast-glob"
-        }
-      ]
-    },
-    {
       "name": "@tailwindcss/typography",
       "severity": "moderate",
       "range": "<=0.0.0-insiders.fda8ce5 || >=0.5.5",
@@ -84,23 +50,6 @@
       "via": [
         {
           "dependency": "postcss-selector-parser"
-        }
-      ]
-    },
-    {
-      "name": "@ts-morph/common",
-      "severity": "high",
-      "range": "0.2.0 - 0.24.0 || 0.26.0 - 0.27.0",
-      "nodes": [
-        {
-          "path": "node_modules/@ts-morph/common",
-          "version": "0.27.0",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "fast-glob"
         }
       ]
     },
@@ -218,27 +167,6 @@
       ]
     },
     {
-      "name": "braces",
-      "severity": "high",
-      "range": "*",
-      "nodes": [
-        {
-          "path": "node_modules/braces",
-          "version": "3.0.3",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "source": 1240992,
-          "id": "GHSA-vfj7-8cjw-p6xm",
-          "severity": "high",
-          "range": "<=3.0.3",
-          "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns"
-        }
-      ]
-    },
-    {
       "name": "drizzle-kit",
       "severity": "moderate",
       "range": "0.19.0 - 1.0.0-beta.1-fd8bfcc",
@@ -285,55 +213,6 @@
           "severity": "low",
           "range": ">=0.27.3 <0.28.1",
           "title": "esbuild allows arbitrary file read when running the development server on Windows"
-        }
-      ]
-    },
-    {
-      "name": "eslint-config-next",
-      "severity": "high",
-      "range": ">=14.3.0-canary.0",
-      "nodes": [
-        {
-          "path": "node_modules/eslint-config-next",
-          "version": "16.4.2",
-          "development": true
-        }
-      ],
-      "via": [
-        {
-          "dependency": "@next/eslint-plugin-next"
-        }
-      ]
-    },
-    {
-      "name": "fast-glob",
-      "severity": "high",
-      "range": "*",
-      "nodes": [
-        {
-          "path": "node_modules/@shadcn/registry/node_modules/fast-glob",
-          "version": "3.3.3",
-          "development": false
-        },
-        {
-          "path": "node_modules/@ts-morph/common/node_modules/fast-glob",
-          "version": "3.3.3",
-          "development": false
-        },
-        {
-          "path": "node_modules/fast-glob",
-          "version": "3.3.1",
-          "development": true
-        },
-        {
-          "path": "node_modules/shadcn/node_modules/fast-glob",
-          "version": "3.3.3",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "micromatch"
         }
       ]
     },
@@ -406,23 +285,6 @@
       ]
     },
     {
-      "name": "micromatch",
-      "severity": "high",
-      "range": ">=0.2.0",
-      "nodes": [
-        {
-          "path": "node_modules/micromatch",
-          "version": "4.0.8",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "braces"
-        }
-      ]
-    },
-    {
       "name": "postcss-selector-parser",
       "severity": "moderate",
       "range": "<7.1.6",
@@ -444,29 +306,6 @@
       ]
     },
     {
-      "name": "shadcn",
-      "severity": "high",
-      "range": "<=0.0.0-rc-20261007105214 || >=2.0.0",
-      "nodes": [
-        {
-          "path": "node_modules/shadcn",
-          "version": "4.22.1",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "@shadcn/registry"
-        },
-        {
-          "dependency": "fast-glob"
-        },
-        {
-          "dependency": "ts-morph"
-        }
-      ]
-    },
-    {
       "name": "source-map-js",
       "severity": "high",
       "range": "1.0.0 - 1.2.1",
@@ -484,23 +323,6 @@
           "severity": "high",
           "range": ">=1.0.0 <1.2.2",
           "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets"
-        }
-      ]
-    },
-    {
-      "name": "ts-morph",
-      "severity": "high",
-      "range": "6.0.1 - 23.0.0 || 25.0.0 - 26.0.0",
-      "nodes": [
-        {
-          "path": "node_modules/ts-morph",
-          "version": "26.0.0",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "@ts-morph/common"
         }
       ]
     },
@@ -816,30 +638,6 @@
       "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
     },
     {
-      "key": "@next/eslint-plugin-next:fast-glob",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
-      "key": "@shadcn/registry:fast-glob",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
       "key": "@tailwindcss/typography:postcss-selector-parser",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -850,18 +648,6 @@
       "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
       "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
       "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
-    },
-    {
-      "key": "@ts-morph/common:fast-glob",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
       "key": "brace-expansion:1123897",
@@ -1008,18 +794,6 @@
       "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
-      "key": "braces:1240992",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns — GHSA-vfj7-8cjw-p6xm, <=3.0.3",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
       "key": "drizzle-kit:@esbuild-kit/esm-loader",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -1054,30 +828,6 @@
       "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
       "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
       "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
-    },
-    {
-      "key": "eslint-config-next:@next/eslint-plugin-next",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "@next/eslint-plugin-next 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
-      "key": "fast-glob:micromatch",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "micromatch 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
       "key": "js-yaml:1121859",
@@ -1164,18 +914,6 @@
       "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
     },
     {
-      "key": "micromatch:braces",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "braces 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
       "key": "postcss-selector-parser:1241232",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -1188,42 +926,6 @@
       "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
     },
     {
-      "key": "shadcn:@shadcn/registry",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "@shadcn/registry 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
-      "key": "shadcn:fast-glob",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "fast-glob 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
-      "key": "shadcn:ts-morph",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "ts-morph 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
       "key": "source-map-js:1241209",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -1234,18 +936,6 @@
       "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
       "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
       "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
-    },
-    {
-      "key": "ts-morph:@ts-morph/common",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-11-05",
-      "attackCondition": "@ts-morph/common 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
       "key": "undici:1121187",
