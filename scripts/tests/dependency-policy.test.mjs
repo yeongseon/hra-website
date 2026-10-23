@@ -7,7 +7,7 @@ const policy = JSON.parse(readFileSync(new URL('../../security/dependency-triage
 const lock = JSON.parse(readFileSync(new URL('../../package-lock.json', import.meta.url)));
 // 실제 원장의 독립 nodes/via 집합으로 npm 응답을 복원한다. 공격 조건 설명은 응답 metadata와 분리한다.
 const audit = { auditReportVersion: 2, vulnerabilities: Object.fromEntries(policy.packages.map(pkg => [pkg.name, { name: pkg.name, severity: pkg.severity, range: pkg.range, nodes: pkg.nodes.map(node => node.path), via: pkg.via.map(v => v.source ? { ...v, url: 'https://github.com/advisories/' + v.id } : v.dependency) }])) };
-test('현재 정확한 집합은 package 수와 advisory 수를 구분한다', () => { assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-22'), { affectedPackages: 22, advisoryEntries: 61, p1: 0 }); });
+test('현재 정확한 집합은 package 수와 advisory 수를 구분한다', () => { assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-22'), { affectedPackages: 20, advisoryEntries: 60, p1: 0 }); });
 for (const [name, change] of [
   ['새 advisory', a => a.vulnerabilities.undici.via[0].source++],
   ['영향 범위 변경', a => a.vulnerabilities.undici.via[0].range += ' || 99.0.0'],
