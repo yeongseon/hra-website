@@ -1,4 +1,4 @@
-# 인증에 영향을 주는 변경만 합성 계정·격리 DB에서 기준 commit과 비교합니다.
+# 인증 변경은 합성 계정·격리 DB에서 검증합니다. 동일 lock일 때만 기준 commit과 비용을 비교합니다.
 name: 인증 비용·권한 회수 회귀
 
 on:
@@ -15,6 +15,8 @@ on:
       - scripts/measure-authentication.mjs
       - scripts/tests/auth-measurement*.test.mjs
       - tests/support/auth-measurement-*.mjs
+      - packages/contracts/package.json
+      - packages/contracts/src/identity.ts
       - src/lib/auth*.ts
       - src/lib/request-session.ts
       - src/lib/admin.ts
@@ -31,7 +33,7 @@ concurrency:
 
 jobs:
   measure:
-    name: 전후 비용 · 200개 계정 · 즉시 권한 회수
+    name: 조건부 비용 비교 · 200개 계정 · 즉시 권한 회수
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -58,11 +60,23 @@ jobs:
         run: |
           node --test scripts/tests/auth-measurement*.test.mjs
           npx vitest run tests/unit/oauth-provider-boundary.test.ts tests/unit/auth-signin-io.test.ts tests/unit/auth-jwt-session.test.ts
-      - name: 같은 의존성으로 기준·현재 production 빌드 비교
+      - name: 동일 lock이면 전후 비교, 변경됐으면 현재 인증 경계 검증
         env:
           # 표현식은 셸 코드로 보간하지 않고 인수로만 전달하며 실행기가 SHA를 검증합니다.
           BASELINE_REF: ${{ github.event.pull_request.base.sha || inputs.baseline_ref }}
-        run: npm run verify:auth-measurement -- --compare --baseline-ref "$BASELINE_REF" --output test-results/authentication-measurement.json
+        run: |
+          # 기준 SHA와 조상 관계는 단일 실행 분기에서도 먼저 검증해 잘못된 입력이 비교를 우회하지 못하게 합니다.
+          [[ "$BASELINE_REF" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$BASELINE_REF" HEAD
+          if git diff --quiet "$BASELINE_REF" HEAD -- package-lock.json; then
+            npm run verify:auth-measurement -- --compare --baseline-ref "$BASELINE_REF" --output test-results/authentication-measurement.json
+          else
+            status=$?
+            test "$status" -eq 1
+            # 서로 다른 의존성의 비용 수치를 비교하지 않고 현재 빌드의 권한 회수·실패 차단만 실행합니다.
+            echo AUTH_MEASURE_CURRENT_ONLY_LOCK_CHANGED
+            npm run verify:auth-measurement -- --single --output test-results/authentication-measurement.json
+          fi
       - name: 공개 산출물의 허용 필드·민감 정보 위험 검사
         id: artifact_safety
         if: always()
