@@ -84,6 +84,11 @@ jobs:
         timeout-minutes: 10
         run: node --test --test-concurrency=1 scripts/tests/db-migration-*.test.mjs tests/integration/db-migration-local.test.mjs
 
+      - name: 관리 CLI 계정 연결·비공개 파일 보호 회귀
+        # 소유 임시 PG와 합성 Blob 저장소만 사용하고 외부 서비스 호출을 차단합니다.
+        timeout-minutes: 5
+        run: node --test scripts/tests/management-cli-safety.test.mjs
+
       - name: 단위 테스트
         run: npm test
 

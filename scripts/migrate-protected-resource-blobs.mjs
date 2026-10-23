@@ -149,8 +149,14 @@ if (apply) {
   if (publicRows.length > 0) throw new Error("공개 자료 참조가 남아 원본을 삭제할 수 없습니다.");
   // 기존 참조가 모두 살아 있는 비공개 사본을 가리키는지 먼저 확인합니다.
   for (const row of privateRows) {
-    const stored = await head(row.url, { token: privateToken });
-    if (stored.url !== row.url || stored.size < 1) {
+    let stored;
+    try {
+      // SDK 오류에는 보호 URL이나 저장소 정보가 담길 수 있으므로 고정 오류로 바꿉니다.
+      stored = await head(row.url, { token: privateToken });
+    } catch {
+      throw new Error("비공개 사본을 확인할 수 없어 공개 원본을 보존합니다.");
+    }
+    if (!stored || stored.url !== row.url || !Number.isSafeInteger(stored.size) || stored.size < 1) {
       throw new Error("비공개 사본을 확인할 수 없어 공개 원본을 보존합니다.");
     }
   }
