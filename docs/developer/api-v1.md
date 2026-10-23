@@ -1,6 +1,6 @@
 # API v1 현재 제공 범위
 
-공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`, `GET /api/v1/notices/{id}`, `GET /api/v1/me`, `GET /api/v1/schedule`입니다. 이후 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
+공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`, `GET /api/v1/notices/{id}`, `GET /api/v1/me`, `GET /api/v1/schedule`, `GET /api/v1/resources/guidebooks`입니다. 이후 나머지 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
 
 ## 본인 프로필
 
@@ -39,6 +39,14 @@ OpenAPI의 JSON 표현은 [OpenAPI 3.1.1 명세](https://spec.openapis.org/oas/v
 `GET /api/v1/notices/{id}`는 UUID 경로 ID가 가리키는 **게시된 공지**만 반환합니다. 성공 응답은 `{ notice: { id, title, content, viewCount, createdAt } }`로 고정합니다. `content`는 공개 Markdown 원문이고 `createdAt`은 UTC 밀리초 ISO 문자열입니다. 내부 작성자 ID, 게시 상태, 이전·다음글, 그 밖의 DB 열은 API 응답에 포함하지 않습니다. Web 상세 화면은 같은 서비스에서 이전·다음글을 받아 표시합니다.
 
 형식이 틀린 ID나 미지원 query는 400 `INVALID_INPUT`, 없는 공지·초안은 404 `NOT_FOUND`, 조회 저장소 장애는 503 `UNAVAILABLE`입니다. 모든 응답은 `Cache-Control: no-store`이며 오류 원문·SQL을 노출하지 않습니다. 성공 응답을 보낸 뒤 `after()` 수명주기에서 조회수를 원자적으로 1 증가시키므로 응답의 `viewCount`는 갱신 전 값일 수 있습니다. 요청당 갱신이며 방문자 중복 제거나 정확히 한 번 집계는 보장하지 않습니다.
+
+## 승인 회원 가이드북 목록
+
+`GET /api/v1/resources/guidebooks`는 현재 Auth.js Web 세션으로 승인된 `ADMIN`, `FACULTY`, `MEMBER`에게 가이드북 **메타데이터만** 제공합니다. Route 안에서 세션을 확인하고 Application Service가 현재 계정 행과 역할을 다시 대조합니다. 익명·삭제 또는 역할이 바뀐 계정은 401 `UNAUTHENTICATED`, 현재 승인 대기 계정은 403 `FORBIDDEN`입니다. Auth.js가 DB 오류를 무세션으로 바꾸는 경우는 `/api/v1/me`와 동일하게 401이 될 수 있습니다.
+
+`page`(기본 1)와 `pageSize`(기본 10, 최대 50)만 받으며 중복·미등록 key와 PostgreSQL offset 범위 밖 값은 400 `INVALID_INPUT`으로 거부합니다. 범위 밖 페이지는 요청 번호를 유지한 빈 `guidebooks` 배열과 공통 `page` 메타를 반환합니다. 목록은 작성 시각·ID 역순으로 안정 정렬합니다. 각 항목은 `id`·`title` 두 필드뿐이고 원본 파일 URL·파일명·Blob 토큰·시간대 없는 `createdAt`은 보내지 않습니다. 실제 파일은 기존 인증 다운로드 경로에서만 서버가 읽습니다. 모든 응답은 `Cache-Control: private, no-store`와 `Vary: Cookie`이며 저장소 장애는 원문 없는 503 `UNAVAILABLE`입니다.
+
+기존 `/resources` 화면은 기수·사용자 정보와 다른 자료 유형을 함께 조회하는 legacy Page라 이 API 작업에서 일부 쿼리만 옮기지 않았습니다. #271의 자료실 화면 전환에서 공동 인가·강의자료 SQL 필터·전체 정렬을 보존하며 이 서비스를 재사용할 수 있습니다.
 
 ## 계약 변경 검사
 

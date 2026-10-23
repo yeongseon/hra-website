@@ -420,3 +420,41 @@ export const apiV1ScheduleResponseSchema = z
   })
   .strict();
 export type ApiV1ScheduleResponse = z.infer<typeof apiV1ScheduleResponseSchema>;
+
+/**
+ * 회원 가이드북 목록은 page와 pageSize만 허용합니다.
+ * 기본값은 공통 목록 계약과 같고, 안전한 OFFSET 범위는 Route에서 추가 검증합니다.
+ */
+export const apiV1GuidebookListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(API_V1_MAX_PAGE_SIZE).default(API_V1_DEFAULT_PAGE_SIZE),
+  })
+  .strict();
+export type ApiV1GuidebookListQuery = z.infer<typeof apiV1GuidebookListQuerySchema>;
+
+/**
+ * 승인 회원에게 노출하는 가이드북 최소 메타데이터입니다.
+ * 작성시각과 비공개 Blob URL·파일명·토큰은 반환하지 않습니다.
+ */
+export const apiV1GuidebookSummarySchema = z
+  .object({
+    id: apiV1UuidSchema,
+    title: z.string().min(1),
+  })
+  .strict();
+export type ApiV1GuidebookSummary = z.infer<typeof apiV1GuidebookSummarySchema>;
+
+/** DB 조회 결과에서 회원에게 허용된 ID·제목만 선택합니다. */
+export function toApiV1GuidebookSummary(input: { id: string; title: string }): ApiV1GuidebookSummary {
+  return apiV1GuidebookSummarySchema.parse({ id: input.id, title: input.title });
+}
+
+/** 승인 회원 가이드북 GET 응답은 최대 50건과 공통 페이지 정보만 포함합니다. */
+export const apiV1GuidebookListResponseSchema = z
+  .object({
+    guidebooks: z.array(apiV1GuidebookSummarySchema).max(API_V1_MAX_PAGE_SIZE),
+    page: apiV1PageMetaSchema,
+  })
+  .strict();
+export type ApiV1GuidebookListResponse = z.infer<typeof apiV1GuidebookListResponseSchema>;
