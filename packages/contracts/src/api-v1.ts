@@ -289,6 +289,18 @@ export const apiV1NoticeSummarySchema = z
 export type ApiV1NoticeSummary = z.infer<typeof apiV1NoticeSummarySchema>;
 
 /**
+ * 공개 공지 목록 GET 응답은 허용된 DTO 배열과 공통 페이지 정보만 전달합니다.
+ * 요청한 페이지가 전체 범위를 넘으면 빈 배열과 요청 페이지 번호를 반환합니다.
+ */
+export const apiV1NoticeListResponseSchema = z
+  .object({
+    notices: z.array(apiV1NoticeSummarySchema).max(API_V1_MAX_PAGE_SIZE),
+    page: apiV1PageMetaSchema,
+  })
+  .strict();
+export type ApiV1NoticeListResponse = z.infer<typeof apiV1NoticeListResponseSchema>;
+
+/**
  * 공지사항 행과 발췌 문자열에서 공개 목록 DTO 필드만 선택합니다.
  */
 export function toApiV1NoticeSummary(input: {

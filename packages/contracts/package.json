@@ -15,7 +15,8 @@
     "./identity": {
       "types": "./src/identity.ts",
       "default": "./src/identity.ts"
-    }
+    },
+    "./openapi.json": "./openapi.json"
   },
   "dependencies": {
     "zod": "^4.3.6"

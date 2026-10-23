@@ -16,6 +16,12 @@ export type NoticeSummary = {
   viewCount: number;
 };
 
+/** API 발췌문 작성에 필요한 본문·수정 시각만 추가한 서버 내부 조회 행입니다. */
+export type NoticeApiRow = NoticeSummary & {
+  content: string;
+  updatedAt: Date;
+};
+
 /** 개수와 목록에 같은 게시 상태·제목 검색 조건을 적용합니다. */
 function publishedFilter(status: "PUBLISHED", query: string) {
   return query
@@ -46,6 +52,30 @@ export async function listNotices(
       pinned: notices.pinned,
       createdAt: notices.createdAt,
       viewCount: notices.viewCount,
+    })
+    .from(notices)
+    .where(publishedFilter(status, query))
+    .orderBy(desc(notices.pinned), desc(notices.createdAt), desc(notices.id))
+    .limit(limit)
+    .offset(offset);
+}
+
+/** API 목록은 본문과 수정 시각을 한 번에 읽고 클라이언트 반환 전에 서비스가 본문을 제거합니다. */
+export async function listNoticeApiRows(
+  status: "PUBLISHED",
+  query: string,
+  limit: number,
+  offset: number,
+): Promise<readonly NoticeApiRow[]> {
+  return db
+    .select({
+      id: notices.id,
+      title: notices.title,
+      content: notices.content,
+      pinned: notices.pinned,
+      viewCount: notices.viewCount,
+      createdAt: notices.createdAt,
+      updatedAt: notices.updatedAt,
     })
     .from(notices)
     .where(publishedFilter(status, query))
