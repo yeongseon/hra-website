@@ -1,12 +1,12 @@
+/**
+ * 공개 수료생 이야기 Page의 카드·링크·이미지 대체색을 표시합니다.
+ * 목록 건수와 짧은 평문 요약 조회는 Application Service/Repository에 맡깁니다.
+ */
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { count, desc } from "drizzle-orm";
 import { ChevronRight } from "lucide-react";
-import { db } from "@/lib/db";
-import { alumniStories as alumniStoriesTable } from "@/lib/db/schema";
-import { parseListPage } from "@/lib/query-params";
-import { alumniStorySummary } from "@/features/alumni/summary";
+import { listPublicAlumniStories } from "@/features/alumni/public-list/service";
 
 export const dynamic = "force-dynamic";
 
@@ -36,25 +36,9 @@ export default async function AlumniPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  // 전체 행 대신 개수와 현재 페이지의 행만 조회한다.
-  const [{ total: totalCount }] = await db.select({ total: count() }).from(alumniStoriesTable);
-  const ITEMS_PER_PAGE = 15;
   const params = await searchParams;
-  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
-  const currentDbStories = await db
-    .select({
-      id: alumniStoriesTable.id,
-      name: alumniStoriesTable.name,
-      quote: alumniStoriesTable.quote,
-      summary: alumniStorySummary,
-      title: alumniStoriesTable.title,
-      imageUrl: alumniStoriesTable.imageUrl,
-    })
-    .from(alumniStoriesTable)
-    // 고정된 항목 먼저, 그 다음 작성일 최신순
-    .orderBy(desc(alumniStoriesTable.pinned), desc(alumniStoriesTable.createdAt), desc(alumniStoriesTable.id))
-    .limit(ITEMS_PER_PAGE)
-    .offset(startIndex);
+  const { items: currentDbStories, totalCount, currentPage, totalPages, startIndex } =
+    await listPublicAlumniStories(params.page);
 
   const stories: AlumniStoryViewModel[] = currentDbStories.map((story, index) => ({
     id: story.id,
