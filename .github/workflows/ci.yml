@@ -73,6 +73,11 @@ jobs:
           test -x "$pg_bin/pg_ctl"
           printf 'HRA_TEST_PG_BIN=%s\n' "$pg_bin" >> "$GITHUB_ENV"
 
+      - name: 로컬 migration 원자성·경합·연결 유실 복구
+        # 실제 임시 PG만 소유하는 factory로 검증하며 운영 URL·승인 입력을 받지 않습니다.
+        timeout-minutes: 10
+        run: node --test --test-concurrency=1 scripts/tests/db-migration-*.test.mjs tests/integration/db-migration-local.test.mjs
+
       - name: 단위 테스트
         run: npm test
 
