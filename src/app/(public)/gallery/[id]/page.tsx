@@ -3,20 +3,17 @@
  *
  * 역할:
  * - 선택한 갤러리 앨범의 제목, 설명, 이미지 목록을 보여줍니다.
- * - DB에 저장된 이미지 순서를 그대로 유지해 공개 페이지에 노출합니다.
+ * - Service/Repository의 이미지 순서와 응답 후 조회수 갱신을 사용합니다.
  */
 
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { asc, eq, sql } from "drizzle-orm";
 import { ArrowLeft, ExternalLink, ImageIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { z } from "zod/v4";
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/lib/db";
-import { galleries, galleryImages } from "@/lib/db/schema";
+import { getPublicGalleryDetail, incrementPublicGalleryViewCount } from "@/features/gallery/detail/service";
 import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
@@ -25,25 +22,9 @@ type GalleryDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-async function getGalleryById(id: string) {
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    return null;
-  }
-
-  return db.query.galleries.findFirst({
-    where: eq(galleries.id, parsedId.data),
-    with: {
-      images: {
-        orderBy: [asc(galleryImages.order), asc(galleryImages.createdAt)],
-      },
-    },
-  });
-}
-
 export async function generateMetadata({ params }: GalleryDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const gallery = await getGalleryById(id);
+  const gallery = await getPublicGalleryDetail(id);
 
   if (!gallery) {
     return { title: "갤러리" };
@@ -72,7 +53,7 @@ export async function generateMetadata({ params }: GalleryDetailPageProps): Prom
 
 export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
   const { id } = await params;
-  const gallery = await getGalleryById(id);
+  const gallery = await getPublicGalleryDetail(id);
 
   if (!gallery) {
     notFound();
@@ -82,10 +63,7 @@ export default async function GalleryDetailPage({ params }: GalleryDetailPagePro
   // 요청별 원자 갱신이며 방문자 중복 제거·정확히 한 번 집계는 보장하지 않는다.
   after(async () => {
     try {
-      await db
-        .update(galleries)
-        .set({ viewCount: sql`${galleries.viewCount} + 1` })
-        .where(eq(galleries.id, gallery.id));
+      await incrementPublicGalleryViewCount(gallery.id);
     } catch (err: unknown) {
       logServerError("public/gallery/viewCount", err, { id: gallery.id });
     }
