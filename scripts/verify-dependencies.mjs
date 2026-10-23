@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyDependencyPolicy } from './_lib/dependency-policy.mjs';
+import { dependencySnapshot, verifyDependencyPolicy } from './_lib/dependency-policy.mjs';
 let temporary;
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { if (temporary) rmSync(temporary, { recursive: true, force: true }); process.exit(1); });
 try {
@@ -19,6 +19,17 @@ try {
   if (audit.error) throw new Error('DEPENDENCY_AUDIT_FAILED');
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
   const policy = JSON.parse(readFileSync(new URL('../security/dependency-triage.json', import.meta.url), 'utf8'));
+  // 임시 진단: 공개 패키지·권고 변경 항목만 표시하고 기존 실패 차단은 유지합니다.
+  const snapshot = dependencySnapshot(audit, lock);
+  const recorded = new Map(policy.packages.map((entry) => [entry.name, entry]));
+  const changes = snapshot
+    .filter((entry) => JSON.stringify(entry) !== JSON.stringify(recorded.get(entry.name)))
+    .map((entry) => ({ name: entry.name, observed: entry, recorded: recorded.get(entry.name) ?? null }));
+  const removed = policy.packages.filter((entry) => !snapshot.some((item) => item.name === entry.name))
+    .map((entry) => ({ name: entry.name, recorded: entry }));
+  if (changes.length || removed.length) {
+    console.error('DEPENDENCY_PUBLIC_DIFF ' + JSON.stringify({ changes, removed }));
+  }
   console.log(JSON.stringify(verifyDependencyPolicy(audit, lock, policy)));
 } catch (error) {
   console.error(error instanceof Error && /^DEPENDENCY_[A-Z_]+$/.test(error.message) ? error.message : 'DEPENDENCY_CHECK_FAILED');
