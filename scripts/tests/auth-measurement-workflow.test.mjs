@@ -9,10 +9,12 @@ import yaml from "js-yaml";
 
 const workflow = yaml.load(readFileSync(new URL("../../.github/workflows/authentication-measurement.yml", import.meta.url), "utf8"));
 
-test("계약 identity와 package manifest 변경은 인증 비용·권한 회수 workflow를 실행한다", () => {
+test("계약 identity·본인 API 변경은 인증 비용·권한 회수 workflow를 실행한다", () => {
   const paths = workflow.on.pull_request.paths;
   assert.ok(paths.includes("packages/contracts/src/identity.ts"));
   assert.ok(paths.includes("packages/contracts/package.json"));
+  assert.ok(paths.includes("src/app/api/v1/me/route.ts"));
+  assert.ok(paths.includes("src/features/users/me/*.ts"));
 });
 
 test("동일 lockfile만 전후 비교하고 변경 시 단독 검증을 명시한다", () => {

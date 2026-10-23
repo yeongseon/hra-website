@@ -17,6 +17,8 @@ on:
       - tests/support/auth-measurement-*.mjs
       - packages/contracts/package.json
       - packages/contracts/src/identity.ts
+      - src/app/api/v1/me/route.ts
+      - src/features/users/me/*.ts
       - src/lib/auth*.ts
       - src/lib/request-session.ts
       - src/lib/admin.ts
