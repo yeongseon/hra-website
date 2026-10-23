@@ -1,9 +1,9 @@
+/**
+ * 공개 교수진 Page의 카테고리 표시와 메타데이터를 구성합니다.
+ * 조회·정렬은 교수진 Application Service/Repository에 맡깁니다.
+ */
 import type { Metadata } from "next";
-import { asc } from "drizzle-orm";
-// 교수진은 카테고리 내에서 관리자가 지정한 순서, 이름순으로 표시합니다.
-
-import { db } from "@/lib/db";
-import { faculty } from "@/lib/db/schema";
+import { listPublicFaculty, type PublicFaculty } from "@/features/faculty/public-list/service";
 import { FacultyTabs } from "./_components/faculty-tabs";
 
 export const metadata: Metadata = {
@@ -13,33 +13,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-type FacultyCategory = "CLASSICS" | "BUSINESS" | "LECTURE";
-
-type FacultyMember = {
-  id: string;
-  name: string;
-  category: FacultyCategory;
-  currentPosition: string | null;
-  formerPosition: string | null;
-  imageUrl: string | null;
-  order: number;
-};
+type FacultyCategory = PublicFaculty["category"];
 
 export default async function FacultyPage() {
-  const allFaculty = await db
-    .select({
-      id: faculty.id,
-      name: faculty.name,
-      category: faculty.category,
-      currentPosition: faculty.currentPosition,
-      formerPosition: faculty.formerPosition,
-      imageUrl: faculty.imageUrl,
-      order: faculty.order,
-    })
-    .from(faculty)
-    .orderBy(asc(faculty.order), asc(faculty.name));
+  const allFaculty = await listPublicFaculty();
 
-  const displayFacultyByCategory: Record<FacultyCategory, FacultyMember[]> = {
+  const displayFacultyByCategory: Record<FacultyCategory, PublicFaculty[]> = {
     CLASSICS: allFaculty.filter((m) => m.category === "CLASSICS"),
     BUSINESS: allFaculty.filter((m) => m.category === "BUSINESS"),
     LECTURE: allFaculty.filter((m) => m.category === "LECTURE"),
