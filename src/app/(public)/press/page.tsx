@@ -7,10 +7,7 @@
  */
 
 import type { Metadata } from "next";
-import { asc, count, desc } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { pressArticles } from "@/lib/db/schema";
-import { parseListPage } from "@/lib/query-params";
+import { listPublicPressArticles } from "@/features/press/public-list/service";
 import { formatKstDate } from "@/lib/date-time";
 import { PressLink } from "./_components/press-link";
 
@@ -32,18 +29,10 @@ export default async function PressPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  // 페이지 범위를 전체 건수로 보정한 뒤 필요한 15행만 가져온다.
-  const [{ total: totalCount }] = await db.select({ total: count() }).from(pressArticles);
-  const ITEMS_PER_PAGE = 15;
   const params = await searchParams;
-  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
-  const currentArticles = await db
-    .select()
-    .from(pressArticles)
-    // 관리자가 드래그앤드롭으로 설정한 order 순서대로 표시, 동일 order는 게시일 최신순
-    .orderBy(asc(pressArticles.order), desc(pressArticles.publishedAt), desc(pressArticles.id))
-    .limit(ITEMS_PER_PAGE)
-    .offset(startIndex);
+  // 전체 건수·페이지 보정·표시 열 조회는 같은 Application Service에 맡깁니다.
+  const { currentArticles, totalCount, currentPage, totalPages, startIndex } =
+    await listPublicPressArticles(params.page);
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
