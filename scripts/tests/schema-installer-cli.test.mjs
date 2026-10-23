@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createQaPostgres } from '../../tests/support/resource-qa-postgres.mjs';
-import { qaDatabaseUrl } from '../../tests/support/neon-psql-transport.mjs';
+import { qaSchemaOperatorDatabaseUrl as qaDatabaseUrl, createPsqlTransport, qaDatabaseUrl as bootstrapQaDatabaseUrl } from '../../tests/support/neon-psql-transport.mjs';
 
 const postgresBin = process.env.HRA_TEST_PG_BIN;
 if (!postgresBin) throw new Error('SCHEMA_INSTALLER_TEST_PG_REQUIRED');
@@ -21,13 +21,18 @@ function fixture(t, target, { column = '', schemaOwner = 'direct', tableOwner = 
   const root = mkdtempSync(join(tmpdir(), 'hra-schema-installer-')); let cluster;
   t.after(() => { try { cluster?.close(); } finally { rmSync(root, { recursive: true, force: true }); } });
   cluster = createQaPostgres(postgresBin);
-  cluster.sql(`CREATE TABLE public.${target.table}(id integer PRIMARY KEY,name text NOT NULL${column ? `,${target.column} ${column}` : ''});
+  // PG16 bootstrap 계정은 강등할 수 없습니다. 관리·관측에만 남기고 실제 CLI는 별도 로그인 역할을 씁니다.
+  cluster.sql(`CREATE ROLE hra_schema_operator LOGIN NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS;
+    GRANT CONNECT ON DATABASE hra_resource_qa TO hra_schema_operator;
+    CREATE TABLE public.${target.table}(id integer PRIMARY KEY,name text NOT NULL${column ? `,${target.column} ${column}` : ''});
     INSERT INTO public.${target.table}(id,name${column ? `,${target.column}` : ''}) VALUES(1,'합성 보존 행'${column ? `,${column.startsWith('text') ? "'37'" : column.includes('DEFAULT NULL') ? 'NULL' : value}` : ''});
     CREATE ROLE schema_other NOLOGIN;
-    ${decoySchema ? `CREATE SCHEMA decoy;CREATE TABLE decoy.${target.table}(id integer PRIMARY KEY);ALTER ROLE hra_resource_qa SET search_path=decoy,public;` : ''}
-    ${tableOwner === 'other' ? `ALTER TABLE public.${target.table} OWNER TO schema_other;GRANT ALL ON public.${target.table} TO hra_resource_qa;` : ''}
-    ${schemaOwner === 'database-owner' || schemaOwner === 'foreign-database-owner' ? 'ALTER SCHEMA public OWNER TO pg_database_owner;' : schemaOwner === 'other' ? 'ALTER SCHEMA public OWNER TO schema_other;' : ''}
-    ${schemaOwner === 'foreign-database-owner' ? 'ALTER DATABASE hra_resource_qa OWNER TO schema_other;GRANT CONNECT ON DATABASE hra_resource_qa TO hra_resource_qa;GRANT USAGE ON SCHEMA public TO hra_resource_qa;' : ''}
+    ALTER TABLE public.${target.table} OWNER TO hra_schema_operator;
+    ${decoySchema ? `CREATE SCHEMA decoy;CREATE TABLE decoy.${target.table}(id integer PRIMARY KEY);ALTER ROLE hra_schema_operator SET search_path=decoy,public;` : ''}
+    ${tableOwner === 'other' ? `ALTER TABLE public.${target.table} OWNER TO schema_other;GRANT ALL ON public.${target.table} TO hra_schema_operator;` : ''}
+    ${schemaOwner === 'database-owner' || schemaOwner === 'foreign-database-owner' ? 'ALTER SCHEMA public OWNER TO pg_database_owner;' : schemaOwner === 'other' ? 'ALTER SCHEMA public OWNER TO schema_other;' : 'ALTER SCHEMA public OWNER TO hra_schema_operator;'}
+    ${schemaOwner === 'database-owner' ? 'ALTER DATABASE hra_resource_qa OWNER TO hra_schema_operator;' : schemaOwner === 'foreign-database-owner' ? 'ALTER DATABASE hra_resource_qa OWNER TO schema_other;' : ''}
+    GRANT USAGE ON SCHEMA public TO hra_schema_operator;
     ${postDdlFault ? `CREATE FUNCTION public.invalidate_schema_cli() RETURNS event_trigger LANGUAGE plpgsql AS $fault$
       BEGIN
         IF pg_catalog.current_setting('hra.schema_cli_fault',true)='on' THEN RETURN; END IF;
@@ -35,10 +40,10 @@ function fixture(t, target, { column = '', schemaOwner = 'direct', tableOwner = 
         EXECUTE 'ALTER TABLE ONLY public.${target.table} ALTER COLUMN ${target.column} DROP NOT NULL';
       END;$fault$;
       CREATE EVENT TRIGGER schema_cli_fault ON ddl_command_end WHEN TAG IN ('ALTER TABLE') EXECUTE FUNCTION public.invalidate_schema_cli();` : ''}
-    ALTER ROLE hra_resource_qa NOSUPERUSER NOCREATEROLE NOCREATEDB NOREPLICATION NOBYPASSRLS;`);
+    `);
   const capture = join(root, 'counts.json'), preload = join(root, 'preload.mjs');
   const transport = pathToFileURL(resolve('tests/support/neon-psql-transport.mjs')).href;
-  writeFileSync(preload, `import{writeFileSync}from'node:fs';import{createPsqlTransport,qaDatabaseUrl,qaNeonEndpoint}from ${JSON.stringify(transport)};
+  writeFileSync(preload, `import{writeFileSync}from'node:fs';import{createPsqlTransport,qaSchemaOperatorDatabaseUrl as qaDatabaseUrl,qaNeonEndpoint}from ${JSON.stringify(transport)};
 const execute=createPsqlTransport({...process.env,DATABASE_URL:qaDatabaseUrl});const counts={requests:0,blocked:0,errors:0,hasSignal:false};const save=()=>writeFileSync(${JSON.stringify(capture)},JSON.stringify(counts));save();
 globalThis.fetch=async(input,options={})=>{counts.requests++;counts.hasSignal=options.signal instanceof AbortSignal;save();const url=input instanceof Request?input.url:String(input),headers=new Headers(options.headers);
 if(url!==qaNeonEndpoint||headers.get('Neon-Connection-String')!==qaDatabaseUrl){counts.blocked++;save();throw new Error('SCHEMA_TEST_EXTERNAL_DENIED');}
@@ -46,7 +51,7 @@ try{if(${errorResponse})throw new Error('SYNTHETIC_PRIVATE_DB_URL_SQL');const pa
 catch{counts.errors++;save();return Response.json({message:'SYNTHETIC_PRIVATE_DB_URL_SQL',code:'P0001'},{status:400});}};`);
   const run = (args = [], url = qaDatabaseUrl) => {
     const child = spawnSync(process.execPath, ['--import', preload, target.file, ...args], { encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024,
-      env: { PATH: process.env.PATH, HOME: process.env.HOME, ...cluster.environment, DATABASE_URL: url } });
+      env: { PATH: process.env.PATH, HOME: process.env.HOME, ...cluster.environment, DATABASE_URL: url, PGUSER: 'hra_schema_operator', PGPASSWORD: 'test-only' } });
     const counts = existsSync(capture) ? JSON.parse(readFileSync(capture, 'utf8')) : null;
     return { ...child, counts };
   };
@@ -64,7 +69,7 @@ for (const target of targets) {
 }
 
 function safeOutput(result) {
-  for (const marker of ['SYNTHETIC_PRIVATE_DB_URL_SQL', qaDatabaseUrl, 'test-only', 'hra_resource_qa', '합성 보존 행']) assert.equal((result.stdout + result.stderr).includes(marker), false);
+  for (const marker of ['SYNTHETIC_PRIVATE_DB_URL_SQL', qaDatabaseUrl, 'test-only', 'hra_resource_qa', 'hra_schema_operator', '합성 보존 행']) assert.equal((result.stdout + result.stderr).includes(marker), false);
 }
 for (const target of targets) {
   test(`${target.column}: unknown·중복 인자는 DB 접속 없이 거부`, t => {
@@ -81,7 +86,18 @@ for (const target of targets) {
   });
   test(`${target.column}: 비super 소유 역할의 명시 적용만 한 컬럼을 추가하고 재실행 가능`, t => {
     const app = fixture(t, target, { decoySchema: true });
-    assert.equal(app.cluster.sql("SELECT NOT rolsuper AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls FROM pg_catalog.pg_roles WHERE rolname=current_user;"), 't');
+    assert.equal(app.cluster.sql("SELECT NOT rolsuper AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls FROM pg_catalog.pg_roles WHERE rolname='hra_schema_operator';"), 't');
+    assert.equal(app.cluster.sql("SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname=current_user;"), 't');
+    // 두 고정 URL/로그인 역할 조합만 허용하고 서로 바꾼 계정·외부 URL은 관측 전에 거부합니다.
+    const operatorEnvironment = { ...app.cluster.environment, DATABASE_URL: qaDatabaseUrl, PGUSER: 'hra_schema_operator', PGPASSWORD: 'test-only' };
+    assert.doesNotThrow(() => createPsqlTransport(app.cluster.environment));
+    assert.doesNotThrow(() => createPsqlTransport(operatorEnvironment));
+    for (const invalidEnvironment of [
+      { ...operatorEnvironment, PGUSER: 'hra_resource_qa' },
+      { ...operatorEnvironment, DATABASE_URL: bootstrapQaDatabaseUrl },
+      { ...operatorEnvironment, DATABASE_URL: qaDatabaseUrl.replace('resource-qa.invalid', 'other.invalid') },
+    ]) assert.throws(() => createPsqlTransport(invalidEnvironment), /격리 PostgreSQL 실행 범위/);
+
     for (let index = 0; index < 2; index++) {
       const result = app.run(['--confirm-apply']); assert.equal(result.status, 0); assert.equal(result.counts.requests, 1); assert.equal(result.counts.blocked, 0); assert.equal(result.counts.hasSignal, true); assert.equal(app.columnExists(), 't'); safeOutput(result);
     }
@@ -113,7 +129,7 @@ for (const target of targets) {
   }
   test(`${target.column}: 현재 DB owner의 pg_database_owner schema는 허용`, t => {
     const app = fixture(t, target, { schemaOwner: 'database-owner' });
-    assert.equal(app.cluster.sql("SELECT pg_catalog.pg_has_role(current_user,'pg_database_owner','MEMBER') AND (SELECT oid FROM pg_catalog.pg_roles WHERE rolname=current_user)=(SELECT datdba FROM pg_catalog.pg_database WHERE datname=pg_catalog.current_database());"), 't');
+    assert.equal(app.cluster.sql("SELECT pg_catalog.pg_has_role('hra_schema_operator','pg_database_owner','MEMBER') AND (SELECT oid FROM pg_catalog.pg_roles WHERE rolname='hra_schema_operator')=(SELECT datdba FROM pg_catalog.pg_database WHERE datname=pg_catalog.current_database());"), 't');
     const result = app.run(['--confirm-apply']); assert.equal(result.status, 0); assert.equal(app.columnExists(), 't'); safeOutput(result);
   });
   for (const schemaOwner of ['other', 'foreign-database-owner']) {

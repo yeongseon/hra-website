@@ -11,6 +11,8 @@ import { join } from "node:path";
 // Neon 1.2의 기본 application_name 추가로 정확한 연결 헤더 검사가 달라지지 않도록 명시합니다.
 // 합성 QA 주소만 바꾸며, 외부 연결·다른 DB를 거부하는 기존 전체 문자열 비교는 유지합니다.
 export const qaDatabaseUrl = "postgresql://hra_resource_qa:test-only@ep-resource-qa.resource-qa.invalid/hra_resource_qa?application_name=hra-resource-qa";
+// schema installer는 bootstrap 관리 계정과 분리된 실제 비슈퍼유저 로그인만 사용합니다.
+export const qaSchemaOperatorDatabaseUrl = "postgresql://hra_schema_operator:test-only@ep-resource-qa.resource-qa.invalid/hra_resource_qa?application_name=hra-resource-qa";
 // 설치된 Neon 클라이언트는 첫 DNS 라벨을 api로 바꿔 HTTP 엔드포인트를 만듭니다.
 export const qaNeonEndpoint = "https://api.resource-qa.invalid/sql";
 
@@ -108,8 +110,10 @@ export function bindParameters(query, params) {
 /** 임시 클러스터의 일치하는 표식·소켓·DB 이름을 확인한 뒤에만 psql을 실행합니다. */
 export function createPsqlTransport(environment) {
   const root = environment.HRA_RESOURCE_QA_ROOT;
-  if (!root || !environment.HRA_TEST_PG_BIN || environment.DATABASE_URL !== qaDatabaseUrl ||
-      environment.PGDATABASE !== "hra_resource_qa" || environment.PGUSER !== "hra_resource_qa" ||
+  const exactQaIdentity = environment.DATABASE_URL === qaDatabaseUrl && environment.PGUSER === "hra_resource_qa";
+  const exactOperatorIdentity = environment.DATABASE_URL === qaSchemaOperatorDatabaseUrl && environment.PGUSER === "hra_schema_operator";
+  if (!root || !environment.HRA_TEST_PG_BIN || !(exactQaIdentity || exactOperatorIdentity) ||
+      environment.PGDATABASE !== "hra_resource_qa" ||
       environment.PGSSLMODE !== "disable") throw new Error("격리 PostgreSQL 실행 범위가 아닙니다.");
   const scope = JSON.parse(readFileSync(join(root, "qa-scope.json"), "utf8"));
   if (realpathSync(environment.PGHOST) !== realpathSync(root) ||
