@@ -2,6 +2,132 @@
   "version": 1,
   "sql": [
     {
+      "path": "scripts/db/candidates/db-fresh/schema-export.sql",
+      "role": "fresh_candidate",
+      "sha256": "0ed45733612ec170785c51975ecb3c9ed5c790e6d54027684fe7df1d90d3a107",
+      "id": "fresh-schema-export",
+      "predecessors": []
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+      "role": "fresh_candidate",
+      "sha256": "93dd16b7d0b5f22083f6ae5fccee0b0d7b2eccebc39ab7b00f9952f36ff1b10c",
+      "id": "fresh-custom-assert-application-question-revision",
+      "predecessors": ["fresh-custom-atomic-application-questions"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+      "role": "fresh_candidate",
+      "sha256": "a719e9b4be6b997277ccf604ed8f6dbb0da4e41ccc1c42d2dfbcbbc5e4f71ee0",
+      "id": "fresh-custom-atomic-application-questions",
+      "predecessors": ["fresh-custom-protect-application-submissions"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+      "role": "fresh_candidate",
+      "sha256": "e27a178317b4acafe1f394c3e051054cf7eed467a61c61ad957bdb2b100c511c",
+      "id": "fresh-custom-markdown-image-references",
+      "predecessors": ["fresh-custom-rate-limit-reservations"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+      "role": "fresh_candidate",
+      "sha256": "1f2084557bf9e1c551df9f9bb1a055d0b14dc180f81c92b2486c73f47d42a73b",
+      "id": "fresh-custom-protect-application-answers",
+      "predecessors": ["fresh-g1-submission-file-reads"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+      "role": "fresh_candidate",
+      "sha256": "3ad5348bfc69ec59eab10e0d2be3becfe85ff9e5d6b125de77acb8171f1668f9",
+      "id": "fresh-custom-protect-application-submissions",
+      "predecessors": ["fresh-custom-protect-application-answers"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+      "role": "fresh_candidate",
+      "sha256": "8bcc03505ac957506c5472d2094c6f379535c65bdf2271275b158f1c31e2d6d0",
+      "id": "fresh-custom-rate-limit-reservation-index",
+      "predecessors": ["fresh-custom-markdown-image-references"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+      "role": "fresh_candidate",
+      "sha256": "b68aae1755468f752756fd97e8eed43bcebb1fdc7f141ebe801be1af915231ae",
+      "id": "fresh-custom-rate-limit-reservations",
+      "predecessors": ["fresh-custom-assert-application-question-revision"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+      "role": "fresh_candidate",
+      "sha256": "50d290b1cd88682e52ba2e84d3a630f72ef05cd80901df45e41ef240e8262c20",
+      "id": "fresh-custom-recruitment-default",
+      "predecessors": ["fresh-custom-rate-limit-reservation-index"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+      "role": "fresh_candidate",
+      "sha256": "233521fe111de6b5827217bad4646d2187b798575f87ece3c87a161d2f5b893a",
+      "id": "fresh-g1-assignment-actions",
+      "predecessors": ["fresh-g1-submissions"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+      "role": "fresh_candidate",
+      "sha256": "e0893684faa106a947c1f38685c82590d42b42e9033afcddffe9ee333d970baa",
+      "id": "fresh-g1-assignments",
+      "predecessors": ["fresh-g1-roster"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+      "role": "fresh_candidate",
+      "sha256": "78ec8c371ff011b470d63111d489b3e15a973170763889d862ac6ee5fe829b9a",
+      "id": "fresh-g1-enrollment-links",
+      "predecessors": ["fresh-g1-students"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-roster.sql",
+      "role": "fresh_candidate",
+      "sha256": "28c5d19fbae5ebac8b8f09d1cfa1698e0ec5e0dd5c5f74c28ebdb874b1c5f080",
+      "id": "fresh-g1-roster",
+      "predecessors": ["fresh-g1-enrollment-links"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-students.sql",
+      "role": "fresh_candidate",
+      "sha256": "ae10c5725af83c5e5f91b1f0bf7b606d86b5f9867b02cc888fab6e932a74f9bd",
+      "id": "fresh-g1-students",
+      "predecessors": ["fresh-schema-export"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+      "role": "fresh_candidate",
+      "sha256": "e019ce041742e36e9e6c7ae5c4b9944e2c4a3aaf51f2875129686f2be9663250",
+      "id": "fresh-g1-submission-file-reads",
+      "predecessors": ["fresh-g1-submission-finalization"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+      "role": "fresh_candidate",
+      "sha256": "c3bc29f0c2cf66bfd44c17584a1655b539f6a99e2f4df35fe7ca9239e0468396",
+      "id": "fresh-g1-submission-finalization",
+      "predecessors": ["fresh-g1-upload-authorizations"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+      "role": "fresh_candidate",
+      "sha256": "465731bd99c776734678c9e0809af07d1a4086c0d35ae91d9ee4d3954520c4c4",
+      "id": "fresh-g1-submissions",
+      "predecessors": ["fresh-g1-assignments"]
+    },
+    {
+      "path": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+      "role": "fresh_candidate",
+      "sha256": "7a06e9d4d2c11f3fddffec9333246e316fb7c7646402ad1529ee8d5207fe314f",
+      "id": "fresh-g1-upload-authorizations",
+      "predecessors": ["fresh-g1-assignment-actions"]
+    },
+    {
       "path": "scripts/migrate-287-rate-limit-reservation-index.sql",
       "role": "versioned_candidate",
       "sha256": "5d7bc2a6cdd62396e7f73d8dde14e9af210226ac0af1bc8387fa963b683b45d7",

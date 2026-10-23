@@ -38,6 +38,44 @@ test('현재 모든 inventory 소스가 대응되지만 필수 미확정 때문�
   const evidenceLineCounts = Object.fromEntries(await Promise.all([...files].map(async file => [file, (await readFile(join(repository, file), 'utf8')).split('\n').length])));
   const result = check({ contract, inventory, trackedPaths, evidenceLineCounts }); assert.equal(result.ok, true); assert.equal(result.coverageComplete, true); assert.equal(result.freshReady, false); assert.ok(result.counts.requiredUnresolved > 0); assert.equal(result.counts.sources, inventory.sql.length + inventory.scripts.length); assert.equal(result.observedDatabase, false); assert.equal(result.productionReady, false);
 });
+test('owned-local fresh 후보는 원천 근거·객체 양방향 FK·기존 fixture 제외를 갖추고 미해결을 유지', async () => {
+  const contract = JSON.parse(await readFile(join(repository, 'scripts/db/installation-contract.json'), 'utf8'));
+  const inventory = JSON.parse(await readFile(join(repository, 'scripts/db/source-inventory.json'), 'utf8'));
+  const candidates = inventory.sql.filter(entry => entry.path.startsWith('scripts/db/candidates/db-fresh/'));
+  assert.ok(candidates.length > 0);
+  for (const candidate of candidates) {
+    const source = contract.sources.find(entry => entry.ref === candidate.path);
+    assert.ok(source, 'FRESH_SOURCE_REGISTERED');
+    assert.equal(source.fresh.disposition, 'unresolved'); assert.equal(source.fresh.required, true);
+    assert.ok(source.unresolved.length > 0);
+    assert.ok(source.evidence.some(proof => proof.file === candidate.path));
+    assert.ok(source.evidence.some(proof => proof.file !== candidate.path && !proof.file.startsWith('scripts/db/candidates/')));
+    for (const objectId of source.objects) {
+      const object = contract.objects.find(entry => entry.id === objectId);
+      assert.ok(object, 'FRESH_PROVIDED_OBJECT_REGISTERED');
+      assert.notEqual(object.owner, candidate.path, 'FRESH_LEGACY_OWNER_PRESERVED');
+      assert.ok(object.definitions.some(entry => entry.source === candidate.path && entry.relationship === 'unresolved'));
+      assert.ok(object.unresolved.length > 0);
+    }
+    for (const fixture of contract.fixtures) {
+      assert.ok(fixture.exclusions.some(entry => entry.ref === candidate.path));
+      assert.ok(!fixture.steps.some(entry => entry.ref === candidate.path));
+    }
+  }
+  const result = check({ contract, inventory });
+  assert.equal(result.ok, true); assert.equal(result.coverageComplete, true);
+  assert.equal(result.freshReady, false); assert.equal(result.productionReady, false); assert.equal(result.observedDatabase, false);
+  // 등록된 후보의 역방향 정의나 제외 근거가 하나라도 빠지면 coverage gate가 거부해야 한다.
+  const first = candidates[0].path;
+  const brokenDefinition = structuredClone(contract);
+  const source = brokenDefinition.sources.find(entry => entry.ref === first);
+  const object = brokenDefinition.objects.find(entry => entry.id === source.objects[0]);
+  object.definitions = object.definitions.filter(entry => entry.source !== first);
+  assert.ok(invalid({ contract: brokenDefinition, inventory }).diagnostics.includes('INSTALL_SOURCE_DEFINITION_MISSING'));
+  const brokenFixture = structuredClone(contract);
+  brokenFixture.fixtures[0].exclusions = brokenFixture.fixtures[0].exclusions.filter(entry => entry.ref !== first);
+  assert.ok(invalid({ contract: brokenFixture, inventory }).diagnostics.includes('INSTALL_FIXTURE_COVERAGE'));
+});
 test('명시적인 합성 모델의 readiness도 실제 DB·운영 승인이 아님', () => {
   const result = check(model()); assert.equal(result.ok, true); assert.equal(result.freshReady, true); assert.equal(result.observedDatabase, false); assert.equal(result.productionReady, false);
 });

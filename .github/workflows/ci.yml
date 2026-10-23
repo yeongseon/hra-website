@@ -46,6 +46,7 @@ jobs:
         # 기존 inventory를 정본으로 참조하고 미해결 설치 조건을 준비 완료로 오인하지 않습니다.
         run: |
           node --test scripts/tests/db-installation-contract.test.mjs
+          node --test scripts/tests/db-fresh-candidate-*.test.mjs
           node scripts/check-db-installation-contract.mjs
 
       - name: 기본 DB push 차단·오프라인 Kit 회귀
@@ -83,6 +84,11 @@ jobs:
         # 실제 임시 PG만 소유하는 factory로 검증하며 운영 URL·승인 입력을 받지 않습니다.
         timeout-minutes: 10
         run: node --test --test-concurrency=1 scripts/tests/db-migration-*.test.mjs tests/integration/db-migration-local.test.mjs
+
+      - name: 신규 설치 원문 기준·후보 전체 복구 계약
+        # 독립 원문 기준 DB와 후보 엔진 DB를 소유 로컬 PG에 따로 만들고 단계별 catalog·실패 복구를 대조합니다.
+        timeout-minutes: 10
+        run: node --test --test-concurrency=1 tests/integration/db-fresh-reference.test.mjs tests/integration/db-fresh-bundle.test.mjs
 
       - name: 관리 CLI 계정 연결·비공개 파일 보호 회귀
         # 소유 임시 PG와 합성 Blob 저장소만 사용하고 외부 서비스 호출을 차단합니다.
