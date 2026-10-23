@@ -12,7 +12,7 @@
 
 "use server";
 
-import { and, asc, between, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
@@ -22,6 +22,7 @@ import { isConstraintViolation } from "@/lib/db/constraint-errors";
 import { logServerError } from "@/lib/errors";
 import { scheduleEvents, scheduleSessions } from "@/lib/db/schema";
 import { parseCalendarMonth } from "@/lib/query-params";
+import { listPublicScheduleMonth, serializePublicScheduleEvents } from "@/features/schedule/public/service";
 
 // ============================================================
 // Zod 스키마 정의
@@ -139,30 +140,7 @@ function parseFormData(formData: FormData) {
 export async function getScheduleEvents(year: number, month: number) {
   // 서버 액션은 클라이언트에서 직접 호출할 수 있으므로 조회 인자도 범위 검증한다.
   const valid = parseCalendarMonth(year, month);
-  // 해당 월의 시작일(1일 00:00)과 마지막날(말일 23:59) 계산
-  // 일정은 buildEventDate 로 UTC 칸에 한국시간 숫자를 그대로 저장하므로,
-  // 조회 범위도 Date.UTC 로 만들어 서버 타임존(dev=KST, prod=UTC)에 영향받지 않게 한다.
-  const startDate = new Date(Date.UTC(valid.year, valid.month - 1, 1, 0, 0, 0));
-  const endDate = new Date(Date.UTC(valid.year, valid.month, 0, 23, 59, 59));
-
-  const events = await db.query.scheduleEvents.findMany({
-    where: and(
-      eq(scheduleEvents.isPublic, true),
-      between(scheduleEvents.eventDate, startDate, endDate)
-    ),
-    with: {
-      sessions: {
-        orderBy: [asc(scheduleSessions.order)],
-        with: {
-          faculty: true,
-        },
-      },
-      cohort: true,
-    },
-    orderBy: [asc(scheduleEvents.eventDate)],
-  });
-
-  return events;
+  return listPublicScheduleMonth(valid.year, valid.month);
 }
 
 /**
@@ -171,24 +149,7 @@ export async function getScheduleEvents(year: number, month: number) {
  */
 export async function getSerializedScheduleEvents(year: number, month: number) {
   const events = await getScheduleEvents(year, month);
-  return events.map((e) => ({
-    id: e.id,
-    eventDate: e.eventDate.toISOString(),
-    eventType: e.eventType,
-    title: e.title,
-    weekNumber: e.weekNumber ?? null,
-    description: e.description ?? null,
-    cohort: e.cohort ? { id: e.cohort.id, name: e.cohort.name } : null,
-    sessions: e.sessions.map((s) => ({
-      category: s.category,
-      content: s.content ?? null,
-      reportCategory: s.reportCategory ?? null,
-      subTitle: s.subTitle ?? null,
-      subDescription: s.subDescription ?? null,
-      faculty: s.faculty ? { id: s.faculty.id, name: s.faculty.name } : null,
-      order: s.order,
-    })),
-  }));
+  return serializePublicScheduleEvents(events);
 }
 
 // ============================================================

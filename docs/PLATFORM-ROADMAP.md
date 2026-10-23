@@ -4,7 +4,7 @@
 
 ## 현재 구현과 이 계획의 관계
 
-이 문서는 앞으로의 Web·Android·iOS 전환 순서를 읽으려는 개발자를 위한 목표 문서다. 현재 Next.js 앱은 저장소 루트에 있고 순수 계약은 `packages/contracts` workspace에 있으며 `GET /api/v1/notices`와 Web 세션 기반 `GET /api/v1/me`를 제공한다. [현재 API v1 범위](developer/api-v1.md)와 OpenAPI 정본에서 구현 상태를 확인한다. `apps/web`, `apps/mobile`, 나머지 공용 API와 OpenAPI 완성은 이 계획의 후속 경계다.
+이 문서는 앞으로의 Web·Android·iOS 전환 순서를 읽으려는 개발자를 위한 목표 문서다. 현재 Next.js 앱은 저장소 루트에 있고 순수 계약은 `packages/contracts` workspace에 있으며 `GET /api/v1/notices`, Web 세션 기반 `GET /api/v1/me`, `GET /api/v1/schedule`을 제공한다. [현재 API v1 범위](developer/api-v1.md)와 OpenAPI 정본에서 구현 상태를 확인한다. `apps/web`, `apps/mobile`, 나머지 공용 API와 OpenAPI 완성은 이 계획의 후속 경계다.
 
 API-first는 화면 종류가 달라도 같은 요청·응답 약속을 사용한다는 뜻이다. 모듈러 모놀리스는 기능을 나누되 서버는 하나의 배포 단위로 유지한다는 뜻이고, monorepo는 여러 앱과 공용 코드를 한 저장소에서 관리한다는 뜻이다. 세부 용어는 [용어집](getting-started/glossary.md)에 있다.
 

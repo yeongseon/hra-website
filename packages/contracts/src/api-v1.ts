@@ -322,3 +322,63 @@ export function toApiV1NoticeSummary(input: {
     updatedAt: toApiV1Timestamp(input.updatedAt),
   });
 }
+
+/**
+ * 공개 일정의 시각은 실제 UTC 순간이 아닌 한국 달력의 벽시계 HH:MM 값입니다.
+ * 24:00, 초 단위, 시간대 접미어는 허용하지 않습니다.
+ */
+const apiV1ScheduleWallTimeSchema = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/);
+
+/** 기수와 교수는 화면에 표시할 식별자·이름만 전달합니다. */
+const apiV1ScheduleNamedReferenceSchema = z
+  .object({ id: apiV1UuidSchema, name: z.string().min(1) })
+  .strict();
+
+/** 공개 일정 세션은 강의 내용과 교수 표시 필드만 포함합니다. */
+const apiV1ScheduleSessionSchema = z
+  .object({
+    category: z.enum(["CLASSICS", "ENGLISH", "SPEECH", "SPECIAL_LECTURE", "CASE_STUDY"]),
+    content: z.string().nullable(),
+    reportCategory: z.string().nullable(),
+    subTitle: z.string().nullable(),
+    subDescription: z.string().nullable(),
+    faculty: apiV1ScheduleNamedReferenceSchema.nullable(),
+    order: z.number().int(),
+  })
+  .strict();
+
+/** 날짜·시각은 한국 달력의 벽시계 값이며 UTC timestamp가 아닙니다. */
+const apiV1ScheduleEventSchema = z
+  .object({
+    id: apiV1UuidSchema,
+    calendarDate: apiV1CalendarDateSchema,
+    startTime: apiV1ScheduleWallTimeSchema,
+    endTime: apiV1ScheduleWallTimeSchema.nullable(),
+    eventType: z.enum(["CLASS", "EVENT"]),
+    title: z.string().min(1),
+    weekNumber: z.number().int().nullable(),
+    description: z.string().nullable(),
+    cohort: apiV1ScheduleNamedReferenceSchema.nullable(),
+    sessions: z.array(apiV1ScheduleSessionSchema),
+  })
+  .strict();
+
+/** 공개 일정 월 조회는 year·month를 반드시 받고 다른 query key를 거부합니다. */
+export const apiV1ScheduleQuerySchema = z
+  .object({
+    year: z.coerce.number().int().min(1900).max(2100),
+    month: z.coerce.number().int().min(1).max(12),
+  })
+  .strict();
+export type ApiV1ScheduleQuery = z.infer<typeof apiV1ScheduleQuerySchema>;
+
+/** 공개 월별 일정 API의 엄격한 응답 계약입니다. */
+export const apiV1ScheduleResponseSchema = z
+  .object({
+    year: z.number().int().min(1900).max(2100),
+    month: z.number().int().min(1).max(12),
+    timeZone: z.literal("Asia/Seoul"),
+    events: z.array(apiV1ScheduleEventSchema),
+  })
+  .strict();
+export type ApiV1ScheduleResponse = z.infer<typeof apiV1ScheduleResponseSchema>;

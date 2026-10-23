@@ -45,6 +45,8 @@ export function installSiteRouteFixture(cluster, repository, schemaSql) {
 
 /** 알려진 동적 경로에는 해당 테이블의 합성 UUID만 사용한다. */
 export function concreteSiteRoute(path){
+ // 공개 일정 API는 필수 연·월을 합성 값으로 채워 실제 성공 응답을 검사한다.
+ if(path==='/api/v1/schedule')return '/api/v1/schedule?year=2026&month=10';
  if(path.includes('[...nextauth]'))return '/api/auth/session';
  if(path.includes('[slug]'))return path.replace('[slug]',path.includes('/guides/')?'route-audit-guide':'route-audit-template');
  if(path.includes('[kind]'))return path.replace('[kind]','class-materials').replace('[id]',ids.material);
