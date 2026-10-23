@@ -5,16 +5,15 @@
  * - 공개 사이트에서 갤러리 앨범 목록을 보여줍니다.
  * - 각 앨범의 커버 이미지와 이미지 개수를 함께 표시합니다.
  * - 앨범 상세 경로를 slug 대신 DB의 UUID 기반으로 연결합니다.
+ * - 조회·사진 수 계산은 갤러리 Application Service/Repository에 맡깁니다.
  */
 
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { desc } from "drizzle-orm";
 import { ImageIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/lib/db";
-import { galleries } from "@/lib/db/schema";
+import { listPublicGalleryAlbums } from "@/features/gallery/public-list/service";
 
 export const dynamic = "force-dynamic";
 
@@ -24,16 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GalleryPage() {
-  const albums = await db.query.galleries.findMany({
-    orderBy: [desc(galleries.createdAt)],
-    with: {
-      images: {
-        columns: {
-          id: true,
-        },
-      },
-    },
-  });
+  const albums = await listPublicGalleryAlbums();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
@@ -59,7 +49,7 @@ export default async function GalleryPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {albums.map((album) => {
-            const imageCount = album.images.length;
+            const imageCount = album.imageCount;
 
             return (
               <Link key={album.id} href={`/gallery/${album.id}`} className="group block h-full">
