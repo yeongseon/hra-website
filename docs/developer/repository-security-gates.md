@@ -25,9 +25,11 @@ node --test scripts/tests/secret-scan.test.mjs scripts/tests/dependency-policy.t
 
 실행기는 credential 환경을 전달하지 않고, 소유 임시 디렉터리의 package/lock 복사본과 비어 있는 npm 설정으로 `npm audit --json --package-lock-only --ignore-scripts`를 실행한다. registry는 `https://registry.npmjs.org`로 고정한다. exit 1의 발견과 통신/구문 오류를 구분하며 raw npm 오류는 출력하지 않는다. 설치 파일을 수정하거나 자동 업데이트하지 않는다.
 
-`security/dependency-triage.json`은 **20 affected package**의 현재 exact metadata를 고정한다(2026-10-22 검토). **60 object-advisory entry**와 전이 링크를 포함한 **74 검토 항목**은 각각 다른 수다. 동일 GHSA의 여러 영향 범위/source ID도 별도로 보존한다. package nodes+lock 버전과 advisory ID/source/range 집합은 독립적이다. 모든 nodes×advisory 조합을 실제 영향 경로라고 해석하지 않는다. npm의 `dev` 값도 실제 운영 도달성을 대신하지 않는다.
+`security/dependency-triage.json`은 **11 affected package**의 현재 exact metadata를 고정한다(2026-10-23 registry 재확인, 기존 항목 평가일 유지). **59 object-advisory entry**와 전이 링크를 포함한 **63 검토 항목**은 각각 다른 수다. 동일 GHSA의 여러 영향 범위/source ID도 별도로 보존한다. package nodes+lock 버전과 advisory ID/source/range 집합은 독립적이다. 모든 nodes×advisory 조합을 실제 영향 경로라고 해석하지 않는다. npm의 `dev` 값도 실제 운영 도달성을 대신하지 않는다.
 
 2026-10-23 registry 재확인에서는 [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)가 2026-10-22에 철회된 사실을 확인했다. 공식 사유는 예외를 적절히 처리할 책임이 애플리케이션에 있다는 것이다. 이에 `sprintf-js` advisory와 `argparse` 전이 항목, `js-yaml`의 해당 전이 링크를 제거하고 집계 범위를 registry의 정확한 값으로 갱신했다. 패키지 설치 버전·검사 정책·기존 평가의 재검토 기한은 변경하지 않았다. 철회 사실은 라이브러리 사용면 전체의 안전을 보증하지 않는다.
+
+같은 날 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)도 실질적 악용 가능성이 없다는 공식 사유로 철회됐다. npm audit에서 `braces`와 그 권고만으로 영향받던 전이 패키지 8개가 제거된 사실을 확인해 해당 패키지 9개·평가 11건만 원장에서 삭제했다. 남은 권고와 설치 경로, lockfile, 기존 평가·기한은 유지한다. 철회된 기록을 검토 원장에 남겨 실제 registry와 어긋나게 하지 않는다.
 
 각 항목에는 공격 조건, 사용하는 API, 호출 위치, P2 사용면 평가, 남는 전제, 유지보수 담당 `repo-maintainers`, 검토일·재검토 기한을 기록한다. 담당자 표시는 owner의 P1 위험 수용 승인이 아니다. js-yaml은 내장 기본본의 JSON_SCHEMA 파싱, Blob undici 6은 실제 fetch, jsdom undici 7은 개발 경로, glob/CSS/esbuild/Vite는 도구 입력을 따로 검토한다. 신뢰 HTTPS만으로 모든 fetch 취약점이 배제되지는 않는다. 특히 keep-alive/공급자 침해 전제는 원장에 남긴다.
 
