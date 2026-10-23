@@ -21,6 +21,18 @@ G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-
 
 선택 인자 `--prior-manifest <상대경로.json>`과 `--ledger-snapshot <상대경로.json>`은 전달된 입력 사이의 일관성만 비교합니다. 이전 manifest의 prefix 변경, 알 수 없는 이력·순서·checksum과 native ledger 테이블 존재를 거부하지만, JSON이 실제 DB 관측이나 승인 근거임을 증명하지는 않습니다. 출력의 `observedDatabase`와 `readyToApply`는 항상 `false`입니다. 입력 schema·크기·경로 제한은 `scripts/db/versioned/README.md`에 있습니다.
 
+### 임시 DB의 적용기 검증
+
+Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN`을 해당 실행 파일 디렉터리로 지정한 뒤 `node --test --test-concurrency=1 scripts/tests/db-migration-*.test.mjs tests/integration/db-migration-local.test.mjs`로 로컬 적용기 계약을 확인합니다. 테스트가 직접 생성한 Unix socket 전용 클러스터에서 적용은 비슈퍼유저 migration 역할로 실행하고, 관리 역할은 임시 클러스터·권한 준비와 고정 합성 대상의 metadata 장애 주입에만 사용합니다. 임의 URL·대상 JSON·운영 DB를 받는 적용 명령은 제공하지 않습니다.
+
+같은 물리 세션의 DB 공통 잠금, manifest와 성공 이력의 전체 prefix·checksum, 파일별 SQL과 ledger의 원자성을 검사합니다. COMMIT 응답 유실은 새 연결에서 동일 대상·잠금·관측 prefix에 대응하는 사전 catalog 계약을 대조한 뒤 판정합니다. 이미 COMMIT이 성공한 후 catalog 검증이 실패하면 committed 상태를 보존하면서 차단하며 자동 rollback·재실행을 하지 않습니다. 검증된 prefix 뒤에 pending 파일이 있으면 전체 migration 완료로 보고하지 않습니다.
+
+카탈로그 비교는 로컬 fixture의 `public`·`hra_migrations`에 있는 검토된 객체 종류와 고정 합성 데이터 불변식에 한정합니다. 함수·ACL·제약·인덱스·뷰·트리거·RLS 등의 지문을 비교하며 전체 운영 PostgreSQL 객체나 실제 hosted Neon의 연결·TLS·pooling을 검증했다는 뜻은 아닙니다. 임시 SQL helper는 transaction 제어를 PostgreSQL에서 거부하게 하는 경계이며, 신뢰하지 않는 임의 SQL의 sandbox가 아닙니다. migration 소스 자체의 검토가 필요합니다.
+
+로컬 transport는 설치된 Neon 1.2.0의 [공개 WebSocket 설정](https://github.com/neondatabase/serverless/blob/v1.2.0/CONFIG.md)을 사용합니다. 파손된 연결은 [PoolClient 해제 계약](https://node-postgres.com/apis/pool#releasing-clients)에 따라 재사용하지 않으며, pool 종료뿐 아니라 실제 socket 종료도 확인합니다. 클라이언트 timeout은 서버의 SQL 취소나 rollback 확정이 아니므로 서버 timeout과 실제 이력·catalog 재검증을 함께 사용합니다. driver 갱신 시에는 최신 웹 문서만 보지 말고 설치본의 공개 API와 이 장애 회귀를 다시 확인합니다.
+
+결과의 `productionReady`는 항상 `false`입니다. 현재 운영 manifest·baseline은 미설정으로 유지하며, 전체 웹/G1 신규 설치·upgrade·restore 계약과 실제 대상·백업/복구·승인·플랫폼 승격 차단은 별도 후속 검증입니다. 원본 SQL·catalog·회원 데이터는 공개 결과로 저장하지 않습니다.
+
 ## 1. 대상과 명령의 효과부터 확인하기
 
 | 상황·명령 | 용도 | 현재 주의할 동작 |
