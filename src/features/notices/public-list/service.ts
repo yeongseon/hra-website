@@ -5,9 +5,16 @@
 import "server-only";
 
 import { parseListPage } from "@/lib/query-params";
-import { countNotices, listNotices, type NoticeSummary } from "./repository";
+import { buildNoticeExcerpt } from "@/lib/notice-excerpt";
+import { countNotices, listNoticeApiRows, listNotices, type NoticeSummary } from "./repository";
 
 const pageSize = 15;
+const maxApiPageSize = 50;
+
+export type PublishedNoticeApiSummary = NoticeSummary & {
+  excerpt: string;
+  updatedAt: Date;
+};
 
 export type PublishedNoticePage = {
   items: readonly NoticeSummary[];
@@ -36,4 +43,37 @@ export async function listPublishedNotices(input: {
   const items = await listNotices("PUBLISHED", query, pageSize, startIndex);
 
   return { items, totalCount, currentPage, totalPages, startIndex };
+}
+
+/** API 목록은 요청 페이지를 유지하고 범위 밖이면 빈 목록을 돌려줍니다. */
+export async function listPublishedNoticesForApi(input: {
+  query: string;
+  page: number;
+  pageSize: number;
+}): Promise<{ items: readonly PublishedNoticeApiSummary[]; totalCount: number }> {
+  if (!input || typeof input.query !== "string" || input.query.trim().length > 100 ||
+    !Number.isSafeInteger(input.page) || input.page < 1 ||
+    !Number.isSafeInteger(input.pageSize) || input.pageSize < 1 || input.pageSize > maxApiPageSize) {
+    throw new Error("NOTICE_API_INPUT_INVALID");
+  }
+
+  const offset = (input.page - 1) * input.pageSize;
+  if (!Number.isSafeInteger(offset)) throw new Error("NOTICE_API_INPUT_INVALID");
+
+  const query = input.query.trim();
+  const totalCount = await countNotices("PUBLISHED", query);
+  if (offset >= totalCount) return { items: [], totalCount };
+
+  // 저장소 내부 본문은 Markdown 발췌에만 쓰고 DTO에는 넣지 않습니다.
+  const rows = await listNoticeApiRows("PUBLISHED", query, input.pageSize, offset);
+  const items = rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    excerpt: buildNoticeExcerpt(row.content),
+    pinned: row.pinned,
+    viewCount: row.viewCount,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }));
+  return { items, totalCount };
 }
