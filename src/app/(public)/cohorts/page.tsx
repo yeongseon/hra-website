@@ -1,11 +1,12 @@
+/**
+ * 공개 기수 Page의 카드 표시와 운영 중 기수 집계를 구성합니다.
+ * 시작일 공개 조건과 PostgreSQL 정렬은 기수 Service/Repository에 맡깁니다.
+ */
 import Image from "next/image";
-import { lte, or, isNull } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
-import { cohortNumberDesc } from "@/lib/db/cohort-order";
-import { cohorts as cohortsTable } from "@/lib/db/schema";
+import { listVisibleCohorts, type PublicCohort } from "@/features/cohorts/public-list/service";
 import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
@@ -22,33 +23,10 @@ function formatPeriod(startDate: Date | null, endDate: Date | null) {
 }
 
 export default async function CohortsPage() {
-  let cohortData: Array<{
-    name: string;
-    startDate: Date | null;
-    endDate: Date | null;
-    description: string | null;
-    isActive: boolean;
-    imageUrl: string | null;
-  }>;
+  let cohortData: PublicCohort[];
 
   try {
-    const dbCohorts = await db
-      .select({
-        name: cohortsTable.name,
-        startDate: cohortsTable.startDate,
-        endDate: cohortsTable.endDate,
-        description: cohortsTable.description,
-        isActive: cohortsTable.isActive,
-        imageUrl: cohortsTable.imageUrl,
-        order: cohortsTable.order,
-      })
-      .from(cohortsTable)
-      // 기수 시작일이 오늘 이전이거나, 시작일이 없는 기수만 표시
-      .where(or(isNull(cohortsTable.startDate), lte(cohortsTable.startDate, new Date())))
-      // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
-      .orderBy(cohortNumberDesc(cohortsTable.name));
-
-    cohortData = dbCohorts;
+    cohortData = await listVisibleCohorts(new Date());
   } catch (error) {
     // DB 조회 실패 시: 빈 화면이 "데이터 없음"과 구분되도록 서버 로그에 명확히 기록한다.
     // 이렇게 해야 운영 중 실제 장애와 단순한 미시드(미입력) 상태를 구분할 수 있다.
