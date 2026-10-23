@@ -499,15 +499,20 @@
       },
       "objects": ["alumni-featured"],
       "requires": ["web-base"],
-      "checks": ["단일 ALTER를 실행하는 관리 진입점은 export 소유 컬럼의 새 설치 실행기로 재사용하지 않는다."],
+      "checks": ["접속 없는 계획과 명시 적용의 한정 DO 검사는 기존 DB 관리 경로이며 export 소유 컬럼의 신규 설치 단계가 아니다.","기존 컬럼의 타입·NOT NULL·default와 표 소유권 불일치는 자동 보정하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-add-alumni-featured.mjs",
-          "line": 29,
-          "note": "is_featured 컬럼 추가 본문."
+          "line": 8,
+          "note": "무인자 계획과 명시 적용 옵션을 먼저 분리한다."
+        },
+        {
+          "file": "scripts/migrate-add-alumni-featured.mjs",
+          "line": 59,
+          "note": "public.alumni_stories의 한정 컬럼 추가는 소유권·catalog 검사와 같은 DO 문에 있다."
         }
       ],
-      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+      "unresolved": ["현재 컬럼이 export 정의와 같은지는 별도 신규 설치 catalog·동작 대조가 필요하며 legacy DO를 그대로 fresh migration으로 승격하지 않는다."]
     },
     {
       "ref": "scripts/migrate-add-application-submissions-unique.mjs",
@@ -610,24 +615,24 @@
       "fresh": {
         "disposition": "exclude",
         "required": false,
-        "reason": "새 DB의 세션 버전은 export가 소유하며 존재 건수만 확인하는 ALTER wrapper는 실행하지 않는다."
+        "reason": "새 DB의 세션 버전은 export가 소유하며 소유권·컬럼 정의를 확인하는 legacy DO는 fresh 단계로 실행하지 않는다."
       },
       "objects": ["session-version"],
       "requires": ["web-base"],
-      "checks": ["컬럼 존재 건수 검사만으로 구조 동등·기존 JWT 회수 검증이 끝났다고 판단하지 않는다."],
+      "checks": ["기존 DB에서는 타입·NOT NULL·default·소유권을 정확히 확인하고 session_version 기존 값을 덮지 않는다.","컬럼 구조 확인만으로 기존 JWT 회수·역할 강등 인가 검증이 끝났다고 판단하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-add-user-session-version.mjs",
-          "line": 41,
-          "note": "세션 버전 ALTER."
+          "line": 8,
+          "note": "무인자 계획과 명시 적용 옵션을 먼저 분리한다."
         },
         {
           "file": "scripts/migrate-add-user-session-version.mjs",
-          "line": 47,
-          "note": "컬럼 존재 건수만 읽는 후속 검사."
+          "line": 59,
+          "note": "public.users의 한정 컬럼 추가와 정확 정의 후조건은 한 DO 문에 있다."
         }
       ],
-      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+      "unresolved": ["새 schema export의 컬럼과 동등한지 실제 신규 DB에서 대조해야 하며 이 legacy DO를 적용 이력으로 간주하지 않는다."]
     },
     {
       "ref": "scripts/migrate-atomic-application-questions.mjs",

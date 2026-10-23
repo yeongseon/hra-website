@@ -161,10 +161,10 @@
     },
     {
       "path": "scripts/migrate-add-alumni-featured.mjs",
-      "sha256": "a09b9b82c5eb55ed30a440ead4a47556a8a09528cd6f82c2e3e27c358f46fdfa",
+      "sha256": "cf0fc4a0fbfab4d42f8b262de7e20a9071763f4286fb2a63155929c83994be21",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
-      "writeOptions": [],
+      "defaultBehavior": "read_only",
+      "writeOptions": ["--confirm-apply"],
       "commands": [
         "db:migrate-alumni-featured"
       ]
@@ -201,10 +201,10 @@
     },
     {
       "path": "scripts/migrate-add-user-session-version.mjs",
-      "sha256": "8fd1893765388e054bbbec6397be45d3b80256da23bcd919672bfa52342da7df",
+      "sha256": "266d490a963af9e920569151e5e53a8d4281d392a5e298a5207cf340b8b42f96",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
-      "writeOptions": [],
+      "defaultBehavior": "read_only",
+      "writeOptions": ["--confirm-apply"],
       "commands": [
         "db:migrate-user-session-version"
       ]
