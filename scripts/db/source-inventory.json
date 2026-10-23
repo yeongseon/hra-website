@@ -242,7 +242,7 @@
     },
     {
       "path": "scripts/migrate-protected-resource-blobs.mjs",
-      "sha256": "e21c93762ee09f15fbb23c6025201f17ab67977488583d2b1731e229272108f4",
+      "sha256": "bab8fa1de77d7509e86e6a5a472de2141e907f13f4ba7532fce6b6b4bd1612db",
       "effect": "blob_and_db",
       "defaultBehavior": "read_only",
       "writeOptions": [
