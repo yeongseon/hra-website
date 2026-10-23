@@ -1,6 +1,14 @@
 # API v1 현재 제공 범위
 
-공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices` 하나입니다. 이후 `/me`, 일정, 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
+공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`와 `GET /api/v1/me`입니다. 이후 일정, 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
+
+## 본인 프로필
+
+`GET /api/v1/me`는 현재 Auth.js **Web 세션 쿠키**를 사용합니다. 세션이 없으면 401 `UNAUTHENTICATED`로 끝나고, Route 내부에서도 매 요청 세션을 확인합니다. 쿠키 이름은 배포 환경과 보안 접두어·분할에 따라 달라지므로 계약에 하나로 고정하지 않습니다. 모바일 Bearer·refresh 인증은 아직 구현되지 않았으며 #273의 별도 경계입니다.
+
+세션 확인 뒤 현재 사용자의 표시용 행을 다시 조회합니다. 응답은 `{ user: { id, name, email, role, cohortId, imageUrl } }` 여섯 필드만 허용하며 비밀번호 해시·OAuth binding·세션 버전은 반환하지 않습니다. 내부 placeholder 이메일은 `null`입니다. `PENDING`도 **자기 프로필만** 읽을 수 있고 자료실·학사 인가는 이 API로 부여하지 않습니다. 사용자 행이 없어졌거나 세션의 역할과 다르면 401로 거부합니다.
+
+이 경로는 query를 받지 않아 전달되면 400 `INVALID_INPUT`입니다. Auth.js가 오류를 명시적으로 전파하거나 세션 인증 이후 별도 프로필 조회가 실패하면 503 `UNAVAILABLE`을 반환합니다. Auth.js JWT 콜백의 DB 오류는 라이브러리가 세션을 지워 무세션 401로 끝날 수도 있으므로 모든 DB 오류를 503으로 분류한다고 주장하지 않습니다. 모든 응답은 `Cache-Control: private, no-store`이며 오류에도 개인 정보·SQL 원문을 포함하지 않습니다.
 
 ## 공개 공지 목록
 

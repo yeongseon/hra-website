@@ -3,7 +3,7 @@
   "info": {
     "title": "HRA 공용 API",
     "version": "0.1.0",
-    "description": "구현된 공용 HTTP 경로만 기록합니다. Web 화면과 모바일 클라이언트가 같은 서버 계약을 사용합니다."
+    "description": "구현된 공용 HTTP 경로만 기록합니다. 인증 방식과 모바일 지원 상태는 각 경로의 설명에 따릅니다."
   },
   "paths": {
     "/api/v1/notices": {
@@ -55,10 +55,89 @@
           }
         }
       }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "summary": "현재 로그인한 사용자의 프로필 조회",
+        "description": "현재는 Auth.js Web 세션 쿠키가 필요한 경로입니다. 쿠키 이름은 환경·보안 접두어·분할 여부에 따라 달라져 고정하지 않습니다. 모바일 Bearer 인증은 아직 지원하지 않습니다. PENDING 사용자도 자신의 프로필만 조회할 수 있으며 자료 접근 권한을 얻지 않습니다. query key는 허용하지 않습니다.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "현재 로그인한 사용자 본인의 공개 가능 프로필",
+            "headers": {
+              "Cache-Control": {
+                "description": "개인 프로필 응답을 공유 캐시와 로컬 캐시에 저장하지 않습니다.",
+                "schema": { "type": "string", "const": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MeResponse" } }
+            }
+          },
+          "400": {
+            "description": "허용되지 않은 query key가 있음",
+            "headers": {
+              "Cache-Control": {
+                "description": "개인 프로필 오류도 캐시하지 않습니다.",
+                "schema": { "type": "string", "const": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/InvalidInputError" } }
+            }
+          },
+          "401": {
+            "description": "세션이 없거나 계정 삭제·역할 변경으로 현재 로그인 상태가 유효하지 않음",
+            "headers": {
+              "Cache-Control": {
+                "description": "인증 오류를 캐시하지 않습니다.",
+                "schema": { "type": "string", "const": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UnauthenticatedError" } }
+            }
+          },
+          "503": {
+          "description": "Auth.js가 명시적으로 전파한 오류 또는 세션 확인 뒤 별도 프로필 저장소 조회 장애가 발생함",
+            "headers": {
+              "Cache-Control": {
+                "description": "저장소 오류를 캐시하지 않습니다.",
+                "schema": { "type": "string", "const": "private, no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UnavailableError" } }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "MeUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "email", "role", "cohortId", "imageUrl"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": ["string", "null"], "minLength": 1 },
+          "email": { "type": ["string", "null"], "minLength": 1 },
+          "role": { "type": "string", "enum": ["ADMIN", "FACULTY", "MEMBER", "PENDING"] },
+          "cohortId": { "type": ["string", "null"], "format": "uuid" },
+          "imageUrl": { "type": ["string", "null"], "minLength": 1 }
+        }
+      },
+      "MeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["user"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/MeUser" }
+        }
+      },
       "NoticeSummary": {
         "type": "object",
         "additionalProperties": false,
@@ -116,6 +195,23 @@
             "required": ["code", "message", "requestId"],
             "properties": {
               "code": { "type": "string", "const": "INVALID_INPUT" },
+              "message": { "type": "string", "minLength": 1 },
+              "requestId": { "type": "string", "format": "uuid" }
+            }
+          }
+        }
+      },
+      "UnauthenticatedError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message", "requestId"],
+            "properties": {
+              "code": { "type": "string", "const": "UNAUTHENTICATED" },
               "message": { "type": "string", "minLength": 1 },
               "requestId": { "type": "string", "format": "uuid" }
             }

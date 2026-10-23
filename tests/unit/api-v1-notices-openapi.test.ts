@@ -45,10 +45,10 @@ describe("#272 공개 공지 목록 OpenAPI 3.1 계약", () => {
     visit(openapi);
   });
 
-  it("구현된 GET 한 경로와 query 제한만 정본에 기록한다", () => {
+  it("구현된 공지 GET과 query 제한을 정본에 기록한다", () => {
     expect(require.resolve("@hra/contracts/openapi.json")).toContain("packages/contracts/openapi.json");
     expect(openapi.openapi).toBe("3.1.1");
-    expect(Object.keys(openapi.paths)).toEqual(["/api/v1/notices"]);
+    expect(Object.keys(openapi.paths).sort()).toEqual(["/api/v1/me", "/api/v1/notices"]);
     expect(Object.keys(openapi.paths["/api/v1/notices"])).toEqual(["get"]);
     expect(operation.operationId).toBe("listPublishedNotices");
 
