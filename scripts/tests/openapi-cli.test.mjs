@@ -22,7 +22,11 @@ function temporaryRepository(t, extraRoute) {
     mkdirSync(dirname(join(temporary, file)), { recursive: true });
     writeFileSync(join(temporary, file), readFileSync(join(root, file)));
   }
-  for (const file of ["src/app/api/v1/me/route.ts", "src/app/api/v1/notices/route.ts", extraRoute]) {
+  // 현재 정본의 구현 경로 전체를 합성 저장소에 만들고, 검토 중인 미지원 Route만 추가합니다.
+  const openapi = JSON.parse(readFileSync(join(root, "packages/contracts/openapi.json"), "utf8"));
+  const implemented = Object.keys(openapi.paths).map((url) =>
+    `src/app${url.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, "[$1]")}/route.ts`);
+  for (const file of [...implemented, extraRoute]) {
     const target = join(temporary, file);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, "export async function GET() {}\n");
