@@ -25,3 +25,9 @@
 입력 오류는 400 `INVALID_INPUT`, DB 등 제공 불가 오류는 503 `UNAVAILABLE`입니다. 오류 본문은 `{ error: { code, message, requestId } }`만 담고 SQL·검색어·내부 오류 원문은 보내지 않습니다. 이 공개 GET은 응답 캐시를 사용하지 않으며 현재 Web 화면과 같은 공지 서비스·게시 정책을 호출합니다. Web 서버가 자기 API로 HTTP 요청을 보내지는 않습니다.
 
 OpenAPI의 JSON 표현은 [OpenAPI 3.1.1 명세](https://spec.openapis.org/oas/v3.1.1.html)의 문서 형식에 따릅니다.
+
+## 계약 변경 검사
+
+`node scripts/check-openapi-compat.mjs --self`는 현재 OpenAPI의 로컬 참조와 실제 `/api/v1` Route 경로를 읽기 전용으로 대조합니다. PR에서는 base commit, `main` push에서는 직전 commit의 OpenAPI와 비교해 **기존 path와 component를 정확히 보존하고 새 항목만 추가**하도록 필수 CI에서 검사합니다. 동적 `[id]` Route는 OpenAPI `{id}` 경로에 대응하며 catch-all·Route Group 아래의 `/api/v1` 등 아직 지원하지 않는 배치는 조용히 무시하지 않고 검사 실패로 남깁니다.
+
+이 정책은 보수적이어서 기존 설명 문구만 고쳐도 차단합니다. 의도된 계약 수정·삭제는 별도 버전/전환 방안을 검토해야 합니다. 이 검사는 실제 HTTP 동작이나 모든 JSON Schema 호환성을 완전하게 판정하지 않으며, PR이 검사 코드 자체를 변경하는 적대적 우회까지 막는 승인 장치가 아닙니다.
