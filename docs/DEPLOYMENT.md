@@ -103,7 +103,7 @@ npm run build
 | `test` | 자동 테스트 | 실패와 건너뜀을 구분하고 필요한 DB 테스트 환경 확인 |
 | `build` | 배포 가능한 앱 생성 | 빌드 로그의 첫 원인부터 확인 |
 
-DB 변경이 필요하면 **앱 배포보다 먼저 적용해야 할 항목**을 [DB 변경 절차](developer/database-change-procedure.md)에서 확인합니다. `npm run db:push`는 새 빈 개발 DB를 준비하는 제한된 용도입니다. 기존 운영 DB를 고치는 일반 명령으로 사용하지 않습니다. 자동 적용 이력·배포 차단 장치의 구축은 [#280](https://github.com/yeongseon/hra-website/issues/280)에서 진행할 작업입니다.
+DB 변경이 필요하면 **앱 배포보다 먼저 적용해야 할 항목**을 [DB 변경 절차](developer/database-change-procedure.md)에서 확인합니다. `npm run db:push`는 현재 모든 대상에서 접속 없이 실패 종료합니다. 기본 Drizzle 설정에도 DB 자격정보가 없으며, SQL 생성과 실제 적용 승인은 위 절차에서 구분합니다. 자동 적용 이력·배포 차단 장치의 구축은 [#280](https://github.com/yeongseon/hra-website/issues/280)에서 진행할 작업입니다.
 
 ## 5. Preview에서 확인한 뒤 운영 반영하기
 

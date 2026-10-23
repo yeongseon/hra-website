@@ -17,11 +17,15 @@ G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-
 
 | 상황·명령 | 용도 | 현재 주의할 동작 |
 | --- | --- | --- |
-| 새 빈 개발·테스트 Neon DB | 초기 테이블·인덱스 준비 | 제한된 범위에서 `db:push` 사용 후 추가 SQL·함수 검증 |
+| 새 빈 개발·테스트 DB | 검토한 초기 SQL·추가 제약 준비 | 기존 격리 fixture 또는 검토·승인한 별도 적용 절차 사용 |
 | 기존·운영 DB | 이미 저장된 데이터 보존하며 변경 | 검토된 범위별 SQL·스크립트 적용 |
-| `npm run db:push` | Drizzle 정의와 DB의 전체 차이 반영 | 운영 URL 자동 차단 기능은 아직 없음 |
+| `npm run db:push` | 검증되지 않은 전체 차이 적용 차단 | 접속·환경 조회 없이 안내하고 실패 종료; 적용 인자도 지원하지 않음 |
 | `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시 |
 | 그 밖의 `db:migrate-*` | 스크립트별 구조 변경 | 이름만으로 dry-run이라 가정하지 않음; 실행 즉시 변경하는 스크립트가 있음 |
+
+기본 `drizzle.config.ts`는 `.env`·`DATABASE_URL`과 DB credentials를 읽지 않습니다. 따라서 기본 설정의 `npx drizzle-kit push`·`npx drizzle-kit migrate`도 접속 정보 부족으로 중단합니다. `npm run db:push -- --isolated`·`--apply`·URL·자체 승인 JSON으로 이를 활성화할 수 없습니다. 도구가 소유한 일회성 DB에 대한 별도 push 기능도 아직 제공하지 않습니다.
+
+이 보호는 저장소의 **기본 실행 경로**에 적용됩니다. 운영자가 `drizzle-kit push --url ...` 또는 별도 `--config`·직접 `psql`을 실행할 권한까지 막는 sandbox는 아닙니다. 그런 우회가 승인된다는 뜻도 아닙니다. 외부에서 별도 도구·설정을 실행할 권한과 Production migration/promotion gate는 #280의 별도 경계로 남습니다. 환경의 URL이 원격·기존 DB를 가리켜도 기본 명령은 접속하지 않으며, 현재 모든 `db:migrate-*`가 같은 보호를 받는다는 뜻은 아닙니다.
 
 `dry-run`은 실제 변경 없이 확인하는 단계입니다. 모든 스크립트가 `--confirm-apply`를 지원하지 않습니다. 실행하려는 파일의 인자 처리와 적용 범위를 읽고, 이슈·PR에 대상 환경·순서·사후 검증을 남깁니다. 연결 문자열·비밀번호·운영 데이터는 공개 기록에 넣지 않습니다.
 
@@ -31,8 +35,8 @@ G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-
 
 다음은 기본 웹 기능을 준비하는 절차입니다. 운영 DB의 갱신이나 학사 전체 설치 목록으로 사용하지 않습니다. 학사는 [G1 품질 게이트](academic-g1-quality-gate.md)의 단계별 SQL·검증을 따르며 준비 전에는 관련 기능을 열지 않습니다.
 
-1. 새 작업 폴더에서 `.env.example`을 참고해 `.env`를 만들고 **별도 개발용 Neon DB**와 필요한 설정을 채웁니다. 기존 설정 파일을 덮어쓰지 않습니다.
-2. 대상이 빈 DB임을 확인한 후 `npm run db:push`로 Drizzle 테이블·인덱스를 만듭니다.
+1. 자동 검증은 `tests/support/resource-qa-postgres.mjs`가 만든 폐기 가능한 PG와 기존 QA fixture를 사용합니다. 실제 개발 DB를 준비하는 경우에는 별도 대상·검토·승인 절차부터 정하고 기존 설정 파일을 덮어쓰지 않습니다.
+2. `npx drizzle-kit export`는 접속 없이 스키마 SQL을 출력하고 `npx drizzle-kit generate`는 로컬 migration 파일을 생성합니다. `generate`의 `drizzle/` 산출물은 검토 대상이며 실제 적용 이력이 아닙니다. 검토한 SQL을 별도로 적용하는 행위는 `push` 실행과 구분하고, 실제 대상·빈 DB·백업/복구·적용 권한을 확인합니다. `npm run db:push`는 현재 모든 대상에서 비활성입니다.
 3. 아래 기본 기능용 후속 항목을 적용합니다. `psql`을 쓰는 단계는 PostgreSQL 클라이언트 실행 파일도 준비합니다.
 4. 카탈로그 확인 SQL과 관련 격리 테스트를 통과시킵니다. 카탈로그는 실제 테이블·제약·함수의 구조 정보를 뜻합니다.
 5. 관리자 계정이 필요하면 [최초 관리자 준비](../DATABASE.md)를 수행하고 합성 데이터로 앱 기능을 확인합니다.
