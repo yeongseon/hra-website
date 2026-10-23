@@ -2,6 +2,7 @@
   "name": "hra-website",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["packages/contracts"],
   "scripts": {
     "dev": "next dev",
     "prebuild": "node --version",
@@ -45,6 +46,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@hra/contracts": "file:packages/contracts",
     "@neondatabase/serverless": "^1.2.0",
     "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-radio-group": "^1.4.0",

@@ -1,18 +1,10 @@
 /**
- * 소셜 로그인 이메일을 화면에 표시하거나 기존 내부 주소에서 승격할 때 사용한다.
- * oauth.placeholder 도메인은 연락 가능한 실제 이메일 주소가 아니다.
+ * 소셜 로그인 원본 응답의 이메일 검증을 소유합니다.
+ * 공용 표시 정책은 순수 계약 패키지에서 가져와 기존 Web import 경로로 재수출합니다.
  */
-export function isOAuthPlaceholderEmail(email: string): boolean {
-  return email.toLowerCase().endsWith("@oauth.placeholder");
-}
+import { getDisplayEmail } from "@hra/contracts/identity";
 
-export function getDisplayEmail(email: string | null | undefined): string | null {
-  if (!email || isOAuthPlaceholderEmail(email)) {
-    return null;
-  }
-
-  return email;
-}
+export { getDisplayEmail, isOAuthPlaceholderEmail } from "@hra/contracts/identity";
 
 /**
  * 카카오의 원본 계정 정보에서 유효하고 검증된 주소만 추출한다.
