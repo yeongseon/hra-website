@@ -1,31 +1,23 @@
-// FAQ 질문·답변 관리 목록 페이지 (관리자 전용)
-// FAQ 항목 목록(드래그앤드롭 순서 변경)과 연락처 설정을 한 페이지에서 관리합니다.
+/**
+ * 관리자 FAQ 목록 화면입니다. 관리자 세션을 확인한 뒤 FAQ 서비스의 정렬 목록을
+ * 최소 props로 전달하고 연락처 설정과 질문 순서 변경 화면을 구성합니다.
+ */
 
 import Link from "next/link";
-import { asc } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { listAdminItems } from "@/features/faq/service";
 import { requireAdmin } from "@/lib/admin";
-import { db } from "@/lib/db";
-import { faqItems } from "@/lib/db/schema";
 import { FaqContactForm } from "./_components/faq-contact-form";
 import { FaqSortableList } from "./_components/faq-sortable-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminFaqPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
-  // order 오름차순, 동일 order는 생성일 오름차순으로 초기 정렬 (클라이언트 목록에 필요한 네 컬럼만 조회)
-  const items = await db
-    .select({
-      id: faqItems.id,
-      question: faqItems.question,
-      answer: faqItems.answer,
-      order: faqItems.order,
-    })
-    .from(faqItems)
-    .orderBy(asc(faqItems.order), asc(faqItems.createdAt));
+  // 서비스가 관리자 주체를 확인하고 정렬된 표시 필드 네 개만 반환합니다.
+  const items = await listAdminItems({ userId: session.user.id, role: session.user.role });
 
   return (
     <section className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">

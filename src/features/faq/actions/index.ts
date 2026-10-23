@@ -1,14 +1,24 @@
 "use server";
 
-import { asc, eq, max } from "drizzle-orm";
+/**
+ * FAQ 웹 서버 액션입니다. FormData와 웹 세션을 검증해 FAQ 서비스에 전달하고,
+ * 저장 후 경로 재검증·리다이렉트와 사용자에게 보여 줄 고정 결과만 처리합니다.
+ */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod/v4";
 import { requireAdmin } from "@/lib/admin";
-import { db } from "@/lib/db";
-import { reorderByCase } from "@/lib/db/reorder";
-import { faqContact, faqItems } from "@/lib/db/schema";
 import { logServerError } from "@/lib/errors";
+import {
+  createItem,
+  deleteItem,
+  getAdminContact,
+  getAdminItem,
+  listPublicItems,
+  reorderItems,
+  saveContact,
+  updateItem,
+} from "@/features/faq/service";
 
 const faqContactSchema = z.object({
   contactName: z.string().trim().min(1, "담당자명을 입력해주세요.").max(100, "담당자명은 100자 이하여야 합니다."),
@@ -43,20 +53,25 @@ function issuesToFieldErrors(issues: Array<{ path: PropertyKey[]; message: strin
   return fieldErrors;
 }
 
+// 웹 세션을 FAQ 서비스의 관리자 주체로 바꾸고 모든 액션 진입에서 다시 인가합니다.
+async function requireFaqActor() {
+  const session = await requireAdmin();
+  return { userId: session.user.id, role: session.user.role };
+}
+
+// 관리자 연락처 조회에서도 매 호출마다 웹 세션을 확인합니다.
 export async function getFaqContact() {
-  await requireAdmin();
-
-  const [contact] = await db
-    .select()
-    .from(faqContact)
-    .where(eq(faqContact.isActive, true))
-    .limit(1);
-
-  return contact ?? null;
+  const actor = await requireFaqActor();
+  const contact = await getAdminContact(actor);
+  return contact ? {
+    contactName: contact.contactName,
+    contactPhone: contact.contactPhone,
+    contactRole: contact.contactRole,
+  } : null;
 }
 
 export async function updateFaqContact(formData: FormData): Promise<FaqContactActionState> {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   const parsed = faqContactSchema.safeParse({
     contactName: normalizeText(formData.get("contactName")),
@@ -74,31 +89,7 @@ export async function updateFaqContact(formData: FormData): Promise<FaqContactAc
     };
   }
 
-  const [existingContact] = await db
-    .select({ id: faqContact.id })
-    .from(faqContact)
-    .where(eq(faqContact.isActive, true))
-    .limit(1);
-
-  if (!existingContact) {
-    await db.insert(faqContact).values({
-      cohortName: "",
-      contactName: parsed.data.contactName,
-      contactPhone: parsed.data.contactPhone,
-      contactRole: parsed.data.contactRole,
-      isActive: true,
-    });
-  } else {
-    await db
-      .update(faqContact)
-      .set({
-        contactName: parsed.data.contactName,
-        contactPhone: parsed.data.contactPhone,
-        contactRole: parsed.data.contactRole,
-        isActive: true,
-      })
-      .where(eq(faqContact.id, existingContact.id));
-  }
+  await saveContact(actor, parsed.data);
 
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
@@ -127,15 +118,13 @@ export type FaqItemActionState = {
 
 // FAQ 항목 전체 조회 (공개·관리자 공용)
 export async function getAllFaqItems() {
-  return db
-    .select()
-    .from(faqItems)
-    .orderBy(asc(faqItems.order), asc(faqItems.createdAt));
+  const items = await listPublicItems();
+  return items.map((item) => ({ id: item.id, question: item.question, answer: item.answer }));
 }
 
 // FAQ 항목 단건 조회 (관리자 편집용)
 export async function getFaqItem(id: string) {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
   // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
@@ -143,13 +132,13 @@ export async function getFaqItem(id: string) {
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) return null;
 
-  const [item] = await db.select().from(faqItems).where(eq(faqItems.id, parsedId.data)).limit(1);
-  return item ?? null;
+  const item = await getAdminItem(actor, parsedId.data);
+  return item ? { id: item.id, question: item.question, answer: item.answer } : null;
 }
 
 // FAQ 항목 생성 — 순서는 기존 최댓값 + 1로 자동 지정 (새 항목은 목록 맨 아래로)
 export async function createFaqItem(formData: FormData): Promise<FaqItemActionState> {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   const parsed = faqItemSchema.safeParse({
     question: formData.get("question"),
@@ -168,11 +157,7 @@ export async function createFaqItem(formData: FormData): Promise<FaqItemActionSt
     };
   }
 
-  // 기존 항목 중 가장 큰 order 값을 조회하여 그보다 1 큰 값으로 설정
-  const [{ maxOrder }] = await db.select({ maxOrder: max(faqItems.order) }).from(faqItems);
-  const nextOrder = (maxOrder ?? 0) + 1;
-
-  await db.insert(faqItems).values({ ...parsed.data, order: nextOrder });
+  await createItem(actor, parsed.data);
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
   redirect("/admin/faq");
@@ -180,7 +165,7 @@ export async function createFaqItem(formData: FormData): Promise<FaqItemActionSt
 
 // FAQ 항목 수정 — 순서(order)는 드래그앤드롭으로 관리하므로 수정하지 않음
 export async function updateFaqItem(id: string, formData: FormData): Promise<FaqItemActionState> {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
   const parsedId = z.uuid().safeParse(id);
@@ -205,10 +190,8 @@ export async function updateFaqItem(id: string, formData: FormData): Promise<Faq
     };
   }
 
-  const updated = await db.update(faqItems).set(parsed.data)
-    .where(eq(faqItems.id, parsedId.data)).returning({ id: faqItems.id });
   // 별도 존재 조회 대신 실제 저장 결과를 검사해 조회 후 삭제 경합도 처리합니다.
-  if (updated.length === 0) {
+  if (!(await updateItem(actor, parsedId.data, parsed.data))) {
     return { success: false, message: "FAQ 항목을 찾을 수 없습니다." };
   }
   revalidatePath("/faq");
@@ -218,25 +201,25 @@ export async function updateFaqItem(id: string, formData: FormData): Promise<Faq
 
 // FAQ 항목 삭제
 export async function deleteFaqItem(id: string): Promise<void> {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
   const parsedId = z.uuid().safeParse(id);
   if (!parsedId.success) return;
 
-  await db.delete(faqItems).where(eq(faqItems.id, parsedId.data));
+  await deleteItem(actor, parsedId.data);
   revalidatePath("/faq");
   revalidatePath("/admin/faq");
 }
 
 // FAQ 항목 순서 일괄 변경 — 드래그앤드롭 결과를 저장
 // orderedIds: 새 순서대로 정렬된 FAQ 항목 ID 배열
-// 단일 UPDATE ... CASE 문(reorderByCase 헬퍼)으로 원자적으로 갱신 —
-// 개별 UPDATE 루프에서 중간 실패 시 정렬 상태가 뒤엉키던 문제를 근본 차단한다.
+// 저장소의 단일 UPDATE ... CASE 문으로 원자적으로 갱신합니다.
+// 개별 UPDATE 루프에서 중간 실패 시 정렬 상태가 뒤엉키지 않도록 합니다.
 export async function reorderFaqItems(
   orderedIds: string[]
 ): Promise<{ success: boolean; message: string }> {
-  await requireAdmin();
+  const actor = await requireFaqActor();
 
   // Oracle Phase D 5라운드 BLOCK 수정 — orderedIds 각 원소를 UUID 로 사전 검증한다.
   // 이 배열은 reorderByCase 헬퍼의 `${a.id}::uuid` raw SQL 캐스트로 흘러가는데
@@ -249,16 +232,10 @@ export async function reorderFaqItems(
   const validIds = parsedIds.data;
 
   try {
-    const { affected } = await reorderByCase({
-      table: faqItems,
-      idColumn: faqItems.id,
-      targetColumn: faqItems.order,
-      // 기존 로직 유지: order 는 1-based (1, 2, 3, ...)
-      assignments: validIds.map((id, index) => ({ id, value: index + 1 })),
-    });
+    const { matched, affected } = await reorderItems(actor, validIds);
 
     // 존재하지 않는 ID 또는 중복 ID 로 인해 일부만 갱신된 경우 방어
-    if (affected !== validIds.length) {
+    if (!matched) {
       logServerError(
         "faq/reorder",
         new Error("update count mismatch"),
