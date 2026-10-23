@@ -255,7 +255,7 @@
     },
     {
       "path": "scripts/migrate-rate-limit-reservations.mjs",
-      "sha256": "a7970c350e27e3f4e95918d6e813651f698faed1a9ea7f1478782adc60cf9181",
+      "sha256": "c504b8567a6a5d03f4bbb813124da768d8862bd6a0830c932a1eeaaef3d1972a",
       "effect": "db_schema",
       "defaultBehavior": "read_only",
       "writeOptions": [

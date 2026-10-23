@@ -754,15 +754,25 @@
       },
       "objects": ["rate-events","rate-reserve"],
       "requires": ["web-base","rate-events"],
-      "checks": ["대상 파싱·읽기 기본 경로와 외부 SQL 설치는 분리되며 기존 관리 옵션 보호를 유지한다."],
+      "checks": ["무인자 확인은 접속하지 않고 --confirm-apply에서만 고정 SQL을 실행한다.","PGHOSTADDR·PGSERVICE·PGOPTIONS 같은 부모 접속 설정은 적용 자식에게 상속하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-rate-limit-reservations.mjs",
-          "line": 29,
-          "note": "요청 옵션 판정과 외부 SQL 설치 경로."
+          "line": 11,
+          "note": "명시 적용 인자만 허용하고 무인자 확인을 별도로 처리한다."
+        },
+        {
+          "file": "scripts/migrate-rate-limit-reservations.mjs",
+          "line": 51,
+          "note": "외부 rate-limit SQL 파일을 고정한 뒤에만 적용 자식을 준비한다."
+        },
+        {
+          "file": "scripts/migrate-rate-limit-reservations.mjs",
+          "line": 55,
+          "note": "부모 PG 설정을 제외하고 URL에서 확인한 libpq 접속값과 고정 제한만 전달한다."
         }
       ],
-      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+      "unresolved": ["wrapper가 실행하는 외부 SQL의 schema export 중복과 함수·권한 계약은 그 SQL 소스에서 수동 대조해야 한다."]
     },
     {
       "ref": "scripts/migrate-recruitment-singleton.mjs",

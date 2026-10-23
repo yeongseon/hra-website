@@ -148,6 +148,8 @@ test("기존 운영 환경 전달 예외는 같은 파일의 다른 spread를 �
   const input = fixture();
   const exception = structuredClone(environmentInventory.dynamicAccess.find((entry) => entry.path === "scripts/migrate-rate-limit-reservations.mjs"));
   input.inventory.dynamicAccess.push(exception);
+  // 허용 목록으로 좁힌 자식 환경의 시스템 이름도 합성 inventory에 선언합니다.
+  input.inventory.variables.push(...exception.names.map(record));
   input.sources.push({ path: exception.path, text: `const ${exception.expression};` });
   input.document = renderEnvironmentReference(input.inventory);
   assert.deepEqual(validateEnvironmentContract(input), []);

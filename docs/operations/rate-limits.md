@@ -14,6 +14,10 @@ npm run db:migrate-rate-limit-reservations
 
 이 기본 명령은 연결 문자열에서 **호스트와 DB명을 표시하고 끝납니다. DB에 접속하거나 설치 상태를 검사하지 않습니다.** 표시가 맞으면 승인된 대상에만 다음 명령을 실행합니다.
 
+URL에는 호스트·DB명·사용자명·비밀번호가 명시되어야 합니다. 중복되거나 지원하지 않는 접속 옵션은 적용 전에 거부합니다. 실제 `psql` 자식 프로세스에는 URL에서 확인한 접속 필드와 고정된 제한 설정만 전달하며, 부모의 `PGHOSTADDR`·`PGSERVICE`·`PGOPTIONS` 같은 PostgreSQL 환경 설정을 상속하지 않습니다. libpq에서는 이 설정들이 표시한 대상이나 세션 설정을 바꿀 수 있습니다([연결 파라미터](https://www.postgresql.org/docs/16/libpq-connect.html#LIBPQ-PARAMKEYWORDS), [service 파일 우선순위](https://www.postgresql.org/docs/16/libpq-pgservice.html)). 실패 시 자격정보·SQL·psql 오류 원문은 출력하지 않습니다.
+
+표시한 URL과 libpq 설정이 일치하더라도 DNS 응답, 실제 DB identity, 백업·승인을 확인한 것은 아닙니다. `sslmode=require`는 `verify-full`의 호스트명 검증과 다릅니다. 운영 적용 전 대상·TLS 정책·백업 및 사후 catalog를 별도로 검토합니다.
+
 ```bash
 npm run db:migrate-rate-limit-reservations -- --confirm-apply
 ```

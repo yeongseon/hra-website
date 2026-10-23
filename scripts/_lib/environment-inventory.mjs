@@ -113,9 +113,9 @@ export const environmentInventory = {
   },
   {
     "path": "scripts/migrate-rate-limit-reservations.mjs",
-    "expression": "pgEnvironment = {\n  ...process.env,\n  PGHOST: target.hostname,\n  PGPORT: target.port || \"5432\",\n  PGUSER: decodeURIComponent(target.username),\n  PGPASSWORD: decodeURIComponent(target.password),\n  PGDATABASE: decodeURIComponent(target.pathname.replace(/^\\//, \"\")),\n  PGSSLMODE: target.searchParams.get(\"sslmode\") || \"require\",\n  PGCHANNELBINDING: target.searchParams.get(\"channel_binding\") || \"prefer\",\n}",
-    "reason": "기존 운영 명령의 환경 상속 후 접속 필드를 덮어쓰는 구문; 실행·보안 변경은 이 계약의 범위 밖",
-    "names": []
+    "expression": "pgEnvironment = {\n  ...Object.fromEntries([\"PATH\", \"HOME\", \"SYSTEMROOT\", \"TMPDIR\", \"TMP\", \"TEMP\"].filter(key => process.env[key]).map(key => [key, process.env[key]])),\n  LC_ALL: \"C\",\n  PGHOST: host,\n  PGPORT: port,\n  PGUSER: user,\n  PGPASSWORD: password,\n  PGDATABASE: database,\n  PGSSLMODE: sslmode,\n  PGCHANNELBINDING: channelBinding,\n  PGCONNECT_TIMEOUT: \"10\",\n  PGGSSENCMODE: \"disable\",\n  PGOPTIONS: \"-c statement_timeout=60000 -c lock_timeout=5000 -c standard_conforming_strings=on\",\n}",
+    "reason": "검증한 URL의 접속 필드와 고정 제한만 psql 자식 환경에 전달해 부모 PG*·DATABASE_URL·NODE_OPTIONS 상속을 차단하는 운영 명령",
+    "names": ["PATH", "HOME", "SYSTEMROOT", "TMPDIR", "TMP", "TEMP"]
   },
   {
     "path": "scripts/verify-academic-assignment-admin-http.mjs",

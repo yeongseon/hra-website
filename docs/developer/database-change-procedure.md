@@ -46,7 +46,7 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 | 새 빈 개발·테스트 DB | 검토한 초기 SQL·추가 제약 준비 | 기존 격리 fixture 또는 검토·승인한 별도 적용 절차 사용 |
 | 기존·운영 DB | 이미 저장된 데이터 보존하며 변경 | 검토된 범위별 SQL·스크립트 적용 |
 | `npm run db:push` | 검증되지 않은 전체 차이 적용 차단 | 접속·환경 조회 없이 안내하고 실패 종료; 적용 인자도 지원하지 않음 |
-| `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시 |
+| `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시; 적용 시 부모 `PG*` 접속 설정은 전달하지 않음 |
 | 그 밖의 `db:migrate-*` | 스크립트별 구조 변경 | 이름만으로 dry-run이라 가정하지 않음; 실행 즉시 변경하는 스크립트가 있음 |
 
 기본 `drizzle.config.ts`는 `.env`·`DATABASE_URL`과 DB credentials를 읽지 않습니다. 따라서 기본 설정의 `npx drizzle-kit push`·`npx drizzle-kit migrate`도 접속 정보 부족으로 중단합니다. `npm run db:push -- --isolated`·`--apply`·URL·자체 승인 JSON으로 이를 활성화할 수 없습니다. 도구가 소유한 일회성 DB에 대한 별도 push 기능도 아직 제공하지 않습니다.
