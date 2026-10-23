@@ -1,6 +1,8 @@
-import { asc, eq } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { alumniStories } from "@/lib/db/schema";
+/**
+ * 홈 수료생 carousel의 표시 슬라이드와 대체 배경색을 구성합니다.
+ * featured 조회·관리자 순서는 Application Service/Repository에 맡깁니다.
+ */
+import { listFeaturedAlumni } from "@/features/alumni/featured/service";
 import { AlumniCarouselClient, type FeaturedAlumniSlide } from "./alumni-carousel-client";
 
 const gradients = [
@@ -10,17 +12,7 @@ const gradients = [
 ] as const;
 
 export async function AlumniCarousel() {
-  const featuredStories = await db
-    .select({
-      id: alumniStories.id,
-      name: alumniStories.name,
-      title: alumniStories.title,
-      quote: alumniStories.quote,
-      imageUrl: alumniStories.imageUrl,
-    })
-    .from(alumniStories)
-    .where(eq(alumniStories.isFeatured, true))
-    .orderBy(asc(alumniStories.order));
+  const featuredStories = await listFeaturedAlumni();
 
   if (featuredStories.length === 0) {
     return null;
