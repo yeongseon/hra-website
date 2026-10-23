@@ -98,7 +98,7 @@ DB 주소가 있어도 테이블이나 로그인 요청 제한 함수가 없으�
 - 로그인·업로드 요청 제한 설정: [요청 제한 운영](../operations/rate-limits.md)
 - 카카오 로그인을 시험하는 경우: [카카오 로그인 설정](../KAKAO-LOGIN-SETUP.md)
 
-`npm run db:push`를 일반적인 시작 명령으로 실행하지 않습니다. 현재 명령은 접속한 DB의 구조를 변경하며, 기존 DB에 필요한 모든 제약이나 함수를 관리해 주는 명령이 아닙니다.
+`npm run db:push`는 현재 접속 없이 안내하고 실패 종료합니다. 기본 Drizzle 설정은 DB 자격정보를 읽지 않습니다. SQL 생성과 별도 적용·추가 제약 검증은 [DB 변경 절차](../developer/database-change-procedure.md)를 따릅니다.
 
 ## 막힐 때
 

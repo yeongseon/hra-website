@@ -105,23 +105,6 @@
       ]
     },
     {
-      "name": "argparse",
-      "severity": "moderate",
-      "range": "1.0.0 - 1.0.10",
-      "nodes": [
-        {
-          "path": "node_modules/gray-matter/node_modules/argparse",
-          "version": "1.0.10",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "dependency": "sprintf-js"
-        }
-      ]
-    },
-    {
       "name": "brace-expansion",
       "severity": "high",
       "range": "<=1.1.20 || 3.0.0 - 5.0.11",
@@ -357,7 +340,7 @@
     {
       "name": "js-yaml",
       "severity": "high",
-      "range": "<=4.3.1",
+      "range": "<=3.15.1 || 4.0.0 - 4.3.1",
       "nodes": [
         {
           "path": "node_modules/gray-matter/node_modules/js-yaml",
@@ -371,9 +354,6 @@
         }
       ],
       "via": [
-        {
-          "dependency": "argparse"
-        },
         {
           "source": 1121859,
           "id": "GHSA-h67p-54hq-rp68",
@@ -504,27 +484,6 @@
           "severity": "high",
           "range": ">=1.0.0 <1.2.2",
           "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets"
-        }
-      ]
-    },
-    {
-      "name": "sprintf-js",
-      "severity": "moderate",
-      "range": "*",
-      "nodes": [
-        {
-          "path": "node_modules/sprintf-js",
-          "version": "1.0.3",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "source": 1241202,
-          "id": "GHSA-hp3w-g68c-fv3c",
-          "severity": "moderate",
-          "range": "<=1.1.3",
-          "title": "sprintf-js vulnerable to denial of service through unbounded precision specifiers"
         }
       ]
     },
@@ -905,18 +864,6 @@
       "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
-      "key": "argparse:sprintf-js",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "sprintf-js 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
-    },
-    {
       "key": "brace-expansion:1123897",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -1133,18 +1080,6 @@
       "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
     },
     {
-      "key": "js-yaml:argparse",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "argparse 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
-    },
-    {
       "key": "js-yaml:1121859",
       "priority": "P2",
       "owner": "repo-maintainers",
@@ -1299,18 +1234,6 @@
       "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
       "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
       "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
-    },
-    {
-      "key": "sprintf-js:1241202",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "sprintf-js vulnerable to denial of service through unbounded precision specifiers — GHSA-hp3w-g68c-fv3c, <=1.1.3",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
     },
     {
       "key": "ts-morph:@ts-morph/common",
