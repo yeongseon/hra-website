@@ -324,6 +324,44 @@ export function toApiV1NoticeSummary(input: {
 }
 
 /**
+ * 공개 공지 상세 GET은 본문과 화면에 필요한 최소 필드만 전달합니다.
+ * 작성자·발행 상태·고정 여부·이전/다음글은 공개 API 계약에 포함하지 않습니다.
+ */
+export const apiV1NoticeDetailResponseSchema = z
+  .object({
+    notice: z
+      .object({
+        id: apiV1UuidSchema,
+        title: z.string().min(1),
+        content: z.string(),
+        viewCount: z.number().int().nonnegative(),
+        createdAt: apiV1TimestampSchema,
+      })
+      .strict(),
+  })
+  .strict();
+export type ApiV1NoticeDetailResponse = z.infer<typeof apiV1NoticeDetailResponseSchema>;
+
+/** DB 조회 결과에서 공지 상세 API의 허용된 5개 필드만 선택합니다. */
+export function toApiV1NoticeDetailResponse(input: {
+  id: string;
+  title: string;
+  content: string;
+  viewCount: number;
+  createdAt: Date | string;
+}): ApiV1NoticeDetailResponse {
+  return apiV1NoticeDetailResponseSchema.parse({
+    notice: {
+      id: input.id,
+      title: input.title,
+      content: input.content,
+      viewCount: input.viewCount,
+      createdAt: toApiV1Timestamp(input.createdAt),
+    },
+  });
+}
+
+/**
  * 공개 일정의 시각은 실제 UTC 순간이 아닌 한국 달력의 벽시계 HH:MM 값입니다.
  * 24:00, 초 단위, 시간대 접미어는 허용하지 않습니다.
  */
