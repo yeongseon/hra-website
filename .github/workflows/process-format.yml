@@ -73,12 +73,20 @@ jobs:
       # 변경된 규칙 자체도 검증한다. 읽기 전용, 토큰/DB 비밀값/의존성 설치 없이 실행한다.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
       - run: node --test scripts/tests/release-policy.test.mjs
       - run: node scripts/check-release-config.mjs
+      - run: node --test scripts/tests/commit-messages.test.mjs
+      - name: 새 커밋 메시지 검사
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: >-
+          node scripts/check-commit-messages.mjs --history
+          "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+          "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
 
   audit:
     name: 열린 이슈·PR 일괄 검사

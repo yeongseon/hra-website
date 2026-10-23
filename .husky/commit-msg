@@ -1,0 +1,1 @@
+node scripts/check-commit-messages.mjs --message-file "$1"
