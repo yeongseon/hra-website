@@ -66,7 +66,7 @@ describe("회원 역할 × 경로", () => {
   it.each(["PENDING", "MEMBER", "FACULTY", "ADMIN"])(
     "%s 역할에 동일한 회원 경로 정책을 적용한다",
     async (role) => {
-      mocks.auth.mockResolvedValue({ user: { id: "user", role, name: "회원" } });
+      mocks.auth.mockResolvedValue({ user: { id: "11111111-1111-4111-8111-111111111111", role, name: "회원" } });
       if (role === "PENDING") {
         await expect(requireMember()).rejects.toThrow("REDIRECT:/pending");
         await expect(MemberLayout({ children: null })).rejects.toThrow("REDIRECT:/pending");
