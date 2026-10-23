@@ -11,6 +11,10 @@
  */
 
 import type { JWT } from "next-auth/jwt";
+import { USER_ROLES, type UserRole } from "@hra/contracts/identity";
+
+export { USER_ROLES };
+export type { UserRole };
 
 /**
  * 사용자 role 값의 런타임 검증용 상수 & type guard (#75)
@@ -23,9 +27,6 @@ import type { JWT } from "next-auth/jwt";
  * 해결: 상수 배열 기반 type guard 로 검증 후 fallback (PENDING) 을 명시하여 defense-in-depth.
  *   schema.ts 의 userRoleEnum 정의와 값이 항상 일치해야 한다.
  */
-export const USER_ROLES = ["ADMIN", "FACULTY", "MEMBER", "PENDING"] as const;
-export type UserRole = (typeof USER_ROLES)[number];
-
 export function isUserRole(value: unknown): value is UserRole {
   return (
     typeof value === "string" &&

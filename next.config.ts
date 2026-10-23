@@ -25,6 +25,8 @@ const downloadCsp = "frame-ancestors 'self'; base-uri 'self'; object-src 'none';
 const apiCsp = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'";
 
 const nextConfig: NextConfig = {
+  // 내부 contracts workspace의 TypeScript 원본을 Web 서버·클라이언트 번들에 포함합니다.
+  transpilePackages: ["@hra/contracts"],
   async headers() {
     return [
       {
