@@ -81,6 +81,16 @@ jobs:
       - run: node --test scripts/tests/release-policy.test.mjs
       - run: node scripts/check-release-config.mjs
       - run: node --test scripts/tests/commit-messages.test.mjs
+      - run: node --test scripts/tests/openapi-append-only.test.mjs scripts/tests/openapi-cli.test.mjs
+      - name: OpenAPI 기존 계약 추가 전용 검사
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        env:
+          # PR base 또는 main 직전 SHA를 셸 본문에 보간하지 않고 고정 인수로 전달합니다.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/check-openapi-compat.mjs --base-sha "$BASE_SHA"
+      - name: OpenAPI 현재 문서·Route 검사
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/check-openapi-compat.mjs --self
       - name: 새 커밋 메시지 검사
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: >-
