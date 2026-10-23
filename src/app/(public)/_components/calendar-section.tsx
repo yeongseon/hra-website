@@ -10,6 +10,7 @@
  */
 
 import { getScheduleEvents } from "@/features/schedule/actions";
+import { serializePublicScheduleEvents } from "@/features/schedule/public/service";
 import { CalendarClient, type SerializedEvent } from "./calendar-client";
 
 type CalendarSectionProps = {
@@ -20,25 +21,8 @@ type CalendarSectionProps = {
 export async function CalendarSection({ year, month }: CalendarSectionProps) {
   const events = await getScheduleEvents(year, month);
 
-  // Date 객체를 ISO 문자열로 직렬화 (클라이언트 컴포넌트 전달 가능하게)
-  const serialized: SerializedEvent[] = events.map((e) => ({
-    id: e.id,
-    eventDate: e.eventDate.toISOString(),
-    eventType: e.eventType,
-    title: e.title,
-    weekNumber: e.weekNumber ?? null,
-    description: e.description ?? null,
-    cohort: e.cohort ? { id: e.cohort.id, name: e.cohort.name } : null,
-    sessions: e.sessions.map((s) => ({
-      category: s.category,
-      content: s.content ?? null,
-      reportCategory: s.reportCategory ?? null,
-      subTitle: s.subTitle ?? null,
-      subDescription: s.subDescription ?? null,
-      faculty: s.faculty ? { id: s.faculty.id, name: s.faculty.name } : null,
-      order: s.order,
-    })),
-  }));
+  // 초기 렌더와 월 이동 액션이 같은 벽시계 직렬화 규칙을 사용합니다.
+  const serialized: SerializedEvent[] = serializePublicScheduleEvents(events);
 
   return (
     <section className="py-24 px-4 w-full bg-[#FFFFFF]">

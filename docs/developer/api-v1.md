@@ -1,6 +1,6 @@
 # API v1 현재 제공 범위
 
-공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`와 `GET /api/v1/me`입니다. 이후 일정, 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
+공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`, `GET /api/v1/me`, `GET /api/v1/schedule`입니다. 이후 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
 
 ## 본인 프로필
 
@@ -9,6 +9,14 @@
 세션 확인 뒤 현재 사용자의 표시용 행을 다시 조회합니다. 응답은 `{ user: { id, name, email, role, cohortId, imageUrl } }` 여섯 필드만 허용하며 비밀번호 해시·OAuth binding·세션 버전은 반환하지 않습니다. 내부 placeholder 이메일은 `null`입니다. `PENDING`도 **자기 프로필만** 읽을 수 있고 자료실·학사 인가는 이 API로 부여하지 않습니다. 사용자 행이 없어졌거나 세션의 역할과 다르면 401로 거부합니다.
 
 이 경로는 query를 받지 않아 전달되면 400 `INVALID_INPUT`입니다. Auth.js가 오류를 명시적으로 전파하거나 세션 인증 이후 별도 프로필 조회가 실패하면 503 `UNAVAILABLE`을 반환합니다. Auth.js JWT 콜백의 DB 오류는 라이브러리가 세션을 지워 무세션 401로 끝날 수도 있으므로 모든 DB 오류를 503으로 분류한다고 주장하지 않습니다. 모든 응답은 `Cache-Control: private, no-store`이며 오류에도 개인 정보·SQL 원문을 포함하지 않습니다.
+
+## 공개 일정
+
+`GET /api/v1/schedule`은 `year`(1900~2100)와 `month`(1~12)를 모두 요구합니다. 중복·미등록 query와 범위 밖 값은 400 `INVALID_INPUT`, 일정 저장소 장애는 503 `UNAVAILABLE`로 처리합니다. Web 캘린더의 잘못된 연·월을 현재 달로 보정하는 규칙과 달리 API 입력은 엄격히 거부합니다. 공개 표시된 일정만 한 달 범위로 조회하며 응답은 `{ year, month, timeZone: "Asia/Seoul", events }`입니다.
+
+각 이벤트의 `calendarDate`는 `YYYY-MM-DD`, `startTime`과 선택적 `endTime`은 한국 벽시계 `HH:MM`입니다. `endTime`만으로 종료 날짜·자정 넘김·지속 시간을 추정하지 않습니다. `event_date`는 PostgreSQL의 **시간대 없는 timestamp**에 한국 달력의 벽시계 필드를 저장하므로 실제 UTC 순간으로 해석하거나 9시간을 더하지 않습니다. 예를 들어 한국 시각 10월 31일 23:30 수업은 API에서 그대로 `calendarDate: "2026-10-31"`, `startTime: "23:30"`입니다. Web 달력의 기존 ISO 직렬화는 Web 표시 규칙으로 유지하며 API에는 `eventDate` ISO를 내보내지 않습니다. [PostgreSQL 시간 타입 설명](https://www.postgresql.org/docs/current/datatype-datetime.html)에 따르면 시간대 없는 timestamp는 입력의 시간대 표시를 조정 값으로 보관하지 않습니다.
+
+이벤트·세션에는 제목/내용·순서와 공개 기수/교수의 ID·이름만 들어갑니다. 기수 시트 주소·폼 URL과 교수 내부 열은 조회·응답에서 제외합니다. 이 공개 GET은 캐시하지 않으며 관리자 일정 쓰기나 개인 출결 인가와 관계없습니다.
 
 ## 공개 공지 목록
 

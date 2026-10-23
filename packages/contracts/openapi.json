@@ -113,6 +113,67 @@
           }
         }
       }
+    },
+    "/api/v1/schedule": {
+      "get": {
+        "operationId": "listPublicScheduleMonth",
+        "summary": "공개 월별 일정 조회",
+        "description": "year와 month를 모두 지정해야 합니다. 알 수 없거나 중복된 query key는 400으로 거부합니다. calendarDate와 startTime/endTime은 Asia/Seoul의 달력 날짜와 벽시계 시각이며 실제 UTC 순간이나 UTC wire timestamp가 아닙니다. 비공개 일정은 포함하지 않습니다.",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "description": "조회할 한국 달력의 연도입니다.",
+            "schema": { "type": "integer", "minimum": 1900, "maximum": 2100 }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "description": "조회할 한국 달력의 월입니다.",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 12 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "지정한 월의 공개 일정과 한국 달력 벽시계 표시 값",
+            "headers": {
+              "Cache-Control": {
+                "description": "월별 일정 응답을 저장하지 않습니다.",
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ScheduleResponse" } }
+            }
+          },
+          "400": {
+            "description": "필수 year/month 누락·범위 오류·중복 또는 미등록 query key",
+            "headers": {
+              "Cache-Control": {
+                "description": "입력 오류 응답을 저장하지 않습니다.",
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/InvalidInputError" } }
+            }
+          },
+          "503": {
+            "description": "저장소 장애로 공개 월별 일정을 제공할 수 없음",
+            "headers": {
+              "Cache-Control": {
+                "description": "저장소 오류 응답을 저장하지 않습니다.",
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UnavailableError" } }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -233,6 +294,68 @@
               "requestId": { "type": "string", "format": "uuid" }
             }
           }
+        }
+      },
+      "ScheduleWallTime": {
+        "type": "string",
+        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+        "description": "Asia/Seoul 달력의 HH:MM 벽시계 시각이며 UTC timestamp가 아닙니다."
+      },
+      "ScheduleCalendarDate": {
+        "type": "string",
+        "format": "date",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "description": "Asia/Seoul의 YYYY-MM-DD 달력 날짜이며 UTC timestamp가 아닙니다."
+      },
+      "ScheduleNamedReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      },
+      "ScheduleSession": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "content", "reportCategory", "subTitle", "subDescription", "faculty", "order"],
+        "properties": {
+          "category": { "type": "string", "enum": ["CLASSICS", "ENGLISH", "SPEECH", "SPECIAL_LECTURE", "CASE_STUDY"] },
+          "content": { "type": ["string", "null"] },
+          "reportCategory": { "type": ["string", "null"] },
+          "subTitle": { "type": ["string", "null"] },
+          "subDescription": { "type": ["string", "null"] },
+          "faculty": { "oneOf": [{ "$ref": "#/components/schemas/ScheduleNamedReference" }, { "type": "null" }] },
+          "order": { "type": "integer" }
+        }
+      },
+      "ScheduleEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "calendarDate", "startTime", "endTime", "eventType", "title", "weekNumber", "description", "cohort", "sessions"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "calendarDate": { "$ref": "#/components/schemas/ScheduleCalendarDate" },
+          "startTime": { "$ref": "#/components/schemas/ScheduleWallTime" },
+          "endTime": { "oneOf": [{ "$ref": "#/components/schemas/ScheduleWallTime" }, { "type": "null" }], "description": "종료 벽시계만 표시하며 종료 날짜·자정 넘김·지속 시간을 보증하지 않습니다." },
+          "eventType": { "type": "string", "enum": ["CLASS", "EVENT"] },
+          "title": { "type": "string", "minLength": 1 },
+          "weekNumber": { "type": ["integer", "null"] },
+          "description": { "type": ["string", "null"] },
+          "cohort": { "oneOf": [{ "$ref": "#/components/schemas/ScheduleNamedReference" }, { "type": "null" }] },
+          "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/ScheduleSession" } }
+        }
+      },
+      "ScheduleResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["year", "month", "timeZone", "events"],
+        "properties": {
+          "year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+          "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "timeZone": { "type": "string", "const": "Asia/Seoul" },
+          "events": { "type": "array", "items": { "$ref": "#/components/schemas/ScheduleEvent" } }
         }
       }
     }
