@@ -63,18 +63,24 @@ it.each([
 
   const countFilter = mocks.countWhere.mock.calls[0][0];
   const listFilter = mocks.listWhere.mock.calls[0][0];
-  expect(listFilter).toBe(countFilter);
-  const query = new PgDialect().sqlToQuery(countFilter);
-  expect(query.params).toEqual(expected ? ["PUBLISHED", expected] : ["PUBLISHED"]);
+  // 서로 다른 저장소 호출이어도 count와 목록의 공개·검색 조건은 SQL 의미가 같아야 합니다.
+  const [countQuery, listQuery] = [countFilter, listFilter]
+    .map((filter) => new PgDialect().sqlToQuery(filter));
+  expect(listQuery.sql).toBe(countQuery.sql);
+  expect(listQuery.params).toEqual(countQuery.params);
+  expect(countQuery.params).toEqual(expected ? ["PUBLISHED", expected] : ["PUBLISHED"]);
   if (expected) {
-    expect(query.sql).toContain("strpos(lower(");
-    expect(query.sql).not.toContain(expected);
+    expect(countQuery.sql).toContain("strpos(lower(");
+    expect(countQuery.sql).not.toContain(expected);
   } else {
-    expect(query.sql).not.toContain("strpos");
+    expect(countQuery.sql).not.toContain("strpos");
   }
 
   expect(mocks.limit).toHaveBeenCalledWith(15);
   expect(mocks.offset).toHaveBeenCalledWith(15);
+  expect(Object.keys(mocks.select.mock.calls[1][0])).toEqual([
+    "id", "title", "pinned", "createdAt", "viewCount",
+  ]);
   const links = [...document_.querySelectorAll<HTMLAnchorElement>('a[href^="/notices?"]')];
   expect(links).toHaveLength(3);
   for (const link of links) {

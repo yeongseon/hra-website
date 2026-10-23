@@ -1,18 +1,15 @@
 /**
- * 공개 공지 목록에서 검색·페이지 입력을 검증하고 발행된 공지만 조회합니다.
+ * 공개 공지 목록의 검색 입력을 정규화하고 서비스가 조회한 발행 목록을 표시합니다.
  * 방문 기록으로 검색어가 바뀌면 검색 입력도 해당 목록의 검색어로 초기화합니다.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, count, desc, eq, sql } from "drizzle-orm";
 import { Pin } from "lucide-react";
 import { NoticeSearch } from "./_components/notice-search";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { db } from "@/lib/db";
-import { notices } from "@/lib/db/schema";
+import { listPublishedNotices } from "@/features/notices/public-list/service";
 import { formatKstDate } from "@/lib/date-time";
-import { parseListPage } from "@/lib/query-params";
 
 export const metadata: Metadata = {
   title: "공지사항",
@@ -29,26 +26,9 @@ export default async function NoticesPage({
   const params = await searchParams;
   // 중복 키는 배열이므로 자료실의 단일 쿼리 처리처럼 무시하고 기본 목록을 표시한다.
   const query = typeof params.q === "string" ? params.q.trim() : "";
-  const ITEMS_PER_PAGE = 15;
-  // 검색은 SQL에서 적용해 전체 행을 서버 메모리로 읽지 않는다.
-  const filter = query
-    ? and(eq(notices.status, "PUBLISHED"), sql`strpos(lower(${notices.title}), lower(${query})) > 0`)
-    : eq(notices.status, "PUBLISHED");
-  const [{ total: totalCount }] = await db.select({ total: count() }).from(notices).where(filter);
-  const { currentPage, totalPages, startIndex } = parseListPage(params.page, totalCount, ITEMS_PER_PAGE);
-  const currentNotices = await db
-    .select({
-      id: notices.id,
-      title: notices.title,
-      pinned: notices.pinned,
-      createdAt: notices.createdAt,
-      viewCount: notices.viewCount,
-    })
-    .from(notices)
-    .where(filter)
-    .orderBy(desc(notices.pinned), desc(notices.createdAt), desc(notices.id))
-    .limit(ITEMS_PER_PAGE)
-    .offset(startIndex);
+  // 목록 서비스가 공개 상태·검색·페이지 보정과 표시 필드 조회를 담당합니다.
+  const { items: currentNotices, totalCount, currentPage, totalPages, startIndex } =
+    await listPublishedNotices({ query, page: params.page });
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">
