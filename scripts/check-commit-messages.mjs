@@ -40,16 +40,16 @@ function checkHistory(base, head) {
 }
 
 function main() {
-  const [mode, file] = process.argv.slice(2);
+  const [mode, file, head] = process.argv.slice(2);
   if (mode === "--message-file") {
     if (!file) throw new Error("메시지 파일 누락");
     const title = readFileSync(file, "utf8").split(/\r?\n/, 1)[0].trim();
     const problem = validateSubject(title);
     if (problem) { console.error(problem); process.exitCode = 1; }
   } else if (mode === "--history") {
-    checkHistory(process.env.COMMIT_BASE ?? "", process.env.COMMIT_HEAD ?? "");
+    checkHistory(file ?? "", head ?? "");
   } else {
-    throw new Error("사용법: --message-file <path> 또는 --history");
+    throw new Error("사용법: --message-file <path> 또는 --history <base-sha> <head-sha>");
   }
 }
 
