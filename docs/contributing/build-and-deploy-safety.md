@@ -176,7 +176,7 @@ PR을 한 건 병합한 뒤에는 **새 `main` 병합 커밋의 Production 배�
 
 Preview의 **빌드 성공**은 배포용 앱 생성의 증거입니다. 실제 OAuth 로그인, DB 연결·변경, Blob 업로드, 예약 작업, 운영 환경변수 일치는 별도 확인입니다. Preview 자원 격리는 아직 [#279](https://github.com/yeongseon/hra-website/issues/279)의 확인 대상이므로, 연결 대상을 확인하기 전에는 실제 개인정보나 운영 파일로 기능 검사를 하지 않습니다. 환경별 절차는 [배포 안내](../DEPLOYMENT.md)를 따릅니다.
 
-리뷰는 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)을 따릅니다. OpenCode의 의미 있는 작업에는 Oracle 리뷰가 필요하고, 문서만 수정하는 등 명시된 간단 변경은 면제입니다. Claude 또는 Codex만 사용한 작업에는 Oracle 절차가 적용되지 않습니다. 일반 코드 리뷰와 필요한 검사는 계속 수행합니다.
+리뷰는 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 **도구 중립적인 위험 기반 기준**을 따릅니다. 인증·인가·개인정보·DB·비공개 파일·운영 설정과 관련된 고위험 변경은 독립 리뷰와 관련 회귀 테스트를 완료한 후 병합합니다. 기능을 변경하지 않는 문서·문구 수정은 diff·실제 명령 정합성을 확인하며, 특정 AI 에이전트 또는 전용 호출 도구를 필수로 요구하지 않습니다.
 
 CI와 리뷰를 확인한 뒤 [협업 절차](workflow.md)에 따라 병합합니다. 실제 배포는 [배포 안내](../DEPLOYMENT.md)를 따르고, 배포된 주소에서 변경 기능·권한·외부 서비스 연결을 확인합니다. DB 변경이나 운영 확인이 남아 있다면 PR의 병합만으로 이슈를 닫지 않습니다.
 

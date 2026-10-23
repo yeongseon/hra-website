@@ -90,7 +90,7 @@ node scripts/check-release-config.mjs
 
 인증·라우팅 등 브라우저 동작을 바꿨다면 [빌드·배포 가이드](build-and-deploy-safety.md)의 환경 조건을 준비하고 관련 E2E와 실제 화면도 확인합니다. 결과나 미실행 사유를 PR에 남깁니다. `npm test`의 성공 종료만 보지 말고 관련 DB 테스트가 건너뛰어졌는지도 확인합니다.
 
-로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode로 수행한 의미 있는 작업**은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 Oracle 리뷰 조건을 적용합니다. 문서만 수정하는 등 명시된 간단 변경은 면제이며, **Claude 또는 Codex만 사용한 작업에는 Oracle 절차를 적용하지 않습니다.** 일반 리뷰와 필요한 검사는 계속 수행합니다.
+로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode·Codex·Claude·사람의 직접 작업 모두 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 위험 기반 리뷰 기준을 동일하게 적용합니다.** 고위험 변경은 독립 리뷰와 관련 회귀 검증을 완료한 후 병합하고, 문서·문구만 바꾸는 비동작 변경은 diff·명령 정합성을 검토합니다. 특정 에이전트의 호출이나 전용 승인 문구가 필수 조건은 아닙니다.
 
 리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. **현재 PR의 마지막 커밋**에서 GitHub CI와 Vercel Preview가 각각 성공했는지 확인한 뒤 한 건을 병합합니다. 새 `main` 병합 커밋의 Production 배포 성공을 확인한 다음 PR을 갱신·푸시합니다. Preview 설치·빌드 실패나 Production 배포 대기·실패·횟수 제한은 [빌드·배포 가이드](build-and-deploy-safety.md)의 중단·원인 확인 절차를 먼저 따릅니다. 최신 `main` 반영이나 수정 커밋 뒤에는 이전 성공 결과를 재사용하지 않습니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
 
