@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "state": "unset",
+  "executionContract": "postgresql-file-transaction-v1",
+  "migrations": []
+}
