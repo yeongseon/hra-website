@@ -46,6 +46,12 @@ jobs:
         # 합성 URL로 기본 접속 차단과 SQL 생성만 검사하며 DB를 준비하지 않습니다.
         run: node --test scripts/tests/db-push-guard.test.mjs
 
+      - name: 버전 SQL manifest·이력 snapshot 소스 계약
+        # 실제 적용 이력을 만들지 않고 파일·Git·전달된 JSON의 일관성만 확인합니다.
+        run: |
+          node --test scripts/tests/db-migration-manifest.test.mjs
+          node scripts/check-db-migration-manifest.mjs
+
       - name: 환경변수 문서·예시 계약 검사
         # 실제 .env·DB·Blob에 접근하지 않고 설치한 TypeScript로 소스만 읽습니다.
         run: |

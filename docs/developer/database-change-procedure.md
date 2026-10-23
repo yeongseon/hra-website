@@ -13,6 +13,14 @@
 G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
 예약 ID 정리 인덱스는 [#287 변경 절차](rate-limit-reservation-index.md)의 범위 SQL·카탈로그 검증을 따릅니다. **이 SQL과 인덱스가 운영 DB에 적용됐다는 뜻은 아닙니다.** 운영 대상·백업·허용 잠금 시간·적용 승인은 별도로 확인합니다.
 
+### 버전 SQL manifest와 전달된 이력 검사
+
+`node scripts/check-db-migration-manifest.mjs`는 `scripts/db/migration-manifest.json`과 `scripts/db/versioned/`의 소스 계약을 확인합니다. 원본 SQL bytes의 SHA256·순서·ID·경로를 검증하고, Git 추적 파일 누락과 해당 디렉터리의 미등록 SQL을 거부합니다. 이 범위에서는 ignore된 미추적 SQL도 검사합니다. SQL을 실행하거나 DB에 접속하지 않습니다.
+
+현재 manifest는 **`unset`·0개**입니다. 이 검사의 성공은 초기 설치·baseline·migration 적용 성공을 뜻하지 않습니다. 기존 SQL17개를 새 migration이나 이미 적용된 이력으로 자동 변환하지 않습니다. 향후 versioned SQL을 추가할 때는 저장소 전체 SQL을 확인하는 기존 source inventory와 새 manifest의 등록 책임을 함께 검토합니다.
+
+선택 인자 `--prior-manifest <상대경로.json>`과 `--ledger-snapshot <상대경로.json>`은 전달된 입력 사이의 일관성만 비교합니다. 이전 manifest의 prefix 변경, 알 수 없는 이력·순서·checksum과 native ledger 테이블 존재를 거부하지만, JSON이 실제 DB 관측이나 승인 근거임을 증명하지는 않습니다. 출력의 `observedDatabase`와 `readyToApply`는 항상 `false`입니다. 입력 schema·크기·경로 제한은 `scripts/db/versioned/README.md`에 있습니다.
+
 ## 1. 대상과 명령의 효과부터 확인하기
 
 | 상황·명령 | 용도 | 현재 주의할 동작 |
