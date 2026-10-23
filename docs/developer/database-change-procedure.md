@@ -2,13 +2,19 @@
 
 이 문서는 저장소의 **DB 구조를 실제 환경에 적용하는 기준**입니다. `schema.ts`를 수정하는 일, DB를 변경하는 일, 앱을 배포하는 일은 각각 다른 작업입니다. 먼저 [DB 입문 안내](../DATABASE.md)에서 테이블·외래 키·마이그레이션 용어를 확인할 수 있습니다.
 
-현재 버전별 마이그레이션 디렉터리와 공통 적용 이력은 없으며, 범위별 SQL·스크립트는 `scripts/migrate-*`에 있습니다. 자동 적용 이력과 Production migration gate는 [#280](https://github.com/yeongseon/hra-website/issues/280)의 후속 작업입니다. 아래 수동 절차가 이미 자동 차단 장치로 구현됐다는 뜻은 아닙니다.
+버전 SQL 등록 디렉터리(`scripts/db/versioned/`)는 있으나 실제 SQL은 없고 manifest도 미설정입니다. 공통 DB 적용 이력은 아직 없으며 범위별 legacy SQL·스크립트는 `scripts/migrate-*`에 있습니다. 자동 적용 이력과 Production migration gate는 [#280](https://github.com/yeongseon/hra-website/issues/280)의 후속 작업입니다. 아래 수동 절차가 이미 Production 배포 차단 장치로 구현됐다는 뜻은 아닙니다.
 
 `scripts/db/source-inventory.json`은 **현재 소스 스냅샷**입니다. Git이 추적하는 SQL 17개(읽기 전용 학사 preflight 포함)의 역할·원본 바이트 해시와 이름 패턴으로 관리하는 MJS 18개의 기본 동작·적용 인자를 기록합니다. `node scripts/check-db-source-inventory.mjs`는 Git 추적 파일과 로컬의 미추적·비무시 SQL/MJS를 대조합니다. CI에서는 PR에 포함된 새 SQL이 Git 추적 파일이므로 목록 밖이면 실패합니다. 로컬의 무시된 미추적 파일은 검사하지 않으며, 임의 이름의 JS·앱 내 SQL·직접 `psql` 명령을 전수 탐지하는 장치는 아닙니다.
 
 이 목록은 **DB에 적용됐다는 ledger나 전체 설치 순서가 아닙니다.** 뷰의 현행 정의처럼 정상적으로 갱신하는 파일도 새 바이트와 목록 해시를 함께 검토합니다. 같은 PR에서 SQL과 해시를 둘 다 수정하면 검사가 통과할 수 있으므로 변경 의미는 리뷰어가 확인합니다. G1의 9개 순서는 기존 테스트 배열과 정확히 대조하며 적용기는 대체하지 않습니다. #287 인덱스 SQL은 `public.rate_limit_events`와 UUID `reservation_id`가 필요하지만, 그 준비가 특정 SQL 파일의 운영 적용을 증명하지는 않습니다. 잠금 방식·대상·백업을 검토하기 전에는 운영 자동 적용 대상이 아닙니다. 새 DB 적용·재실행·catalog 확인, 운영 백업·승격 차단은 여전히 #280 후속 단계입니다.
 
 검사는 `npm ci` 뒤에 실행합니다. 이미 사용하는 TypeScript 파서로 G1의 실제 최상위 `export const` 문자열 배열만 읽으며, 주석·문자열 속 가짜 선언과 실행식·중복 선언·문법 오류는 인정하지 않습니다. 소스 모듈이나 SQL을 실행하지 않으며 새 의존성도 추가하지 않습니다.
+
+### 신규 설치 소스 대응표
+
+`scripts/db/installation-contract.json`은 위 source inventory의 항목을 참조해 신규 설치에 필요한 객체·선행 조건·검증 내용과 제외 이유를 기록합니다. 경로·역할·원본 해시·선행 관계의 정본은 기존 inventory입니다. `node scripts/check-db-installation-contract.mjs`는 모든 inventory 항목의 양방향 대응을 검사하며 SQL·관리 스크립트·DB를 실행하지 않습니다.
+
+대응표의 `coverageComplete`는 확인된 소스를 빠짐없이 분류했는지, `freshReady`는 신규 설치에 필요한 정의·중복 관계·선행 조건이 모두 해결됐는지를 구분합니다. 분석만으로 확정할 수 없는 동적 SQL이나 schema export와 legacy SQL의 중복은 `unresolved`로 남깁니다. 필요한 객체의 정의 소스가 제외됐거나 미해결 조건이 남아 있으면 신규 설치 bundle의 승격을 차단합니다. 이 표의 성공도 실제 DB 적용·운영 baseline을 증명하지 않습니다.
 
 G1 학생·기수 등록 테이블은 [학생 명부 스키마 적용](academic-students-migration.md)의 범위 SQL과 읽기 전용 preflight를 사용합니다.
 예약 ID 정리 인덱스는 [#287 변경 절차](rate-limit-reservation-index.md)의 범위 SQL·카탈로그 검증을 따릅니다. **이 SQL과 인덱스가 운영 DB에 적용됐다는 뜻은 아닙니다.** 운영 대상·백업·허용 잠금 시간·적용 승인은 별도로 확인합니다.

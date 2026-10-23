@@ -1,0 +1,2131 @@
+{
+  "version": 1,
+  "inventoryRef": "scripts/db/source-inventory.json",
+  "schemaExport": {
+    "entry": "src/lib/db/schema.ts",
+    "description": "현재 웹·학사 모델 재수출 진입점의 정적 선언을 출발점으로 삼는다. 이 표는 schema export를 실행하지 않으며 실제 DB나 과거 적용 이력을 관측하지 않는다.",
+    "checks": ["현재 설치 Drizzle export tool/version과 검토 snapshot을 S3b에서 고정한다.","export와 custom SQL의 객체 이름·타입·기본값·FK·index·함수/권한을 별도 대조하며 IF NOT EXISTS를 동등 증거로 쓰지 않는다."],
+    "evidence": [
+      {
+        "file": "src/lib/db/schema.ts",
+        "line": 1181,
+        "note": "학사 관련 모델을 같은 schema 진입점에서 재수출한다."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "ref": "scripts/migrate-287-rate-limit-reservation-index.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "현 export와 중복된 예약 UUID 인덱스의 수동 동등/잠금 검토가 먼저 필요하다."
+      },
+      "objects": ["rate-reservation-index"],
+      "requires": ["rate-events"],
+      "checks": ["현재 export가 이미 가진 index에 대한 별도 조건부 검증·잠금 경로로 검토하며 자동 재생을 결정하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-287-rate-limit-reservation-index.sql",
+          "line": 18,
+          "note": "현 export와 중복된 예약 UUID 인덱스의 수동 동등/잠금 검토가 먼저 필요하다."
+        }
+      ],
+      "unresolved": ["export에 이미 있는 index와 조건부 legacy SQL의 수동 동등/대체 판정 및 locking 정책이 남았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-assignment-actions.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-actions","academic-action-functions"],
+      "requires": ["web-base","academic-submissions","academic-actions","academic-assignment-functions"],
+      "checks": ["이벤트 표와 6인자 action 함수의 결합, 요청별 감사·멱등성 경계를 유지한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-assignment-actions.sql",
+          "line": 9,
+          "note": "변경 event 구조."
+        },
+        {
+          "file": "scripts/migrate-academic-assignment-actions.sql",
+          "line": 77,
+          "note": "6인자 mutate 함수와 payload/action 분기."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-assignments.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-assignments","academic-assignment-functions","academic-assignments-type","academic-assignment-triggers"],
+      "requires": ["web-base","academic-roster","academic-assignments-type","academic-assignments","academic-assignment-functions"],
+      "checks": ["테이블·상태 enum·게시/참조 함수와 여섯 trigger가 하나의 원문에서 설치됨을 유지한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-assignments.sql",
+          "line": 20,
+          "note": "과제/대상 표와 상태·참조 정의."
+        },
+        {
+          "file": "scripts/migrate-academic-assignments.sql",
+          "line": 151,
+          "note": "과제 guard와 snapshot 함수."
+        },
+        {
+          "file": "scripts/migrate-academic-assignments.sql",
+          "line": 298,
+          "note": "과제/대상/수업/명부 trigger 연결."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다.","같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다.","fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-enrollment-links.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-links","academic-link-functions"],
+      "requires": ["web-base","academic-students","academic-links"],
+      "checks": ["batch 표와 후보 관측·명시 plan 적용 함수의 설치를 분리해 누락하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-enrollment-links.sql",
+          "line": 8,
+          "note": "연결 batch 구조와 expected CHECK 검증."
+        },
+        {
+          "file": "scripts/migrate-academic-enrollment-links.sql",
+          "line": 61,
+          "note": "후보 관측 함수."
+        },
+        {
+          "file": "scripts/migrate-academic-enrollment-links.sql",
+          "line": 100,
+          "note": "명시 plan 적용 함수와 사용자 역할 재검증."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-roster.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-roster","academic-roster-functions"],
+      "requires": ["web-base","academic-links","academic-roster"],
+      "checks": ["표가 이미 export되어도 명부 등록 함수의 PUBLIC 실행 권한 회수를 빠뜨리지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-roster.sql",
+          "line": 6,
+          "note": "명부 등록 구조와 제약 대조."
+        },
+        {
+          "file": "scripts/migrate-academic-roster.sql",
+          "line": 71,
+          "note": "등록 함수 본문·고정 search_path."
+        },
+        {
+          "file": "scripts/migrate-academic-roster.sql",
+          "line": 124,
+          "note": "PUBLIC EXECUTE 회수."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-students.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-students","academic-students-type"],
+      "requires": ["web-base","academic-students-type"],
+      "checks": ["기존 enum/table/index를 허용하는 원문 검증 DO와 신규 생성 경로를 모두 보존하는 후보가 필요하다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-students.sql",
+          "line": 23,
+          "note": "학생/등록 표와 enum 선행조건·정의 검증."
+        },
+        {
+          "file": "scripts/migrate-academic-students.sql",
+          "line": 50,
+          "note": "기수/상태 index와 이후 catalog shape 검사."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-submission-file-reads.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-file-reads","academic-file-read-function","academic-file-read-trigger"],
+      "requires": ["web-base","academic-submissions","academic-file-reads","academic-complete-function","academic-file-read-function"],
+      "checks": ["감사 표·조회 index와 불변 guard/trigger를 빠뜨리지 않고 같은 파일의 검증 범위로 대조한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-submission-file-reads.sql",
+          "line": 9,
+          "note": "허가 감사 표·시간 index."
+        },
+        {
+          "file": "scripts/migrate-academic-submission-file-reads.sql",
+          "line": 74,
+          "note": "불변 guard 함수와 UPDATE/DELETE trigger."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다.","fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-submission-finalization.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-complete-function"],
+      "requires": ["academic-upload-auth","academic-upload-functions"],
+      "checks": ["원문 transaction advisory lock과 새 5인자 최종화 함수 설치 경계를 수동 검토한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-submission-finalization.sql",
+          "line": 9,
+          "note": "파일/텍스트 최종화를 결합하는 5인자 함수."
+        },
+        {
+          "file": "scripts/migrate-academic-submission-finalization.sql",
+          "line": 88,
+          "note": "PUBLIC EXECUTE 회수."
+        }
+      ],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-submissions.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-submissions","academic-submission-functions","academic-submissions-type","academic-submission-triggers"],
+      "requires": ["web-base","academic-assignments","academic-submissions-type","academic-submissions","academic-submission-functions"],
+      "checks": ["공유 DDL을 임시 expected schema와 비교한 뒤 제거하는 과정과 지연 trigger의 COMMIT 시점을 보존한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-submissions.sql",
+          "line": 28,
+          "note": "공유 DDL 텍스트와 임시 expected schema 비교."
+        },
+        {
+          "file": "scripts/migrate-academic-submissions.sql",
+          "line": 137,
+          "note": "소유·마감 검증 및 제출 함수."
+        },
+        {
+          "file": "scripts/migrate-academic-submissions.sql",
+          "line": 280,
+          "note": "COMMIT 시점 constraint trigger와 PUBLIC 권한 회수."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다.","같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다.","fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-academic-upload-authorizations.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "최신 export의 중복 학사 구조와 custom 함수·trigger를 G1 순서로 대조한 후에만 fresh 후보에 포함한다."
+      },
+      "objects": ["academic-upload-auth","academic-upload-functions","academic-upload-trigger"],
+      "requires": ["web-base","academic-actions","academic-upload-auth","academic-submission-functions","academic-upload-functions"],
+      "checks": ["승인 원장·함수 권한·구 cancel 제거/신 cancel 정의·최종 guard의 결합 관계를 명시한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-academic-upload-authorizations.sql",
+          "line": 8,
+          "note": "승인 원장 구조·부분 unique/cleanup index."
+        },
+        {
+          "file": "scripts/migrate-academic-upload-authorizations.sql",
+          "line": 71,
+          "note": "발급/검증/취소 함수."
+        },
+        {
+          "file": "scripts/migrate-academic-upload-authorizations.sql",
+          "line": 150,
+          "note": "이전 2인자 취소 진입점 제거와 새 3인자 정의."
+        },
+        {
+          "file": "scripts/migrate-academic-upload-authorizations.sql",
+          "line": 217,
+          "note": "공개 함수 실행 권한 회수."
+        }
+      ],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다.","함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다.","fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-assert-application-question-revision.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "제출 시 revision 검증 함수가 필요하며 export가 함수를 대신하지 않는다."
+      },
+      "objects": ["question-revision-assert"],
+      "requires": ["web-base","question-revision-column"],
+      "checks": ["제출 transaction의 FOR SHARE/공개 상태/revision 경계를 함수 본문·권한과 함께 대조한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-assert-application-question-revision.sql",
+          "line": 3,
+          "note": "제출 시 revision 검증 함수가 필요하며 export가 함수를 대신하지 않는다."
+        }
+      ],
+      "unresolved": ["함수의 설치 역할과 실제 실행 권한을 fresh 후보 catalog로 확인하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-atomic-application-questions.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "질문 저장 사용자 정의 함수가 필요하나 역할·transaction 경계를 검토하지 않은 상태다."
+      },
+      "objects": ["question-save"],
+      "requires": ["web-base","question-revision-column","answer-fk"],
+      "checks": ["함수 원문을 단독 SQL 파일로 유지하고 컬럼 선행조건은 wrapper·export와 별도 연결한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-atomic-application-questions.sql",
+          "line": 4,
+          "note": "질문 저장 사용자 정의 함수가 필요하나 역할·transaction 경계를 검토하지 않은 상태다."
+        }
+      ],
+      "unresolved": ["versioned 후보에 옮길 transaction 경계와 함수 ACL/search_path 계약을 아직 독립 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/migrate-protect-application-answers.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "답변 보존 지연 FK가 필요하고 export 기본 FK와의 교체 판정이 남았다."
+      },
+      "objects": ["answer-fk"],
+      "requires": ["web-base"],
+      "checks": ["정확한 단일 FK만 교체하는 catalog/data 선행 검사를 raw wrapper 제거로 바꾸지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-protect-application-answers.sql",
+          "line": 38,
+          "note": "답변 보존 지연 FK가 필요하고 export 기본 FK와의 교체 판정이 남았다."
+        }
+      ],
+      "unresolved": ["최신 export와 교체 후 FK의 deferred/validated/action 차이를 prefix별로 검증해야 한다."]
+    },
+    {
+      "ref": "scripts/migrate-protect-application-submissions.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "지원자 데이터 보존 FK의 export 동등·기존 분기 검토가 남았다."
+      },
+      "objects": ["submission-fks"],
+      "requires": ["web-base"],
+      "checks": ["두 FK 각각의 CASCADE/RESTRICT 분기를 확인하며 다른 참조·동작을 자동 수용하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-protect-application-submissions.sql",
+          "line": 28,
+          "note": "지원자 데이터 보존 FK의 export 동등·기존 분기 검토가 남았다."
+        }
+      ],
+      "unresolved": ["현 export가 이미 RESTRICT인 상태와 legacy 교체 분기의 동등성 검증이 남았다."]
+    },
+    {
+      "ref": "scripts/preflight-academic-students.sql",
+      "phase": "preflight",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "읽기 전용 운영 사전 관측은 DDL 적용 이력도 fresh 설치 단계도 아니다."
+      },
+      "objects": ["students-preflight"],
+      "requires": ["web-base"],
+      "checks": ["읽기 관측 건수는 실제 운영 적용 이력이나 새 테이블 생성 증거가 아니다."],
+      "evidence": [
+        {
+          "file": "scripts/preflight-academic-students.sql",
+          "line": 4,
+          "note": "읽기 전용 운영 사전 관측은 DDL 적용 이력도 fresh 설치 단계도 아니다."
+        }
+      ],
+      "unresolved": []
+    },
+    {
+      "ref": "scripts/sql/markdown-image-references.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "이미지 소유 원장과 콘텐츠 참조 view는 필요하며 전체 선행 표·권한 대조가 남았다."
+      },
+      "objects": ["markdown-references"],
+      "requires": ["web-base","markdown-assets"],
+      "checks": ["원장 및 모든 콘텐츠 표가 먼저 필요하며 미포함 fixture를 완전 fresh 설치로 오인하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/sql/markdown-image-references.sql",
+          "line": 4,
+          "note": "이미지 소유 원장과 콘텐츠 참조 view는 필요하며 전체 선행 표·권한 대조가 남았다."
+        }
+      ],
+      "unresolved": ["전체 웹 테이블 선행조건과 view 정의·열·권한을 fresh 후보에서 아직 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/sql/rate-limit-reservations.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "예약 원자 함수가 필요하고 테이블/index는 최신 export와 겹친다."
+      },
+      "objects": ["rate-events","rate-reserve"],
+      "requires": ["web-base","rate-events"],
+      "checks": ["외부 BEGIN/COMMIT과 예약 함수·기존 index 생성의 의미를 보존하고 #287 추가 index와 구분한다."],
+      "evidence": [
+        {
+          "file": "scripts/sql/rate-limit-reservations.sql",
+          "line": 5,
+          "note": "예약 원자 함수가 필요하고 테이블/index는 최신 export와 겹친다."
+        }
+      ],
+      "unresolved": ["export와 기존 SQL의 인덱스 집합 차이를 명시한 최종 fresh catalog가 아직 없다.","현재 함수의 권한·search_path와 S2 helper 내부 설치 의미를 아직 fresh bundle에서 대조하지 않았다."]
+    },
+    {
+      "ref": "scripts/backfill-academic-enrollments.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["enrollment-backfill"],
+      "requires": ["web-base","academic-link-functions"],
+      "checks": ["승인 plan·현재 후보 snapshot·대상 확인의 결합을 fresh DDL이나 자동 학적 seed로 바꾸지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/backfill-academic-enrollments.mjs",
+          "line": 24,
+          "note": "대상 fingerprint/계획·승인자 선행조건."
+        },
+        {
+          "file": "scripts/backfill-academic-enrollments.mjs",
+          "line": 58,
+          "note": "읽기 기본 경로와 조건부 적용 SQL."
+        },
+        {
+          "file": "scripts/backfill-academic-enrollments.mjs",
+          "line": 60,
+          "note": "명시 적용 경로가 public.apply_academic_enrollment_links를 직접 호출하므로 link 함수 설치가 선행해야 한다."
+        }
+      ],
+      "unresolved": ["외부 승인 plan과 현재 후보 snapshot에 따라 조건부 SQL 인자·적용 대상이 달라지므로 정적 SQL 한 파일로 추출하지 않았다."]
+    },
+    {
+      "ref": "scripts/cleanup-markdown-image-assets.mjs",
+      "phase": "external",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 원본의 외부 copy/delete와 DB 상태 교체는 fresh schema 설치에 포함하지 않는다."
+      },
+      "objects": ["markdown-blob-cleanup"],
+      "requires": ["markdown-assets","markdown-references"],
+      "checks": ["쓰기 중단·원장 소유·현재 참조·외부 삭제 결과의 조건부 원장 갱신을 schema 설치와 구분한다."],
+      "evidence": [
+        {
+          "file": "scripts/cleanup-markdown-image-assets.mjs",
+          "line": 14,
+          "note": "콘텐츠 쓰기 중단과 토큰의 적용 선행조건."
+        },
+        {
+          "file": "scripts/cleanup-markdown-image-assets.mjs",
+          "line": 46,
+          "note": "후보별 현재 참조 재검사와 private/public Blob 삭제 분기."
+        },
+        {
+          "file": "scripts/cleanup-markdown-image-assets.mjs",
+          "line": 72,
+          "note": "성공·이미 삭제됨 상황의 원장 deleted_at 변경."
+        }
+      ],
+      "unresolved": ["실제 참조·원본 바이트·외부 store 응답에 따라 copy/delete/보상 결과가 달라진다. 이 표는 외부 실행 계획·원자성 증거를 만들지 않는다."]
+    },
+    {
+      "ref": "scripts/migrate-add-alumni-featured.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "현 export가 컬럼을 소유하므로 legacy 접속형 wrapper를 fresh 단계로 실행하지 않는다."
+      },
+      "objects": ["alumni-featured"],
+      "requires": ["web-base"],
+      "checks": ["단일 ALTER를 실행하는 관리 진입점은 export 소유 컬럼의 새 설치 실행기로 재사용하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-add-alumni-featured.mjs",
+          "line": 29,
+          "note": "is_featured 컬럼 추가 본문."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-add-application-submissions-unique.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "신규 DB는 export 제약을 사용하며 기존 데이터·catalog 분기 installer를 자동 변환하지 않는다."
+      },
+      "objects": ["application-unique"],
+      "requires": ["web-base"],
+      "checks": ["현재 relation/index/중복 행에 따른 runtime 분기와 동적 식별자 경로를 자동 단일 SQL로 만들지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-add-application-submissions-unique.mjs",
+          "line": 95,
+          "note": "동명 relation 충돌 분기."
+        },
+        {
+          "file": "scripts/migrate-add-application-submissions-unique.mjs",
+          "line": 126,
+          "note": "다른 이름의 unique index 검사."
+        },
+        {
+          "file": "scripts/migrate-add-application-submissions-unique.mjs",
+          "line": 157,
+          "note": "기존 중복 데이터 선행 검사."
+        },
+        {
+          "file": "scripts/migrate-add-application-submissions-unique.mjs",
+          "line": 205,
+          "note": "동적 식별자로 제약을 추가하는 최종 분기."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-add-markdown-image-assets.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "inline 구조는 export와 대조하고 외부 view만 별도 후보로 검토한다. wrapper 자체는 fresh 실행에서 제외한다."
+      },
+      "objects": ["markdown-assets","markdown-references"],
+      "requires": ["web-base","markdown-assets"],
+      "checks": ["inline DDL과 외부 view가 한 transaction에 결합되어 있어 구조/export와 custom view 소유를 분리한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-add-markdown-image-assets.mjs",
+          "line": 15,
+          "note": "외부 view 파일 읽기."
+        },
+        {
+          "file": "scripts/migrate-add-markdown-image-assets.mjs",
+          "line": 27,
+          "note": "inline table/index와 view transaction."
+        },
+        {
+          "file": "scripts/migrate-add-markdown-image-assets.mjs",
+          "line": 46,
+          "note": "설치 후 columns/view 검증."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-add-rate-limit-tables.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "runtime TARGETS별 transaction·catalog 분기는 신규 export 구조와 분리하며 wrapper를 자동 SQL화하지 않는다."
+      },
+      "objects": ["legacy-rate-tables"],
+      "requires": ["web-base"],
+      "checks": ["TARGETS 각 항목의 transaction·동명 relation 검사·기존 데이터 보존을 개별 검토한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-add-rate-limit-tables.mjs",
+          "line": 76,
+          "note": "TARGETS의 정적 DDL 및 index 표."
+        },
+        {
+          "file": "scripts/migrate-add-rate-limit-tables.mjs",
+          "line": 147,
+          "note": "runtime target 순회·catalog 분기."
+        },
+        {
+          "file": "scripts/migrate-add-rate-limit-tables.mjs",
+          "line": 174,
+          "note": "대상별 transaction의 실행 경계."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-add-user-session-version.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "새 DB의 세션 버전은 export가 소유하며 존재 건수만 확인하는 ALTER wrapper는 실행하지 않는다."
+      },
+      "objects": ["session-version"],
+      "requires": ["web-base"],
+      "checks": ["컬럼 존재 건수 검사만으로 구조 동등·기존 JWT 회수 검증이 끝났다고 판단하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-add-user-session-version.mjs",
+          "line": 41,
+          "note": "세션 버전 ALTER."
+        },
+        {
+          "file": "scripts/migrate-add-user-session-version.mjs",
+          "line": 47,
+          "note": "컬럼 존재 건수만 읽는 후속 검사."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-atomic-application-questions.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "revision 컬럼은 export, 두 외부 함수는 SQL 참조가 소유한다. wrapper의 전체 transaction을 자동 복제하지 않는다."
+      },
+      "objects": ["question-revision-column","question-save","question-revision-assert"],
+      "requires": ["web-base","question-revision-column","answer-fk"],
+      "checks": ["questions_revision ALTER와 두 외부 SQL의 transaction 결합은 원문 SQL 둘만 수집해 대체한 것으로 간주하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-atomic-application-questions.mjs",
+          "line": 14,
+          "note": "두 외부 SQL 원문을 읽기."
+        },
+        {
+          "file": "scripts/migrate-atomic-application-questions.mjs",
+          "line": 17,
+          "note": "컬럼 추가와 함수들의 결합 transaction."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["kakao-binding-backfill"],
+      "requires": ["web-base"],
+      "checks": ["계정별 충돌 검사·backup·expect를 유지하며 binding 변경은 별도 관리 작업으로 남긴다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+          "line": 31,
+          "note": "기존 바인딩·placeholder 분류."
+        },
+        {
+          "file": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+          "line": 81,
+          "note": "실제 데이터로 구성되는 적용 block."
+        },
+        {
+          "file": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+          "line": 132,
+          "note": "명시 적용과 검증."
+        }
+      ],
+      "unresolved": ["현재 계정 바인딩·subject 충돌·대상 건수로 SQL block을 구성하므로 실제 갱신 값·backup 내용을 읽지 않고 전체 실행 SQL을 확정하지 않는다."]
+    },
+    {
+      "ref": "scripts/migrate-html-to-markdown.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["content-markdown-conversion"],
+      "requires": ["web-base"],
+      "checks": ["현재 실제 본문을 읽어 변환하는 runtime UPDATE이며 빈 신규 DB 설치에 넣지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-html-to-markdown.mjs",
+          "line": 67,
+          "note": "변환 TARGETS."
+        },
+        {
+          "file": "scripts/migrate-html-to-markdown.mjs",
+          "line": 103,
+          "note": "동적 표/열 조회."
+        },
+        {
+          "file": "scripts/migrate-html-to-markdown.mjs",
+          "line": 123,
+          "note": "실제 원문별 변환·조건부 UPDATE."
+        }
+      ],
+      "unresolved": ["행별 실제 HTML과 변환 결과가 UPDATE 값·대상을 정하므로 AST만으로 데이터 효과 전체를 고정할 수 없다."]
+    },
+    {
+      "ref": "scripts/migrate-protected-resource-blobs.mjs",
+      "phase": "external",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 원본의 외부 copy/delete와 DB 상태 교체는 fresh schema 설치에 포함하지 않는다."
+      },
+      "objects": ["protected-blob-move"],
+      "requires": ["web-base"],
+      "checks": ["private copy/바이트 검증·조건부 DB swap·미참조 public 삭제는 각각 별도 외부 효과다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-protected-resource-blobs.mjs",
+          "line": 65,
+          "note": "보호 자료·이미지의 DB URL을 조건부로 교체하는 분기."
+        },
+        {
+          "file": "scripts/migrate-protected-resource-blobs.mjs",
+          "line": 82,
+          "note": "실제 바이트 copy/검증과 새 Blob 원장 등록."
+        },
+        {
+          "file": "scripts/migrate-protected-resource-blobs.mjs",
+          "line": 148,
+          "note": "공개 원본의 미참조 재확인·etag 기반 별도 삭제."
+        }
+      ],
+      "unresolved": ["실제 참조·원본 바이트·외부 store 응답에 따라 copy/delete/보상 결과가 달라진다. 이 표는 외부 실행 계획·원자성 증거를 만들지 않는다."]
+    },
+    {
+      "ref": "scripts/migrate-rate-limit-reservations.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "read-only 기본 wrapper와 명시 confirm-apply 경계를 유지하며 외부 SQL만 별도 후보 검토한다."
+      },
+      "objects": ["rate-events","rate-reserve"],
+      "requires": ["web-base","rate-events"],
+      "checks": ["대상 파싱·읽기 기본 경로와 외부 SQL 설치는 분리되며 기존 관리 옵션 보호를 유지한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-rate-limit-reservations.mjs",
+          "line": 29,
+          "note": "요청 옵션 판정과 외부 SQL 설치 경로."
+        }
+      ],
+      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+    },
+    {
+      "ref": "scripts/migrate-recruitment-singleton.mjs",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "schema 제약과 기본행 INSERT가 섞여 있어 신규 설치에 필요한 최소 기본행 정책을 먼저 분리해야 한다."
+      },
+      "objects": ["recruitment-singleton","recruitment-default"],
+      "requires": ["web-base","recruitment-singleton"],
+      "checks": ["복수 행 검사를 지나야 하는 조건부 제약·기본행 정책을 새 설치의 schema/data 단계로 수동 분리한다."],
+      "evidence": [
+        {
+          "file": "scripts/migrate-recruitment-singleton.mjs",
+          "line": 12,
+          "note": "현재 행 수에 따른 거부 분기."
+        },
+        {
+          "file": "scripts/migrate-recruitment-singleton.mjs",
+          "line": 25,
+          "note": "조건부 컬럼/제약과 기본 행의 transaction."
+        },
+        {
+          "file": "scripts/migrate-recruitment-singleton.mjs",
+          "line": 51,
+          "note": "기본 행 삽입과 후속 단일 행 검증."
+        }
+      ],
+      "unresolved": ["schema export와 조건부 DO 제약의 동등성, schema/data 분리 경계가 미확정이다.","빈 신규 DB의 최소 기본 행 필요성·필드 값·설치 phase를 별도 승인된 fresh 계약으로 확정해야 한다."]
+    },
+    {
+      "ref": "scripts/seed-admin.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["admin-seed"],
+      "requires": ["web-base"],
+      "checks": ["기존 계정 승격과 새 관리자 생성의 각 확인 경계를 유지하고 자동 초기 관리자 발급을 하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/seed-admin.mjs",
+          "line": 34,
+          "note": "명시 create/promote 옵션이 없는 실행 거부."
+        },
+        {
+          "file": "scripts/seed-admin.mjs",
+          "line": 66,
+          "note": "기존 계정의 역할 승격 분기."
+        },
+        {
+          "file": "scripts/seed-admin.mjs",
+          "line": 94,
+          "note": "새 관리자 INSERT 경로."
+        }
+      ],
+      "unresolved": []
+    },
+    {
+      "ref": "scripts/seed-alumni.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["alumni-seed"],
+      "requires": ["web-base"],
+      "checks": ["이야기별 기존 행 확인·콘텐츠 INSERT를 새 구조 설치의 일부로 재생하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/seed-alumni.mjs",
+          "line": 61,
+          "note": "이야기 데이터별 중복 검사."
+        },
+        {
+          "file": "scripts/seed-alumni.mjs",
+          "line": 73,
+          "note": "정적 콘텐츠 행 INSERT."
+        }
+      ],
+      "unresolved": []
+    },
+    {
+      "ref": "scripts/seed-cohorts.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["cohort-seed"],
+      "requires": ["web-base"],
+      "checks": ["기수별 콘텐츠 INSERT가 회원 기수·학적의 실제 연결을 만들었다고 추론하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/seed-cohorts.mjs",
+          "line": 54,
+          "note": "기수 데이터별 중복 검사."
+        },
+        {
+          "file": "scripts/seed-cohorts.mjs",
+          "line": 68,
+          "note": "정적 기수 행 INSERT."
+        }
+      ],
+      "unresolved": []
+    },
+    {
+      "ref": "scripts/seed-faculty.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["faculty-seed"],
+      "requires": ["web-base"],
+      "checks": ["교수진 콘텐츠 INSERT를 학사 운영/출결 권한 부여로 해석하지 않는다."],
+      "evidence": [
+        {
+          "file": "scripts/seed-faculty.mjs",
+          "line": 61,
+          "note": "교수 데이터별 중복 검사."
+        },
+        {
+          "file": "scripts/seed-faculty.mjs",
+          "line": 74,
+          "note": "정적 교수 행 INSERT."
+        }
+      ],
+      "unresolved": []
+    },
+    {
+      "ref": "scripts/seed-press.mjs",
+      "phase": "data",
+      "fresh": {
+        "disposition": "exclude",
+        "required": false,
+        "reason": "기존 콘텐츠·계정·학적을 변경하는 seed/backfill/변환은 fresh DDL 적용 이력에서 제외한다."
+      },
+      "objects": ["press-seed"],
+      "requires": ["web-base"],
+      "checks": ["기사별 조회·INSERT는 외부 링크를 포함한 콘텐츠 관리이며 migration baseline 행이 아니다."],
+      "evidence": [
+        {
+          "file": "scripts/seed-press.mjs",
+          "line": 285,
+          "note": "기사별 중복 검사."
+        },
+        {
+          "file": "scripts/seed-press.mjs",
+          "line": 297,
+          "note": "기사 콘텐츠 행 INSERT."
+        }
+      ],
+      "unresolved": []
+    }
+  ],
+  "objects": [
+    {
+      "id": "web-base",
+      "kind": "table-set",
+      "names": ["public.users","public.cohorts","public.notices","public.class_logs","public.class_log_images","public.galleries","public.gallery_images","public.applications","public.faculty","public.alumni_stories","public.alumni_story_images","public.faq_items","public.faq_contact","public.recruitment_settings","public.notice_attachments","public.weekly_texts","public.weekly_text_images","public.class_materials","public.guidebooks","public.press_articles","public.report_templates","public.application_forms","public.application_questions","public.application_question_options","public.application_submissions","public.application_answers","public.application_submissions_log","public.schedule_events","public.schedule_sessions"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-types"],
+      "checks": ["웹 테이블·enum·일반 FK·기본값은 현재 schema 진입점에서 export하되 설치 snapshot과 tool 버전을 고정한다.","학사 재수출도 포함되므로 이후 G1 SQL을 별도 빈 schema처럼 취급하지 않는다."],
+      "unresolved": ["검토한 schema export snapshot과 전체 custom 객체의 prefix별 catalog 대조는 S3b에서 아직 수행하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "alumni-featured",
+      "kind": "column",
+      "names": ["public.alumni_stories.is_featured"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-alumni-featured.mjs",
+          "relationship": "unresolved",
+          "reason": "동일 boolean NOT NULL DEFAULT false 추가 의도지만 IF NOT EXISTS만으로 실제 export 동등성을 확정하지 않는다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["false 기본값·NOT NULL·기존 이야기 보존을 새 설치와 기존 상태에서 각각 대조한다."],
+      "unresolved": ["schema export와 legacy ALTER의 정확한 동등성 판정이 미완료다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "session-version",
+      "kind": "column",
+      "names": ["public.users.session_version"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-user-session-version.mjs",
+          "relationship": "unresolved",
+          "reason": "정수 NOT NULL DEFAULT 0 추가와 존재 건수 조회를 수행한다. 단순 컬럼 존재는 타입·기본값 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["정수 기본값 0·NOT NULL 및 다음 요청 세션 회수 계약을 유지한다."],
+      "unresolved": ["legacy installer와 export의 정확한 타입·기본값 동등성은 catalog로 확인해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "application-unique",
+      "kind": "constraint-set",
+      "names": ["public.application_submissions_form_applicant_unique"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-application-submissions-unique.mjs",
+          "relationship": "unresolved",
+          "reason": "catalog·중복 데이터·동명/다른 이름 인덱스 분기에 따라 동적 식별자로 UNIQUE를 추가한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["form_id·applicant_email 복합 UNIQUE의 이름과 열 조합을 확인한다.","중복 데이터·동명 relation·다른 unique index를 자동 삭제하지 않으며 race 후 제약을 재검증한다."],
+      "unresolved": ["runtime catalog/data 분기 전체를 fresh SQL 하나로 추출하지 않았다. export 동등과 기존 데이터 전제는 별도 검토다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "question-revision-column",
+      "kind": "column",
+      "names": ["public.application_forms.questions_revision"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-atomic-application-questions.mjs",
+          "relationship": "unresolved",
+          "reason": "wrapper는 컬럼 추가와 두 외부 함수 SQL을 한 transaction에 전달한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["정수 NOT NULL DEFAULT 0이 질문 저장·제출 검증 양쪽 함수의 선행조건이다."],
+      "unresolved": ["export 컬럼과 wrapper ALTER의 동등성 및 wrapper 전체 transaction 경계 분리가 미검증이다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "question-save",
+      "kind": "function-set",
+      "names": ["public.save_application_form_questions(uuid,integer,jsonb)"],
+      "owner": "scripts/migrate-atomic-application-questions.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-atomic-application-questions.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-atomic-application-questions.mjs",
+          "relationship": "wrapper",
+          "reason": "외부 함수 원문을 읽어 revision 컬럼·assert 함수와 함께 설치한다."
+        }
+      ],
+      "requires": ["web-base","question-revision-column","answer-fk"],
+      "checks": ["양식 FOR UPDATE 잠금·예상 revision 비교·질문/선택지/버전의 원자 저장을 검사한다.","답변 있는 질문 변경/삭제 보호, 함수 signature·본문·실행 권한·search_path를 확인한다."],
+      "unresolved": ["versioned 후보에 옮길 transaction 경계와 함수 ACL/search_path 계약을 아직 독립 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "question-revision-assert",
+      "kind": "function-set",
+      "names": ["public.assert_application_form_questions_revision(uuid,integer)"],
+      "owner": "scripts/migrate-assert-application-question-revision.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-assert-application-question-revision.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-atomic-application-questions.mjs",
+          "relationship": "wrapper",
+          "reason": "질문 저장 wrapper가 이 외부 SQL도 읽는다."
+        }
+      ],
+      "requires": ["web-base","question-revision-column"],
+      "checks": ["FOR SHARE가 질문 편집 FOR UPDATE와 충돌하고 공개 여부·revision 변경 시 제출을 거부해야 한다.","함수 signature·본문·SECURITY INVOKER 기본값·ACL·search_path를 대조한다."],
+      "unresolved": ["함수의 설치 역할과 실제 실행 권한을 fresh 후보 catalog로 확인하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "answer-fk",
+      "kind": "constraint-set",
+      "names": ["public.application_answers_question_id_application_questions_id_fk"],
+      "owner": "scripts/migrate-protect-application-answers.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-protect-application-answers.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "schema-export",
+          "relationship": "replacement",
+          "reason": "export의 일반 FK를 custom SQL이 NO ACTION DEFERRABLE INITIALLY DEFERRED로 교체하는 의도다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["question_id 단일 열 FK만 교체하고 예상 밖 복합/다른 참조는 실패해야 한다.","질문 삭제·답변 제출 경합에서 COMMIT 시점 지연 FK 검증과 답변 보존을 확인한다."],
+      "unresolved": ["최신 export와 교체 후 FK의 deferred/validated/action 차이를 prefix별로 검증해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "submission-fks",
+      "kind": "constraint-set",
+      "names": ["public.application_submissions_form_id_application_forms_id_fk","public.applications_cohort_id_cohorts_id_fk"],
+      "owner": "scripts/migrate-protect-application-submissions.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-protect-application-submissions.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "schema-export",
+          "relationship": "unresolved",
+          "reason": "현 export의 RESTRICT 선언과 legacy CASCADE→RESTRICT 분기를 대조해야 한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["정확한 제약 이름과 참조 대상을 검사하고 CASCADE 또는 이미 RESTRICT인 상태만 수용한다.","양식·기수 삭제가 신·구 지원서 데이터를 연쇄 삭제하지 않아야 한다."],
+      "unresolved": ["현 export가 이미 RESTRICT인 상태와 legacy 교체 분기의 동등성 검증이 남았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "rate-events",
+      "kind": "table-set",
+      "names": ["public.rate_limit_events"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/sql/rate-limit-reservations.sql",
+          "relationship": "unresolved",
+          "reason": "UUID reservation_id와 세 기존 인덱스를 정의하며 신규 #287 인덱스는 이 원문에 없다."
+        },
+        {
+          "source": "scripts/migrate-rate-limit-reservations.mjs",
+          "relationship": "wrapper",
+          "reason": "외부 SQL 원문을 명시 confirm-apply 경로에서만 전달하는 관리 wrapper다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["reservation_id UUID NOT NULL, scope/key 길이·timestamptz·지원서 CASCADE FK를 확인한다.","기존 scope/key/time·attempted_at·submission_id 인덱스와 신규 reservation 인덱스를 구별한다."],
+      "unresolved": ["export와 기존 SQL의 인덱스 집합 차이를 명시한 최종 fresh catalog가 아직 없다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "rate-reserve",
+      "kind": "function-set",
+      "names": ["public.reserve_rate_limit(text[],text[],integer[],integer[])"],
+      "owner": "scripts/sql/rate-limit-reservations.sql",
+      "definitions": [
+        {
+          "source": "scripts/sql/rate-limit-reservations.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-rate-limit-reservations.mjs",
+          "relationship": "wrapper",
+          "reason": "외부 원문 설치 뒤 불변조건·경계 검증을 수행하는 wrapper다."
+        }
+      ],
+      "requires": ["rate-events"],
+      "checks": ["입력 배열 차원/정책 검사, 정렬된 transaction advisory lock, 잠금 뒤 최신 커밋 조회를 확인한다.","초과 시 거부·최대 retry 계산, 다중 축이 한 UUID 예약을 공유하는 원자성을 유지한다.","함수 search_path public,pg_temp·실행 역할·ACL을 별도로 검토한다."],
+      "unresolved": ["현재 함수의 권한·search_path와 S2 helper 내부 설치 의미를 아직 fresh bundle에서 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "rate-reservation-index",
+      "kind": "index-set",
+      "names": ["public.idx_rate_limit_reservation_id"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-287-rate-limit-reservation-index.sql",
+          "relationship": "unresolved",
+          "reason": "현 schema에는 이미 선언되어 있다. SQL은 UUID NOT NULL 선행 열과 정확한 단일 btree 정의·valid/ready/live 상태를 검증한다."
+        }
+      ],
+      "requires": ["rate-events"],
+      "checks": ["예약 열 UUID prerequisite 및 중복 선두 인덱스가 있으면 자동 생성/삭제하지 않는 검토 분기를 확인한다.","원본의 SHARE ROW EXCLUSIVE 잠금·timeout·외부 BEGIN/COMMIT을 자동 제거하지 않는다."],
+      "unresolved": ["export에 이미 있는 index와 조건부 legacy SQL의 수동 동등/대체 판정 및 locking 정책이 남았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "legacy-rate-tables",
+      "kind": "table-set",
+      "names": ["public.login_attempts","public.upload_rate_limit_log"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-rate-limit-tables.mjs",
+          "relationship": "unresolved",
+          "reason": "정적 TARGETS에 table/index 문이 있지만 실행 시 각 항목의 catalog·데이터 분기를 거쳐 transaction을 구성한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["login ip/email/time와 upload ip/time 인덱스·열 nullability·timestamptz를 대조한다.","runtime loop를 단일 SQL로 추정하지 않으며 동명 비table relation과 기존 행 보존을 검사한다."],
+      "unresolved": ["TARGETS별 runtime 분기와 현재 export의 정확한 동등성이 미검증이다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "markdown-assets",
+      "kind": "table-set",
+      "names": ["public.markdown_image_assets"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-markdown-image-assets.mjs",
+          "relationship": "unresolved",
+          "reason": "inline table/index DDL과 외부 참조 view를 같은 transaction에 연결한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["URL UNIQUE·업로더 SET NULL FK·created/deleted timestamp·created_at index를 대조한다.","서버 등록 원장만 소유권 근거이며 본문 URL이나 도메인으로 소급 등록하지 않는다."],
+      "unresolved": ["inline 구조와 export의 catalog 동등성 및 외부 view와의 설치 단위를 아직 확정하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "markdown-references",
+      "kind": "view",
+      "names": ["public.markdown_image_references"],
+      "owner": "scripts/sql/markdown-image-references.sql",
+      "definitions": [
+        {
+          "source": "scripts/sql/markdown-image-references.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-add-markdown-image-assets.mjs",
+          "relationship": "wrapper",
+          "reason": "원장 구조 뒤 외부 view 원문을 읽어 설치한다."
+        }
+      ],
+      "requires": ["web-base","markdown-assets"],
+      "checks": ["현재 콘텐츠 본문·이미지/첨부/자료 URL의 UNION ALL 참조가 모두 원장 asset_id를 반환하는지 확인한다.","참조를 live 조회하며 오래된 스냅샷·도메인만으로 삭제 가능하다고 판단하지 않는다."],
+      "unresolved": ["전체 웹 테이블 선행조건과 view 정의·열·권한을 fresh 후보에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "recruitment-singleton",
+      "kind": "constraint-set",
+      "names": ["public.recruitment_settings.singleton_key","public.recruitment_settings_singleton_key_unique","public.recruitment_settings_singleton_key_check"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-recruitment-singleton.mjs",
+          "relationship": "unresolved",
+          "reason": "복수 행 사전 거부 뒤 조건부 제약 추가와 기본 행 INSERT를 한 transaction에 실행한다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["singleton_key=1 CHECK와 UNIQUE 및 NOT NULL/default1을 확인한다.","기존 복수 행을 자동 삭제하지 않고 정의 불일치·경합에서 fail-closed여야 한다."],
+      "unresolved": ["schema export와 조건부 DO 제약의 동등성, schema/data 분리 경계가 미확정이다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "recruitment-default",
+      "kind": "data-effect",
+      "names": ["public.recruitment_settings"],
+      "owner": "scripts/migrate-recruitment-singleton.mjs",
+      "definitions": [
+        {
+          "source": "scripts/migrate-recruitment-singleton.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["recruitment-singleton"],
+      "checks": ["최소 기본 행을 만들 정책과 관리자 편집 콘텐츠를 덮어쓰지 않는 조건을 구별한다."],
+      "unresolved": ["빈 신규 DB의 최소 기본 행 필요성·필드 값·설치 phase를 별도 승인된 fresh 계약으로 확정해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-students",
+      "kind": "table-set",
+      "names": ["public.academic_students","public.cohort_enrollments"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-students.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-students-type"],
+      "checks": ["연결 user_id UNIQUE·RESTRICT FK, student/cohort UNIQUE·상태 enum·빈 이름 CHECK·cohort/status index를 확인한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-links",
+      "kind": "table-set",
+      "names": ["public.academic_enrollment_link_batches"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-enrollment-links.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-students"],
+      "checks": ["연결 batch 정원·digest·actor·명시 plan을 확인하고 회원 role만으로 학적을 자동 동기화하지 않는다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-roster",
+      "kind": "table-set",
+      "names": ["public.academic_roster_registrations"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-roster.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-links"],
+      "checks": ["입학 명부의 enrollment UNIQUE·배정 참조·immutable 요청 식별·동일 요청 재시도 의미를 유지한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-assignments",
+      "kind": "table-set",
+      "names": ["public.assignments","public.assignment_targets"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-roster","academic-assignments-type"],
+      "checks": ["과제 상태/publication shape, 대상 enrollment UNIQUE·RESTRICT 참조·게시 snapshot·수업 일치 guard를 대조한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-submissions",
+      "kind": "table-set",
+      "names": ["public.assignment_upload_intents","public.assignment_submissions","public.assignment_submission_files"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-assignments","academic-submissions-type"],
+      "checks": ["intent/제출/파일 연결·중복 키·유효한 크기/MIME/해시·만료·지연 FK와 constraint trigger의 COMMIT 의미를 유지한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-actions",
+      "kind": "table-set",
+      "names": ["public.academic_assignment_events"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-assignment-actions.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-submissions"],
+      "checks": ["허용 action/previous-next 상태·payload digest·실행 actor·요청 멱등성과 변경 event 기록을 확인한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-upload-auth",
+      "kind": "table-set",
+      "names": ["public.academic_upload_authorizations"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-upload-authorizations.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-actions"],
+      "checks": ["active target 부분 UNIQUE·cleanup index·request/intent/target 연결과 기존 업로드 검사에서 새 authorization guard로 이어지는 의미를 확인한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-file-reads",
+      "kind": "table-set",
+      "names": ["public.academic_submission_file_reads"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-submission-file-reads.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": ["web-base","academic-submissions"],
+      "checks": ["감사 row의 actor/file 참조·허용한 고정 metadata·시간 index와 UPDATE/DELETE 불변 trigger를 유지한다.","각 SQL의 임시 expected schema/table 검증 객체는 최종 app catalog에 남지 않아야 한다."],
+      "unresolved": ["현 전체 export와 G1 raw SQL의 객체 소유·중복 동등/대체 및 파일별 최종 catalog 대조를 아직 완료하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-link-functions",
+      "kind": "function-set",
+      "names": ["public.inspect_academic_enrollment_candidates()","public.apply_academic_enrollment_links(uuid,uuid,jsonb)"],
+      "owner": "scripts/migrate-academic-enrollment-links.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-enrollment-links.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-links"],
+      "checks": ["읽기 후보 요약과 명시 actor/plan/digest 기반 연결 적용을 구별하며 SECURITY INVOKER·고정 search_path를 검사한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-roster-functions",
+      "kind": "function-set",
+      "names": ["public.register_academic_roster(uuid,uuid,uuid,uuid,text,text,uuid)"],
+      "owner": "scripts/migrate-academic-roster.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-roster.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-roster"],
+      "checks": ["일곱 인자의 명부 등록과 같은 요청의 멱등성을 확인하고 PUBLIC EXECUTE 회수·앱 역할 GRANT를 별도로 검토한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-assignment-functions",
+      "kind": "function-set",
+      "names": ["public.guard_academic_assignment()","public.snapshot_academic_assignment()","public.guard_academic_assignment_target()","public.guard_academic_assignment_reference()","public.publish_academic_assignment(uuid,uuid)"],
+      "owner": "scripts/migrate-academic-assignments.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-assignments.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-assignments"],
+      "checks": ["게시 snapshot·과제/대상/수업·학적 변경 guard trigger, publish 진입점과 실제 권한을 확인한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-submission-functions",
+      "kind": "function-set",
+      "names": ["public.assert_academic_submission_owner(uuid,uuid,boolean)","public.guard_academic_upload_intent()","public.guard_academic_final_submission()","public.assert_academic_submission_complete()","public.guard_academic_submission_binding()","public.verify_academic_assignment_upload(uuid,uuid,text,text,integer,text)","public.finalize_academic_assignment_submission(uuid,uuid,uuid,uuid)"],
+      "owner": "scripts/migrate-academic-submissions.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-submissions.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-submissions"],
+      "checks": ["제출 소유자·마감·intent 소비와 파일/제출 완성의 지연 검사를 유지한다.","PUBLIC 권한 회수와 임시 expected schema 제거, 각 일반/constraint trigger를 대조한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-action-functions",
+      "kind": "function-set",
+      "names": ["public.mutate_academic_assignment(text,uuid,uuid,uuid,uuid,jsonb)"],
+      "owner": "scripts/migrate-academic-assignment-actions.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-assignment-actions.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-actions","academic-assignment-functions"],
+      "checks": ["CREATE/UPDATE_DRAFT/PUBLISH/CLOSE의 payload·이벤트 기록·반복 요청·금지 필드와 고정 search_path를 확인한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-upload-functions",
+      "kind": "function-set",
+      "names": ["public.authorize_academic_assignment_upload(uuid,uuid)","public.issue_academic_assignment_upload(uuid,uuid,uuid,text,integer)","public.verify_authorized_academic_upload(uuid,uuid,text,text)","public.cancel_academic_assignment_upload(uuid,uuid,uuid)","public.guard_authorized_academic_submission()","public.claim_academic_upload_cleanup(uuid)"],
+      "owner": "scripts/migrate-academic-upload-authorizations.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-upload-authorizations.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-upload-auth","academic-submission-functions"],
+      "checks": ["기존 2인자 cancel 진입점 DROP과 새 3인자 target-bound cancel을 명시적으로 대체한다.","issue/verify/final-guard/cleanup의 원자성과 PUBLIC EXECUTE 회수를 확인한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-complete-function",
+      "kind": "function-set",
+      "names": ["public.complete_academic_assignment_submission(uuid,uuid,uuid,uuid,boolean)"],
+      "owner": "scripts/migrate-academic-submission-finalization.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-submission-finalization.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-upload-auth","academic-upload-functions"],
+      "checks": ["파일 첨부/텍스트 제출을 한 최종화 진입점으로 처리하고 모순 상태·소유자·마감·멱등성을 확인한다.","이전 finalize/verify 함수가 자동 제거된다고 추정하지 않고 함께 남는 진입점·ACL을 검토한다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-file-read-function",
+      "kind": "function-set",
+      "names": ["public.guard_academic_submission_file_read()"],
+      "owner": "scripts/migrate-academic-submission-file-reads.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-submission-file-reads.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-file-reads","academic-complete-function"],
+      "checks": ["감사 row UPDATE/DELETE를 항상 거부하며 전달 허가 기록을 네트워크 수신 완료 증명으로 오해하지 않는다."],
+      "unresolved": ["함수 signature·본문·SECURITY INVOKER/ACL/search_path·trigger 동작을 전체 fresh prefix 계약에서 아직 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "students-preflight",
+      "kind": "inspection",
+      "names": ["public.users","public.cohorts","public.academic_students","public.cohort_enrollments"],
+      "owner": "scripts/preflight-academic-students.sql",
+      "definitions": [
+        {
+          "source": "scripts/preflight-academic-students.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["읽기 전용 transaction에서 학적 표 일부 존재·계정 연결 중복/고아·기존 cohort 차이를 건수로만 확인한다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "enrollment-backfill",
+      "kind": "data-effect",
+      "names": ["public.academic_students","public.cohort_enrollments"],
+      "owner": "scripts/backfill-academic-enrollments.mjs",
+      "definitions": [
+        {
+          "source": "scripts/backfill-academic-enrollments.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["명시 plan·대상 fingerprint·승인자·expect와 feature flag를 확인하며 기존 회원을 자동 학적화하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "kakao-binding-backfill",
+      "kind": "data-effect",
+      "names": ["public.users.oauth_provider","public.users.oauth_provider_account_id"],
+      "owner": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+      "definitions": [
+        {
+          "source": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["legacy placeholder를 분류한 뒤 충돌·예상 건수·backup을 검사하고 제한된 실제 계정 연결만 수정한다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "content-markdown-conversion",
+      "kind": "data-effect",
+      "names": ["public.notices.content","public.class_logs.content","public.weekly_texts.body","public.report_templates.body","public.recruitment_settings.details_markdown"],
+      "owner": "scripts/migrate-html-to-markdown.mjs",
+      "definitions": [
+        {
+          "source": "scripts/migrate-html-to-markdown.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["runtime TARGETS와 HTML 변환 결과에 따라 데이터별 UPDATE가 달라지며 현재 운영 콘텐츠를 새 설치 데이터로 재생하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "admin-seed",
+      "kind": "data-effect",
+      "names": ["public.users"],
+      "owner": "scripts/seed-admin.mjs",
+      "definitions": [
+        {
+          "source": "scripts/seed-admin.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["명시 create/promote 의도와 기존 역할·계정 보호 조건을 보존하며 최초 설치가 임의 관리자를 발급하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "alumni-seed",
+      "kind": "data-effect",
+      "names": ["public.alumni_stories"],
+      "owner": "scripts/seed-alumni.mjs",
+      "definitions": [
+        {
+          "source": "scripts/seed-alumni.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["관리자가 편집한 이야기·이미지 metadata를 초기 설치 원장에 합치거나 overwrite하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "cohort-seed",
+      "kind": "data-effect",
+      "names": ["public.cohorts"],
+      "owner": "scripts/seed-cohorts.mjs",
+      "definitions": [
+        {
+          "source": "scripts/seed-cohorts.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["기수 콘텐츠 seed를 학적·회원 자동 연결 또는 실제 운영 baseline으로 취급하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "faculty-seed",
+      "kind": "data-effect",
+      "names": ["public.faculty"],
+      "owner": "scripts/seed-faculty.mjs",
+      "definitions": [
+        {
+          "source": "scripts/seed-faculty.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["교수진 콘텐츠 seed를 출결 업무 권한이나 실제 승인 계정 부여로 취급하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "press-seed",
+      "kind": "data-effect",
+      "names": ["public.press_articles"],
+      "owner": "scripts/seed-press.mjs",
+      "definitions": [
+        {
+          "source": "scripts/seed-press.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["기사 seed의 외부 URL·중복/정렬 등 실제 데이터 효과를 fresh schema DDL과 분리한다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "protected-blob-move",
+      "kind": "external-effect",
+      "names": ["public.class_materials.file_url","public.guidebooks.file_url","public.weekly_texts.file_url","public.weekly_text_images.url","public.class_log_images.url","public.markdown_image_assets"],
+      "owner": "scripts/migrate-protected-resource-blobs.mjs",
+      "definitions": [
+        {
+          "source": "scripts/migrate-protected-resource-blobs.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["web-base"],
+      "checks": ["copy·DB URL 교체·공개 원본 삭제는 별개 외부 효과이며 --apply/--delete-public·기존 안전조건을 유지한다.","DB ledger transaction으로 Blob copy/delete의 원자성을 주장하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "markdown-blob-cleanup",
+      "kind": "external-effect",
+      "names": ["public.markdown_image_assets.deleted_at"],
+      "owner": "scripts/cleanup-markdown-image-assets.mjs",
+      "definitions": [
+        {
+          "source": "scripts/cleanup-markdown-image-assets.mjs",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["markdown-assets","markdown-references"],
+      "checks": ["등록 원장·현재 참조·쓰기 중단 flag·명시 apply 조건을 통과한 정리만 별도 수행한다.","fresh 설치에서는 기존 Blob 원본 삭제·복사를 수행하지 않는다."],
+      "unresolved": [],
+      "requiredForFresh": false
+    },
+    {
+      "id": "academic-students-type",
+      "kind": "type-set",
+      "names": ["public.enrollment_status"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-students.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": [],
+      "checks": ["현재 schema와 SQL enum의 label 집합·순서·기존 enum 불일치 거부를 명시적으로 대조한다."],
+      "unresolved": ["같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-assignments-type",
+      "kind": "type-set",
+      "names": ["public.assignment_status"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": [],
+      "checks": ["현재 schema와 SQL enum의 label 집합·순서·기존 enum 불일치 거부를 명시적으로 대조한다."],
+      "unresolved": ["같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-submissions-type",
+      "kind": "type-set",
+      "names": ["public.assignment_upload_state"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/migrate-academic-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        }
+      ],
+      "requires": [],
+      "checks": ["현재 schema와 SQL enum의 label 집합·순서·기존 enum 불일치 거부를 명시적으로 대조한다."],
+      "unresolved": ["같은 enum 이름의 IF NOT EXISTS를 동등성 증거로 쓰지 않고 실제 export/type catalog를 확인해야 한다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "web-types",
+      "kind": "type-set",
+      "names": ["public.user_role","public.recruitment_status","public.notice_status","public.application_status","public.faculty_category","public.report_template_category","public.application_question_type","public.schedule_event_type","public.session_category"],
+      "owner": "schema-export",
+      "definitions": [
+        {
+          "source": "schema-export",
+          "relationship": "primary",
+          "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        }
+      ],
+      "requires": [],
+      "checks": ["회원 역할·모집·공지·지원 상태·교수/수업 분류·자료 유형 enum의 label과 순서는 현재 schema가 소유한다."],
+      "unresolved": ["검토 export snapshot에서 type label·순서를 아직 catalog로 고정하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-assignment-triggers",
+      "kind": "trigger-set",
+      "names": ["public.academic_assignment_guard","public.academic_assignment_snapshot","public.academic_assignment_target_guard","public.academic_assignment_event_reference","public.academic_assignment_session_reference","public.academic_assignment_enrollment_reference"],
+      "owner": "scripts/migrate-academic-assignments.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-assignments.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-assignment-functions"],
+      "checks": ["일반 BEFORE/AFTER trigger의 대상 표·event·guard/snapshot 함수 연결을 확인한다."],
+      "unresolved": ["fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-submission-triggers",
+      "kind": "trigger-set",
+      "names": ["public.academic_upload_intent_guard","public.academic_final_submission_guard","public.academic_final_file_guard","public.academic_submission_complete","public.academic_submission_file_complete","public.academic_upload_consumed_complete","public.academic_submission_binding_guard"],
+      "owner": "scripts/migrate-academic-submissions.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-submissions.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-submission-functions"],
+      "checks": ["세 완성 검사는 DEFERRABLE INITIALLY DEFERRED constraint trigger이며 나머지 BEFORE guard와 구별한다."],
+      "unresolved": ["fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-upload-trigger",
+      "kind": "trigger-set",
+      "names": ["public.academic_upload_authorization_final_guard"],
+      "owner": "scripts/migrate-academic-upload-authorizations.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-upload-authorizations.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-upload-functions"],
+      "checks": ["최종 제출 INSERT 전 authorization guard의 target/intent/actor 연결과 기존 guard의 공존을 확인한다."],
+      "unresolved": ["fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."],
+      "requiredForFresh": true
+    },
+    {
+      "id": "academic-file-read-trigger",
+      "kind": "trigger-set",
+      "names": ["public.academic_submission_file_reads_immutable"],
+      "owner": "scripts/migrate-academic-submission-file-reads.sql",
+      "definitions": [
+        {
+          "source": "scripts/migrate-academic-submission-file-reads.sql",
+          "relationship": "primary",
+          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        }
+      ],
+      "requires": ["academic-file-read-function"],
+      "checks": ["감사 row UPDATE/DELETE의 변경 거부 trigger와 enabled 상태를 확인한다."],
+      "unresolved": ["fresh prefix별 trigger 종류·정의·enabled/deferred 상태를 실제 catalog/동작으로 대조하지 않았다."],
+      "requiredForFresh": true
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "academic-g1",
+      "file": "tests/support/academic-g1-fixture.mjs",
+      "description": "G1의 최소 합성 base와 9개 raw SQL 순서를 관측한 참고 계약이다. 각 파일 2회는 해당 fixture 재실행 검증이며 적용 이력·미래 실행 권한이 아니다.",
+      "steps": [
+        {
+          "kind": "synthetic-base",
+          "ref": null,
+          "repeatEach": 1,
+          "note": "installAcademicG1Base의 container 설명이다. 내부 installQaFixture가 예약 SQL을 읽은 뒤 추가 회원·기수·일정을 준비한다. 아래 nested-source는 내부 참조이며 별도 직렬 적용 단계가 아니다."
+        },
+        {
+          "kind": "nested-source",
+          "ref": "scripts/sql/rate-limit-reservations.sql",
+          "repeatEach": 1,
+          "note": "앞 synthetic-base의 installQaFixture 내부 중간에 1회 간접 실행되며 base 완료 뒤 다시 실행하는 단계가 아니다."
+        },
+        {
+          "kind": "inventory-order",
+          "ref": "g1Order",
+          "repeatEach": 2,
+          "note": "inventory 순서를 참조해 각 파일 직후 2회 실행하며 후속 trigger 뒤 전체 옛 baseline을 replay하지 않는다."
+        },
+        {
+          "kind": "synthetic-data",
+          "ref": null,
+          "repeatEach": 1,
+          "note": "학사 domain fixture는 운영 명부·계정과 분리된 합성 데이터다."
+        }
+      ],
+      "exclusions": [
+        {
+          "ref": "scripts/migrate-287-rate-limit-reservation-index.sql",
+          "reason": "예약 인덱스는 별도 index 검증 범위이며 이 fixture 비포함만으로 운영 누락을 판단하지 않는다."
+        },
+        {
+          "ref": "scripts/migrate-assert-application-question-revision.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/migrate-atomic-application-questions.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/migrate-protect-application-answers.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/migrate-protect-application-submissions.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/preflight-academic-students.sql",
+          "reason": "운영 전 읽기 관측은 해당 합성 installer의 적용 단계가 아니다."
+        },
+        {
+          "ref": "scripts/sql/markdown-image-references.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        }
+      ],
+      "evidence": [
+        {
+          "file": "tests/support/academic-g1-fixture.mjs",
+          "line": 24,
+          "note": "G1 원문 목록의 literal 배열."
+        },
+        {
+          "file": "tests/support/academic-g1-fixture.mjs",
+          "line": 33,
+          "note": "base 내부 installQaFixture 호출 뒤 회원·기수·일정 준비."
+        },
+        {
+          "file": "tests/support/academic-g1-fixture.mjs",
+          "line": 50,
+          "note": "각 파일을 두 번 실행한 뒤 다음 파일로 이동하는 실제 loop."
+        },
+        {
+          "file": "tests/support/resource-qa-postgres.mjs",
+          "line": 82,
+          "note": "최소 base installer가 예약 SQL을 별도로 읽는다."
+        }
+      ]
+    },
+    {
+      "id": "site-routes",
+      "file": "tests/support/site-route-fixture.mjs",
+      "description": "경로 QA가 사용하는 부분집합이다. SQL287·preflight·markdown view 비포함은 fixture 목적 차이이며 전체 설치나 운영 catalog 완료를 증명하지 않는다.",
+      "steps": [
+        {
+          "kind": "schema-export",
+          "ref": null,
+          "repeatEach": 1,
+          "note": "호출자가 전달한 현재 전체 schema SQL을 적용한다."
+        },
+        {
+          "kind": "synthetic-data",
+          "ref": null,
+          "repeatEach": 1,
+          "note": "운영 콘텐츠·계정을 복사하지 않고 합성 웹 행을 만든다."
+        },
+        {
+          "kind": "inventory-order",
+          "ref": "g1Order",
+          "repeatEach": 2,
+          "note": "동일 G1 목록의 각 raw 파일을 2회 적용한다."
+        },
+        {
+          "kind": "synthetic-data",
+          "ref": null,
+          "repeatEach": 1,
+          "note": "학사 domain seed를 추가한다."
+        },
+        {
+          "kind": "source",
+          "ref": "scripts/migrate-protect-application-answers.sql",
+          "repeatEach": 1,
+          "note": "웹 경로가 요구하는 보호 제약·질문 함수·예약 함수를 이 fixture 범위에서 설치한다."
+        },
+        {
+          "kind": "source",
+          "ref": "scripts/migrate-protect-application-submissions.sql",
+          "repeatEach": 1,
+          "note": "웹 경로가 요구하는 보호 제약·질문 함수·예약 함수를 이 fixture 범위에서 설치한다."
+        },
+        {
+          "kind": "source",
+          "ref": "scripts/migrate-atomic-application-questions.sql",
+          "repeatEach": 1,
+          "note": "웹 경로가 요구하는 보호 제약·질문 함수·예약 함수를 이 fixture 범위에서 설치한다."
+        },
+        {
+          "kind": "source",
+          "ref": "scripts/migrate-assert-application-question-revision.sql",
+          "repeatEach": 1,
+          "note": "웹 경로가 요구하는 보호 제약·질문 함수·예약 함수를 이 fixture 범위에서 설치한다."
+        },
+        {
+          "kind": "source",
+          "ref": "scripts/sql/rate-limit-reservations.sql",
+          "repeatEach": 1,
+          "note": "웹 경로가 요구하는 보호 제약·질문 함수·예약 함수를 이 fixture 범위에서 설치한다."
+        }
+      ],
+      "exclusions": [
+        {
+          "ref": "scripts/migrate-287-rate-limit-reservation-index.sql",
+          "reason": "예약 인덱스는 별도 index 검증 범위이며 이 fixture 비포함만으로 운영 누락을 판단하지 않는다."
+        },
+        {
+          "ref": "scripts/preflight-academic-students.sql",
+          "reason": "운영 전 읽기 관측은 해당 합성 installer의 적용 단계가 아니다."
+        },
+        {
+          "ref": "scripts/sql/markdown-image-references.sql",
+          "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        }
+      ],
+      "evidence": [
+        {
+          "file": "tests/support/site-route-fixture.mjs",
+          "line": 15,
+          "note": "전체 export·합성 웹 데이터 뒤 G1과 기본 custom subset을 설치한다."
+        },
+        {
+          "file": "tests/support/site-route-fixture.mjs",
+          "line": 41,
+          "note": "G1 각 파일을 두 번 실행하는 실제 loop."
+        },
+        {
+          "file": "tests/support/site-route-fixture.mjs",
+          "line": 42,
+          "note": "G1 완료 뒤 합성 학사 domain seed."
+        },
+        {
+          "file": "tests/support/site-route-fixture.mjs",
+          "line": 43,
+          "note": "보호 제약·질문 함수·예약 SQL의 실제 부분집합과 순서."
+        }
+      ]
+    }
+  ]
+}
