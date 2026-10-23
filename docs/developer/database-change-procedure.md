@@ -47,7 +47,10 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 | 기존·운영 DB | 이미 저장된 데이터 보존하며 변경 | 검토된 범위별 SQL·스크립트 적용 |
 | `npm run db:push` | 검증되지 않은 전체 차이 적용 차단 | 접속·환경 조회 없이 안내하고 실패 종료; 적용 인자도 지원하지 않음 |
 | `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시; 적용 시 부모 `PG*` 접속 설정은 전달하지 않음 |
+| `db:migrate-alumni-featured`·`db:migrate-user-session-version` | 두 한정 컬럼의 구조 확인·적용 | 무인자는 DB에 접속하지 않는 계획; `--confirm-apply`에서만 소유 표·정확한 컬럼 정의 검증 후 적용 |
 | 그 밖의 `db:migrate-*` | 스크립트별 구조 변경 | 이름만으로 dry-run이라 가정하지 않음; 실행 즉시 변경하는 스크립트가 있음 |
+
+두 한정 컬럼 명령은 `.env`가 없어도 무인자 계획을 출력합니다. 적용하려면 승인된 대상의 명시적 DB URL과 `--confirm-apply`를 전달해야 합니다. 이 인자는 실행 의도를 표시할 뿐 실제 DB identity·백업·운영 승인을 증명하지 않습니다. 기존 컬럼의 타입·NOT NULL·기본값·소유권이 다르면 자동 보정하지 않고 실패하며, 이미 저장된 `session_version` 값은 변경하지 않습니다.
 
 기본 `drizzle.config.ts`는 `.env`·`DATABASE_URL`과 DB credentials를 읽지 않습니다. 따라서 기본 설정의 `npx drizzle-kit push`·`npx drizzle-kit migrate`도 접속 정보 부족으로 중단합니다. `npm run db:push -- --isolated`·`--apply`·URL·자체 승인 JSON으로 이를 활성화할 수 없습니다. 도구가 소유한 일회성 DB에 대한 별도 push 기능도 아직 제공하지 않습니다.
 

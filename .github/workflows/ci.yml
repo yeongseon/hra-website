@@ -89,6 +89,11 @@ jobs:
         timeout-minutes: 5
         run: node --test scripts/tests/management-cli-safety.test.mjs
 
+      - name: 한정 스키마 설치 CLI의 무인자·원자 적용 회귀
+        # 소유 임시 PG에서만 두 컬럼의 소유권·정의·기존 값 보존을 검증합니다.
+        timeout-minutes: 5
+        run: node --test scripts/tests/schema-installer-cli.test.mjs
+
       - name: 단위 테스트
         run: npm test
 

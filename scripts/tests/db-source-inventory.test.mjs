@@ -169,11 +169,11 @@ test("현재 인벤토리는 읽기 전용 preflight·현행 뷰와 알려진 �
   const expected = {
     "backfill-academic-enrollments": ["db_data", "read_only"],
     "cleanup-markdown-image-assets": ["blob_cleanup", "read_only"],
-    "migrate-add-alumni-featured": ["db_schema", "writes"],
+    "migrate-add-alumni-featured": ["db_schema", "read_only"],
     "migrate-add-application-submissions-unique": ["db_schema", "writes"],
     "migrate-add-markdown-image-assets": ["db_schema", "writes"],
     "migrate-add-rate-limit-tables": ["db_schema", "writes"],
-    "migrate-add-user-session-version": ["db_schema", "writes"],
+    "migrate-add-user-session-version": ["db_schema", "read_only"],
     "migrate-atomic-application-questions": ["db_schema", "writes"],
     "migrate-backfill-kakao-legacy-bindings": ["db_data", "read_only"],
     "migrate-html-to-markdown": ["db_data", "writes"],
