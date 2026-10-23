@@ -83,10 +83,10 @@ jobs:
       - run: node --test scripts/tests/commit-messages.test.mjs
       - name: 새 커밋 메시지 검사
         if: github.event_name == 'push' || github.event_name == 'pull_request'
-        env:
-          COMMIT_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          COMMIT_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: node scripts/check-commit-messages.mjs --history
+        run: >-
+          node scripts/check-commit-messages.mjs --history
+          "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+          "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
 
   audit:
     name: 열린 이슈·PR 일괄 검사
