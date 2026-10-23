@@ -938,6 +938,783 @@
         }
       ],
       "unresolved": []
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-assert-application-question-revision.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "question-revision-assert"
+      ],
+      "requires": [
+        "web-base",
+        "question-revision-column"
+      ],
+      "checks": [
+        "원본 scripts/migrate-assert-application-question-revision.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-assert-application-question-revision.sql",
+          "line": 3,
+          "note": "제출 시 revision 검증 함수가 필요하며 export가 함수를 대신하지 않는다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-atomic-application-questions.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "question-save"
+      ],
+      "requires": [
+        "web-base",
+        "question-revision-column",
+        "answer-fk"
+      ],
+      "checks": [
+        "원본 scripts/migrate-atomic-application-questions.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-atomic-application-questions.sql",
+          "line": 4,
+          "note": "질문 저장 사용자 정의 함수가 필요하나 역할·transaction 경계를 검토하지 않은 상태다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/sql/markdown-image-references.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "markdown-references"
+      ],
+      "requires": [
+        "web-base",
+        "markdown-assets"
+      ],
+      "checks": [
+        "원본 scripts/sql/markdown-image-references.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/sql/markdown-image-references.sql",
+          "line": 4,
+          "note": "이미지 소유 원장과 콘텐츠 참조 view는 필요하며 전체 선행 표·권한 대조가 남았다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-protect-application-answers.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "answer-fk"
+      ],
+      "requires": [
+        "web-base"
+      ],
+      "checks": [
+        "원본 scripts/migrate-protect-application-answers.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-protect-application-answers.sql",
+          "line": 38,
+          "note": "답변 보존 지연 FK가 필요하고 export 기본 FK와의 교체 판정이 남았다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-protect-application-submissions.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "submission-fks"
+      ],
+      "requires": [
+        "web-base"
+      ],
+      "checks": [
+        "원본 scripts/migrate-protect-application-submissions.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-protect-application-submissions.sql",
+          "line": 28,
+          "note": "지원자 데이터 보존 FK의 export 동등·기존 분기 검토가 남았다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-287-rate-limit-reservation-index.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "rate-reservation-index"
+      ],
+      "requires": [
+        "rate-events"
+      ],
+      "checks": [
+        "원본 scripts/migrate-287-rate-limit-reservation-index.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-287-rate-limit-reservation-index.sql",
+          "line": 18,
+          "note": "현 export와 중복된 예약 UUID 인덱스의 수동 동등/잠금 검토가 먼저 필요하다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+      "phase": "custom-definition",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/sql/rate-limit-reservations.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "rate-events",
+        "rate-reserve"
+      ],
+      "requires": [
+        "web-base",
+        "rate-events"
+      ],
+      "checks": [
+        "원본 scripts/sql/rate-limit-reservations.sql에서 검토된 생성 대상 public 수식과 외부 transaction 제외만 허용하며 COMMIT 앞 원본 99번 빈 구분 행도 EOF 공백 경고 방지를 위해 제외한다. 이 원문에는 statement60초 행이 없다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/sql/rate-limit-reservations.sql",
+          "line": 5,
+          "note": "예약 원자 함수가 필요하고 테이블/index는 최신 export와 겹친다."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-custom.test.mjs",
+          "line": 1,
+          "note": "원문/후보 행 위치·수식·transaction/timeout 제외 이유와 후보 고정 SHA를 검사한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-recruitment-singleton.mjs에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "recruitment-default"
+      ],
+      "requires": [
+        "web-base",
+        "recruitment-singleton"
+      ],
+      "checks": [
+        "원본 scripts/migrate-recruitment-singleton.mjs:51의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-recruitment-singleton.mjs",
+          "line": 51,
+          "note": "원본 singleton_key=1 최소 INSERT 효과를 별도 후보로 분리하는 근거다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-assignment-actions.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-actions",
+        "academic-action-functions"
+      ],
+      "requires": [
+        "web-base",
+        "academic-submissions",
+        "academic-actions",
+        "academic-assignment-functions"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-assignment-actions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-assignment-actions.sql",
+          "line": 9,
+          "note": "변경 event 구조."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-assignments.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-assignments",
+        "academic-assignment-functions",
+        "academic-assignments-type",
+        "academic-assignment-triggers"
+      ],
+      "requires": [
+        "web-base",
+        "academic-roster",
+        "academic-assignments-type",
+        "academic-assignments",
+        "academic-assignment-functions"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-assignments.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-assignments.sql",
+          "line": 20,
+          "note": "과제/대상 표와 상태·참조 정의."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-enrollment-links.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-links",
+        "academic-link-functions"
+      ],
+      "requires": [
+        "web-base",
+        "academic-students",
+        "academic-links"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-enrollment-links.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 승인된 원본 lock10초 한 행도 제외하여 engine5초가 소유하며 운영 timing 동등성을 주장하지 않는다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-enrollment-links.sql",
+          "line": 8,
+          "note": "연결 batch 구조와 expected CHECK 검증."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-roster.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-roster.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-roster",
+        "academic-roster-functions"
+      ],
+      "requires": [
+        "web-base",
+        "academic-links",
+        "academic-roster"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-roster.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-roster.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-roster.sql",
+          "line": 6,
+          "note": "명부 등록 구조와 제약 대조."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-students.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-students.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-students",
+        "academic-students-type"
+      ],
+      "requires": [
+        "web-base",
+        "academic-students-type"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-students.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-students.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-students.sql",
+          "line": 23,
+          "note": "학생/등록 표와 enum 선행조건·정의 검증."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-submission-file-reads.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-file-reads",
+        "academic-file-read-function",
+        "academic-file-read-trigger"
+      ],
+      "requires": [
+        "web-base",
+        "academic-submissions",
+        "academic-file-reads",
+        "academic-complete-function",
+        "academic-file-read-function"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-submission-file-reads.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-submission-file-reads.sql",
+          "line": 9,
+          "note": "허가 감사 표·시간 index."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-submission-finalization.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-complete-function"
+      ],
+      "requires": [
+        "academic-upload-auth",
+        "academic-upload-functions"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-submission-finalization.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-submission-finalization.sql",
+          "line": 9,
+          "note": "파일/텍스트 최종화를 결합하는 5인자 함수."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-submissions.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-submissions",
+        "academic-submission-functions",
+        "academic-submissions-type",
+        "academic-submission-triggers"
+      ],
+      "requires": [
+        "web-base",
+        "academic-assignments",
+        "academic-submissions-type",
+        "academic-submissions",
+        "academic-submission-functions"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-submissions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-submissions.sql",
+          "line": 28,
+          "note": "공유 DDL 텍스트와 임시 expected schema 비교."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+      "phase": "academic",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 scripts/migrate-academic-upload-authorizations.sql에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "academic-upload-auth",
+        "academic-upload-functions",
+        "academic-upload-trigger"
+      ],
+      "requires": [
+        "web-base",
+        "academic-actions",
+        "academic-upload-auth",
+        "academic-submission-functions",
+        "academic-upload-functions"
+      ],
+      "checks": [
+        "원본 scripts/migrate-academic-upload-authorizations.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "line": 1,
+          "note": "소유 로컬 후보의 실제 파일이며 원문/후보 SHA는 source inventory가 단독 소유한다."
+        },
+        {
+          "file": "scripts/migrate-academic-upload-authorizations.sql",
+          "line": 8,
+          "note": "승인 원장 구조·부분 unique/cleanup index."
+        },
+        {
+          "file": "scripts/tests/db-fresh-candidate-g1.test.mjs",
+          "line": 1,
+          "note": "원문 바이트와 검토된 정확한 외부 transaction·timeout 행 delta만 허용한다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
+    },
+    {
+      "ref": "scripts/db/candidates/db-fresh/schema-export.sql",
+      "phase": "schema-overlap",
+      "fresh": {
+        "disposition": "unresolved",
+        "required": true,
+        "reason": "원천 schema-export에 연결한 owned-local 후보이며 전체 engine/reference prefix·동작·timeout 실패 통합 전에 설치 포함을 확정하지 않는다."
+      },
+      "objects": [
+        "web-base",
+        "alumni-featured",
+        "session-version",
+        "application-unique",
+        "question-revision-column",
+        "answer-fk",
+        "submission-fks",
+        "rate-events",
+        "rate-reservation-index",
+        "legacy-rate-tables",
+        "markdown-assets",
+        "recruitment-singleton",
+        "academic-students",
+        "academic-links",
+        "academic-roster",
+        "academic-assignments",
+        "academic-submissions",
+        "academic-actions",
+        "academic-upload-auth",
+        "academic-file-reads",
+        "academic-students-type",
+        "academic-assignments-type",
+        "academic-submissions-type",
+        "web-types"
+      ],
+      "requires": [],
+      "checks": [
+        "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다.",
+        "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
+        "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
+      ],
+      "evidence": [
+        {
+          "file": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "line": 1,
+          "note": "설치 도구·schema 권위·생성 SQL hash와 수동 public 수식의 후보 provenance를 확인한다."
+        },
+        {
+          "file": "src/lib/db/schema.ts",
+          "line": 1181,
+          "note": "웹 스키마와 학사 재수출의 생성 권위이며 historical SQL 원문으로 발명하지 않는다."
+        }
+      ],
+      "unresolved": [
+        "전체 fresh bundle의 engine/reference 동등성과 timeout·실패 원자성 통합 gate가 끝나지 않았으므로 운영 manifest/baseline 및 freshReady를 승격하지 않는다."
+      ]
     }
   ],
   "objects": [
@@ -951,6 +1728,11 @@
           "source": "schema-export",
           "relationship": "primary",
           "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-types"],
@@ -973,6 +1755,11 @@
           "source": "scripts/migrate-add-alumni-featured.mjs",
           "relationship": "unresolved",
           "reason": "동일 boolean NOT NULL DEFAULT false 추가 의도지만 IF NOT EXISTS만으로 실제 export 동등성을 확정하지 않는다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -995,6 +1782,11 @@
           "source": "scripts/migrate-add-user-session-version.mjs",
           "relationship": "unresolved",
           "reason": "정수 NOT NULL DEFAULT 0 추가와 존재 건수 조회를 수행한다. 단순 컬럼 존재는 타입·기본값 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1017,6 +1809,11 @@
           "source": "scripts/migrate-add-application-submissions-unique.mjs",
           "relationship": "unresolved",
           "reason": "catalog·중복 데이터·동명/다른 이름 인덱스 분기에 따라 동적 식별자로 UNIQUE를 추가한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1039,6 +1836,11 @@
           "source": "scripts/migrate-atomic-application-questions.mjs",
           "relationship": "unresolved",
           "reason": "wrapper는 컬럼 추가와 두 외부 함수 SQL을 한 transaction에 전달한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1061,6 +1863,11 @@
           "source": "scripts/migrate-atomic-application-questions.mjs",
           "relationship": "wrapper",
           "reason": "외부 함수 원문을 읽어 revision 컬럼·assert 함수와 함께 설치한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-atomic-application-questions.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","question-revision-column","answer-fk"],
@@ -1083,6 +1890,11 @@
           "source": "scripts/migrate-atomic-application-questions.mjs",
           "relationship": "wrapper",
           "reason": "질문 저장 wrapper가 이 외부 SQL도 읽는다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-assert-application-question-revision.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","question-revision-column"],
@@ -1105,6 +1917,16 @@
           "source": "schema-export",
           "relationship": "replacement",
           "reason": "export의 일반 FK를 custom SQL이 NO ACTION DEFERRABLE INITIALLY DEFERRED로 교체하는 의도다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-protect-application-answers.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1127,6 +1949,16 @@
           "source": "schema-export",
           "relationship": "unresolved",
           "reason": "현 export의 RESTRICT 선언과 legacy CASCADE→RESTRICT 분기를 대조해야 한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-protect-application-submissions.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1154,6 +1986,16 @@
           "source": "scripts/migrate-rate-limit-reservations.mjs",
           "relationship": "wrapper",
           "reason": "외부 SQL 원문을 명시 confirm-apply 경로에서만 전달하는 관리 wrapper다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/sql/rate-limit-reservations.sql에서 검토된 생성 대상 public 수식과 외부 transaction 제외만 허용하며 COMMIT 앞 원본 99번 빈 구분 행도 EOF 공백 경고 방지를 위해 제외한다. 이 원문에는 statement60초 행이 없다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1176,6 +2018,11 @@
           "source": "scripts/migrate-rate-limit-reservations.mjs",
           "relationship": "wrapper",
           "reason": "외부 원문 설치 뒤 불변조건·경계 검증을 수행하는 wrapper다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/sql/rate-limit-reservations.sql에서 검토된 생성 대상 public 수식과 외부 transaction 제외만 허용하며 COMMIT 앞 원본 99번 빈 구분 행도 EOF 공백 경고 방지를 위해 제외한다. 이 원문에는 statement60초 행이 없다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["rate-events"],
@@ -1198,6 +2045,16 @@
           "source": "scripts/migrate-287-rate-limit-reservation-index.sql",
           "relationship": "unresolved",
           "reason": "현 schema에는 이미 선언되어 있다. SQL은 UUID NOT NULL 선행 열과 정확한 단일 btree 정의·valid/ready/live 상태를 검증한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-287-rate-limit-reservation-index.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["rate-events"],
@@ -1220,6 +2077,11 @@
           "source": "scripts/migrate-add-rate-limit-tables.mjs",
           "relationship": "unresolved",
           "reason": "정적 TARGETS에 table/index 문이 있지만 실행 시 각 항목의 catalog·데이터 분기를 거쳐 transaction을 구성한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1242,6 +2104,11 @@
           "source": "scripts/migrate-add-markdown-image-assets.mjs",
           "relationship": "unresolved",
           "reason": "inline table/index DDL과 외부 참조 view를 같은 transaction에 연결한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1264,6 +2131,11 @@
           "source": "scripts/migrate-add-markdown-image-assets.mjs",
           "relationship": "wrapper",
           "reason": "원장 구조 뒤 외부 view 원문을 읽어 설치한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/sql/markdown-image-references.sql에서 검토된 생성 대상 public 수식과 외부 transaction·statement60초 제외만 허용한다. 해당하지 않는 행·함수 본문·proconfig·ACL·잠금·FK/index/view 의미는 유지한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","markdown-assets"],
@@ -1286,6 +2158,11 @@
           "source": "scripts/migrate-recruitment-singleton.mjs",
           "relationship": "unresolved",
           "reason": "복수 행 사전 거부 뒤 조건부 제약 추가와 기본 행 INSERT를 한 transaction에 실행한다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base"],
@@ -1303,6 +2180,11 @@
           "source": "scripts/migrate-recruitment-singleton.mjs",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-recruitment-singleton.mjs:51의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["recruitment-singleton"],
@@ -1325,6 +2207,16 @@
           "source": "scripts/migrate-academic-students.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-students.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-students.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-students-type"],
@@ -1347,6 +2239,16 @@
           "source": "scripts/migrate-academic-enrollment-links.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-enrollment-links.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 승인된 원본 lock10초 한 행도 제외하여 engine5초가 소유하며 운영 timing 동등성을 주장하지 않는다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-students"],
@@ -1369,6 +2271,16 @@
           "source": "scripts/migrate-academic-roster.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-roster.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-roster.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-links"],
@@ -1391,6 +2303,16 @@
           "source": "scripts/migrate-academic-assignments.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignments.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-roster","academic-assignments-type"],
@@ -1413,6 +2335,16 @@
           "source": "scripts/migrate-academic-submissions.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submissions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-assignments","academic-submissions-type"],
@@ -1435,6 +2367,16 @@
           "source": "scripts/migrate-academic-assignment-actions.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignment-actions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-submissions"],
@@ -1457,6 +2399,16 @@
           "source": "scripts/migrate-academic-upload-authorizations.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-upload-authorizations.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-actions"],
@@ -1479,6 +2431,16 @@
           "source": "scripts/migrate-academic-submission-file-reads.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submission-file-reads.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["web-base","academic-submissions"],
@@ -1496,6 +2458,11 @@
           "source": "scripts/migrate-academic-enrollment-links.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-enrollment-links.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 승인된 원본 lock10초 한 행도 제외하여 engine5초가 소유하며 운영 timing 동등성을 주장하지 않는다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-links"],
@@ -1513,6 +2480,11 @@
           "source": "scripts/migrate-academic-roster.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-roster.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-roster.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-roster"],
@@ -1530,6 +2502,11 @@
           "source": "scripts/migrate-academic-assignments.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignments.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-assignments"],
@@ -1547,6 +2524,11 @@
           "source": "scripts/migrate-academic-submissions.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submissions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-submissions"],
@@ -1564,6 +2546,11 @@
           "source": "scripts/migrate-academic-assignment-actions.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignment-actions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-actions","academic-assignment-functions"],
@@ -1581,6 +2568,11 @@
           "source": "scripts/migrate-academic-upload-authorizations.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-upload-authorizations.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-upload-auth","academic-submission-functions"],
@@ -1598,6 +2590,11 @@
           "source": "scripts/migrate-academic-submission-finalization.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submission-finalization.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-upload-auth","academic-upload-functions"],
@@ -1615,6 +2612,11 @@
           "source": "scripts/migrate-academic-submission-file-reads.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submission-file-reads.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-file-reads","academic-complete-function"],
@@ -1824,6 +2826,16 @@
           "source": "scripts/migrate-academic-students.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-students.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-students.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": [],
@@ -1846,6 +2858,16 @@
           "source": "scripts/migrate-academic-assignments.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignments.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": [],
@@ -1868,6 +2890,16 @@
           "source": "scripts/migrate-academic-submissions.sql",
           "relationship": "unresolved",
           "reason": "현재 schema 진입점에 같은 학사 모델이 선언·재수출된다. IF NOT EXISTS 통과는 CHECK/FK/index 동등 증명이 아니다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submissions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": [],
@@ -1885,6 +2917,11 @@
           "source": "schema-export",
           "relationship": "primary",
           "reason": "현재 schema.ts 진입점과 재수출 모델이 이 구조의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "relationship": "unresolved",
+          "reason": "설치 Drizzle export 생성 bytes가 원천인 후보이며 생성 대상 public 수식과 원본 생성 provenance를 별도 검토한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": [],
@@ -1902,6 +2939,11 @@
           "source": "scripts/migrate-academic-assignments.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-assignments.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-assignment-functions"],
@@ -1919,6 +2961,11 @@
           "source": "scripts/migrate-academic-submissions.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submissions.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-submission-functions"],
@@ -1936,6 +2983,11 @@
           "source": "scripts/migrate-academic-upload-authorizations.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-upload-authorizations.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-upload-functions"],
@@ -1953,6 +3005,11 @@
           "source": "scripts/migrate-academic-submission-file-reads.sql",
           "relationship": "primary",
           "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+        },
+        {
+          "source": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "relationship": "unresolved",
+          "reason": "원본 scripts/migrate-academic-submission-file-reads.sql의 외부 BEGIN/COMMIT과 승인된 statement timeout 행만 후보에서 제외하고 함수 본문·search_path·ACL·trigger를 보존한다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["academic-file-read-function"],
@@ -2020,6 +3077,78 @@
         {
           "ref": "scripts/sql/markdown-image-references.sql",
           "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-roster.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-students.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
         }
       ],
       "evidence": [
@@ -2117,6 +3246,78 @@
         {
           "ref": "scripts/sql/markdown-image-references.sql",
           "reason": "이 fixture의 제한된 학사/경로 목적 밖이다. 전체 fresh 계약에서는 별도로 검토하며 운영 누락 증거가 아니다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-protect-application-answers.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-protect-application-submissions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservation-index.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-rate-limit-reservations.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-assignment-actions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-assignments.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-enrollment-links.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-roster.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-students.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submission-file-reads.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submission-finalization.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-submissions.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/g1-upload-authorizations.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
+        },
+        {
+          "ref": "scripts/db/candidates/db-fresh/schema-export.sql",
+          "reason": "이 fixture는 기존 raw 원문 부분집합을 실행하며 별도 owned-local fresh engine 후보를 실행하지 않는다. 후보 제외는 운영 객체 누락이나 engine 검증 완료를 뜻하지 않는다."
         }
       ],
       "evidence": [

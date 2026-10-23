@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
 
-const sqlRoles = new Set(["versioned_candidate", "current_definition_or_installer", "read_only_preflight"]);
+const sqlRoles = new Set(["versioned_candidate", "fresh_candidate", "current_definition_or_installer", "read_only_preflight"]);
 const effects = new Set(["db_schema", "db_schema_and_data", "db_data", "seed_db", "blob_and_db", "blob_cleanup"]);
 const defaultBehaviors = new Set(["writes", "read_only", "rejects"]);
 const managedScript = /^scripts\/(?:migrate|backfill|seed|cleanup)-[a-z0-9-]+\.mjs$/;
@@ -77,6 +77,7 @@ export function validateSourceInventory(input) {
   const declaredScripts = new Set();
   const ids = new Map();
   const edges = new Map();
+  const candidateRoles = new Map();
   const links = new Set(symlinkPaths);
   const isLinked = (path) => typeof path === "string" &&
     [...links].some((link) => path === link || path.startsWith(`${link}/`));
@@ -96,7 +97,13 @@ export function validateSourceInventory(input) {
     if (declaredSql.has(entry.path)) add("DUPLICATE_PATH", entry.path);
     declaredSql.add(entry.path);
     if (!sqlRoles.has(entry.role)) add("INVALID_ROLE", entry.path);
-    if (entry.role === "versioned_candidate") {
+    if (typeof entry.path === "string" && entry.path.startsWith("scripts/db/candidates/db-fresh/") && entry.role !== "fresh_candidate") {
+      add("INVALID_FRESH_ROLE", entry.path);
+    }
+    if (entry.role === "fresh_candidate" && !/^scripts\/db\/candidates\/db-fresh\/[a-z0-9-]+\.sql$/.test(entry.path)) {
+      add("INVALID_FRESH_PATH", entry.path);
+    }
+    if (entry.role === "versioned_candidate" || entry.role === "fresh_candidate") {
       if (typeof entry.id !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(entry.id) ||
           !Array.isArray(entry.predecessors) || entry.predecessors.some((id) => typeof id !== "string")) {
         add("INVALID_CANDIDATE", entry.path);
@@ -104,12 +111,18 @@ export function validateSourceInventory(input) {
         if (ids.has(entry.id)) add("DUPLICATE_ID", entry.path);
         ids.set(entry.id, entry.path);
         edges.set(entry.id, entry.predecessors);
+        candidateRoles.set(entry.id, entry.role);
       }
     } else if (entry.id !== undefined || entry.predecessors !== undefined) add("INVALID_CANDIDATE", entry.path);
   }
 
   for (const [id, parents] of edges) {
-    for (const parent of parents) if (!ids.has(parent)) add("UNKNOWN_PREDECESSOR", ids.get(id));
+    for (const parent of parents) {
+      if (!ids.has(parent)) add("UNKNOWN_PREDECESSOR", ids.get(id));
+      if (candidateRoles.get(id) === "fresh_candidate" && candidateRoles.get(parent) !== "fresh_candidate") {
+        add("FRESH_LEGACY_PREDECESSOR", ids.get(id));
+      }
+    }
   }
   if (hasCycle(edges)) add("DEPENDENCY_CYCLE");
 
