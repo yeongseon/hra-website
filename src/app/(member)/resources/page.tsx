@@ -8,21 +8,10 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Info, Plus } from "lucide-react";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { Plus } from "lucide-react";
+import { redirect } from "next/navigation";
 import { requireSharedResourceReader } from "@/lib/resource-access";
-import { classMaterialReadFilter } from "@/features/class-materials/access";
-import { db } from "@/lib/db";
-import { cohortNumberDesc } from "@/lib/db/cohort-order";
-import {
-  classMaterials,
-  classLogs,
-  cohorts,
-  guidebooks,
-  reportTemplates,
-  users,
-  weeklyTexts,
-} from "@/lib/db/schema";
+import { getResourcesOverview } from "@/features/resources/overview/service";
 import { ResourcesTabs, type ResourceItem } from "./_components/resources-tabs";
 
 export const metadata: Metadata = {
@@ -39,104 +28,15 @@ export default async function ResourcesPage({ searchParams }: Props) {
   const requestedCategory = (await searchParams).category;
   const initialCategory = typeof requestedCategory === "string" ? requestedCategory : undefined;
   const session = await requireSharedResourceReader();
-  const userRole = session?.user?.role;
+  // Page는 Web 세션만 전달하고, 현재 계정·역할 및 자료 조회는 공용 서비스에 맡깁니다.
+  const overview = await getResourcesOverview({ userId: session.user.id, role: session.user.role });
+  if (overview.kind === "unauthenticated") redirect("/login");
+  if (overview.kind === "forbidden") redirect("/pending");
 
-  // ADMIN/FACULTY/MEMBER는 열람 권한이 있으므로 경고 불필요
-  const showAccessWarning =
-    userRole !== "ADMIN" && userRole !== "FACULTY" && userRole !== "MEMBER";
+  const userRole = overview.role;
   const isAdmin = userRole === "ADMIN";
-
-  // 기수(최신순), 사용자 cohortId, 자료들을 병렬 조회
-  const [
-    cohortRows,
-    userRow,
-    logs,
-    allWeeklyTexts,
-    allClassMaterials,
-    allGuidebooks,
-    allTemplates,
-  ] =
-    await Promise.all([
-      // 기수 목록 — desc 정렬로 최신 기수가 드롭다운 상단에 위치
-      db
-        .select({ id: cohorts.id, name: cohorts.name })
-        .from(cohorts)
-        // 기수명에서 숫자만 추출해 내림차순 정렬 (20기 → 19기 → ... → 1기)
-        .orderBy(cohortNumberDesc(cohorts.name)),
-
-      // 로그인 사용자의 cohortId 조회 (MEMBER일 때 업로드 권한 제한에 사용)
-      session?.user?.id
-        ? db
-            .select({ cohortId: users.cohortId })
-            .from(users)
-            .where(eq(users.id, session.user.id))
-            .limit(1)
-        : Promise.resolve([]),
-
-      // 주차별 수업일지
-      db
-        .select({
-          id: classLogs.id,
-          title: classLogs.title,
-          classDate: classLogs.classDate,
-          createdAt: classLogs.createdAt,
-          authorName: users.name,
-          cohortId: classLogs.cohortId,
-        })
-        .from(classLogs)
-        .leftJoin(users, eq(classLogs.authorId, users.id))
-        .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt)),
-
-      // 주차별 텍스트 (textType 포함) — classDate 기준 최신순, null은 맨 뒤로
-      db
-       .select({
-          id: weeklyTexts.id,
-          title: weeklyTexts.title,
-          fileUrl: weeklyTexts.fileUrl,
-          body: weeklyTexts.body,
-          classDate: weeklyTexts.classDate,
-          createdAt: weeklyTexts.createdAt,
-          cohortId: weeklyTexts.cohortId,
-          textType: weeklyTexts.textType,
-        })
-        .from(weeklyTexts)
-        .orderBy(sql`${weeklyTexts.classDate} DESC NULLS LAST`, desc(weeklyTexts.createdAt)),
-
-      db
-            .select({
-              id: classMaterials.id,
-              title: classMaterials.title,
-              classDate: classMaterials.classDate,
-              createdAt: classMaterials.createdAt,
-              audience: classMaterials.audience,
-              weekNumber: classMaterials.weekNumber,
-              lectureTitle: classMaterials.lectureTitle,
-              uploaderName: users.name,
-            })
-            .from(classMaterials)
-            .leftJoin(users, eq(classMaterials.uploadedById, users.id))
-            .where(classMaterialReadFilter(session?.user))
-            .orderBy(sql`${classMaterials.classDate} DESC NULLS LAST`, desc(classMaterials.createdAt)),
-
-      // 가이드북 파일 (Vercel Blob)
-      db.select().from(guidebooks).orderBy(desc(guidebooks.createdAt)),
-
-      // 보고서 양식 — published:true인 것만, order 오름차순
-      db
-        .select({
-          id: reportTemplates.id,
-          slug: reportTemplates.slug,
-          title: reportTemplates.title,
-          category: reportTemplates.category,
-          createdAt: reportTemplates.createdAt,
-        })
-        .from(reportTemplates)
-        .where(eq(reportTemplates.published, true))
-        .orderBy(asc(reportTemplates.order), asc(reportTemplates.createdAt)),
-    ]);
-
-  // 로그인 사용자의 cohortId
-  const userCohortId = (userRow as Array<{ cohortId: string | null }>)[0]?.cohortId ?? null;
+  const { cohorts: cohortRows, userCohortId, logs, weeklyTexts: allWeeklyTexts,
+    classMaterials: allClassMaterials, guidebooks: allGuidebooks, templates: allTemplates } = overview;
 
   // 모든 자료를 ResourceItem 배열로 통합
   const items: ResourceItem[] = [
@@ -158,8 +58,8 @@ export default async function ResourcesPage({ searchParams }: Props) {
       date: text.classDate ?? text.createdAt,
       cohortId: text.cohortId,
       textType: text.textType ?? null,
-      href: text.body ? `/resources/weekly-texts/${text.id}` : undefined,
-      downloadUrl: !text.body && text.fileUrl ? `/api/resources/weekly-texts/${text.id}/download` : undefined,
+      href: text.hasBody ? `/resources/weekly-texts/${text.id}` : undefined,
+      downloadUrl: !text.hasBody && text.hasFile ? `/api/resources/weekly-texts/${text.id}/download` : undefined,
     })),
     ...allClassMaterials.map((material) => ({
       id: `cm-${material.id}`,
@@ -232,27 +132,6 @@ export default async function ResourcesPage({ searchParams }: Props) {
           </div>
         )}
       </section>
-
-      {/* PENDING 사용자에게 열람 권한 안내 */}
-      {showAccessWarning && (
-        <section className="mb-12">
-          <div className="relative overflow-hidden rounded-2xl bg-amber-50 border border-amber-200 p-6 md:p-8 shadow-[var(--shadow-soft)]">
-            <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
-            <div className="flex items-start sm:items-center gap-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center border border-amber-200">
-                <Info className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-amber-800 mb-1">열람 권한 안내</h3>
-                <p className="text-[#666666] text-sm md:text-base leading-relaxed">
-                  자료실의 일부 콘텐츠는 수료생, 교수진, 운영진 등 내부 회원만 열람할 수
-                  있습니다.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* 자료실 탭 필터 + 목록 */}
       <ResourcesTabs

@@ -12,9 +12,13 @@ const dialect = new PgDialect();
 
 describe("강의자료 읽기 권한", () => {
   it("목록과 상세·메타데이터가 공통 필터를 사용", () => {
-    const list = readFileSync("src/app/(member)/resources/page.tsx", "utf8");
+    const list = readFileSync("src/features/resources/overview/repository.ts", "utf8");
+    const page = readFileSync("src/app/(member)/resources/page.tsx", "utf8");
     const detail = readFileSync("src/app/(member)/resources/class-materials/[id]/page.tsx", "utf8");
-    expect(list).toContain(".where(classMaterialReadFilter(session?.user))");
+    // 자료실 화면은 직접 DB를 열지 않고 검증된 현재 역할을 저장소 SQL 필터에 넘깁니다.
+    expect(page).toContain("getResourcesOverview({ userId: session.user.id, role: session.user.role })");
+    expect(page).not.toContain('from "@/lib/db"');
+    expect(list).toContain(".where(classMaterialReadFilter({ id: verified.id, role: verified.role }))");
     expect(detail).toContain("classMaterialReadFilter(session.user)");
     expect(detail.match(/await getVisibleMaterial\(id\)/g)).toHaveLength(2);
   });
