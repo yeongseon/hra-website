@@ -1,6 +1,6 @@
 # API v1 현재 제공 범위
 
-공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`, `GET /api/v1/me`, `GET /api/v1/schedule`입니다. 이후 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
+공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 현재 구현된 경로는 `GET /api/v1/notices`, `GET /api/v1/notices/{id}`, `GET /api/v1/me`, `GET /api/v1/schedule`입니다. 이후 자료, 과제·제출·파일 계약은 #272에서 추가합니다.
 
 ## 본인 프로필
 
@@ -33,6 +33,12 @@
 입력 오류는 400 `INVALID_INPUT`, DB 등 제공 불가 오류는 503 `UNAVAILABLE`입니다. 오류 본문은 `{ error: { code, message, requestId } }`만 담고 SQL·검색어·내부 오류 원문은 보내지 않습니다. 이 공개 GET은 응답 캐시를 사용하지 않으며 현재 Web 화면과 같은 공지 서비스·게시 정책을 호출합니다. Web 서버가 자기 API로 HTTP 요청을 보내지는 않습니다.
 
 OpenAPI의 JSON 표현은 [OpenAPI 3.1.1 명세](https://spec.openapis.org/oas/v3.1.1.html)의 문서 형식에 따릅니다.
+
+## 공개 공지 상세
+
+`GET /api/v1/notices/{id}`는 UUID 경로 ID가 가리키는 **게시된 공지**만 반환합니다. 성공 응답은 `{ notice: { id, title, content, viewCount, createdAt } }`로 고정합니다. `content`는 공개 Markdown 원문이고 `createdAt`은 UTC 밀리초 ISO 문자열입니다. 내부 작성자 ID, 게시 상태, 이전·다음글, 그 밖의 DB 열은 API 응답에 포함하지 않습니다. Web 상세 화면은 같은 서비스에서 이전·다음글을 받아 표시합니다.
+
+형식이 틀린 ID나 미지원 query는 400 `INVALID_INPUT`, 없는 공지·초안은 404 `NOT_FOUND`, 조회 저장소 장애는 503 `UNAVAILABLE`입니다. 모든 응답은 `Cache-Control: no-store`이며 오류 원문·SQL을 노출하지 않습니다. 성공 응답을 보낸 뒤 `after()` 수명주기에서 조회수를 원자적으로 1 증가시키므로 응답의 `viewCount`는 갱신 전 값일 수 있습니다. 요청당 갱신이며 방문자 중복 제거나 정확히 한 번 집계는 보장하지 않습니다.
 
 ## 계약 변경 검사
 

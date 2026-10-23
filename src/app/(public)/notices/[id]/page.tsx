@@ -1,6 +1,9 @@
+/**
+ * 공개 공지 상세 화면과 검색 미리보기 메타데이터를 구성합니다.
+ * 공지 조회·이웃 글·조회수 저장은 공용 Application Service를 통해 처리합니다.
+ */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, eq, lt, gt, asc, desc, sql } from "drizzle-orm";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -8,8 +11,7 @@ import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
-import { db } from "@/lib/db";
-import { notices } from "@/lib/db/schema";
+import { getPublishedNoticeById, getPublishedNoticeDetail, incrementPublishedNoticeViewCount } from "@/features/notices/detail/service";
 import { formatKstDate } from "@/lib/date-time";
 import { logServerError } from "@/lib/errors";
 import { buildNoticeExcerpt } from "@/lib/notice-excerpt";
@@ -20,20 +22,10 @@ type NoticePageProps = {
 
 export const dynamic = "force-dynamic";
 
-async function getPublishedNoticeById(id: string) {
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    return null;
-  }
-
-  return db.query.notices.findFirst({
-    where: and(eq(notices.id, parsedId.data), eq(notices.status, "PUBLISHED")),
-  });
-}
-
 export async function generateMetadata({ params }: NoticePageProps): Promise<Metadata> {
   const { id } = await params;
-  const notice = await getPublishedNoticeById(id);
+  const parsedId = z.uuid().safeParse(id);
+  const notice = parsedId.success ? await getPublishedNoticeById(parsedId.data) : null;
 
   if (!notice) {
     return { title: "공지사항" };
@@ -60,48 +52,23 @@ export async function generateMetadata({ params }: NoticePageProps): Promise<Met
 
 export default async function NoticeDetailPage({ params }: NoticePageProps) {
   const { id } = await params;
-  const notice = await getPublishedNoticeById(id);
+  const parsedId = z.uuid().safeParse(id);
+  const detail = parsedId.success ? await getPublishedNoticeDetail(parsedId.data) : null;
 
-  if (!notice) {
+  if (!detail) {
     notFound();
   }
+  const { notice, prevNotice, nextNotice } = detail;
 
   // 응답을 막지 않되 플랫폼이 SQL 완료를 기다리도록 응답 후 수명주기에 등록한다.
   // 요청별 원자 갱신이며 방문자 중복 제거·정확히 한 번 집계는 보장하지 않는다.
   after(async () => {
     try {
-      await db
-        .update(notices)
-        .set({ viewCount: sql`${notices.viewCount} + 1` })
-        .where(eq(notices.id, notice.id));
+      await incrementPublishedNoticeViewCount(notice.id);
     } catch (err: unknown) {
       logServerError("public/notices/viewCount", err, { id: notice.id });
     }
   });
-
-  const [prevNotice] = await db
-    .select({ id: notices.id, title: notices.title })
-    .from(notices)
-    .where(
-      and(
-        eq(notices.status, "PUBLISHED"),
-        lt(notices.createdAt, notice.createdAt)
-      )
-    )
-    .orderBy(desc(notices.createdAt))
-    .limit(1);
-
-  const [nextNotice] = await db
-    .select({ id: notices.id, title: notices.title })
-    .from(notices)
-    .where(
-      and(
-        eq(notices.status, "PUBLISHED"),
-        gt(notices.createdAt, notice.createdAt)
-      )
-    )
-    .orderBy(asc(notices.createdAt))
-    .limit(1);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-20 md:py-32">

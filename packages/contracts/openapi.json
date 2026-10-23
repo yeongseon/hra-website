@@ -56,6 +56,69 @@
         }
       }
     },
+    "/api/v1/notices/{id}": {
+      "get": {
+        "operationId": "getPublishedNoticeDetail",
+        "summary": "발행된 공지사항 상세 조회",
+        "description": "발행 상태인 공지만 조회합니다. 초안이나 존재하지 않는 공지는 404를 반환합니다. query key는 허용하지 않습니다. 본문 응답은 조회수 증가 처리와 분리되며 방문자 중복 제거를 보장하지 않습니다.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "조회할 공지사항의 UUID입니다. 형식이 잘못되면 400을 반환합니다.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "발행된 공지사항의 공개 상세 DTO",
+            "headers": {
+              "Cache-Control": {
+                "description": "조회수 처리와 공개 상태 변경을 고려하여 응답을 저장하지 않습니다.",
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/NoticeDetailResponse" } }
+            }
+          },
+          "400": {
+            "description": "공지 UUID 형식이 잘못되었거나 허용되지 않은 query key가 있음",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/InvalidInputError" } }
+            }
+          },
+          "404": {
+            "description": "공지사항이 없거나 발행되지 않음",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/NotFoundError" } }
+            }
+          },
+          "503": {
+            "description": "저장소 장애로 공지 상세를 조회할 수 없음",
+            "headers": {
+              "Cache-Control": {
+                "schema": { "type": "string", "const": "no-store" }
+              }
+            },
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UnavailableError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "getCurrentUser",
@@ -356,6 +419,43 @@
           "month": { "type": "integer", "minimum": 1, "maximum": 12 },
           "timeZone": { "type": "string", "const": "Asia/Seoul" },
           "events": { "type": "array", "items": { "$ref": "#/components/schemas/ScheduleEvent" } }
+        }
+      },
+      "NoticeDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "content", "viewCount", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string", "minLength": 1 },
+          "content": { "type": "string", "description": "발행된 공지사항의 Markdown 본문입니다." },
+          "viewCount": { "type": "integer", "minimum": 0 },
+          "createdAt": { "$ref": "#/components/schemas/UtcTimestamp" }
+        }
+      },
+      "NoticeDetailResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["notice"],
+        "properties": {
+          "notice": { "$ref": "#/components/schemas/NoticeDetail" }
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message", "requestId"],
+            "properties": {
+              "code": { "type": "string", "const": "NOT_FOUND" },
+              "message": { "type": "string", "minLength": 1 },
+              "requestId": { "type": "string", "format": "uuid" }
+            }
+          }
         }
       }
     }
