@@ -33,16 +33,16 @@ function capturePolicyError(inputAudit, inputLock = lock) {
   assert.fail('변경된 감사 결과가 차단되지 않았다');
 }
 
-test('신규 권고는 패키지와 권고 ID로만 진단하며 차단한다', () => {
+test('신규 권고는 패키지·권고 ID·source로만 진단하며 차단한다', () => {
   const input = structuredClone(audit);
   input.vulnerabilities.vite.via.push({ source: 999999, url: 'https://github.com/advisories/GHSA-test-1234', severity: 'high', range: '<99', title: 'SENSITIVE_SENTINEL' });
   const error = capturePolicyError(input);
   assert.equal(error.message, 'DEPENDENCY_TRIAGE_CHANGED');
-  assert.deepEqual(error.diagnostics, [{ kind: 'ADVISORY_ONLY_IN_AUDIT', package: 'vite', id: 'GHSA-test-1234' }]);
+  assert.deepEqual(error.diagnostics, [{ kind: 'ADVISORY_ONLY_IN_AUDIT', package: 'vite', id: 'GHSA-test-1234', source: 999999 }]);
   assert.doesNotMatch(JSON.stringify(error.diagnostics), /SENSITIVE_SENTINEL|<99/);
   assert.deepEqual(dependencyDiagnosticLines(error), [
     'DEPENDENCY_TRIAGE_CHANGED',
-    'DEPENDENCY_CHANGE {"kind":"ADVISORY_ONLY_IN_AUDIT","package":"vite","id":"GHSA-test-1234"}',
+    'DEPENDENCY_CHANGE {"kind":"ADVISORY_ONLY_IN_AUDIT","package":"vite","id":"GHSA-test-1234","source":999999}',
   ]);
 });
 
@@ -51,14 +51,14 @@ test('권고 제거는 철회로 단정하지 않고 원장에만 남은 ID를 �
   const removed = input.vulnerabilities.vite.via.pop();
   const error = capturePolicyError(input);
   assert.equal(error.message, 'DEPENDENCY_TRIAGE_CHANGED');
-  assert.deepEqual(error.diagnostics, [{ kind: 'ADVISORY_ONLY_IN_POLICY', package: 'vite', id: removed.id }]);
+  assert.deepEqual(error.diagnostics, [{ kind: 'ADVISORY_ONLY_IN_POLICY', package: 'vite', id: removed.id, source: removed.source }]);
 });
 
 test('권고 메타데이터와 설치 버전 변경은 원문 없이 위치만 진단한다', () => {
   const input = structuredClone(audit);
   input.vulnerabilities.vite.via[0].title = 'SENSITIVE_SENTINEL';
   const changedAdvisory = capturePolicyError(input);
-  assert.deepEqual(changedAdvisory.diagnostics, [{ kind: 'ADVISORY_METADATA_CHANGED', package: 'vite', id: input.vulnerabilities.vite.via[0].id }]);
+  assert.deepEqual(changedAdvisory.diagnostics, [{ kind: 'ADVISORY_METADATA_CHANGED', package: 'vite', id: input.vulnerabilities.vite.via[0].id, source: input.vulnerabilities.vite.via[0].source }]);
   assert.doesNotMatch(JSON.stringify(changedAdvisory.diagnostics), /SENSITIVE_SENTINEL/);
   const changedLock = structuredClone(lock);
   changedLock.packages['node_modules/vite'].version = '99.0.0';
@@ -110,4 +110,48 @@ test('손상된 원장은 원문 없이 실패 차단한다', () => {
   catch (caught) { error = caught; }
   assert.equal(error?.message, 'DEPENDENCY_TRIAGE_CHANGED');
   assert.deepEqual(dependencyDiagnosticLines(error), ['DEPENDENCY_TRIAGE_CHANGED']);
+});
+
+test('v2 원장은 32개 권고별 판단과 6개 공유 사용 맥락을 유지한다', () => {
+  assert.equal(policy.schemaVersion, 2);
+  assert.equal(policy.assessments.length, 32);
+  assert.equal(policy.contexts.length, 6);
+  assert.equal(new Set(policy.assessments.map(item => item.contextId)).size, 6);
+  assert.deepEqual(policy.contexts.map(context => policy.assessments.filter(item => item.contextId === context.id).length).sort((a, b) => a - b), [2, 3, 5, 5, 5, 12]);
+  assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-24'), { affectedPackages: 10, advisoryEntries: 28, p1: 0 });
+});
+
+for (const [name, change] of [
+  ['공유 맥락 누락', p => p.contexts.pop()],
+  ['공유 맥락 ID 중복', p => p.contexts[1].id = p.contexts[0].id],
+  ['공유 판단문 중복', p => { for (const field of ['usedApi', 'callLocations', 'assessment', 'residualAssumptions']) p.contexts[1][field] = p.contexts[0][field]; }],
+  ['미사용 공유 맥락', p => p.contexts.push({ ...p.contexts[0], id: 'unused-context' })],
+  ['잘못된 공유 맥락 ID', p => p.contexts[0].id = 'private@example.invalid'],
+  ['공유 판단문 누락', p => p.contexts[0].assessment = ''],
+  ['없는 공유 맥락 참조', p => p.assessments[0].contextId = 'missing-context'],
+  ['권고별 항목 손상', p => p.assessments[0] = null],
+  ['권고별 공격 조건 누락', p => p.assessments[0].attackCondition = ''],
+  ['예전 중복 필드 재도입', p => p.assessments[0].usedApi = 'SENSITIVE_SENTINEL'],
+]) test(name + ' 차단', () => {
+  const input = structuredClone(policy);
+  change(input);
+  assert.throws(() => verifyDependencyPolicy(audit, lock, input, '2026-10-24'), /DEPENDENCY_/);
+});
+
+test('구 schema v1은 새 검토 원장으로 자동 승인하지 않는다', () => {
+  const input = structuredClone(policy);
+  input.schemaVersion = 1;
+  assert.throws(() => verifyDependencyPolicy(audit, lock, input, '2026-10-24'), /DEPENDENCY_TRIAGE_CHANGED/);
+});
+
+test('동일 GHSA의 다른 source ID는 각각 진단하고 차단한다', () => {
+  const input = structuredClone(audit);
+  const duplicate = { ...input.vulnerabilities.vite.via[0], source: 999998 };
+  input.vulnerabilities.vite.via.push(duplicate);
+  const error = capturePolicyError(input);
+  assert.equal(error.message, 'DEPENDENCY_TRIAGE_CHANGED');
+  assert.deepEqual(error.diagnostics, [{
+    kind: 'ADVISORY_ONLY_IN_AUDIT', package: 'vite', id: duplicate.id, source: 999998,
+  }]);
+  assert.doesNotMatch(dependencyDiagnosticLines(error).join('\n'), /title|range|version/);
 });
