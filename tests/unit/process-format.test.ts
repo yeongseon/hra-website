@@ -3,8 +3,8 @@
  * 이슈·PR 형식 규칙 회귀 테스트
  *
  * 검증 대상 (scripts/_lib/process-format.mjs):
- *   - validateIssue: 제목(대괄호 접두어 금지)·라벨(종류/우선순위/분류)·본문 섹션 규칙
- *   - validatePullRequest: PR 섹션과 이슈 연결 규칙
+ *   - validateIssue: 빈 제목·종류/우선순위·핵심 본문과 완료 체크리스트 규칙
+ *   - validatePullRequest: 순서와 추가 섹션에 무관한 필수 근거·이슈 연결 규칙
  *   - 규칙 상수와 이슈 폼(.github/ISSUE_TEMPLATE/*.yml)·PR 템플릿의 일치
  *
  * 마지막 항목이 중요한 이유: 폼의 섹션 이름을 바꾸고 규칙을 안 바꾸면 (또는 그 반대)
@@ -96,17 +96,28 @@ describe("validateIssue — 통과", () => {
   it("CRLF 줄바꿈 본문도 통과한다", () => {
     expect(validateIssue({ ...bugIssue, body: makeBody(BUG_SECTIONS).replace(/\n/g, "\r\n") })).toEqual([]);
   });
+
+  it("핵심 정보가 있으면 섹션 순서와 추가 설명 섹션은 자유롭다", () => {
+    const reordered = [BUG_SECTIONS[1], BUG_SECTIONS[0], BUG_SECTIONS[2]];
+    expect(validateIssue({ ...bugIssue, body: `${makeBody(reordered)}\n\n### 추가 근거\n\n합성 관찰` })).toEqual([]);
+  });
+
+  it("관련 이슈가 없으면 섹션과 관례적인 '없음' 입력을 생략한다", () => {
+    const withoutRelated = makeBody(BUG_SECTIONS.slice(0, 3));
+    expect(validateIssue({ ...bugIssue, body: withoutRelated })).toEqual([]);
+    expect(validateIssue({ ...bugIssue, body: `${withoutRelated}\n\n### 관련 이슈\n\n_No response_` })).toEqual([]);
+  });
+
+  it("분류가 아직 없거나 제목에 기존 접두어가 있어도 핵심 라벨·본문이면 통과한다", () => {
+    expect(validateIssue({ ...bugIssue, title: "[P1][보안] 요약", labels: ["bug", "P1"] })).toEqual([]);
+    expect(validateIssue({ ...taskIssue, labels: ["enhancement", "P2"] })).toEqual([]);
+    expect(validateIssue({ ...policyIssue, body: makeBody(TASK_SECTIONS.slice(0, 3)) })).toEqual([]);
+  });
 });
 
 describe("validateIssue — 제목 위반", () => {
-  it.each([
-    ["우선순위·분류 접두어", "[P1][보안] 요약"],
-    ["정책확인 접두어", "[정책확인] 요약"],
-    ["추적 접두어", "[추적] 요약"],
-    ["앞 공백 뒤 접두어", "  [버그] 요약"],
-    ["빈 제목", "   "],
-  ])("%s", (_name, title) => {
-    expect(validateIssue({ ...bugIssue, title }).length).toBeGreaterThan(0);
+  it("빈 제목은 차단한다", () => {
+    expect(validateIssue({ ...bugIssue, title: "   " }).length).toBeGreaterThan(0);
   });
 });
 
@@ -116,7 +127,6 @@ describe("validateIssue — 라벨 위반", () => {
     ["종류 라벨 둘", ["bug", "enhancement", "P1", "보안"]],
     ["우선순위 없음", ["bug", "보안"]],
     ["우선순위 둘", ["bug", "P1", "P2", "보안"]],
-    ["분류 없음", ["bug", "P1"]],
     ["분류 둘", ["bug", "P1", "보안", "검증"]],
   ])("버그: %s", (_name, labels) => {
     expect(validateIssue({ ...bugIssue, labels }).length).toBeGreaterThan(0);
@@ -128,7 +138,7 @@ describe("validateIssue — 라벨 위반", () => {
     expect(errors[0]).toContain("종류 라벨");
   });
 
-  it("작업 이슈도 우선순위·분류가 필요하다", () => {
+  it("작업 이슈도 우선순위가 필요하다", () => {
     expect(validateIssue({ ...taskIssue, labels: ["enhancement"] }).length).toBeGreaterThan(0);
   });
 
@@ -155,20 +165,19 @@ describe("validateIssue — 본문 위반", () => {
     expect(validateIssue({ ...bugIssue, body: makeBody(BUG_SECTIONS, "##") }).length).toBeGreaterThan(0);
   });
 
-  it("섹션 순서가 다르면 위반", () => {
-    const reordered = [BUG_SECTIONS[1], BUG_SECTIONS[0], BUG_SECTIONS[2], BUG_SECTIONS[3]];
-    expect(validateIssue({ ...bugIssue, body: makeBody(reordered) }).length).toBeGreaterThan(0);
+  it("핵심 섹션이 중복되면 위반", () => {
+    const duplicated = `${makeBody(BUG_SECTIONS)}\n\n### 완료 조건\n\n- [ ] 중복`;
+    expect(validateIssue({ ...bugIssue, body: duplicated }).length).toBeGreaterThan(0);
   });
 
-  it("규칙에 없는 섹션이 더 있으면 위반", () => {
-    expect(
-      validateIssue({ ...bugIssue, body: `${makeBody(BUG_SECTIONS)}\n\n### 범위\n\n내용` }).length,
-    ).toBeGreaterThan(0);
+  it("핵심 섹션이 없으면 추가 설명이 있어도 위반", () => {
+    const missing = `${makeBody([BUG_SECTIONS[0], BUG_SECTIONS[2]])}\n\n### 추가 근거\n\n내용`;
+    expect(validateIssue({ ...bugIssue, body: missing }).length).toBeGreaterThan(0);
   });
 
-  it("빈 섹션과 폼의 _No response_ 는 위반", () => {
-    const empty = makeBody(BUG_SECTIONS).replace("### 관련 이슈\n\n내용", "### 관련 이슈\n\n");
-    const noResponse = makeBody(BUG_SECTIONS).replace("### 관련 이슈\n\n내용", "### 관련 이슈\n\n_No response_");
+  it("빈 핵심 섹션과 폼의 _No response_ 는 위반", () => {
+    const empty = makeBody(BUG_SECTIONS).replace("### 재현 근거와 영향\n\n내용", "### 재현 근거와 영향\n\n");
+    const noResponse = makeBody(BUG_SECTIONS).replace("### 재현 근거와 영향\n\n내용", "### 재현 근거와 영향\n\n_No response_");
     expect(validateIssue({ ...bugIssue, body: empty }).length).toBeGreaterThan(0);
     expect(validateIssue({ ...bugIssue, body: noResponse }).length).toBeGreaterThan(0);
   });
@@ -210,6 +219,20 @@ describe("validatePullRequest", () => {
       expect(validatePullRequest({ body: prBody(related) })).toEqual([]);
     },
   );
+
+  it("PR 필수 근거가 있으면 섹션 순서와 추가 검토 섹션은 자유롭다", () => {
+    const reordered = [PR_SECTIONS[2], PR_SECTIONS[0], PR_SECTIONS[3], PR_SECTIONS[1]];
+    const body = `${makeBody(reordered, "##").replace("## 관련 이슈\n\n내용", "## 관련 이슈\n\nCloses #12")}\n\n## 추가 검토\n\n범위`;
+    expect(validatePullRequest({ body })).toEqual([]);
+  });
+
+  it("검증 근거가 빈 PR은 순서와 관계없이 차단한다", () => {
+    expect(validatePullRequest({ body: prBody("Refs #12").replace("## 검증 결과\n\n내용", "## 검증 결과\n\n_No response_") }).length).toBeGreaterThan(0);
+  });
+
+  it("PR 핵심 근거 섹션을 중복하면 차단한다", () => {
+    expect(validatePullRequest({ body: `${prBody("Closes #12")}\n\n## 검증 결과\n\n중복` }).length).toBeGreaterThan(0);
+  });
 
   it("이슈 번호도 사유도 없으면 위반", () => {
     expect(validatePullRequest({ body: prBody("관련 없음") }).length).toBeGreaterThan(0);
@@ -271,6 +294,15 @@ describe("규칙과 템플릿의 일치", () => {
       (m) => m[1],
     );
     expect(headings).toEqual([...PR_SECTIONS]);
+  });
+
+  it("웹 이슈 폼은 관련 이슈에 관례적 없음이나 필수 입력을 요구하지 않는다", () => {
+    for (const file of ["bug.yml", "task.yml", "policy.yml"]) {
+      const form = readFileSync(`.github/ISSUE_TEMPLATE/${file}`, "utf8");
+      const related = form.slice(form.indexOf("    id: related"));
+      expect(related).toContain("required: false");
+      expect(related).not.toContain("value: 없음");
+    }
   });
 
   it("문서·폼·AGENTS 에 모든 분류와 우선순위가 적혀 있다", () => {
