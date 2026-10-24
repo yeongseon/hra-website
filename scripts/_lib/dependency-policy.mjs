@@ -43,14 +43,16 @@ function dependencyChanges(snapshot, recorded) {
       if (!current || !previous) add(current ? 'NODE_ONLY_IN_AUDIT' : 'NODE_ONLY_IN_POLICY', name, { path: safeLabel(path) });
       else if (canonical(current) !== canonical(previous)) add('NODE_METADATA_CHANGED', name, { path: safeLabel(path) });
     }
-    const key = via => via.id ?? `dependency:${via.dependency}`;
+    const key = via => via.id ? `advisory:${via.source}:${via.id}` : `dependency:${via.dependency}`;
     const actualVia = new Map(actual.via.map(via => [key(via), via]));
     const recordedVia = new Map(expected.via.map(via => [key(via), via]));
     for (const viaKey of new Set([...actualVia.keys(), ...recordedVia.keys()])) {
       const current = actualVia.get(viaKey);
       const previous = recordedVia.get(viaKey);
       const item = current ?? previous;
-      const fields = item.id ? { id: safeLabel(item.id) } : { dependency: safeLabel(item.dependency) };
+      const fields = item.id
+        ? { id: safeLabel(item.id), ...(Number.isSafeInteger(item.source) && item.source >= 0 ? { source: item.source } : {}) }
+        : { dependency: safeLabel(item.dependency) };
       const prefix = item.id ? 'ADVISORY' : 'DEPENDENCY';
       if (!current || !previous) add(`${prefix}_ONLY_IN_${current ? 'AUDIT' : 'POLICY'}`, name, fields);
       else if (canonical(current) !== canonical(previous)) add(`${prefix}_METADATA_CHANGED`, name, fields);
@@ -71,23 +73,45 @@ export function dependencyDiagnosticLines(error) {
   }
   return lines;
 }
-/** 변경/누락/만료/미분류/P1은 차단한다. 원장의 owner는 유지보수 담당이며 위험 수용 승인으로 해석하지 않는다. */
+// 공유 사용 맥락과 권고별 판단은 닫힌 필드 집합으로 검증해 예전 중복 필드나 미검토 설명을 허용하지 않는다.
+const contextFields = ['usedApi', 'callLocations', 'assessment', 'residualAssumptions'];
+const contextKeys = ['assessment', 'callLocations', 'id', 'residualAssumptions', 'usedApi'].join(',');
+const assessmentKeys = ['attackCondition', 'contextId', 'key', 'owner', 'priority', 'reviewBy', 'reviewedOn'].join(',');
+/** 변경/누락/만료/미분류/P1은 차단한다. 공유 맥락은 검토 책임과 위험 수용 권한을 대체하지 않는다. */
 export function verifyDependencyPolicy(audit, lock, policy, today = new Date().toISOString().slice(0, 10)) {
   const snapshot = dependencySnapshot(audit, lock);
-  if (!policy || policy.schemaVersion !== 1 || !Array.isArray(policy.packages) || !Array.isArray(policy.assessments)) throw new Error('DEPENDENCY_TRIAGE_CHANGED');
+  if (!policy || policy.schemaVersion !== 2 || !Array.isArray(policy.packages)
+    || !Array.isArray(policy.contexts) || !Array.isArray(policy.assessments)) throw new Error('DEPENDENCY_TRIAGE_CHANGED');
   if (canonical(snapshot) !== canonical(policy.packages)) {
     const error = new Error('DEPENDENCY_TRIAGE_CHANGED');
     error.diagnostics = dependencyChanges(snapshot, policy.packages);
     throw error;
   }
+  const contexts = new Map();
+  const contextTexts = new Set();
+  for (const item of policy.contexts) {
+    if (!item || Object.keys(item).sort().join(',') !== contextKeys
+      || typeof item.id !== 'string' || !/^[a-z][a-z0-9-]{1,50}$/.test(item.id) || contexts.has(item.id)
+      || contextFields.some(field => typeof item[field] !== 'string' || item[field].trim().length < 15)) throw new Error('DEPENDENCY_TRIAGE_INVALID');
+    const text = canonical(contextFields.map(field => item[field]));
+    if (contextTexts.has(text)) throw new Error('DEPENDENCY_TRIAGE_INVALID');
+    contextTexts.add(text);
+    contexts.set(item.id, item);
+  }
   const required = snapshot.flatMap(pkg => pkg.via.map(via => `${pkg.name}:${via.source ?? via.dependency}`));
+  if (policy.assessments.some(item => !item || typeof item.key !== 'string')) throw new Error('DEPENDENCY_TRIAGE_MISSING');
   if (policy.assessments.length !== required.length || new Set(policy.assessments.map(item => item.key)).size !== required.length) throw new Error('DEPENDENCY_TRIAGE_MISSING');
+  const usedContexts = new Set();
   for (const key of required) {
     const item = policy.assessments.find(entry => entry.key === key);
-    if (!item || item.priority !== 'P2' || item.owner !== 'repo-maintainers'
+    if (!item || Object.keys(item).sort().join(',') !== assessmentKeys
+      || item.priority !== 'P2' || item.owner !== 'repo-maintainers'
       || !validDate(item.reviewedOn) || !validDate(item.reviewBy) || !validDate(today)
       || item.reviewedOn > today || item.reviewBy < today || item.reviewedOn > item.reviewBy
-      || ['attackCondition', 'usedApi', 'callLocations', 'assessment', 'residualAssumptions'].some(field => typeof item[field] !== 'string' || item[field].trim().length < 15)) throw new Error('DEPENDENCY_TRIAGE_INVALID');
+      || typeof item.attackCondition !== 'string' || item.attackCondition.trim().length < 15
+      || !contexts.has(item.contextId)) throw new Error('DEPENDENCY_TRIAGE_INVALID');
+    usedContexts.add(item.contextId);
   }
+  if (usedContexts.size !== contexts.size) throw new Error('DEPENDENCY_TRIAGE_INVALID');
   return { affectedPackages: snapshot.length, advisoryEntries: snapshot.reduce((sum, item) => sum + item.via.filter(via => via.source).length, 0), p1: 0 };
 }

@@ -33,8 +33,10 @@ node --test scripts/tests/secret-scan.test.mjs scripts/tests/dependency-policy.t
 
 2026-10-24 registry 재확인에서는 새 [fast-uri 권고](https://github.com/advisories/GHSA-w74x-v6f9-j3xg)와 [undici 권고](https://github.com/advisories/GHSA-4qv8-2p9j-2685)를 확인했다. 잠금파일에서 fast-uri 3.1.9, Blob 경로 undici 6.29.1, jsdom 내부 undici 7.30.1로 각각 패치했다. 패치 뒤 기존 undici 권고도 audit에서 사라져 undici 패키지 1개·평가 31건만 원장에서 삭제했다. 다른 설치 패키지·기존 평가 내용·재검토 기한과 신규 권고 실패 차단은 유지한다.
 
-각 항목에는 공격 조건, 사용하는 API, 호출 위치, P2 사용면 평가, 남는 전제, 유지보수 담당 `repo-maintainers`, 검토일·재검토 기한을 기록한다. 담당자 표시는 owner의 P1 위험 수용 승인이 아니다. js-yaml은 내장 기본본의 JSON_SCHEMA 파싱, glob/CSS/esbuild/Vite는 도구 입력을 따로 검토한다. Blob의 undici 6과 jsdom 내부 undici 7은 위 패치 버전으로 잠가 현재 원장에서 빠졌지만, 이후 새 권고는 같은 exact gate에서 다시 차단한다. 신뢰 HTTPS만으로 모든 fetch 위험이 배제되지는 않는다.
+원장 schema v2는 권고별 `assessments` **32건**의 `key`·공격 조건·P2 판단·담당자 `repo-maintainers`·검토일·재검토 기한을 그대로 둔다. 동일한 사용하는 API·호출 위치·사용면 평가·잔여 전제 네 필드만 `contexts` **6건**에 모아 `contextId`로 참조한다. 반복 설명 필드는 종전 32×4=128회에서 6×4=24회로 줄었고 JSON은 43,030바이트에서 27,621바이트로 줄었다. 서로 다른 권고의 공격 조건·검토 기한을 합치거나 package nodes×advisory를 새로운 영향 경로로 만들어 내지 않는다.
 
-새 advisory·source·범위·심각도·패키지 경로·설치 버전, 누락/잘못된 원장, 만료는 실패한다. 현재 P2는 독립 코드 검토를 거치는 사용면 평가이며 모든 high 항목을 면제하는 정책이 아니다. 운영 관련 재검토 기한은 **2026-10-29**, 도구 관련은 **2026-11-05**다. 기한 전에 패치 또는 새 근거를 검토하고 실제 재검토일과 기한을 갱신한다. 단순히 기한을 늘리지 않는다. 확인된 P1은 이 게이트에서 항상 차단하며 수정이 필요하다. 권한 있는 owner의 개별 예외가 필요하다면 별도 검토로 정책을 확장해야 하며 에이전트가 승인 사실을 만들어 통과시키지 않는다.
+공유 context 하나를 수정하면 이를 참조하는 권고 2~12건의 판단문이 함께 바뀐다. PR에서 참조하는 `key` 목록과 권고별 공격 조건·날짜를 함께 검토한다. 비어 있거나 중복된 context, 없는 참조, 미사용 context, 누락된 권고별 평가와 예전 중복 필드는 실패한다. 담당자 표시는 P1 위험 수용 승인이 아니다. js-yaml은 내장 기본본의 JSON_SCHEMA 파싱, glob/CSS/esbuild/Vite는 도구 입력을 따로 검토한다. Blob의 undici 6과 jsdom 내부 undici 7은 위 패치 버전으로 잠가 현재 원장에서 빠졌지만, 이후 새 권고는 같은 exact gate에서 다시 차단한다. 신뢰 HTTPS만으로 모든 fetch 위험이 배제되지는 않는다.
+
+새 advisory·source·범위·심각도·패키지 경로·설치 버전, 누락/잘못된 원장, 만료는 실패한다. 불일치 진단은 정제된 패키지·GHSA ID·숫자 source·설치 경로만 출력하고 감사 원문의 제목·범위·버전은 출력하지 않는다. 현재 P2는 독립 코드 검토를 거치는 사용면 평가이며 모든 high 항목을 면제하는 정책이 아니다. 운영 관련 재검토 기한은 **2026-10-29**, 도구 관련은 **2026-11-05**다. 기한 전에 패치 또는 새 근거를 검토하고 실제 재검토일과 기한을 갱신한다. 단순히 기한을 늘리지 않는다. 확인된 P1은 이 게이트에서 항상 차단하며 수정이 필요하다. 권한 있는 owner의 개별 예외가 필요하다면 별도 검토로 정책을 확장해야 하며 에이전트가 승인 사실을 만들어 통과시키지 않는다.
 
 공식 근거: [npm audit 동작](https://docs.npmjs.com/cli/v11/commands/npm-audit/), 각 원장 항목의 GHSA ID. 원장의 source 번호와 범위는 registry 관측 시점 자료이므로 upstream advisory 변경은 재검토를 유발한다.

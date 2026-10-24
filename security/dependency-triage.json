@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "note": "P2는 코드 사용면 평가이며 owner의 P1 위험 수용 승인이 아니다. advisory 집합과 nodes는 독립적이며 모든 조합이 실제 영향 경로라는 뜻이 아니다. 독립 리뷰에서 재검토한다.",
   "packages": [
     {
@@ -376,390 +376,338 @@
       ]
     }
   ],
+  "contexts": [
+    {
+      "id": "build-esbuild",
+      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
+      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
+      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
+      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+    },
+    {
+      "id": "build-css-source-map",
+      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
+      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
+      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
+      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+    },
+    {
+      "id": "tooling-brace-expansion",
+      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
+      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
+      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
+      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+    },
+    {
+      "id": "yaml-parser-cli",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "id": "yaml-omap",
+      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
+      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
+      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
+      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+    },
+    {
+      "id": "vitest-vite",
+      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
+      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
+      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
+      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    }
+  ],
   "assessments": [
     {
       "key": "@esbuild-kit/core-utils:esbuild",
+      "contextId": "build-esbuild",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "esbuild 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
-      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
-      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
-      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+      "attackCondition": "esbuild 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다."
     },
     {
       "key": "@esbuild-kit/esm-loader:@esbuild-kit/core-utils",
+      "contextId": "build-esbuild",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "@esbuild-kit/core-utils 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
-      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
-      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
-      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+      "attackCondition": "@esbuild-kit/core-utils 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다."
     },
     {
       "key": "@tailwindcss/typography:postcss-selector-parser",
+      "contextId": "build-css-source-map",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "postcss-selector-parser 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
-      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
-      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
-      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+      "attackCondition": "postcss-selector-parser 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다."
     },
     {
       "key": "brace-expansion:1123897",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, <1.1.16",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, <1.1.16"
     },
     {
       "key": "brace-expansion:1123898",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, >=3.0.0 <5.0.7",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups — GHSA-3jxr-9vmj-r5cp, >=3.0.0 <5.0.7"
     },
     {
       "key": "brace-expansion:1130588",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, <1.1.17",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, <1.1.17"
     },
     {
       "key": "brace-expansion:1130591",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, >=4.0.0 <5.0.8",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash — GHSA-mh99-v99m-4gvg, >=4.0.0 <5.0.8"
     },
     {
       "key": "brace-expansion:1130734",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, >=4.0.0 <5.0.9",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, >=4.0.0 <5.0.9"
     },
     {
       "key": "brace-expansion:1130737",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, <1.1.18",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation — GHSA-rgw5-rvv9-x895, <1.1.18"
     },
     {
       "key": "brace-expansion:1240100",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, <1.1.21",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, <1.1.21"
     },
     {
       "key": "brace-expansion:1240103",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, >=4.0.0 <5.0.12",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service — GHSA-q2hr-2g5m-vwhr, >=4.0.0 <5.0.12"
     },
     {
       "key": "brace-expansion:1240104",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, <1.1.20",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, <1.1.20"
     },
     {
       "key": "brace-expansion:1240107",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, >=4.0.0 <5.0.11",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion — GHSA-qhr7-859c-m2p7, >=4.0.0 <5.0.11"
     },
     {
       "key": "brace-expansion:1240108",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, <1.1.19",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, <1.1.19"
     },
     {
       "key": "brace-expansion:1240111",
+      "contextId": "tooling-brace-expansion",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, >=4.0.0 <5.0.10",
-      "usedApi": "ESLint/TypeScript/shadcn/맞춤법 도구의 glob·brace 파일 패턴 확장.",
-      "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
-      "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
-      "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
+      "attackCondition": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion — GHSA-6j4f-fj2g-mc7p, >=4.0.0 <5.0.10"
     },
     {
       "key": "drizzle-kit:@esbuild-kit/esm-loader",
+      "contextId": "build-esbuild",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "@esbuild-kit/esm-loader 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다.",
-      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
-      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
-      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
-      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+      "attackCondition": "@esbuild-kit/esm-loader 전이 advisory의 공격 조건을 해당 패키지 항목에서 별도로 검토한다."
     },
     {
       "key": "esbuild:1102341",
+      "contextId": "build-esbuild",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "esbuild enables any website to send any requests to the development server and read the response — GHSA-67mh-4wv8-2f99, <=0.24.2",
-      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
-      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
-      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
-      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+      "attackCondition": "esbuild enables any website to send any requests to the development server and read the response — GHSA-67mh-4wv8-2f99, <=0.24.2"
     },
     {
       "key": "esbuild:1120680",
+      "contextId": "build-esbuild",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "esbuild allows arbitrary file read when running the development server on Windows — GHSA-g7r4-m6w7-qqqr, >=0.27.3 <0.28.1",
-      "usedApi": "빌드/Drizzle CLI의 esbuild 변환; 운영 Next 서버의 외부 요청 처리는 아니다.",
-      "callLocations": "package.json db:* 및 build 명령; node_modules/@esbuild-kit/core-utils; drizzle.config.ts.",
-      "assessment": "공격 조건은 esbuild serve 개발 서버의 cross-origin 응답 노출 또는 Windows 개발 서버 파일 경로 입력이다. HRA는 이 esbuild serve를 외부 웹 서비스로 운영하지 않는다.",
-      "residualAssumptions": "개발자가 별도 serve를 실행하거나 신뢰할 수 없는 프로젝트/Windows 입력을 허용하면 재분류한다."
+      "attackCondition": "esbuild allows arbitrary file read when running the development server on Windows — GHSA-g7r4-m6w7-qqqr, >=0.27.3 <0.28.1"
     },
     {
       "key": "js-yaml:1121859",
+      "contextId": "yaml-parser-cli",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases — GHSA-h67p-54hq-rp68, <3.15.0",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases — GHSA-h67p-54hq-rp68, <3.15.0"
     },
     {
       "key": "js-yaml:1123911",
+      "contextId": "yaml-parser-cli",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=4.0.0 <4.3.0",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=4.0.0 <4.3.0"
     },
     {
       "key": "js-yaml:1123912",
+      "contextId": "yaml-parser-cli",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=3.0.0 <3.15.0",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=3.0.0 <3.15.0"
     },
     {
       "key": "js-yaml:1138114",
+      "contextId": "yaml-omap",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=3.0.0 <3.15.1",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=3.0.0 <3.15.1"
     },
     {
       "key": "js-yaml:1138115",
+      "contextId": "yaml-omap",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=4.0.0 <4.3.1",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=4.0.0 <4.3.1"
     },
     {
       "key": "js-yaml:1193726",
+      "contextId": "yaml-parser-cli",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=3.0.0 <3.15.2",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=3.0.0 <3.15.2"
     },
     {
       "key": "js-yaml:1193727",
+      "contextId": "yaml-parser-cli",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=4.0.0 <4.3.2",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
+      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=4.0.0 <4.3.2"
     },
     {
       "key": "postcss-selector-parser:1241232",
+      "contextId": "build-css-source-map",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion — GHSA-rj75-hqrm-r3gf, <7.1.6",
-      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
-      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
-      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
-      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+      "attackCondition": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion — GHSA-rj75-hqrm-r3gf, <7.1.6"
     },
     {
       "key": "source-map-js:1241209",
+      "contextId": "build-css-source-map",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "source-map-js allows event-loop denial of service through indexed source-map section offsets — GHSA-68fv-2mgg-jv7q, >=1.0.0 <1.2.2",
-      "usedApi": "Tailwind/PostCSS 빌드의 CSS selector/source map 파싱.",
-      "callLocations": "postcss.config.mjs; src/app/globals.css; package.json build; Tailwind typography 플러그인.",
-      "assessment": "공격 조건은 비정상 selector 또는 indexed source-map section offset을 도구에 전달하는 것이다. 사용자 콘텐츠는 CSS/source map 빌드 입력으로 컴파일되지 않는다.",
-      "residualAssumptions": "악성 dependency 또는 저장소 CSS/source map 공급망 입력은 CI/개발 자원 고갈을 일으킬 수 있어 P2 추적한다."
+      "attackCondition": "source-map-js allows event-loop denial of service through indexed source-map section offsets — GHSA-68fv-2mgg-jv7q, >=1.0.0 <1.2.2"
     },
     {
       "key": "vite:1242624",
+      "contextId": "vitest-vite",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "launch-editor: escapeCmdArgs() omits % escaping on Windows — GHSA-698v-4r3x-3vcv, >=8.0.0 <=8.1.5",
-      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
-      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
-      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
-      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+      "attackCondition": "launch-editor: escapeCmdArgs() omits % escaping on Windows — GHSA-698v-4r3x-3vcv, >=8.0.0 <=8.1.5"
     },
     {
       "key": "vite:1242653",
+      "contextId": "vitest-vite",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "launch-editor: Editor CLI flag misinterpretation causing arbitrary command execution for some editors — GHSA-r825-w8mm-5pxw, >=8.0.0 <=8.1.5",
-      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
-      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
-      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
-      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+      "attackCondition": "launch-editor: Editor CLI flag misinterpretation causing arbitrary command execution for some editors — GHSA-r825-w8mm-5pxw, >=8.0.0 <=8.1.5"
     },
     {
       "key": "vite:1242660",
+      "contextId": "vitest-vite",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows — GHSA-587h-7wmj-h5pm, >=8.0.0 <=8.1.5",
-      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
-      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
-      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
-      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+      "attackCondition": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows — GHSA-587h-7wmj-h5pm, >=8.0.0 <=8.1.5"
     },
     {
       "key": "vite:1242726",
+      "contextId": "vitest-vite",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "Vite: Cross origin script execution through Vite custom middleware — GHSA-9jrq-w75r-8gcw, >=8.0.0 <=8.1.5",
-      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
-      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
-      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
-      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+      "attackCondition": "Vite: Cross origin script execution through Vite custom middleware — GHSA-9jrq-w75r-8gcw, >=8.0.0 <=8.1.5"
     },
     {
       "key": "vite:1242732",
+      "contextId": "vitest-vite",
       "priority": "P2",
       "owner": "repo-maintainers",
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
-      "attackCondition": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine — GHSA-rq7h-c2jc-7f22, >=8.0.0 <=8.1.5",
-      "usedApi": "Vitest 테스트 번들링; Vite 개발 서버 editor/custom middleware는 운영 Next.js와 분리된다.",
-      "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
-      "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
-      "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+      "attackCondition": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine — GHSA-rq7h-c2jc-7f22, >=8.0.0 <=8.1.5"
     }
   ]
 }
