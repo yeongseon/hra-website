@@ -1,6 +1,7 @@
 /** npm advisory의 정확한 집합과 lock 경로를 검토 원장과 대조한다. npm severity를 HRA P1로 자동 변환하지 않는다. */
 const severities = new Set(['low', 'moderate', 'high', 'critical']);
 const canonical = value => JSON.stringify(value);
+const safeLabel = value => typeof value === 'string' && /^[A-Za-z0-9@/._-]{1,240}$/.test(value) ? value : '[redacted]';
 // 달력에 존재하지 않는 날짜를 기한으로 사용해 만료 검사를 우회하지 못하게 한다.
 const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 /** nodes와 advisory는 독립 집합이다. 둘을 곱해 확인되지 않은 설치 경로를 만들지 않는다. */
@@ -20,11 +21,65 @@ export function dependencySnapshot(audit, lock) {
     return { name, severity: item.severity, range: item.range, nodes, via };
   });
 }
+/** 불일치 진단에는 패키지·권고 ID·설치 경로만 넣고 감사 원문/영향 범위/버전은 출력하지 않는다. */
+function dependencyChanges(snapshot, recorded) {
+  if (!recorded.every(pkg => pkg && typeof pkg.name === 'string'
+    && Array.isArray(pkg.nodes) && pkg.nodes.every(node => node && typeof node.path === 'string')
+    && Array.isArray(pkg.via) && pkg.via.every(via => via && (typeof via.id === 'string' || typeof via.dependency === 'string')))) return [];
+  const changes = [];
+  const add = (kind, packageName, fields = {}) => changes.push({ kind, package: safeLabel(packageName), ...fields });
+  const actualPackages = new Map(snapshot.map(pkg => [pkg.name, pkg]));
+  const recordedPackages = new Map(recorded.map(pkg => [pkg.name, pkg]));
+  for (const name of new Set([...actualPackages.keys(), ...recordedPackages.keys()])) {
+    const actual = actualPackages.get(name);
+    const expected = recordedPackages.get(name);
+    if (!actual || !expected) { add(actual ? 'PACKAGE_ONLY_IN_AUDIT' : 'PACKAGE_ONLY_IN_POLICY', name); continue; }
+    if (actual.severity !== expected.severity || actual.range !== expected.range) add('PACKAGE_METADATA_CHANGED', name);
+    const actualNodes = new Map(actual.nodes.map(node => [node.path, node]));
+    const recordedNodes = new Map(expected.nodes.map(node => [node.path, node]));
+    for (const path of new Set([...actualNodes.keys(), ...recordedNodes.keys()])) {
+      const current = actualNodes.get(path);
+      const previous = recordedNodes.get(path);
+      if (!current || !previous) add(current ? 'NODE_ONLY_IN_AUDIT' : 'NODE_ONLY_IN_POLICY', name, { path: safeLabel(path) });
+      else if (canonical(current) !== canonical(previous)) add('NODE_METADATA_CHANGED', name, { path: safeLabel(path) });
+    }
+    const key = via => via.id ?? `dependency:${via.dependency}`;
+    const actualVia = new Map(actual.via.map(via => [key(via), via]));
+    const recordedVia = new Map(expected.via.map(via => [key(via), via]));
+    for (const viaKey of new Set([...actualVia.keys(), ...recordedVia.keys()])) {
+      const current = actualVia.get(viaKey);
+      const previous = recordedVia.get(viaKey);
+      const item = current ?? previous;
+      const fields = item.id ? { id: safeLabel(item.id) } : { dependency: safeLabel(item.dependency) };
+      const prefix = item.id ? 'ADVISORY' : 'DEPENDENCY';
+      if (!current || !previous) add(`${prefix}_ONLY_IN_${current ? 'AUDIT' : 'POLICY'}`, name, fields);
+      else if (canonical(current) !== canonical(previous)) add(`${prefix}_METADATA_CHANGED`, name, fields);
+    }
+  }
+  // 배열 순서·중복처럼 위의 키 비교로 포착되지 않은 차이도 조용히 지나가지 않는다.
+  if (!changes.length) changes.push({ kind: 'SNAPSHOT_CHANGED' });
+  changes.sort((a, b) => canonical(a).localeCompare(canonical(b)));
+  return changes.length > 20 ? [...changes.slice(0, 20), { kind: 'MORE_CHANGES', count: changes.length - 20 }] : changes;
+}
+
+/** CLI는 정제한 코드와 진단만 기록한다. 네트워크 오류·감사 원문은 로그에 남기지 않는다. */
+export function dependencyDiagnosticLines(error) {
+  if (!(error instanceof Error) || !/^DEPENDENCY_[A-Z_]+$/.test(error.message)) return ['DEPENDENCY_CHECK_FAILED'];
+  const lines = [error.message];
+  if (error.message === 'DEPENDENCY_TRIAGE_CHANGED' && Array.isArray(error.diagnostics)) {
+    for (const item of error.diagnostics) lines.push(`DEPENDENCY_CHANGE ${canonical(item)}`);
+  }
+  return lines;
+}
 /** 변경/누락/만료/미분류/P1은 차단한다. 원장의 owner는 유지보수 담당이며 위험 수용 승인으로 해석하지 않는다. */
 export function verifyDependencyPolicy(audit, lock, policy, today = new Date().toISOString().slice(0, 10)) {
   const snapshot = dependencySnapshot(audit, lock);
-  if (!policy || policy.schemaVersion !== 1 || !Array.isArray(policy.packages) || !Array.isArray(policy.assessments)
-    || canonical(snapshot) !== canonical(policy.packages)) throw new Error('DEPENDENCY_TRIAGE_CHANGED');
+  if (!policy || policy.schemaVersion !== 1 || !Array.isArray(policy.packages) || !Array.isArray(policy.assessments)) throw new Error('DEPENDENCY_TRIAGE_CHANGED');
+  if (canonical(snapshot) !== canonical(policy.packages)) {
+    const error = new Error('DEPENDENCY_TRIAGE_CHANGED');
+    error.diagnostics = dependencyChanges(snapshot, policy.packages);
+    throw error;
+  }
   const required = snapshot.flatMap(pkg => pkg.via.map(via => `${pkg.name}:${via.source ?? via.dependency}`));
   if (policy.assessments.length !== required.length || new Set(policy.assessments.map(item => item.key)).size !== required.length) throw new Error('DEPENDENCY_TRIAGE_MISSING');
   for (const key of required) {
