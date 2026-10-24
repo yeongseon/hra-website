@@ -18,7 +18,7 @@ import { syntheticPng } from "../support/synthetic-image";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), put: vi.fn(), del: vi.fn(), log: vi.fn(),
   database: undefined as NeonHttpDatabase<typeof schema> | undefined }));
 vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/errors", () => ({ logServerError: mocks.log, redactBlobUrl: () => "합성 저장소" }));
+vi.mock("@/lib/errors", () => ({ logServerError: mocks.log }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Error("시험 로그인 이동"); } }));
 vi.mock("@/lib/blob-host", () => ({ projectBlobHost: "replacementqa.public.blob.vercel-storage.com" }));

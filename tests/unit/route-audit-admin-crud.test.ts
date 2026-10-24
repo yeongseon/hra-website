@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   database: undefined as NeonHttpDatabase<typeof schema> | undefined,
 }));
 vi.mock("@/lib/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError, redactBlobUrl: () => "합성 저장소" }));
+vi.mock("@/lib/errors", () => ({ logServerError: mocks.logServerError }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`REDIRECT:${path}`); } }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
