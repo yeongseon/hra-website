@@ -92,6 +92,19 @@ node scripts/check-release-config.mjs
 
 로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode로 수행한 의미 있는 작업**은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 Oracle 리뷰 조건을 적용합니다. 문서만 수정하는 등 명시된 간단 변경은 면제이며, **Claude 또는 Codex만 사용한 작업에는 Oracle 절차를 적용하지 않습니다.** 일반 리뷰와 필요한 검사는 계속 수행합니다.
 
+### 검증 비용과 삭제 ref 처리 (2026-10-24 측정)
+
+| 경로 | 측정값 | 유지·조정 근거 |
+| --- | --- | --- |
+| 로컬 pre-commit | `typecheck` 22.54초 | 코드 오류를 커밋 전에 발견하므로 유지 |
+| 로컬 pre-push | `build` 99.40초, 삭제 전용 훅 0.0011초 | 새 코드 ref를 보내기 전에 Next 빌드 실패를 잡으므로 유지. **삭제 ref만 있는 push**는 코드 전송이 없어 이 빌드를 생략 |
+| 기본 PR CI | [#386 실행](https://github.com/yeongseon/hra-website/actions/runs/40053038911) 620초, [#385 실행](https://github.com/yeongseon/hra-website/actions/runs/40051384154) 627초 | lint·typecheck·Vitest·build·격리 PG·학사 G1·브라우저 스모크 유지 |
+| 병합 후 main CI | [#385 병합 실행](https://github.com/yeongseon/hra-website/actions/runs/40052247252) 547초 | squash 후 새 SHA와 배포 기준 코드를 다시 검증하므로 유지 |
+| 별도 보안/CSP | #385 PR 164초, main 154초 | 실제 브라우저와 설치 SDK·공개 소스 검사를 독립 환경에서 유지 |
+| 예약 확장 E2E | [정상 실행](https://github.com/yeongseon/hra-website/actions/runs/40026997272) 210초 | 매일 공개 여정·학사 G1을 주기 검증. 앞선 704초 실행은 Chromium 설치만 502초가 걸린 외부 설치 지연 |
+
+로컬 시간은 설치 완료된 Node 24 워크트리에서 단일 실행으로 잰 값이며 장비·캐시에 따라 달라집니다. 삭제 전용 0.0011초는 훅에 합성 ref 입력을 넣어 잰 시간으로 원격 통신은 포함하지 않으며, 격리 bare 저장소의 실제 Git push/delete 통합 테스트로 입력 형식을 확인했습니다. PR #386의 단위 테스트 152초·빌드 69초·학사 G1 67초, #385의 159초·69초·67초는 검사 자체의 큰 비용을 보여줍니다. 측정한 필수 CI는 성공했고, 외부 Chromium 설치 지연 외 테스트 실패 반복은 관측하지 않았습니다. 이 변경으로 CI 작업의 skip이나 실행 조건은 달라지지 않습니다. pre-commit 검사도 유지합니다. `pre-push`는 [Git의 ref 입력 계약](https://git-scm.com/docs/githooks)에 따라 **모든 줄이 `(delete)` ref와 0 OID로 검증될 때만** 빌드를 생략합니다. 생성·갱신이 섞이거나 입력이 비어 있거나 잘못되면 기존 빌드를 실행합니다. 새 캐시·공유 DB·운영 secret 전달은 도입하지 않습니다.
+
 리뷰어는 이슈의 완료 조건, 권한·데이터 영향, 검증 증거를 확인합니다. **현재 PR의 마지막 커밋**에서 GitHub CI와 Vercel Preview가 각각 성공했는지 확인한 뒤 한 건을 병합합니다. 새 `main` 병합 커밋의 Production 배포 성공을 확인한 다음 PR을 갱신·푸시합니다. Preview 설치·빌드 실패나 Production 배포 대기·실패·횟수 제한은 [빌드·배포 가이드](build-and-deploy-safety.md)의 중단·원인 확인 절차를 먼저 따릅니다. 최신 `main` 반영이나 수정 커밋 뒤에는 이전 성공 결과를 재사용하지 않습니다. main 브랜치 보호/필수 체크와 squash 기본 메시지는 관리자가 확인합니다. 이 workflow 추가만으로 보호 설정까지 활성화되었다고 주장하지 않습니다.
 
 ## 4. 완료와 릴리스

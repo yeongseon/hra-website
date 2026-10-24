@@ -1,8 +1,9 @@
 # =====================================================================
 # pre-push 훅: git push 직전에 실행되는 최종 안전망
 #
-# 역할: Vercel 에서 실패할 빌드를 미리 잡아냄 (1~3분 걸림)
+# 역할: 코드 ref를 올리기 전에 Vercel 에서 실패할 빌드를 미리 잡아냄 (1~3분 걸림)
 # - npm run build: Next.js 프로덕션 빌드 (Vercel 과 동일한 검증)
+# - 원격 ref 삭제만 있을 때는 보낼 코드가 없으므로 빌드를 반복하지 않음
 #
 # ⚠️  학생 작업자에게: 이 훅이 실패하면 push 가 차단됩니다.
 #    이건 Vercel 배포 실패를 미리 막아주는 마지막 안전벨트입니다.
@@ -11,6 +12,42 @@
 #    빌드가 1~3분 걸리니 잠깐 차 한 잔 마시고 오세요 ☕
 #    절대로 `--no-verify` 로 우회하지 마세요.
 # =====================================================================
+
+# Git은 삭제 local_ref를 괄호 포함 "(delete)"로 stdin에 전달한다.
+# 한 줄이라도 생성·갱신·형식 오류가 있으면
+# 기존과 같이 빌드한다. 삭제만 확실할 때에만 마지막 빌드를 생략한다.
+only_deletions=true
+saw_ref=false
+while :; do
+  local_ref= local_oid= remote_ref= remote_oid= extra=
+  # Husky는 sh -e로 실행하므로 EOF는 if 조건 안에서 받아야 훅이 중단되지 않는다.
+  if IFS=' ' read -r local_ref local_oid remote_ref remote_oid extra; then
+    read_status=0
+  else
+    read_status=1
+  fi
+  if [ "$read_status" -ne 0 ]; then
+    # 줄 끝 LF가 없는 잔여 입력은 정상 Git 형식이 아니므로 빌드한다.
+    if [ -n "$local_ref$local_oid$remote_ref$remote_oid$extra" ]; then
+      only_deletions=false
+    fi
+    break
+  fi
+  saw_ref=true
+  if [ "$local_ref" != "(delete)" ] || [ -n "$extra" ]; then
+    only_deletions=false
+    continue
+  fi
+  case "$remote_ref" in refs/*) ;; *) only_deletions=false ;; esac
+  case "$local_oid" in *[!0]*|'') only_deletions=false ;; esac
+  case "$remote_oid" in *[!0-9a-fA-F]*|'') only_deletions=false ;; esac
+  case "${#local_oid}:${#remote_oid}" in 40:40|64:64) ;; *) only_deletions=false ;; esac
+done
+
+if [ "$saw_ref" = true ] && [ "$only_deletions" = true ]; then
+  echo "🧹 [pre-push] 원격 ref 삭제만 있어 빌드를 생략합니다."
+  exit 0
+fi
 
 echo "🏗️  [pre-push] Next.js 프로덕션 빌드 검증 중... (1~3분)"
 echo "    Vercel 배포 전 마지막 안전망입니다. 잠시만 기다려주세요."
