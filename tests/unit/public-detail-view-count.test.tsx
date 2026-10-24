@@ -109,7 +109,7 @@ describe.each(cases)("$label 상세 조회수 응답 수명주기", ({ page, met
     expect(console.error).not.toHaveBeenCalled();
   });
 
-  it("조회수 SQL이 실패해도 페이지 응답을 유지하고 기존 정제 로그에 식별자만 남긴다", async () => {
+  it("조회수 SQL이 실패해도 페이지 응답을 유지하고 허용 필드 로그에 식별자만 남긴다", async () => {
     const error = new Error("Failed query: UPDATE synthetic_table SET email = 'synthetic@example.test'");
     // 페이지가 응답한 뒤 after를 실행할 때에만 거부되는 Promise를 만든다.
     mocks.updateWhere.mockImplementation(() => Promise.reject(error));
@@ -123,7 +123,7 @@ describe.each(cases)("$label 상세 조회수 응답 수명주기", ({ page, met
     expect(console.error).toHaveBeenCalledOnce();
     expect(console.error).toHaveBeenCalledWith(`[${scope}]`, {
       context: { id: itemId },
-      error: expect.objectContaining({ name: "Error", message: expect.stringContaining("[SQL redacted]") }),
+      error: { kind: "ERROR" },
     });
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toMatch(/synthetic@example|UPDATE synthetic_table/);
     expect(html).toMatch(/조회수(?:\s|:)*12/);

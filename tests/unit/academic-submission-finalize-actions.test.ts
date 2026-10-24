@@ -151,7 +151,7 @@ describe("제출 최종화 액션",()=>{
     const cacheFailure=await finalizeAssignmentSubmission(request());
     expect(cacheFailure).toMatchObject({success:false,status:503});
     expect(console.error).toHaveBeenCalledWith("[academic/events]",expect.objectContaining({
-      error:expect.objectContaining({name:"Error",message:"학사 요청 처리 실패"}),
+      error:{kind:"ERROR"},
       context:expect.objectContaining({action:"SUBMISSION_FINALIZE",requestId:key,actorUserId:user,correlationId:cacheFailure.referenceId}),
     }));
     const output=JSON.stringify([failed,cacheFailure,vi.mocked(console.error).mock.calls]);
