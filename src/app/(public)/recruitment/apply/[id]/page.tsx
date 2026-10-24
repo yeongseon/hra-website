@@ -1,19 +1,14 @@
 /**
- * 사용자용 동적 지원서 작성 페이지
+ * 사용자용 동적 지원서 작성 페이지입니다.
+ * 양식·질문 조회와 공개 여부 정책은 Application Service에 맡기고 화면 상태만 렌더링합니다.
+ * 잘못된 ID의 404와 비공개·없는 양식의 마감 안내를 구분합니다.
  */
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, asc } from "drizzle-orm";
-import { z } from "zod/v4";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/lib/db";
-import { 
-  applicationForms, 
-  applicationQuestions, 
-  applicationQuestionOptions 
-} from "@/lib/db/schema";
+import { getPublicApplicationFormDetail } from "@/features/applications/public-detail/service";
 import { PublicApplicationForm } from "./_components/public-application-form";
 
 export const dynamic = "force-dynamic";
@@ -24,22 +19,13 @@ type Props = {
 
 export default async function PublicApplicationApplyPage({ params }: Props) {
   const { id } = await params;
-
-  // Oracle Phase D BLOCK 수정 — z.uuid() 사전 검증으로 라우트 파라미터 leak 방지.
-  // UUID 형식이 아닌 값이 DB 쿼리에 도달하면 Postgres cast error 로 raw ID 가
-  // Vercel Logs 에 노출될 수 있으므로 사전 차단한다.
-  // 공개 페이지이므로 notFound() 로 안전하게 404 응답한다.
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
+  // Service가 엄격 UUID를 DB 조회 전에 검증하며 Web은 기존 404 응답을 유지합니다.
+  const detail = await getPublicApplicationFormDetail(id);
+  if (detail.kind === "invalid") {
     notFound();
   }
 
-  // 1. 양식 마스터 정보 조회 (공개된 것만)
-  const form = await db.query.applicationForms.findFirst({
-    where: eq(applicationForms.id, parsedId.data),
-  });
-
-  if (!form || !form.isPublished) {
+  if (detail.kind === "unavailable") {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12 sm:py-20 md:py-32">
         <section className="mb-8 space-y-4 sm:mb-10 text-center sm:text-left">
@@ -69,17 +55,6 @@ export default async function PublicApplicationApplyPage({ params }: Props) {
     );
   }
 
-  // 2. 질문 및 선택지 조회
-  const questionsData = await db.query.applicationQuestions.findMany({
-    where: eq(applicationQuestions.formId, parsedId.data),
-    orderBy: [asc(applicationQuestions.order)],
-    with: {
-      options: {
-        orderBy: [asc(applicationQuestionOptions.order)],
-      },
-    },
-  });
-
   return (
     <div className="bg-[#F8FAFC] min-h-screen">
       <div className="mx-auto max-w-4xl px-4 py-12 sm:py-20 md:py-32">
@@ -91,28 +66,18 @@ export default async function PublicApplicationApplyPage({ params }: Props) {
             </Badge>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-            {form.title}
+            {detail.form.title}
           </h1>
-          {form.description && (
+          {detail.form.description && (
             <p className="max-w-2xl text-lg text-slate-500 leading-relaxed">
-              {form.description}
+              {detail.form.description}
             </p>
           )}
         </section>
 
         {/* 지원서 폼 */}
-        <PublicApplicationForm 
-          // 브라우저에는 표시·제출에 필요한 필드만 전달하며 DB 내부 버전·연결 정보는 제외합니다.
-          form={{ id: form.id, title: form.title, description: form.description }}
-          questions={questionsData.map(q => ({
-            id: q.id,
-            title: q.title,
-            description: q.description,
-            type: q.type,
-            isRequired: q.isRequired,
-            options: (q.options || []).map(option => ({ id: option.id, value: option.value })),
-          }))} 
-        />
+        {/* Service가 DB 내부 필드를 제거한 표시·제출 계약만 클라이언트에 전달합니다. */}
+        <PublicApplicationForm form={detail.form} questions={detail.questions} />
       </div>
     </div>
   );
