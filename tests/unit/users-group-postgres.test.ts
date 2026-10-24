@@ -232,7 +232,7 @@ describe.skipIf(!bin)("회원 승인·삭제 SQL의 실제 PostgreSQL 실행", (
       const logged = JSON.stringify(consoleError.mock.calls);
       const expectedLog = JSON.stringify([["[users/delete]", {
         context: { userId: target },
-        error: { name: "Error", message: "회원 삭제 처리 실패" },
+        error: { kind: "ERROR" },
       }]]);
       // 비교 실패 시에도 캡처한 로그 원문을 assertion 출력으로 내보내지 않는다.
       expect(logged === expectedLog).toBe(true);

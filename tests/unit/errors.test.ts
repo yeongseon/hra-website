@@ -12,8 +12,8 @@
  *   - sanitizeError: Error·비Error·Postgres code 처리
  *   - sanitizeError 회귀: throw-safety — getter/toString 이 throw 해도 sanitize 는 죽지 않음 (Oracle NIT #4)
  *   - redactBlobUrl: Vercel Blob URL 에서 사용자 지정 파일명(PII) 제거 (Oracle BLOCK #2)
- *   - logServerError: 콘솔 포맷 및 context 병합, sanitize 통과
- *   - 통합: blob-utils 사용 패턴 (redactBlobUrl → logServerError context) 재현
+ *   - logServerError: 허용 필드와 원본 오류·임의 context 비노출
+ *   - 통합: Blob URL 문자열을 전달해도 로그에서 제외
  */
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
@@ -780,17 +780,22 @@ describe("logServerError", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it.each(drizzleQueries)("실제 %s 오류를 로그할 때도 SQL·매개변수를 제거한다", (_label, query) => {
+  it.each(drizzleQueries)("실제 %s 오류를 로그할 때 원문 대신 SQLSTATE만 남긴다", (_label, query) => {
     logServerError("qa/redaction", drizzleFailure(query), { count: 1 });
     expect(consoleErrorSpy).toHaveBeenCalledOnce();
-    expectNoDrizzleLeak(JSON.stringify(consoleErrorSpy.mock.calls), query);
+    const serialized = JSON.stringify(consoleErrorSpy.mock.calls);
+    expect(serialized).not.toMatch(/qa_private_|qa_synthetic_parameter|qa_synthetic_provider_failure|params:/);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[qa/redaction]", {
+      context: { count: 1 },
+      error: { kind: "DATABASE", sqlState: "P0001" },
+    });
   });
 
   it("scope 를 대괄호로 감싸 첫 번째 인자로 전달한다", () => {
     logServerError("test/scope", new Error("x"));
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "[test/scope]",
-      expect.objectContaining({ error: expect.objectContaining({ message: "x" }) }),
+      expect.objectContaining({ error: { kind: "ERROR" } }),
     );
   });
 
@@ -801,21 +806,111 @@ describe("logServerError", () => {
     expect(call).toHaveProperty("error");
   });
 
-  it("context 가 있으면 함께 로그한다 (식별자만 허용됨을 문서상 강제)", () => {
-    logServerError("t", new Error("x"), { id: "uuid", count: 3, active: true });
+  it("검증된 context 식별자·개수·boolean만 로그한다", () => {
+    const id = "123e4567-e89b-42d3-a456-426614174000";
+    logServerError("t", new Error("x"), { id, count: 3, active: true });
     const call = consoleErrorSpy.mock.calls[0]?.[1] as { context?: Record<string, unknown> };
-    expect(call.context).toEqual({ id: "uuid", count: 3, active: true });
+    expect(call.context).toEqual({ id, count: 3, active: true });
   });
 
-  it("error 는 sanitize 된 상태로 로그된다 (SQL 미포함 확인)", () => {
+  it("error message를 로그하지 않는다 (SQL 미포함 확인)", () => {
     logServerError("t", new Error("SELECT * FROM users WHERE id=1"));
-    const call = consoleErrorSpy.mock.calls[0]?.[1] as { error: { message: string } };
-    expect(call.error.message).toContain("[SQL redacted]");
-    expect(call.error.message).not.toContain("users");
+    const call = consoleErrorSpy.mock.calls[0]?.[1] as { error: Record<string, unknown> };
+    expect(call.error).toEqual({ kind: "ERROR" });
+    expect(JSON.stringify(call)).not.toContain("users");
   });
 });
 
-describe("logServerError + redactBlobUrl 통합 (#70 Oracle 재리뷰 대비)", () => {
+describe("logServerError 허용 필드 정책 (#369)", () => {
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+  const requestId = "123e4567-e89b-42d3-a456-426614174000";
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("원본 오류·임의 context 대신 검증된 SQLSTATE·요청 참조·개수만 기록한다", () => {
+    const secret = "private@example.invalid";
+    const error = Object.assign(new Error(`SELECT * FROM users WHERE email='${secret}'`), {
+      name: `Token ${secret}`,
+      code: "23505",
+      stack: `https://example.invalid/${secret}`,
+      cause: { detail: secret },
+    });
+    logServerError("markdown/parse", error, {
+      requestId,
+      candidateCount: 3,
+      email: secret,
+      token: "SECRET_TOKEN",
+      url: `https://example.invalid/${secret}`,
+      sql: `SELECT '${secret}'`,
+    });
+    const serialized = JSON.stringify(consoleErrorSpy.mock.calls);
+    expect(serialized).not.toMatch(/private@example|SECRET_TOKEN|example\.invalid|SELECT|Token/);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[markdown/parse]", {
+      context: { requestId, candidateCount: 3 },
+      error: { kind: "DATABASE", sqlState: "23505" },
+    });
+  });
+
+  it("허용된 키라도 잘못된 UUID·SQLSTATE·개수·enum은 출력하지 않는다", () => {
+    logServerError("test/scope", new Error("secret"), {
+      requestId: "not-a-uuid",
+      candidateCount: Number.POSITIVE_INFINITY,
+      retryCount: -1,
+      sqlState: "TOKEN",
+      action: "SECRET_TOKEN",
+      issueFields: "email.secret",
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[test/scope]", {
+      error: { kind: "ERROR" },
+    });
+  });
+
+  it("정상 학사 상관관계·결과 enum과 검증된 원인 코드만 유지한다", () => {
+    const error = Object.assign(new Error("raw secret"), { cause: { code: "23503" } });
+    logServerError("academic/events", error, {
+      correlationId: requestId,
+      actorUserId: null,
+      action: "ASSIGNMENT_CREATE",
+      outcome: "FAILED",
+      failureCode: "STORAGE",
+      sqlState: "23503",
+      retryCount: 2,
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[academic/events]", {
+      context: {
+        correlationId: requestId,
+        actorUserId: null,
+        action: "ASSIGNMENT_CREATE",
+        outcome: "FAILED",
+        failureCode: "STORAGE",
+        sqlState: "23503",
+        retryCount: 2,
+      },
+      error: { kind: "DATABASE", sqlState: "23503" },
+    });
+  });
+
+  it("병리적 getter·Proxy·순환 cause에서도 원문을 읽거나 예외를 던지지 않는다", () => {
+    const error = new Error("private@example.invalid");
+    Object.defineProperty(error, "code", { get() { throw new Error("SECRET_TOKEN"); } });
+    Object.defineProperty(error, "cause", { value: error });
+    const context = new Proxy({ requestId }, {
+      getOwnPropertyDescriptor() { throw new Error("SECRET_TOKEN"); },
+    });
+    expect(() => logServerError("invalid scope private@example.invalid", error, context)).not.toThrow();
+    const serialized = JSON.stringify(consoleErrorSpy.mock.calls);
+    expect(serialized).not.toMatch(/private@example|SECRET_TOKEN/);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[invalid-scope]", { error: { kind: "ERROR" } });
+  });
+});
+
+describe("logServerError + Blob URL 비노출 통합 (#369)", () => {
   let consoleErrorSpy: MockInstance<typeof console.error>;
 
   beforeEach(() => {
@@ -826,20 +921,15 @@ describe("logServerError + redactBlobUrl 통합 (#70 Oracle 재리뷰 대비)", 
     consoleErrorSpy.mockRestore();
   });
 
-  it("blob-utils 가 redactBlobUrl 로 감싼 URL 을 context 로 넘기면 PII 가 로그에 남지 않는다", () => {
-    // src/lib/blob-utils.ts:41 의 실제 호출 패턴을 재현한 회귀 테스트.
-    // Phase C 확산 시 이 패턴을 모든 Blob 로그 지점에 강제한다.
+  it("Blob URL 문자열을 context에 전달해도 로그에서는 제외한다", () => {
     const url = "https://xyz.public.blob.vercel-storage.com/alumni/1234-홍길동.jpg";
     logServerError("blob-utils/delete", new Error("blob delete failed"), {
       blobUrl: redactBlobUrl(url),
     });
     const call = consoleErrorSpy.mock.calls[0]?.[1] as { context?: { blobUrl?: string } };
-    expect(call.context?.blobUrl).toBe(
-      "xyz.public.blob.vercel-storage.com/alumni/[filename redacted]",
-    );
-    // 로그 payload 전체 어디에도 원본 파일명이 남지 않아야 한다.
+    expect(call.context).toBeUndefined();
     const serialized = JSON.stringify(consoleErrorSpy.mock.calls);
     expect(serialized).not.toContain("홍길동");
-    expect(serialized).not.toContain("1234-홍길동.jpg");
+    expect(serialized).not.toContain("blob.vercel-storage.com");
   });
 });

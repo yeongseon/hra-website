@@ -13,7 +13,6 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 import * as actions from "@/features/academics/assignments/actions";
 import * as service from "@/features/academics/assignments/service";
 import { parseAssignmentKst } from "@/features/academics/assignments/validation";
-import { sanitizeError } from "@/lib/errors";
 
 const actor = "10000000-0000-4000-8000-000000000001";
 const other = "10000000-0000-4000-8000-000000000002";
@@ -175,7 +174,7 @@ describe("과제 액션·서비스 경계", () => {
     }
     expect(console.error).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
       context: expect.objectContaining({ sqlState: "XX000" }),
-      error: sanitizeError(new Error("학사 요청 처리 실패")),
+      error: { kind: "ERROR" },
     }));
     expect(mocks.revalidate).not.toHaveBeenCalled();
   });
