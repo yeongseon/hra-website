@@ -93,7 +93,9 @@ node scripts/check-release-config.mjs
 
 인증·라우팅 등 브라우저 동작을 바꿨다면 [빌드·배포 가이드](build-and-deploy-safety.md)의 환경 조건을 준비하고 관련 E2E와 실제 화면도 확인합니다. 결과나 미실행 사유를 PR에 남깁니다. `npm test`의 성공 종료만 보지 말고 관련 DB 테스트가 건너뛰어졌는지도 확인합니다.
 
-로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. **OpenCode로 수행한 의미 있는 작업**은 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 Oracle 리뷰 조건을 적용합니다. 문서만 수정하는 등 명시된 간단 변경은 면제이며, **Claude 또는 Codex만 사용한 작업에는 Oracle 절차를 적용하지 않습니다.** 일반 리뷰와 필요한 검사는 계속 수행합니다.
+로컬 훅이 설정된 환경에서는 커밋 전 타입 검사, 코드 ref 푸시 전 빌드를 실행합니다. 훅을 우회하지 않습니다. 독립 리뷰는 [AGENTS.md §11](https://github.com/yeongseon/hra-website/blob/main/AGENTS.md)의 **변경 위험 기준**을 모든 도구에 동일하게 적용합니다. PR에는 위험 판단 이유, 검증 결과, 필요한 독립 리뷰와 남은 위험을 적습니다.
+
+기존 [인증 PR #306](https://github.com/yeongseon/hra-website/pull/306)과 [DB 설치 PR #348](https://github.com/yeongseon/hra-website/pull/348)은 새 기준에서도 높은 위험이라 권한·격리 DB 회귀와 분야 리뷰가 필요합니다. [DB 실행 안내를 고친 문서 PR #371](https://github.com/yeongseon/hra-website/pull/371)도 한 파일뿐이지만 운영 절차를 바꾸므로 새 기준에서는 높은 위험입니다. 당시 #306·#348의 독립 리뷰 결과와 #371의 리뷰 면제 사유는 PR 본문에 기록됐지만 GitHub의 정식 review 기록은 없어 리뷰어 신원이나 품질을 입증한 예로 해석하지 않습니다. 이미 병합한 기록을 소급 수정하지 않습니다. 단순 오타·설명 문구는 낮은 위험으로 diff와 필요한 검사를 확인하되 필수 CI는 계속 적용합니다.
 
 ### 검증 비용과 삭제 ref 처리 (2026-10-24 측정)
 
