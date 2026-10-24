@@ -20,7 +20,7 @@ function runHook(input, npmExit = 0) {
   try {
     const run = spawnSync('sh', ['-e', hook], {
       input, encoding: 'utf8',
-      env: { ...process.env, PATH: `${directory}:${process.env.PATH}`, HRA_HOOK_TEST_CALLS: calls, HRA_HOOK_TEST_EXIT: String(npmExit) },
+      env: { PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`, HOME: directory, TMPDIR: directory, LANG: 'C', HRA_HOOK_TEST_CALLS: calls, HRA_HOOK_TEST_EXIT: String(npmExit) },
     });
     return { status: run.status, output: run.stdout + run.stderr, calls: existsSync(calls) ? readFileSync(calls, 'utf8').trim().split('\n') : [] };
   } finally {
@@ -64,7 +64,7 @@ test('격리된 실제 Git push에서 생성은 빌드하고 삭제는 생략한
   const remote = join(directory, 'remote.git');
   const local = join(directory, 'local');
   const calls = join(directory, 'npm-calls');
-  const environment = { ...process.env, PATH: `${directory}:${process.env.PATH}`, HRA_HOOK_TEST_CALLS: calls, HRA_HOOK_TEST_EXIT: '0' };
+  const environment = { PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`, HOME: directory, TMPDIR: directory, LANG: 'C', HRA_HOOK_TEST_CALLS: calls, HRA_HOOK_TEST_EXIT: '0' };
   const git = (args, cwd = directory) => {
     const result = spawnSync('git', args, { cwd, env: environment, encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
