@@ -62,8 +62,8 @@ export function parseMarkdown(
     // gray-matter/js-yaml 원본 예외는 파싱 실패한 소스 스니펫을 그대로 인용할 수 있어,
     // 편집자 실수로 frontmatter 값에 넣은 이메일·전화번호·이름 등 일반 텍스트 PII 가
     // 상위 호출자(read-from-content.ts) 의 throw 를 통해 에러 바운더리에서 렌더링될 수 있다.
-    // redactMessage 는 SQL·경로 위주라 자유 텍스트 PII 를 걸러내지 못하므로, 반환값은
-    // 일반화하고 디버깅용 원본은 서버 로그(Vercel Logs)에만 남긴다.
+    // 반환값은 일반화하고 서버 로그에는 고정 오류 분류와 검증된 kind만 남긴다.
+    // 원본 파서 메시지와 입력 스니펫은 로그에 기록하지 않는다.
     logServerError("markdown/parse", error, { kind });
     return {
       ok: false,
