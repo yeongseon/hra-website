@@ -1,19 +1,19 @@
-import { eq, desc } from "drizzle-orm";
+/**
+ * 공개 지원 양식 목록 Page입니다.
+ * 발행 정책과 DB 조회는 Application Service에 맡기고 카드·상세 링크만 표시합니다.
+ * 질문 조회와 실제 제출 인가는 별도의 상세 Page·Server Action에서 처리합니다.
+ */
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, FileText } from "lucide-react";
-import { db } from "@/lib/db";
-import { applicationForms } from "@/lib/db/schema";
+import { listPublishedApplicationForms } from "@/features/applications/public-list/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecruitmentApplyPage() {
-  // 1. 공개된 모든 지원서 양식 조회
-  const publishedForms = await db.query.applicationForms.findMany({
-    where: eq(applicationForms.isPublished, true),
-    orderBy: [desc(applicationForms.createdAt)],
-  });
+  // 서비스가 발행된 양식의 표시 필드만 작성일 역순으로 반환합니다.
+  const publishedForms = await listPublishedApplicationForms();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:py-20 md:py-32">
