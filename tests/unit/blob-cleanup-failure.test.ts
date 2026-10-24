@@ -4,13 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   del: vi.fn(),
   logServerError: vi.fn(),
-  redactBlobUrl: vi.fn((url: string) => new URL(url).hostname),
 }));
 
 vi.mock("@vercel/blob", () => ({ del: mocks.del }));
 vi.mock("@/lib/errors", () => ({
   logServerError: mocks.logServerError,
-  redactBlobUrl: mocks.redactBlobUrl,
 }));
 
 import { deleteBlobIfExists } from "@/lib/blob-utils";
@@ -21,13 +19,10 @@ describe("Blob 정리 실패", () => {
   it("삭제 오류를 기록하고 호출자에게 새 오류를 던지지 않는다", async () => {
     const url = "https://example.public.blob.vercel-storage.com/class-logs/new.png";
     mocks.del.mockRejectedValueOnce(new Error("삭제 실패"));
-    mocks.redactBlobUrl.mockReturnValueOnce("example.public.blob.vercel-storage.com");
-
     await expect(deleteBlobIfExists(url)).resolves.toBeUndefined();
     expect(mocks.logServerError).toHaveBeenCalledExactlyOnceWith(
       "blob-utils/delete",
       expect.any(Error),
-      { blobUrl: "example.public.blob.vercel-storage.com" },
     );
   });
 });
