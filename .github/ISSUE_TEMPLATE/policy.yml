@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **제목**에는 결정할 내용을 요약만 적습니다. 대괄호 접두어를 쓰지 않습니다.
+        **제목**에는 결정할 내용을 알아볼 수 있는 요약을 적습니다.
         `question` 라벨이 자동으로 붙습니다. 우선순위·분류 라벨은 붙이지 않습니다.
         결정이 내려지면 결과를 댓글로 남기고, 구현이 필요하면 버그 또는 작업 이슈를 따로 만듭니다.
   - type: textarea
@@ -37,6 +37,5 @@ body:
     attributes:
       label: 관련 이슈
       description: 이 결정에 영향받는 이슈 번호를 적어주세요.
-      value: 없음
     validations:
-      required: true
+      required: false
