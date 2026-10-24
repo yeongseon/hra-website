@@ -65,6 +65,10 @@ jobs:
           node --test scripts/tests/environment-contract.test.mjs
           node scripts/check-environment-contract.mjs
 
+      - name: 로컬 push 훅 ref 계약 검사
+        # 삭제 전용 push만 빌드를 생략하고 코드 ref·손상된 입력은 계속 차단합니다.
+        run: node --test scripts/tests/pre-push-hook.test.mjs
+
       - name: ESLint 검사
         run: npm run lint
 

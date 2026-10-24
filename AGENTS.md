@@ -246,7 +246,7 @@ task(subagent_type="oracle", load_skills=[], run_in_background=true,
 ### 자동 가드 (Husky 훅 — 자동으로 동작함)
 
 - **pre-commit**: `npm run typecheck` 자동 실행 (10~20초). 타입 에러 있으면 커밋 차단
-- **pre-push**: `npm run build` 자동 실행 (1~3분). 빌드 실패하면 push 차단
+- **pre-push**: 코드 ref 생성·갱신 시 `npm run build` 자동 실행 (1~3분). 빌드 실패하면 push 차단. 원격 ref 삭제만 하는 push는 보낼 코드가 없어 빌드를 생략
 
 > 훅이 귀찮다고 `--no-verify` 로 우회하지 마세요. 그게 11회 push-fail 사고의 원인입니다.
 > 1~3분 기다리는 게 Vercel 배포 실패하고 11번 다시 push 하는 것보다 백배 빠릅니다.
