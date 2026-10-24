@@ -4,6 +4,7 @@
  * 질문·선택지 표시 순서와 비공개 양식의 조기 종료를 보존합니다.
  */
 import { Children, isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -26,7 +27,7 @@ vi.mock("@/app/(public)/recruitment/apply/[id]/_components/public-application-fo
   PublicApplicationForm: () => null,
 }));
 
-import PublicApplicationApplyPage from "@/app/(public)/recruitment/apply/[id]/page";
+import PublicApplicationApplyPage, { dynamic } from "@/app/(public)/recruitment/apply/[id]/page";
 import { PublicApplicationForm } from "@/app/(public)/recruitment/apply/[id]/_components/public-application-form";
 
 type PublicFormProps = ComponentProps<typeof PublicApplicationForm>;
@@ -115,5 +116,28 @@ describe("공개 지원서 페이지의 클라이언트 props", () => {
       .rejects.toThrow("NOT_FOUND");
     expect(mocks.findForm).not.toHaveBeenCalled();
     expect(mocks.findQuestions).not.toHaveBeenCalled();
+  });
+
+  it("없는 양식과 비공개 양식은 동일한 200 마감 안내 화면을 표시한다", async () => {
+    expect(dynamic).toBe("force-dynamic");
+    mocks.findForm.mockResolvedValueOnce({ ...fixture().form, isPublished: false });
+    const privateHtml = renderToStaticMarkup(await PublicApplicationApplyPage({ params: params() }));
+    mocks.findForm.mockResolvedValueOnce(undefined);
+    const missingHtml = renderToStaticMarkup(await PublicApplicationApplyPage({ params: params() }));
+    expect(privateHtml).toBe(missingHtml);
+    expect(privateHtml).toContain("모집이 마감되었습니다");
+    expect(privateHtml).toContain('href="/"');
+    expect(mocks.findQuestions).not.toHaveBeenCalled();
+  });
+
+  it("마스터 또는 질문 DB 오류는 마감 화면으로 숨기지 않고 상위 경계로 전달한다", async () => {
+    const failure = new Error("합성 상세 DB 오류");
+    mocks.findForm.mockRejectedValueOnce(failure);
+    await expect(PublicApplicationApplyPage({ params: params() })).rejects.toBe(failure);
+    expect(mocks.findQuestions).not.toHaveBeenCalled();
+
+    mocks.findForm.mockResolvedValueOnce(fixture().form);
+    mocks.findQuestions.mockRejectedValueOnce(failure);
+    await expect(PublicApplicationApplyPage({ params: params() })).rejects.toBe(failure);
   });
 });
