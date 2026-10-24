@@ -1,15 +1,16 @@
+/**
+ * 공개 모집안내 화면입니다.
+ * 현재 기수·모집 상태는 Application Service에서 받고 Page는 날짜·링크·포스터를 표시합니다.
+ */
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, ExternalLink } from "lucide-react";
-import { eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
-import { db } from "@/lib/db";
-import { computeRecruitmentStatus, getStoredDateKey } from "@/features/recruitment/status";
-import { cohorts, recruitmentSettings } from "@/lib/db/schema";
+import { getPublicRecruitmentOverview } from "@/features/recruitment/public-overview/service";
 import { formatKstDate } from "@/lib/date-time";
 import { ProcessSteps } from "./_components/process-steps";
 
@@ -33,26 +34,12 @@ const formatDate = (value: Date | null) => {
 };
 
 export default async function RecruitmentPage() {
-  // 모집 설정에서 activeCohortId와 모집 정보를 조회
-  const [settings] = await db.select().from(recruitmentSettings).limit(1);
-
-  // activeCohortId가 있으면 해당 기수 정보를 조회
-  const activeCohort = settings?.activeCohortId
-    ? await db
-        .select({ id: cohorts.id, name: cohorts.name, description: cohorts.description })
-        .from(cohorts)
-        .where(eq(cohorts.id, settings.activeCohortId))
-        .limit(1)
-        .then((rows) => rows[0] ?? null)
-    : null;
-
-  const recruitmentStatus = computeRecruitmentStatus(
-    getStoredDateKey(settings?.recruitmentStartDate ?? null),
-    getStoredDateKey(settings?.deadlineDate ?? null),
-  );
+  // Service가 관리자 저장값에서 공개 표시용 필드만 읽고 날짜 기반 상태를 계산합니다.
+  const overview = await getPublicRecruitmentOverview();
+  const { activeCohort, recruitmentStatus } = overview;
   const status = statusMap[recruitmentStatus] ?? statusMap.UPCOMING;
-  const startDate = formatDate(settings?.recruitmentStartDate ?? null);
-  const endDate = formatDate(settings?.deadlineDate ?? null);
+  const startDate = formatDate(overview.recruitmentStartDate);
+  const endDate = formatDate(overview.deadlineDate);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20 md:py-32">
@@ -104,12 +91,12 @@ export default async function RecruitmentPage() {
               </div>
 
               {/* 지원하기 버튼 — 모집중이고 구글폼 URL이 있을 때만 표시 */}
-              {recruitmentStatus === "OPEN" && settings?.googleFormUrl ? (
+              {recruitmentStatus === "OPEN" && overview.googleFormUrl ? (
                 <div className="shrink-0">
                   <Button
                     className="bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
                     render={
-                      <Link href={settings.googleFormUrl} target="_blank" rel="noopener noreferrer" />
+                      <Link href={overview.googleFormUrl} target="_blank" rel="noopener noreferrer" />
                     }
                   >
                     지원하기
@@ -123,14 +110,15 @@ export default async function RecruitmentPage() {
       </section>
 
       {/* 포스터 + 세부 안내 섹션 */}
-      {(settings?.posterImageUrl || settings?.detailsMarkdown) && (() => {
-        const layout = settings?.posterLayout ?? "right";
-        const showPoster = !!settings?.posterImageUrl && layout !== "none";
+      {(overview.posterImageUrl || overview.detailsMarkdown) && (() => {
+        const layout = overview.posterLayout ?? "right";
+        const posterUrl = overview.posterImageUrl;
+        const showPoster = !!posterUrl && layout !== "none";
 
-        const posterEl = showPoster ? (
+        const posterEl = showPoster && posterUrl ? (
           <div className="shrink-0 lg:w-80 xl:w-96">
             <Image
-              src={settings.posterImageUrl!}
+              src={posterUrl}
               alt="모집 포스터"
               width={600}
               height={840}
@@ -139,9 +127,9 @@ export default async function RecruitmentPage() {
           </div>
         ) : null;
 
-        const detailsEl = settings?.detailsMarkdown ? (
+        const detailsEl = overview.detailsMarkdown ? (
           <div className="lg:flex-1">
-            <MarkdownViewer body={settings.detailsMarkdown} />
+            <MarkdownViewer body={overview.detailsMarkdown} />
           </div>
         ) : null;
 
