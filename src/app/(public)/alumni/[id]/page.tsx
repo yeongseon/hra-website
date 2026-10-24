@@ -1,15 +1,15 @@
-import { db } from "@/lib/db";
-import { alumniStories } from "@/lib/db/schema";
-import { eq, lt, gt, asc, desc, or, and } from "drizzle-orm";
+/**
+ * 공개 수료생 상세의 본문·이웃 링크·사이드바를 렌더링합니다.
+ * UUID 검사와 조회 순서·표시 열은 수료생 Application Service/Repository에 맡깁니다.
+ */
+import { getPublicAlumniDetail } from "@/features/alumni/detail/service";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
-import { z } from "zod/v4";
 import { AlumniSidebar } from "./_components/alumni-sidebar";
 import { MarkdownViewer } from "@/components/markdown/markdown-viewer";
-import { alumniStorySummary } from "@/features/alumni/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -25,64 +25,9 @@ interface PageProps {
 
 export default async function AlumniDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const parsedId = z.uuid().safeParse(id);
-
-  if (!parsedId.success) {
-    notFound();
-  }
-
-  const storyId = parsedId.data;
-
-  const story = await db.query.alumniStories.findFirst({
-    where: eq(alumniStories.id, storyId),
-  });
-
-  if (!story) {
-    notFound();
-  }
-
-  const prevStory = await db
-    .select({ id: alumniStories.id, name: alumniStories.name })
-    .from(alumniStories)
-    .where(
-      or(
-        lt(alumniStories.order, story.order),
-        and(
-          eq(alumniStories.order, story.order),
-          lt(alumniStories.createdAt, story.createdAt)
-        )
-      )
-    )
-    .orderBy(desc(alumniStories.order), desc(alumniStories.createdAt))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
-
-  const nextStory = await db
-    .select({ id: alumniStories.id, name: alumniStories.name })
-    .from(alumniStories)
-    .where(
-      or(
-        gt(alumniStories.order, story.order),
-        and(
-          eq(alumniStories.order, story.order),
-          gt(alumniStories.createdAt, story.createdAt)
-        )
-      )
-    )
-    .orderBy(asc(alumniStories.order), asc(alumniStories.createdAt))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
-
-  const allStories = await db
-    .select({
-      id: alumniStories.id,
-      name: alumniStories.name,
-      title: alumniStories.title,
-      summary: alumniStorySummary,
-      imageUrl: alumniStories.imageUrl,
-    })
-    .from(alumniStories)
-    .orderBy(asc(alumniStories.order));
+  const detail = await getPublicAlumniDetail(id);
+  if (!detail) notFound();
+  const { story, prevStory, nextStory, sidebarStories } = detail;
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-5xl">
@@ -125,7 +70,7 @@ export default async function AlumniDetailPage({ params }: PageProps) {
         </div>
 
         <div className="pt-16 border-t border-[#D9D9D9]">
-          <AlumniSidebar stories={allStories} currentStoryId={story.id} />
+          <AlumniSidebar stories={sidebarStories} currentStoryId={story.id} />
         </div>
       </div>
 
