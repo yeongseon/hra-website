@@ -1,5 +1,5 @@
 <!-- 제목: type(scope)!: 설명. 예: fix(auth): 카카오 로그인 오류 처리
-     이슈 제목의 P1/P2 라벨은 버전 증가 종류가 아닙니다.
+     이슈 제목의 P0/P1/P2 라벨은 버전 증가 종류가 아닙니다.
      일반 PR은 아래 네 섹션을 유지합니다. release-please/Dependabot은 검증된 생성형 본문을 사용합니다.
      상세: docs/contributing/releasing.md -->
 ## 관련 이슈
