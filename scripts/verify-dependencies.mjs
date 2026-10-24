@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyDependencyPolicy } from './_lib/dependency-policy.mjs';
+import { dependencyDiagnosticLines, verifyDependencyPolicy } from './_lib/dependency-policy.mjs';
 let temporary;
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { if (temporary) rmSync(temporary, { recursive: true, force: true }); process.exit(1); });
 try {
@@ -21,7 +21,7 @@ try {
   const policy = JSON.parse(readFileSync(new URL('../security/dependency-triage.json', import.meta.url), 'utf8'));
   console.log(JSON.stringify(verifyDependencyPolicy(audit, lock, policy)));
 } catch (error) {
-  console.error(error instanceof Error && /^DEPENDENCY_[A-Z_]+$/.test(error.message) ? error.message : 'DEPENDENCY_CHECK_FAILED');
+  for (const line of dependencyDiagnosticLines(error)) console.error(line);
   process.exitCode = 1;
 }
 
