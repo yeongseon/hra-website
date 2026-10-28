@@ -9,14 +9,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq } from "drizzle-orm";
-import { z } from "zod/v4";
 import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getGuidebookForReader } from "@/features/guidebooks/member-detail/service";
 import { canReadSharedResource } from "@/features/resources/access";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { guidebooks } from "@/lib/db/schema";
 import { requireSharedResourceReader } from "@/lib/resource-access";
 
 export const dynamic = "force-dynamic";
@@ -30,30 +27,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!canReadSharedResource(session?.user?.role)) return { title: "가이드북" };
   const { id } = await params;
 
-  // Oracle Phase D BLOCK 수정 — z.uuid() 로 사전 차단하여 Postgres cast 에러 leak 방지.
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    return { title: "가이드북" };
-  }
-
-  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, parsedId.data)).limit(1);
+  // 메타데이터도 같은 서비스의 승인 역할·UUID·표시 필드 정책을 적용합니다.
+  const book = await getGuidebookForReader({ id, readerRole: session?.user?.role });
   return {
     title: book ? `${book.title} — 가이드북` : "가이드북",
   };
 }
 
 export default async function GuidebookViewerPage({ params }: Props) {
-  await requireSharedResourceReader();
+  const session = await requireSharedResourceReader();
   const { id } = await params;
 
-  // Oracle Phase D BLOCK 수정 — 라우트 파라미터의 UUID 형식을 먼저 검증.
-  const parsedId = z.uuid().safeParse(id);
-  if (!parsedId.success) {
-    notFound();
-  }
-
-  // DB에서 가이드북 조회
-  const [book] = await db.select().from(guidebooks).where(eq(guidebooks.id, parsedId.data)).limit(1);
+  // 현재 세션의 인가를 먼저 마친 뒤 서비스에서 뷰어 표시 값만 읽습니다.
+  const book = await getGuidebookForReader({ id, readerRole: session.user.role });
 
   if (!book) {
     notFound();
