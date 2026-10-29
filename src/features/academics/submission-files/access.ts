@@ -10,6 +10,8 @@ import { isValidUuid } from "@/lib/auth-session";
 const failures = {
   UNAUTHENTICATED: { status: 401, message: "로그인이 필요합니다." },
   FORBIDDEN: { status: 403, message: "과제 파일에 접근할 수 없습니다." },
+  // 기존 Web 경로의 비공개 404는 보존하고, v1은 이 코드를 공통 DISABLED 응답으로 변환합니다.
+  DISABLED: { status: 404, message: "파일을 찾을 수 없습니다." },
   NOT_FOUND: { status: 404, message: "파일을 찾을 수 없습니다." },
   UNAVAILABLE: { status: 503, message: "파일을 제공할 수 없습니다. 잠시 후 다시 시도해 주세요." },
 } as const;
@@ -39,7 +41,7 @@ export async function requireSubmissionFileReader(): Promise<SubmissionFileReade
   const configured = process.env.ACADEMIC_APPROVER_USER_ID;
   const management = canManageAcademics(session.user, configured);
   if (!management && session.user.role !== "MEMBER") throw new SubmissionFileAccessError("FORBIDDEN");
-  if (process.env.ACADEMIC_ENABLED !== "true") throw new SubmissionFileAccessError("NOT_FOUND");
+  if (process.env.ACADEMIC_ENABLED !== "true") throw new SubmissionFileAccessError("DISABLED");
   return { userId: session.user.id, scope: management ? "MANAGEMENT" : "OWNER",
     approverId: isValidUuid(configured) ? configured : null };
 }

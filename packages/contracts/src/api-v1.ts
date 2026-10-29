@@ -458,3 +458,133 @@ export const apiV1GuidebookListResponseSchema = z
   })
   .strict();
 export type ApiV1GuidebookListResponse = z.infer<typeof apiV1GuidebookListResponseSchema>;
+
+/** 본인 과제 목록은 기존 학생 조회의 페이지 상한과 기본 크기를 그대로 사용합니다. */
+export const apiV1AssignmentListQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).max(10_000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(API_V1_MAX_PAGE_SIZE).default(20),
+  })
+  .strict();
+export type ApiV1AssignmentListQuery = z.infer<typeof apiV1AssignmentListQuerySchema>;
+
+/** 최종 제출의 식별자와 UTC 시각만 전달하며 작성 계정·업로드 원장은 숨깁니다. */
+export const apiV1SubmissionSummarySchema = z
+  .object({ submissionId: apiV1UuidSchema, submittedAt: apiV1TimestampSchema })
+  .strict();
+export type ApiV1SubmissionSummary = z.infer<typeof apiV1SubmissionSummarySchema>;
+
+/** 개인 PDF의 최소 메타데이터입니다. 원본 파일 URL·저장 키·토큰은 포함하지 않습니다. */
+export const apiV1SubmissionFileMetadataSchema = z
+  .object({
+    fileId: apiV1UuidSchema,
+    originalName: z.string().min(1).max(255),
+    mimeType: z.literal("application/pdf"),
+    sizeBytes: z.number().int().min(1).max(52_428_800),
+  })
+  .strict();
+export type ApiV1SubmissionFileMetadata = z.infer<typeof apiV1SubmissionFileMetadataSchema>;
+
+/** 본인에게 공개된 과제의 최소 목록 DTO입니다. 다른 학생·학적 식별자는 제외합니다. */
+export const apiV1AssignmentSummarySchema = z
+  .object({
+    assignmentId: apiV1UuidSchema,
+    targetId: apiV1UuidSchema,
+    title: z.string().min(1),
+    status: z.enum(["PUBLISHED", "CLOSED"]),
+    dueAt: apiV1TimestampSchema,
+    publishedAt: apiV1TimestampSchema,
+    submission: apiV1SubmissionSummarySchema.nullable(),
+  })
+  .strict();
+export type ApiV1AssignmentSummary = z.infer<typeof apiV1AssignmentSummarySchema>;
+
+/** 과제 상세는 지침과 본인 최종 PDF 메타데이터만 추가합니다. */
+export const apiV1AssignmentDetailSchema = apiV1AssignmentSummarySchema
+  .extend({ instructions: z.string(), file: apiV1SubmissionFileMetadataSchema.nullable() })
+  .strict();
+export type ApiV1AssignmentDetail = z.infer<typeof apiV1AssignmentDetailSchema>;
+
+/** 총수 조회 없는 학생 서비스의 페이지 결과를 보존하고 추정 totalCount는 만들지 않습니다. */
+export const apiV1AssignmentListResponseSchema = z
+  .object({
+    assignments: z.array(apiV1AssignmentSummarySchema).max(API_V1_MAX_PAGE_SIZE),
+    page: z.object({
+      page: z.number().int().min(1).max(10_000),
+      pageSize: z.number().int().min(1).max(API_V1_MAX_PAGE_SIZE),
+      hasNextPage: z.boolean(),
+    }).strict(),
+  })
+  .strict();
+export type ApiV1AssignmentListResponse = z.infer<typeof apiV1AssignmentListResponseSchema>;
+
+/** 과제 상세 GET 응답은 허용된 과제 DTO 하나로 고정합니다. */
+export const apiV1AssignmentDetailResponseSchema = z
+  .object({ assignment: apiV1AssignmentDetailSchema })
+  .strict();
+export type ApiV1AssignmentDetailResponse = z.infer<typeof apiV1AssignmentDetailResponseSchema>;
+
+/** 미제출 상태는 두 null로 표현하고 업로드 중 원장·임시 파일은 제공하지 않습니다. */
+export const apiV1AssignmentSubmissionResponseSchema = z
+  .object({
+    submission: apiV1SubmissionSummarySchema.nullable(),
+    file: apiV1SubmissionFileMetadataSchema.nullable(),
+  })
+  .strict();
+export type ApiV1AssignmentSubmissionResponse = z.infer<typeof apiV1AssignmentSubmissionResponseSchema>;
+
+/** 제출 최종화는 식별자 세 개만 받고 파일 저장 위치나 사용자 ID를 입력받지 않습니다. */
+export const apiV1FinalizeSubmissionInputSchema = z
+  .object({ assignmentId: apiV1UuidSchema, uploadIntentId: apiV1UuidSchema, submissionKey: apiV1UuidSchema })
+  .strict();
+export type ApiV1FinalizeSubmissionInput = z.infer<typeof apiV1FinalizeSubmissionInputSchema>;
+
+/** 최초 확정과 같은 키의 성공 복구는 동일한 HTTP 200 결과와 replayed로 구분합니다. */
+export const apiV1FinalizedSubmissionResponseSchema = z
+  .object({
+    submission: z.object({
+      assignmentId: apiV1UuidSchema,
+      submissionId: apiV1UuidSchema,
+      submittedAt: apiV1TimestampSchema,
+      replayed: z.boolean(),
+      file: apiV1SubmissionFileMetadataSchema,
+    }).strict(),
+  })
+  .strict();
+export type ApiV1FinalizedSubmissionResponse = z.infer<typeof apiV1FinalizedSubmissionResponseSchema>;
+
+/** 비어 있지 않은 안전한 PDF 원본명과 50MiB 이하 크기로 업로드 발급 입력을 제한합니다. */
+export const apiV1UploadIntentInputSchema = z
+  .object({
+    assignmentId: apiV1UuidSchema,
+    requestId: apiV1UuidSchema,
+    originalName: z.string().trim().min(1).max(255)
+      .refine((value) => !/[\x00-\x1f\x7f/\\]/.test(value) && /\.pdf$/i.test(value)),
+    sizeBytes: z.number().int().min(1).max(52_428_800),
+    mimeType: z.literal("application/pdf"),
+  })
+  .strict();
+export type ApiV1UploadIntentInput = z.infer<typeof apiV1UploadIntentInputSchema>;
+
+/** 검증·취소 요청의 업로드 ID는 경로에서 받고 과제 ID만 JSON 본문에서 받습니다. */
+export const apiV1UploadSelectionInputSchema = z.object({ assignmentId: apiV1UuidSchema }).strict();
+export type ApiV1UploadSelectionInput = z.infer<typeof apiV1UploadSelectionInputSchema>;
+
+/** 서버가 발급한 불투명 경로는 SDK 전송에만 쓰며 해당 발급 ID와 반드시 일치해야 합니다. */
+export const apiV1UploadIntentResponseSchema = z
+  .object({
+    uploadIntentId: apiV1UuidSchema,
+    pathname: z.string().regex(/^academic-uploads\/v1\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/document\.pdf$/),
+    expiresAt: apiV1TimestampSchema,
+  })
+  .strict()
+  .refine((value) => value.pathname === `academic-uploads/v1/${value.uploadIntentId.toLowerCase()}/document.pdf`);
+export type ApiV1UploadIntentResponse = z.infer<typeof apiV1UploadIntentResponseSchema>;
+
+/** 객체 검증은 제출 최종화와 구분하며 저장소 상세는 응답에 포함하지 않습니다. */
+export const apiV1UploadVerifiedResponseSchema = z.object({ state: z.literal("VERIFIED") }).strict();
+export type ApiV1UploadVerifiedResponse = z.infer<typeof apiV1UploadVerifiedResponseSchema>;
+
+/** 취소는 원장 종료를 나타내며 실제 객체의 즉시 삭제를 의미하지 않습니다. */
+export const apiV1UploadCancelledResponseSchema = z.object({ state: z.literal("CANCELLED") }).strict();
+export type ApiV1UploadCancelledResponse = z.infer<typeof apiV1UploadCancelledResponseSchema>;
