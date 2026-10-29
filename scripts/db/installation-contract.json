@@ -555,29 +555,19 @@
       "fresh": {
         "disposition": "exclude",
         "required": false,
-        "reason": "inline 구조는 export와 대조하고 외부 view만 별도 후보로 검토한다. wrapper 자체는 fresh 실행에서 제외한다."
+        "reason": "접속 없는 계획만 제공하고 신뢰된 대상 없는 적용을 차단한다. 원장 구조는 export, 참조 뷰는 원본 SQL이 소유하며 이 CLI는 설치하지 않는다."
       },
       "objects": ["markdown-assets","markdown-references"],
       "requires": ["web-base","markdown-assets"],
-      "checks": ["inline DDL과 외부 view가 한 transaction에 결합되어 있어 구조/export와 custom view 소유를 분리한다."],
+      "checks": ["무인자와 확인 인자만 있는 CLI는 DB 접속·환경 자격 조회 없이 종료해야 한다.","원본 뷰 SQL과 fresh 후보 보존을 기존 DB의 테이블·인덱스·뷰 결합 업그레이드 검증으로 간주하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-add-markdown-image-assets.mjs",
-          "line": 15,
-          "note": "외부 view 파일 읽기."
-        },
-        {
-          "file": "scripts/migrate-add-markdown-image-assets.mjs",
-          "line": 27,
-          "note": "inline table/index와 view transaction."
-        },
-        {
-          "file": "scripts/migrate-add-markdown-image-assets.mjs",
-          "line": 46,
-          "note": "설치 후 columns/view 검증."
+          "line": 1,
+          "note": "본문 이미지 원장의 예정 객체만 설명하는 접속 없는 계획과 신뢰되지 않은 적용의 차단 경계."
         }
       ],
-      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+      "unresolved": ["기존 DB의 관계 종류 사전 확인·테이블/인덱스/뷰 결합 설치·후조건 검증을 수행하던 공개 wrapper는 비활성이다. 실제 대상·복구·승인과 결합 업그레이드는 #280의 별도 검증이 필요하다."]
     },
     {
       "ref": "scripts/migrate-add-rate-limit-tables.mjs",
@@ -2097,8 +2087,8 @@
         },
         {
           "source": "scripts/migrate-add-markdown-image-assets.mjs",
-          "relationship": "unresolved",
-          "reason": "inline table/index DDL과 외부 참조 view를 같은 transaction에 연결한다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 원장 테이블과 인덱스를 예정 대상으로 설명하는 차단된 계획이며, 관계 조회나 DDL을 실행하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/schema-export.sql",
@@ -2108,7 +2098,7 @@
       ],
       "requires": ["web-base"],
       "checks": ["URL UNIQUE·업로더 SET NULL FK·created/deleted timestamp·created_at index를 대조한다.","서버 등록 원장만 소유권 근거이며 본문 URL이나 도메인으로 소급 등록하지 않는다."],
-      "unresolved": ["inline 구조와 export의 catalog 동등성 및 외부 view와의 설치 단위를 아직 확정하지 않았다."],
+      "unresolved": ["export 구조와 신규 설치 후보의 실제 catalog 동등성은 별도 검증 대상이다. 공개 wrapper의 기존 DB 결합 업그레이드는 비활성 상태다."],
       "requiredForFresh": true
     },
     {
@@ -2124,8 +2114,8 @@
         },
         {
           "source": "scripts/migrate-add-markdown-image-assets.mjs",
-          "relationship": "wrapper",
-          "reason": "원장 구조 뒤 외부 view 원문을 읽어 설치한다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 이 뷰를 예정 대상으로 설명하는 차단된 계획이며, 원본 SQL 읽기·설치·후조건 조회를 실행하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/custom-markdown-image-references.sql",

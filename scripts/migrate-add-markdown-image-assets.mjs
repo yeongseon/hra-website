@@ -1,64 +1,23 @@
 /**
- * 본문 이미지 소유권 원장만 추가하는 재실행 가능한 마이그레이션 (#88).
- * 기존 Blob URL에는 소유권을 소급 부여하지 않습니다.
- * 운영 DB에서는 사전 점검과 승인 후 실행해야 합니다.
+ * 본문 이미지 원장의 테이블·인덱스·참조 뷰 변경 계획을 안내하는 차단형 CLI입니다.
+ * 신뢰된 대상·복구·승인 경계가 마련되기 전에는 DB 드라이버·자격정보·SQL 원문을 읽지 않습니다.
+ * 기존 관계 사전 확인·결합 설치·사후 검증 경로는 #280의 신뢰된 업그레이드가 준비될 때까지 비활성입니다.
+ * 기존 Blob URL에 소유권을 소급 부여하지 않으며 원본 SQL·신규 설치 후보가 기존 DB 업그레이드를 대신하지 않습니다.
  */
-import { neon } from "@neondatabase/serverless";
-import { readFileSync } from "node:fs";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL 환경변수가 필요합니다.");
-}
-
-const sql = neon(databaseUrl);
-const referencesView = readFileSync(new URL("./sql/markdown-image-references.sql", import.meta.url), "utf8");
-
-const relation = await sql`
-  SELECT c.relkind
-  FROM pg_class c
-  JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname = 'public' AND c.relname = 'markdown_image_assets'
-`;
-if (relation.length > 0 && relation[0].relkind !== "r") {
-  throw new Error("markdown_image_assets 이름에 테이블이 아닌 객체가 있습니다.");
-}
-
-await sql.transaction([
-  sql`
-    CREATE TABLE IF NOT EXISTS markdown_image_assets (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      url text NOT NULL UNIQUE,
-      uploaded_by_id uuid REFERENCES users(id) ON DELETE SET NULL,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      deleted_at timestamptz
-    )
-  `,
-  sql`
-    CREATE INDEX IF NOT EXISTS idx_markdown_image_assets_created_at
-    ON markdown_image_assets (created_at)
-  `,
-  // unsafe()는 원시 SQL 조각이므로 템플릿 쿼리로 감싸 트랜잭션에 전달합니다.
-  sql`${sql.unsafe(referencesView)}`,
-]);
-
-const columns = await sql`
-  SELECT column_name FROM information_schema.columns
-  WHERE table_schema = 'public' AND table_name = 'markdown_image_assets'
-`;
-const actual = new Set(columns.map((row) => row.column_name));
-for (const column of ["id", "url", "uploaded_by_id", "created_at", "deleted_at"]) {
-  if (!actual.has(column)) {
-    throw new Error(`markdown_image_assets.${column} 확인 실패`);
+/** URL·승인 문서·자격정보를 반사하지 않고 계획 또는 고정 오류만 제공합니다. */
+function run(args) {
+  if (args.length === 0) {
+    console.log("본문 이미지 원장 변경 계획: markdown_image_assets 테이블·인덱스와 markdown_image_references 참조 뷰. 기존 DB의 결합 업그레이드는 비활성이며 접속·변경하지 않습니다. 기존 Blob URL에 소유권을 소급 부여하지 않습니다. [MARKDOWN_IMAGE_INSTALLER_PLAN]");
+    return 0;
   }
+  if (args.length === 1 && args[0] === "--confirm-apply") {
+    console.error("적용 의도만으로 대상·복구·승인을 확인할 수 없어 직접 적용을 차단합니다. [MARKDOWN_IMAGE_INSTALLER_TARGET_UNTRUSTED]");
+    return 1;
+  }
+  console.error("지원하지 않는 인자입니다. 인자 없이 변경 계획을 확인하세요. [MARKDOWN_IMAGE_INSTALLER_ARGUMENTS]");
+  return 1;
 }
 
-const view = await sql`
-  SELECT 1 FROM information_schema.views
-  WHERE table_schema = 'public' AND table_name = 'markdown_image_references'
-`;
-if (view.length !== 1) {
-  throw new Error("markdown_image_references 뷰 확인 실패");
-}
-
-console.log("markdown_image_assets 테이블과 참조 뷰 확인 완료");
+// 프로젝트 기준인 Node 24의 직접 실행 표식으로 모듈 import 시 출력·종료 부작용을 막습니다.
+if (import.meta.main) process.exitCode = run(process.argv.slice(2));

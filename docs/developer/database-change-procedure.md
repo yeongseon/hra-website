@@ -51,11 +51,12 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 | `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시; 적용 시 부모 `PG*` 접속 설정은 전달하지 않음 |
 | `db:migrate-alumni-featured`·`db:migrate-user-session-version` | 두 한정 컬럼의 구조 확인·적용 | 무인자는 DB에 접속하지 않는 계획; `--confirm-apply`에서만 소유 표·정확한 컬럼 정의 검증 후 적용 |
 | `db:migrate-atomic-application-questions` | 질문 저장 버전·저장/제출 검증 함수의 설치 계획 | DB 접속 없는 계획만 제공하며, `--confirm-apply`도 신뢰된 적용 대상이 없어 접속 전에 차단 |
+| `db:migrate-add-markdown-image-assets` | 본문 이미지 원장·인덱스·참조 뷰의 설치 계획 | DB 접속 없는 계획만 제공하며, `--confirm-apply`도 신뢰된 적용 대상이 없어 접속 전에 차단 |
 | 그 밖의 `db:migrate-*` | 스크립트별 구조 변경 | 이름만으로 dry-run이라 가정하지 않음; 실행 즉시 변경하는 스크립트가 있음 |
 
 두 한정 컬럼 명령은 `.env`가 없어도 무인자 계획을 출력합니다. 적용하려면 승인된 대상의 명시적 DB URL과 `--confirm-apply`를 전달해야 합니다. 이 인자는 실행 의도를 표시할 뿐 실제 DB identity·백업·운영 승인을 증명하지 않습니다. 기존 컬럼의 타입·NOT NULL·기본값·소유권이 다르면 자동 보정하지 않고 실패하며, 이미 저장된 `session_version` 값은 변경하지 않습니다.
 
-질문 저장 버전 명령도 `.env` 없이 계획을 출력하지만, 실제 적용 기능은 비활성입니다. `--confirm-apply`만 지정해도 `TARGET_UNTRUSTED`로 실패하며 URL·환경 플래그·자체 작성 승인 JSON으로 이를 해제할 수 없습니다. 기존 DB에 버전 컬럼 추가와 두 함수 설치를 한 트랜잭션으로 수행하던 경로는 사용할 수 없습니다. 두 원본 SQL과 소유 로컬 신규 설치 후보는 유지하지만, 이 후보·격리 함수 회귀는 해당 기존 DB 업그레이드 경로를 대체하지 않습니다. 실제 대상·복구·승인이 검증된 결합 업그레이드는 [#280](https://github.com/yeongseon/hra-website/issues/280)에 남아 있습니다.
+질문 저장 버전과 본문 이미지 원장 명령도 `.env` 없이 계획을 출력하지만, 실제 적용 기능은 비활성입니다. `--confirm-apply`만 지정해도 `TARGET_UNTRUSTED`로 실패하며 URL·환경 플래그·자체 작성 승인 JSON으로 이를 해제할 수 없습니다. 기존 DB에서 질문 버전 컬럼·두 함수를 결합 설치하거나 이미지 원장 테이블·인덱스·뷰를 결합 설치하던 경로는 사용할 수 없습니다. 원본 SQL과 소유 로컬 신규 설치 후보는 유지하지만, 이 후보·격리 회귀는 해당 기존 DB 업그레이드 경로를 대체하지 않습니다. 실제 대상·복구·승인이 검증된 결합 업그레이드는 [#280](https://github.com/yeongseon/hra-website/issues/280)에 남아 있습니다.
 
 기본 `drizzle.config.ts`는 `.env`·`DATABASE_URL`과 DB credentials를 읽지 않습니다. 따라서 기본 설정의 `npx drizzle-kit push`·`npx drizzle-kit migrate`도 접속 정보 부족으로 중단합니다. `npm run db:push -- --isolated`·`--apply`·URL·자체 승인 JSON으로 이를 활성화할 수 없습니다. 도구가 소유한 일회성 DB에 대한 별도 push 기능도 아직 제공하지 않습니다.
 
@@ -71,14 +72,14 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 
 1. 자동 검증은 `tests/support/resource-qa-postgres.mjs`가 만든 폐기 가능한 PG와 기존 QA fixture를 사용합니다. 실제 개발 DB를 준비하는 경우에는 별도 대상·검토·승인 절차부터 정하고 기존 설정 파일을 덮어쓰지 않습니다.
 2. `npx drizzle-kit export`는 접속 없이 스키마 SQL을 출력하고 `npx drizzle-kit generate`는 로컬 migration 파일을 생성합니다. `generate`의 `drizzle/` 산출물은 검토 대상이며 실제 적용 이력이 아닙니다. 검토한 SQL을 별도로 적용하는 행위는 `push` 실행과 구분하고, 실제 대상·빈 DB·백업/복구·적용 권한을 확인합니다. `npm run db:push`는 현재 모든 대상에서 비활성입니다.
-3. 아래 기본 기능용 후속 항목을 적용합니다. `psql`을 쓰는 단계는 PostgreSQL 클라이언트 실행 파일도 준비합니다.
+3. 아래 후속 항목별로 실제 적용 경로가 제공되는지 확인합니다. 계획만 제공하는 명령은 DB 준비를 완료하지 않습니다. `psql`을 쓰는 단계는 PostgreSQL 클라이언트 실행 파일도 준비합니다.
 4. 카탈로그 확인 SQL과 관련 격리 테스트를 통과시킵니다. 카탈로그는 실제 테이블·제약·함수의 구조 정보를 뜻합니다.
 5. 관리자 계정이 필요하면 [최초 관리자 준비](../DATABASE.md)를 수행하고 합성 데이터로 앱 기능을 확인합니다.
 
 | 순서 | 적용 항목 | 명령·문서 |
 | --- | --- | --- |
 | 1 | 질문 저장·제출 버전 확인 함수 | `npm run db:migrate-atomic-application-questions`는 접속 없는 계획만 제공. 실제 적용은 검토된 별도 절차가 필요하며 기존 DB 결합 업그레이드 경로는 미제공 |
-| 2 | 파일 소유권 원장·현재 참조 뷰 | `npm run db:migrate-add-markdown-image-assets` |
+| 2 | 파일 소유권 원장·현재 참조 뷰 | `npm run db:migrate-add-markdown-image-assets`는 접속 없는 계획만 제공. 실제 적용은 검토된 별도 절차가 필요하며 기존 DB 결합 업그레이드 경로는 미제공 |
 | 3 | 요청 제한 테이블·예약 함수 | [요청 제한 운영 절차](../operations/rate-limits.md)의 대상 표시 후 `--confirm-apply` |
 | 4 | 모집설정 고정 키·기본 행 | `npm run db:migrate-recruitment-singleton` |
 | 5 | 답변 보호와 지연 FK 검사 | `psql -X -v ON_ERROR_STOP=1 -f scripts/migrate-protect-application-answers.sql` |
