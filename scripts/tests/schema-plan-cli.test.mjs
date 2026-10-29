@@ -1,5 +1,5 @@
 /**
- * 질문 설치 CLI의 직접 실행·npm 별칭·모듈 import 경계를 실제 자식 프로세스로 검증합니다.
+ * 계획 전용 스키마 CLI의 직접 실행·npm 별칭·모듈 import 경계를 실제 자식 프로세스로 검증합니다.
  * DB 드라이버와 자격정보 조회, SQL 읽기·외부 통신·추가 프로세스 실행을 계수하면서 차단합니다.
  * 합성 값만 전달하며 운영 환경 파일·DB·네트워크를 사용하지 않습니다.
  */
@@ -13,20 +13,23 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 // npm 별칭도 저장소의 실제 명령을 그대로 사용하되 환경 파일이 없는 별도 디렉터리에서 실행합니다.
 const repository = fileURLToPath(new URL("../../", import.meta.url));
-const script = "scripts/migrate-atomic-application-questions.mjs";
-const alias = "db:migrate-atomic-application-questions";
-const command = JSON.parse(readFileSync(join(repository, "package.json"), "utf8")).scripts[alias];
+const targets = [
+  { name: "질문", script: "scripts/migrate-atomic-application-questions.mjs", alias: "db:migrate-atomic-application-questions", prefix: "ATOMIC_QUESTION_INSTALLER" },
+  { name: "Markdown 이미지", script: "scripts/migrate-add-markdown-image-assets.mjs", alias: "db:migrate-add-markdown-image-assets", prefix: "MARKDOWN_IMAGE_INSTALLER" },
+];
+const commands = JSON.parse(readFileSync(join(repository, "package.json"), "utf8")).scripts;
 const syntheticUrl = "postgresql://atomic-only:atomic-credential-sentinel@atomic-qa.invalid/atomic_only";
 const unsafeMarker = "ATOMIC_PRIVATE_URL_SQL_SENTINEL";
 const emptyCounts = { dbImports: 0, dbClients: 0, credentialReads: 0, network: 0, processCalls: 0, sqlReads: 0 };
 
 /** 네트워크를 열기 전에 실패시키며 원문을 기록하지 않는 preload와 실행 경로를 만듭니다. */
-function sandbox(t) {
-  const root = mkdtempSync(join(tmpdir(), "hra-atomic-question-cli-"));
+function sandbox(t, target = targets[0]) {
+  const { script, alias } = target;
+  const root = mkdtempSync(join(tmpdir(), "hra-schema-plan-cli-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   mkdirSync(join(root, "scripts"));
   copyFileSync(join(repository, script), join(root, script));
-  writeFileSync(join(root, "package.json"), JSON.stringify({ private: true, scripts: { [alias]: command } }));
+  writeFileSync(join(root, "package.json"), JSON.stringify({ private: true, scripts: { [alias]: commands[alias] } }));
   const capture = join(root, "counts.json");
   const importCompletion = join(root, "import-completed.json");
   const preload = join(root, "preload.mjs");
@@ -139,58 +142,60 @@ test("격리 canary는 DB import·클라이언트·자격정보·네트워크·�
   assert.deepEqual(result.counts, { dbImports: 1, dbClients: 1, credentialReads: 1, network: 1, processCalls: 1, sqlReads: 1 });
 });
 
-for (const mode of ["direct", "npm"]) {
-  test(`${mode}: 환경 파일·자격정보가 없어도 무인자는 접속 없는 계획이다`, t => {
-    const fixture = sandbox(t);
-    assert.equal(existsSync(join(fixture.root, ".env")), false);
-    const result = fixture.run([], { mode, env: { DATABASE_URL: "", PGPASSWORD: "" } });
-    assert.equal(result.status, 0, "ATOMIC_PLAN_SUCCEEDED");
-    assert.equal(result.stdout.includes("[ATOMIC_QUESTION_INSTALLER_PLAN]"), true);
+for (const target of targets) {
+  for (const mode of ["direct", "npm"]) {
+    test(`${target.name}/${mode}: 환경 파일·자격정보가 없어도 무인자는 접속 없는 계획이다`, t => {
+      const fixture = sandbox(t, target);
+      assert.equal(existsSync(join(fixture.root, ".env")), false);
+      const result = fixture.run([], { mode, env: { DATABASE_URL: "", PGPASSWORD: "" } });
+      assert.equal(result.status, 0, "ATOMIC_PLAN_SUCCEEDED");
+      assert.equal(result.stdout.includes(`[${target.prefix}_PLAN]`), true);
+      assert.equal(result.stderr, "");
+      assert.deepEqual(result.counts, emptyCounts);
+    });
+
+    test(`${target.name}/${mode}: URL과 자체 승인 환경값이 있어도 무인자는 계획만 출력한다`, t => {
+      const result = sandbox(t, target).run([], { mode, env: { HRA_DB_APPLY_ALLOWED: "true", HRA_DB_APPROVAL: '{"approved":"private-approval-sentinel"}' } });
+      assert.equal(result.status, 0, "ATOMIC_PLAN_SUCCEEDED");
+      assert.equal(result.stdout.includes(`[${target.prefix}_PLAN]`), true);
+      assert.equal(result.stderr, "");
+      assert.deepEqual(result.counts, emptyCounts);
+    });
+
+    test(`${target.name}/${mode}: 동의 인자만으로 신뢰되지 않은 대상에 적용할 수 없다`, t => {
+      const fixture = sandbox(t, target);
+      for (const env of [{}, { HRA_DB_APPLY_ALLOWED: "true", HRA_DB_APPROVAL: '{"approved":"private-approval-sentinel"}', VERCEL_ENV: "development" }]) {
+        const result = fixture.run(["--confirm-apply"], { mode, env });
+        assert.equal(result.status, 1);
+        assert.equal(result.stdout, "");
+        assert.equal(result.stderr.includes(`[${target.prefix}_TARGET_UNTRUSTED]`), true);
+        assert.deepEqual(result.counts, emptyCounts);
+      }
+    });
+
+    test(`${target.name}/${mode}: 알 수 없는·중복·URL·자체 승인 인자는 원문 없이 접속 전에 거부한다`, t => {
+      const fixture = sandbox(t, target);
+      for (const args of [
+        ["--apply"], ["--confirm-apply", "--confirm-apply"], ["--confirm-apply", "--unknown"],
+        ["--url", syntheticUrl], ["--confirm-apply", "--url", syntheticUrl],
+        ["--confirm-apply", "--isolated"], ["--approval", '{"approved":"private-approval-sentinel"}'],
+        ["--confirm-apply", "--approval", '{"approved":"private-approval-sentinel"}'], ["--help"],
+      ]) {
+        const result = fixture.run(args, { mode });
+        assert.equal(result.status, 1);
+        assert.equal(result.stdout, "");
+        assert.equal(result.stderr.includes(`[${target.prefix}_ARGUMENTS]`), true);
+        assert.deepEqual(result.counts, emptyCounts);
+      }
+    });
+  }
+
+  test(`${target.name}: 모듈 import는 출력·종료·DB import·자격정보 조회 부작용이 없다`, t => {
+    const result = sandbox(t, target).run([], { mode: "import" });
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, "");
     assert.equal(result.stderr, "");
     assert.deepEqual(result.counts, emptyCounts);
-  });
-
-  test(`${mode}: URL과 자체 승인 환경값이 있어도 무인자는 계획만 출력한다`, t => {
-    const result = sandbox(t).run([], { mode, env: { HRA_DB_APPLY_ALLOWED: "true", HRA_DB_APPROVAL: '{"approved":"private-approval-sentinel"}' } });
-    assert.equal(result.status, 0, "ATOMIC_PLAN_SUCCEEDED");
-    assert.equal(result.stdout.includes("[ATOMIC_QUESTION_INSTALLER_PLAN]"), true);
-    assert.equal(result.stderr, "");
-    assert.deepEqual(result.counts, emptyCounts);
-  });
-
-  test(`${mode}: 동의 인자만으로 신뢰되지 않은 대상에 적용할 수 없다`, t => {
-    const fixture = sandbox(t);
-    for (const env of [{}, { HRA_DB_APPLY_ALLOWED: "true", HRA_DB_APPROVAL: '{"approved":"private-approval-sentinel"}', VERCEL_ENV: "development" }]) {
-      const result = fixture.run(["--confirm-apply"], { mode, env });
-      assert.equal(result.status, 1);
-      assert.equal(result.stdout, "");
-      assert.equal(result.stderr.includes("[ATOMIC_QUESTION_INSTALLER_TARGET_UNTRUSTED]"), true);
-      assert.deepEqual(result.counts, emptyCounts);
-    }
-  });
-
-  test(`${mode}: 알 수 없는·중복·URL·자체 승인 인자는 원문 없이 접속 전에 거부한다`, t => {
-    const fixture = sandbox(t);
-    for (const args of [
-      ["--apply"], ["--confirm-apply", "--confirm-apply"], ["--confirm-apply", "--unknown"],
-      ["--url", syntheticUrl], ["--confirm-apply", "--url", syntheticUrl],
-      ["--confirm-apply", "--isolated"], ["--approval", '{"approved":"private-approval-sentinel"}'],
-      ["--confirm-apply", "--approval", '{"approved":"private-approval-sentinel"}'], ["--help"],
-    ]) {
-      const result = fixture.run(args, { mode });
-      assert.equal(result.status, 1);
-      assert.equal(result.stdout, "");
-      assert.equal(result.stderr.includes("[ATOMIC_QUESTION_INSTALLER_ARGUMENTS]"), true);
-      assert.deepEqual(result.counts, emptyCounts);
-    }
+    assert.deepEqual(result.imported, { continued: true, exitCodeUnchanged: true });
   });
 }
-
-test("모듈 import는 출력·종료·DB import·자격정보 조회 부작용이 없다", t => {
-  const result = sandbox(t).run([], { mode: "import" });
-  assert.equal(result.status, 0);
-  assert.equal(result.stdout, "");
-  assert.equal(result.stderr, "");
-  assert.deepEqual(result.counts, emptyCounts);
-  assert.deepEqual(result.imported, { continued: true, exitCodeUnchanged: true });
-});

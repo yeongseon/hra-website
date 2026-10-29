@@ -307,9 +307,9 @@
     },
     {
       "path": "scripts/migrate-add-markdown-image-assets.mjs",
-      "sha256": "3e362b83f8e63e0ff665a17734b4c0289e6eb56744446b4529b17404b5ac24f0",
+      "sha256": "ddead3f3e193863abcc7329462ce2a9d0827130d57fa713bcdb4f79ea2d3d520",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
+      "defaultBehavior": "read_only",
       "writeOptions": [],
       "commands": [
         "db:migrate-add-markdown-image-assets"
