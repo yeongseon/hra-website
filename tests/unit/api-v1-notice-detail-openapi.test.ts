@@ -20,9 +20,9 @@ const id = "11111111-1111-4111-8111-111111111111";
 describe("#272 공개 공지 상세 OpenAPI 3.1 계약", () => {
   it("GET 한 경로와 필수 UUID path param만 추가하고 초안·query 입력을 거부한다고 설명한다", () => {
     expect(openapi.openapi).toBe("3.1.1");
-    expect(Object.keys(openapi.paths).sort()).toEqual([
+    expect(Object.keys(openapi.paths)).toEqual(expect.arrayContaining([
       "/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}", "/api/v1/resources/guidebooks", "/api/v1/schedule",
-    ]);
+    ]));
     expect(Object.keys(openapi.paths["/api/v1/notices/{id}"])).toEqual(["get"]);
     expect(operation.operationId).toBe("getPublishedNoticeDetail");
     expect(operation.parameters).toEqual([

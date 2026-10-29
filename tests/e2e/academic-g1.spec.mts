@@ -2,6 +2,18 @@
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, test, type Browser, type BrowserContext, type Page, type Request, type APIResponse } from "@playwright/test";
+import { put } from "@vercel/blob/client";
+import type { z } from "zod/v4";
+import {
+  apiV1AssignmentDetailResponseSchema,
+  apiV1AssignmentListResponseSchema,
+  apiV1AssignmentSubmissionResponseSchema,
+  apiV1ErrorResponseSchema,
+  apiV1FinalizedSubmissionResponseSchema,
+  apiV1UploadCancelledResponseSchema,
+  apiV1UploadIntentResponseSchema,
+  apiV1UploadVerifiedResponseSchema,
+} from "@hra/contracts/api-v1";
 import { resourceQaPdfBytes } from "../support/resource-qa-pdf.mjs";
 import { qaPassword } from "../support/resource-qa-postgres.mjs";
 import { academicG1Actors as actors, academicG1Ids as ids, academicG1Sql, createAcademicG1Assignment } from "../support/academic-g1-fixture.mjs";
@@ -28,6 +40,33 @@ let blocked = false;
 let managementAction: WireAction;
 let submissionAction: WireAction;
 let filePath = "";
+
+/** 실제 HTTP 응답을 공용 계약으로 검사하되 실패 로그에 본문·파일명·토큰을 출력하지 않는다. */
+async function readV1Contract<T>(response: APIResponse, schema: z.ZodType<T>, stage: string): Promise<T> {
+  let value: unknown;
+  try { value = await response.json(); }
+  catch { throw new Error(`G1_V1_${stage}_JSON`); }
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw new Error(`G1_V1_${stage}_CONTRACT`);
+  expect(response.headers()["cache-control"], `G1_V1_${stage}_CACHE`).toBe("private, no-store");
+  // Next가 추가하는 RSC 협상 토큰은 보존하면서 쿠키별 응답 분리는 반드시 요구한다.
+  expect(response.headers().vary?.split(",").some((value: string) => value.trim().toLowerCase() === "cookie"),
+    `G1_V1_${stage}_COOKIE`).toBe(true);
+  return parsed.data;
+}
+
+/** v1의 인증·인가 실패가 HTML redirect나 내부 오류 대신 공통 JSON과 같은 참조 ID를 제공하는지 확인한다. */
+async function expectV1Error(response: APIResponse, status: number, code: string, stage: string) {
+  expect(response.status(), `G1_V1_${stage}_STATUS`).toBe(status);
+  const body = await readV1Contract(response, apiV1ErrorResponseSchema, stage);
+  expect(body.error.code, `G1_V1_${stage}_CODE`).toBe(code);
+  expect(response.headers()["x-request-id"] === body.error.requestId, `G1_V1_${stage}_REFERENCE`).toBe(true);
+}
+
+/** 기존 Web 제출의 파일을 같은 객체 ID의 v1 다운로드로 검증하며 경로를 권한 증명으로 사용하지 않는다. */
+function v1SubmittedFilePath() {
+  return filePath.replace("/api/academic/submissions/", "/api/v1/submissions/").replace("/file/", "/files/");
+}
 
 /** 쿠키를 직접 만들지 않고 정상 CSRF·credentials와 현재 DB 세션을 대조한다. */
 async function contextFor(browser: Browser, actor: Actor | "anon") {
@@ -89,6 +128,109 @@ async function uploadWithoutFinalizing(page: Page, assignment: string) {
 async function finalCount(assignment: string) {
   return Number(await sql("SELECT count(*) FROM assignment_submissions s JOIN assignment_targets t ON t.id=s.assignment_target_id WHERE t.assignment_id=$1::uuid", [assignment]));
 }
+
+/** 별도 과제에서 v1의 실제 HTTP·인증·DB·SDK 전송을 연결하며 흐름 중 제한 원장을 초기화하지 않는다. */
+async function verifyV1SubmissionFlow(owner: BrowserContext) {
+  const assignmentId = await createAcademicG1Assignment(sql);
+  const input = { assignmentId, requestId: randomUUID(), originalName: "API 수용 시험.pdf",
+    sizeBytes: pdf.length, mimeType: "application/pdf" };
+  await expectV1Error(await api(owner).post("/api/v1/uploads/intents", { data: input }),
+    403, "FORBIDDEN", "MUTATION_ORIGIN");
+
+  // 최초 의도를 실제 취소하고 새 요청으로 발급하여 파일 교체·취소 경로도 같은 예산 안에서 확인한다.
+  const first = await api(owner).post("/api/v1/uploads/intents", { headers: { Origin: origin }, data: input });
+  expect(first.status(), "G1_V1_FIRST_INTENT_STATUS").toBe(200);
+  const cancelledGrant = await readV1Contract(first, apiV1UploadIntentResponseSchema, "FIRST_INTENT");
+  const storageBeforeCancellation = store.snapshot();
+  const cancellation = await api(owner).delete(`/api/v1/uploads/intents/${cancelledGrant.uploadIntentId}`, {
+    headers: { Origin: origin }, data: { assignmentId },
+  });
+  expect(cancellation.status(), "G1_V1_CANCEL_STATUS").toBe(200);
+  await readV1Contract(cancellation, apiV1UploadCancelledResponseSchema, "CANCEL");
+  // 유효한 토큰의 실물을 즉시 지우지 않으므로 intent 상태·키는 보존하고 승인 원장만 종료한다.
+  expect(await sql(`SELECT count(*) FROM assignment_upload_intents i
+    JOIN academic_upload_authorizations a ON a.intent_id=i.id
+    WHERE i.id=$1::uuid AND i.state='INTENDED' AND i.storage_key=$2::text AND a.retired_at IS NOT NULL
+      AND NOT EXISTS(SELECT 1 FROM assignment_submissions s WHERE s.upload_intent_id=i.id)`,
+  [cancelledGrant.uploadIntentId, cancelledGrant.pathname]), "G1_V1_CANCEL_DATABASE").toBe("1");
+  // 취소 전후 객체 수와 모든 저장소 요청 수가 같아 삭제 요청도 발생하지 않아야 한다.
+  expect(store.snapshot(), "G1_V1_CANCEL_WITHOUT_STORAGE").toEqual(storageBeforeCancellation);
+
+  const issued = await api(owner).post("/api/v1/uploads/intents", {
+    headers: { Origin: origin }, data: { ...input, requestId: randomUUID() },
+  });
+  expect(issued.status(), "G1_V1_INTENT_STATUS").toBe(200);
+  const grant = await readV1Contract(issued, apiV1UploadIntentResponseSchema, "INTENT");
+  expect(grant.uploadIntentId !== cancelledGrant.uploadIntentId, "G1_V1_REPLACEMENT_INTENT").toBe(true);
+  const tokenResponse = await api(owner).post("/api/v1/uploads", {
+    headers: { Origin: origin },
+    data: { type: "blob.generate-client-token", payload: { pathname: grant.pathname, multipart: false,
+      clientPayload: JSON.stringify({ assignmentId, uploadIntentId: grant.uploadIntentId }) } },
+  });
+  expect(tokenResponse.status(), "G1_V1_TOKEN_STATUS").toBe(200);
+  const tokenBody: unknown = await tokenResponse.json();
+  if (typeof tokenBody !== "object" || tokenBody === null || !("clientToken" in tokenBody) ||
+    typeof tokenBody.clientToken !== "string" || !tokenBody.clientToken.startsWith("vercel_blob_client_")) {
+    throw new Error("G1_V1_TOKEN_CONTRACT");
+  }
+  // 실제 SDK의 직렬화·서명·스트림을 유지하고 이미 설치한 네트워크 경계로 loopback 저장소만 사용한다.
+  await put(grant.pathname, pdf, { access: "private", token: tokenBody.clientToken,
+    contentType: "application/pdf", multipart: false, abortSignal: AbortSignal.timeout(30_000) });
+  const verified = await api(owner).post(`/api/v1/uploads/${grant.uploadIntentId}/verify`, {
+    headers: { Origin: origin }, data: { assignmentId },
+  });
+  expect(verified.status(), "G1_V1_VERIFY_STATUS").toBe(200);
+  await readV1Contract(verified, apiV1UploadVerifiedResponseSchema, "VERIFY");
+  expect(await finalCount(assignmentId), "G1_V1_VERIFIED_NOT_SUBMITTED").toBe(0);
+
+  // 최초 확정과 같은 키 재시도는 하나의 DB 최종 제출을 유지하고 복구 시 Blob을 다시 요청하지 않는다.
+  const command = { assignmentId, uploadIntentId: grant.uploadIntentId, submissionKey: randomUUID() };
+  const finalized = await api(owner).post("/api/v1/submissions", { headers: { Origin: origin }, data: command });
+  expect(finalized.status(), "G1_V1_FINALIZE_STATUS").toBe(200);
+  const result = await readV1Contract(finalized, apiV1FinalizedSubmissionResponseSchema, "FINALIZE");
+  expect(result.submission.replayed, "G1_V1_FIRST_FINALIZE").toBe(false);
+  const readsBeforeReplay = store.snapshot();
+  const replayed = await api(owner).post("/api/v1/submissions", { headers: { Origin: origin }, data: command });
+  expect(replayed.status(), "G1_V1_REPLAY_STATUS").toBe(200);
+  const recovered = await readV1Contract(replayed, apiV1FinalizedSubmissionResponseSchema, "REPLAY");
+  expect(recovered.submission.replayed, "G1_V1_REPLAYED").toBe(true);
+  expect(JSON.stringify({ ...recovered.submission, replayed: false }) === JSON.stringify(result.submission),
+    "G1_V1_REPLAY_SAME_SUBMISSION").toBe(true);
+  expect(store.snapshot(), "G1_V1_REPLAY_WITHOUT_STORAGE").toEqual(readsBeforeReplay);
+  expect(await finalCount(assignmentId), "G1_V1_FINAL_SUBMISSION_COUNT").toBe(1);
+
+  const listingResponse = await api(owner).get("/api/v1/assignments?page=1&pageSize=50");
+  expect(listingResponse.status(), "G1_V1_LIST_STATUS").toBe(200);
+  const listing = await readV1Contract(listingResponse, apiV1AssignmentListResponseSchema, "LIST");
+  expect(listing.assignments.some(item => item.assignmentId === assignmentId &&
+    item.submission?.submissionId === result.submission.submissionId), "G1_V1_LIST_RESULT").toBe(true);
+  const detailResponse = await api(owner).get(`/api/v1/assignments/${assignmentId}`);
+  expect(detailResponse.status(), "G1_V1_DETAIL_STATUS").toBe(200);
+  const detail = await readV1Contract(detailResponse, apiV1AssignmentDetailResponseSchema, "DETAIL");
+  const projectionResponse = await api(owner).get(`/api/v1/assignments/${assignmentId}/submission`);
+  expect(projectionResponse.status(), "G1_V1_PROJECTION_STATUS").toBe(200);
+  const projection = await readV1Contract(projectionResponse, apiV1AssignmentSubmissionResponseSchema, "PROJECTION");
+  expect(detail.assignment.submission?.submissionId === result.submission.submissionId &&
+    projection.submission?.submissionId === result.submission.submissionId &&
+    projection.file?.fileId === result.submission.file.fileId, "G1_V1_READ_SAME_SUBMISSION").toBe(true);
+  for (const body of [listing, detail, projection, result]) {
+    expect(!/academic-uploads\/|blob\.vercel-storage\.com|vercel_blob_/.test(JSON.stringify(body)),
+      "G1_V1_METADATA_WITHOUT_STORAGE").toBe(true);
+  }
+
+  const downloaded = await api(owner).get(`/api/v1/submissions/${result.submission.submissionId}/files/${result.submission.file.fileId}`);
+  expect(downloaded.status(), "G1_V1_DOWNLOAD_STATUS").toBe(200);
+  expect(createHash("sha256").update(await downloaded.body()).digest("hex"), "G1_V1_DOWNLOAD_HASH")
+    .toBe(createHash("sha256").update(pdf).digest("hex"));
+  expect(downloaded.headers()["cache-control"], "G1_V1_DOWNLOAD_CACHE").toBe("private, no-store");
+  expect(downloaded.headers().vary?.split(",").some((value: string) => value.trim().toLowerCase() === "cookie"),
+    "G1_V1_DOWNLOAD_COOKIE").toBe(true);
+  expect(downloaded.headers()["content-type"], "G1_V1_DOWNLOAD_TYPE").toBe("application/octet-stream");
+  expect(downloaded.headers()["content-security-policy"], "G1_V1_DOWNLOAD_SANDBOX").toBe("sandbox; default-src 'none'");
+  expect(downloaded.headers()["x-content-type-options"], "G1_V1_DOWNLOAD_NOSNIFF").toBe("nosniff");
+  expect(downloaded.headers()["content-disposition"]?.includes(encodeURIComponent(input.originalName)),
+    "G1_V1_DOWNLOAD_ATTACHMENT").toBe(true);
+}
 test.beforeAll(async () => {
   if (!origin || !storeOrigin || !blobToken) throw new Error("G1_RUNNER_REQUIRED");
   store = await createAcademicPrivateStore({ host: blobHost, token: blobToken, port: Number(new URL(storeOrigin).port), browserTls: true });
@@ -145,7 +287,8 @@ test("[G1:ADMIN_FLOW] 실제 관리 액션으로 초안·공개·종료", async 
 });
 
 test("[G1:SUBMIT_COUNTS] 실제 업로드·최종화와 학생·운영진 집계 일치", async ({ browser }) => {
-  const page = await (await contextFor(browser, "studentA")).newPage();
+  const owner = await contextFor(browser, "studentA");
+  const page = await owner.newPage();
   const diagnostics = new Set<string>();
   // 요청 주소·본문을 기록하지 않고 고정 단계와 상태 코드만 실패 진단에 남긴다.
   page.on("response", response => {
@@ -189,6 +332,8 @@ test("[G1:SUBMIT_COUNTS] 실제 업로드·최종화와 학생·운영진 집계
   }
   expect(await sql("SELECT count(*) FROM assignment_targets WHERE assignment_id=$1::uuid", [ids.active])).toBe("3");
   await manager.close(); await page.close();
+  // Web의 최초 분모·집계를 확인한 뒤 독립 과제로 신규 v1 아홉 경로를 모두 실제 요청한다.
+  await verifyV1SubmissionFlow(owner);
 });
 
 test("[G1:ROLE_MATRIX] 역할·기수별 페이지·액션·업로드·최종화·파일·CSV 직접 요청", async ({ browser }) => {
@@ -214,6 +359,17 @@ test("[G1:ROLE_MATRIX] 역할·기수별 페이지·액션·업로드·최종화
       expect(listing.includes("G1 제출 수용 과제")).toBe(actor !== "studentB");
       expect(listing.includes("다른 기수 비공개 안내")).toBe(actor === "studentB");
     }
+    // 신규 v1도 실제 로그인 쿠키로 현재 역할·기수를 검사하고 HTML redirect 대신 공통 JSON을 제공한다.
+    const apiList = await api(context).get("/api/v1/assignments?pageSize=50");
+    if (member) {
+      expect(apiList.status(), "G1_V1_ROLE_LIST_STATUS").toBe(200);
+      const body = await readV1Contract(apiList, apiV1AssignmentListResponseSchema, "ROLE_LIST");
+      expect(body.assignments.some(item => item.assignmentId === ids.active), "G1_V1_ROLE_COHORT_A").toBe(actor !== "studentB");
+      expect(body.assignments.some(item => item.assignmentId === ids.other), "G1_V1_ROLE_COHORT_B").toBe(actor === "studentB");
+    } else {
+      await expectV1Error(apiList, actor === "anon" ? 401 : 403,
+        actor === "anon" ? "UNAUTHENTICATED" : "FORBIDDEN", "ROLE_LIST");
+    }
     for (const assignment of [ids.active, ids.other]) {
       const ownCohort = assignment === ids.active ? actor === "studentA" || actor === "peerA" : actor === "studentB";
       const detail = await api(context).get(`/member/assignments/${assignment}`), body = await detail.text();
@@ -222,9 +378,33 @@ test("[G1:ROLE_MATRIX] 역할·기수별 페이지·액션·업로드·최종화
       if (["anon", "pending"].includes(actor)) expect(new URL(detail.headers().location, origin).pathname).toBe(actor === "anon" ? "/login" : "/pending");
       else if (!member) expect(body).toContain("학생 과제에 접근할 수 없습니다.");
       if (actor !== "studentA" || assignment !== ids.active) expect(body).not.toContain(filePath);
+      for (const projection of [false, true]) {
+        const response = await api(context).get(`/api/v1/assignments/${assignment}${projection ? "/submission" : ""}`);
+        if (member && ownCohort) {
+          expect(response.status(), "G1_V1_ROLE_DETAIL_STATUS").toBe(200);
+          if (projection) {
+            const result = await readV1Contract(response, apiV1AssignmentSubmissionResponseSchema, "ROLE_PROJECTION");
+            expect(result.submission !== null, "G1_V1_ROLE_OWN_SUBMISSION").toBe(actor === "studentA" && assignment === ids.active);
+          } else {
+            await readV1Contract(response, apiV1AssignmentDetailResponseSchema, "ROLE_DETAIL");
+          }
+        } else {
+          await expectV1Error(response, actor === "anon" ? 401 : member ? 404 : 403,
+            actor === "anon" ? "UNAUTHENTICATED" : member ? "NOT_FOUND" : "FORBIDDEN", "ROLE_DETAIL");
+        }
+      }
     }
     const file = await api(context).get(filePath);
     expect(file.status(), `G1_FILE_${actor}`).toBe(["studentA", "manager"].includes(actor) ? 200 : actor === "anon" ? 401 : ["peerA", "studentB"].includes(actor) ? 404 : 403);
+    const apiFile = await api(context).get(v1SubmittedFilePath());
+    if (["studentA", "manager"].includes(actor)) {
+      expect(apiFile.status(), "G1_V1_ROLE_FILE_STATUS").toBe(200);
+      expect(createHash("sha256").update(await apiFile.body()).digest("hex"), "G1_V1_ROLE_FILE_HASH")
+        .toBe(createHash("sha256").update(pdf).digest("hex"));
+    } else {
+      await expectV1Error(apiFile, actor === "anon" ? 401 : member ? 404 : 403,
+        actor === "anon" ? "UNAUTHENTICATED" : member ? "NOT_FOUND" : "FORBIDDEN", "ROLE_FILE");
+    }
     expect((await api(context).get(`/api/academic/assignments/${ids.active}/submissions/export`)).status()).toBe(actor === "manager" ? 200 : 403);
     if (actor !== "manager") expect((await actionValue(await replay(context, managementAction)))?.success).not.toBe(true);
     if (actor !== "studentA") expect((await actionValue(await replay(context, submissionAction)))?.success).not.toBe(true);
@@ -432,13 +612,30 @@ test("[G1:RETENTION] 학적 종료·역할·세션 철회를 반영하고 공개
   await sql("UPDATE cohort_enrollments SET ended_at=clock_timestamp() WHERE student_id=$1::uuid", [ids.studentA]);
   expect((await api(owner).get(filePath)).status()).toBe(404);
   expect((await api(manager).get(filePath)).status()).toBe(200);
+  // 학적 종료는 본인 v1 목록을 비우고 과제·최종 파일 직접 요청을 거부하되 지정 승인자 읽기는 보존한다.
+  const endedList = await api(owner).get("/api/v1/assignments");
+  expect(endedList.status(), "G1_V1_ENDED_LIST_STATUS").toBe(200);
+  expect((await readV1Contract(endedList, apiV1AssignmentListResponseSchema, "ENDED_LIST")).assignments.length,
+    "G1_V1_ENDED_LIST_EMPTY").toBe(0);
+  for (const path of [`/api/v1/assignments/${ids.active}`, `/api/v1/assignments/${ids.active}/submission`, v1SubmittedFilePath()]) {
+    await expectV1Error(await api(owner).get(path), 404, "NOT_FOUND", "ENDED_ENROLLMENT");
+  }
+  const retainedFile = await api(manager).get(v1SubmittedFilePath());
+  expect(retainedFile.status(), "G1_V1_MANAGER_RETENTION").toBe(200);
+  await retainedFile.body();
   const lateStudent = randomUUID();
   await sql("INSERT INTO academic_students(id,display_name) VALUES($1::uuid,'공개 후 신규 시험')", [lateStudent]);
   await sql("INSERT INTO cohort_enrollments(student_id,cohort_id)VALUES($1::uuid,$2::uuid)", [lateStudent, ids.cohortA]);
   expect(await sql("SELECT count(*) FROM assignment_targets WHERE assignment_id=$1::uuid", [ids.active])).toBe("3");
   await sql("UPDATE users SET role='PENDING' WHERE id=$1::uuid", [actors.studentA.id]);
   expect((await api(owner).get(filePath)).status()).toBe(403);
+  for (const path of ["/api/v1/assignments", `/api/v1/assignments/${ids.active}`, v1SubmittedFilePath()]) {
+    await expectV1Error(await api(owner).get(path), 403, "FORBIDDEN", "ROLE_REVOKED");
+  }
   await sql("UPDATE users SET role='MEMBER',session_version=session_version+1 WHERE id=$1::uuid", [actors.studentA.id]);
   expect((await api(owner).get(filePath)).status()).toBe(401);
+  for (const path of ["/api/v1/assignments", `/api/v1/assignments/${ids.active}`, v1SubmittedFilePath()]) {
+    await expectV1Error(await api(owner).get(path), 401, "UNAUTHENTICATED", "SESSION_REVOKED");
+  }
   expect(await sql("SELECT count(*) FROM assignment_submissions")).toBe(before);
 });

@@ -87,8 +87,14 @@ function failure(error: SubmissionFileAccessError, observation: AcademicObservat
     headers: { ...privateHeaders, "Content-Type": "text/plain; charset=utf-8", "X-Request-Id":observation.correlationId } });
 }
 
-/** params도 인증 이후 평가하며 소유권·감사 확정 전에는 Blob을 요청하지 않습니다. */
-export async function downloadSubmissionFile(params: Promise<SubmissionFileParams>): Promise<Response> {
+/**
+ * params도 인증 이후 평가하며 소유권·감사 확정 전에는 Blob을 요청하지 않습니다.
+ * 오류 응답만 어댑터가 선택할 수 있고, 기존 Web 호출은 기본 text/plain 계약을 유지합니다.
+ */
+export async function downloadSubmissionFile(
+  params: Promise<SubmissionFileParams>,
+  respondFailure: (error: SubmissionFileAccessError, observation: AcademicObservation) => Response = failure,
+): Promise<Response> {
   const observation=createAcademicObservation("FILE_READ","SUBMISSION_FILE");
   try {
     const reader = await requireSubmissionFileReader();
@@ -127,6 +133,6 @@ export async function downloadSubmissionFile(params: Promise<SubmissionFileParam
     observation.emit(safe.status===503?"FAILED":"DENIED",{
       failureCode:safe.status===503?"STORAGE":"AUTHORIZATION",sqlState:academicSqlState(error),
     });
-    return failure(safe,observation);
+    return respondFailure(safe,observation);
   }
 }

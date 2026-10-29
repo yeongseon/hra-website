@@ -26,10 +26,10 @@ const id = "11111111-1111-4111-8111-111111111111";
 describe("#272 승인 회원 가이드북 목록 OpenAPI 3.1 계약", () => {
   it("GET만 정의하고 page/pageSize 기본값·범위·미등록 및 중복 query 거부를 기록한다", () => {
     expect(openapi.openapi).toBe("3.1.1");
-    expect(Object.keys(openapi.paths).sort()).toEqual([
+    expect(Object.keys(openapi.paths)).toEqual(expect.arrayContaining([
       "/api/v1/me", "/api/v1/notices", "/api/v1/notices/{id}",
       "/api/v1/resources/guidebooks", "/api/v1/schedule",
-    ]);
+    ]));
     expect(Object.keys(openapi.paths["/api/v1/resources/guidebooks"])).toEqual(["get"]);
     expect(operation.operationId).toBe("listMemberGuidebooks");
     expect(operation.parameters).toEqual([

@@ -105,6 +105,25 @@ async function login(origin, name) {
   check(session.user?.id === academicG1Actors[name].id, "DISABLED_LOGIN");
   return cookie;
 }
+
+/** 학사 표 설치 전의 v1 거부가 공통 JSON·요청 참조·비공개 캐시 계약을 지키는지 실제 HTTP로 확인한다. */
+async function verifyDisabledV1(origin, path, cookie, expectedStatus, expectedCode) {
+  const response = await fetch(`${origin}${path}`, { headers: cookie ? { Cookie: cookie } : {}, redirect: "manual" });
+  check(response.status === expectedStatus, "DISABLED_V1_STATUS");
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error("G1_DISABLED_V1_JSON"); }
+  check(body && typeof body === "object" && Object.keys(body).join(",") === "error" &&
+    body.error && typeof body.error === "object" &&
+    Object.keys(body.error).sort().join(",") === "code,message,requestId" &&
+    body.error.code === expectedCode && typeof body.error.message === "string" && body.error.message.length > 0 &&
+    typeof body.error.requestId === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.error.requestId), "DISABLED_V1_CONTRACT");
+  check(response.headers.get("X-Request-Id") === body.error.requestId &&
+    response.headers.get("Cache-Control") === "private, no-store" &&
+    // Next의 RSC 협상 토큰이 함께 있어도 쿠키별 응답 분리가 유지되는지 검사한다.
+    response.headers.get("Vary")?.split(",").some(value => value.trim().toLowerCase() === "cookie"), "DISABLED_V1_HEADERS");
+}
 try {
   check(arguments_.length === 0 || production, "ARGUMENTS");
   check(![".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local"]
@@ -121,10 +140,24 @@ try {
       { headers: { Cookie: cookie }, redirect: "manual" });
     check(response.status === (["studentA", "manager"].includes(name) ? 404 : 403), "DISABLED_API");
     await response.body?.cancel();
+    // 학생 조회는 MEMBER만, 개인 파일은 학생 또는 정확히 지정된 책임자만 기능 gate에 도달한다.
+    for (const path of ["/api/v1/assignments", `/api/v1/assignments/${academicG1Ids.active}`,
+      `/api/v1/assignments/${academicG1Ids.active}/submission`]) {
+      await verifyDisabledV1(appOrigin, path, cookie, name === "studentA" ? 503 : 403,
+        name === "studentA" ? "DISABLED" : "FORBIDDEN");
+    }
+    await verifyDisabledV1(appOrigin,
+      `/api/v1/submissions/${academicG1Ids.active}/files/${academicG1Ids.draft}`, cookie,
+      ["studentA", "manager"].includes(name) ? 503 : 403,
+      ["studentA", "manager"].includes(name) ? "DISABLED" : "FORBIDDEN");
     if (name === "manager") {
       const preparation = await fetch(`${appOrigin}/admin/academics/assignments`, { headers: { Cookie: cookie }, redirect: "manual" });
       check(preparation.status === 200 && (await preparation.text()).includes("준비"), "DISABLED_PREPARATION");
     }
+  }
+  for (const path of ["/api/v1/assignments",
+    `/api/v1/submissions/${academicG1Ids.active}/files/${academicG1Ids.draft}`]) {
+    await verifyDisabledV1(appOrigin, path, null, 401, "UNAUTHENTICATED");
   }
   check(cluster.sql("SELECT to_regclass('academic_students') IS NULL") === "t", "DISABLED_TABLES");
   pass("GATE_OFF");
