@@ -50,9 +50,12 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 | `npm run db:push` | 검증되지 않은 전체 차이 적용 차단 | 접속·환경 조회 없이 안내하고 실패 종료; 적용 인자도 지원하지 않음 |
 | `db:migrate-rate-limit-reservations` | 요청 제한 설치 대상 표시 | 인자 없이는 DB에 접속하지 않고 URL의 호스트·DB명만 표시; 적용 시 부모 `PG*` 접속 설정은 전달하지 않음 |
 | `db:migrate-alumni-featured`·`db:migrate-user-session-version` | 두 한정 컬럼의 구조 확인·적용 | 무인자는 DB에 접속하지 않는 계획; `--confirm-apply`에서만 소유 표·정확한 컬럼 정의 검증 후 적용 |
+| `db:migrate-atomic-application-questions` | 질문 저장 버전·저장/제출 검증 함수의 설치 계획 | DB 접속 없는 계획만 제공하며, `--confirm-apply`도 신뢰된 적용 대상이 없어 접속 전에 차단 |
 | 그 밖의 `db:migrate-*` | 스크립트별 구조 변경 | 이름만으로 dry-run이라 가정하지 않음; 실행 즉시 변경하는 스크립트가 있음 |
 
 두 한정 컬럼 명령은 `.env`가 없어도 무인자 계획을 출력합니다. 적용하려면 승인된 대상의 명시적 DB URL과 `--confirm-apply`를 전달해야 합니다. 이 인자는 실행 의도를 표시할 뿐 실제 DB identity·백업·운영 승인을 증명하지 않습니다. 기존 컬럼의 타입·NOT NULL·기본값·소유권이 다르면 자동 보정하지 않고 실패하며, 이미 저장된 `session_version` 값은 변경하지 않습니다.
+
+질문 저장 버전 명령도 `.env` 없이 계획을 출력하지만, 실제 적용 기능은 비활성입니다. `--confirm-apply`만 지정해도 `TARGET_UNTRUSTED`로 실패하며 URL·환경 플래그·자체 작성 승인 JSON으로 이를 해제할 수 없습니다. 기존 DB에 버전 컬럼 추가와 두 함수 설치를 한 트랜잭션으로 수행하던 경로는 사용할 수 없습니다. 두 원본 SQL과 소유 로컬 신규 설치 후보는 유지하지만, 이 후보·격리 함수 회귀는 해당 기존 DB 업그레이드 경로를 대체하지 않습니다. 실제 대상·복구·승인이 검증된 결합 업그레이드는 [#280](https://github.com/yeongseon/hra-website/issues/280)에 남아 있습니다.
 
 기본 `drizzle.config.ts`는 `.env`·`DATABASE_URL`과 DB credentials를 읽지 않습니다. 따라서 기본 설정의 `npx drizzle-kit push`·`npx drizzle-kit migrate`도 접속 정보 부족으로 중단합니다. `npm run db:push -- --isolated`·`--apply`·URL·자체 승인 JSON으로 이를 활성화할 수 없습니다. 도구가 소유한 일회성 DB에 대한 별도 push 기능도 아직 제공하지 않습니다.
 
@@ -74,7 +77,7 @@ Linux의 `/dev/shm`과 PostgreSQL 실행 파일을 준비하고 `HRA_TEST_PG_BIN
 
 | 순서 | 적용 항목 | 명령·문서 |
 | --- | --- | --- |
-| 1 | 질문 저장·제출 버전 확인 함수 | `npm run db:migrate-atomic-application-questions` |
+| 1 | 질문 저장·제출 버전 확인 함수 | `npm run db:migrate-atomic-application-questions`는 접속 없는 계획만 제공. 실제 적용은 검토된 별도 절차가 필요하며 기존 DB 결합 업그레이드 경로는 미제공 |
 | 2 | 파일 소유권 원장·현재 참조 뷰 | `npm run db:migrate-add-markdown-image-assets` |
 | 3 | 요청 제한 테이블·예약 함수 | [요청 제한 운영 절차](../operations/rate-limits.md)의 대상 표시 후 `--confirm-apply` |
 | 4 | 모집설정 고정 키·기본 행 | `npm run db:migrate-recruitment-singleton` |

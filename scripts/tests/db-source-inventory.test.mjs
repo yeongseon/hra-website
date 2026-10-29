@@ -200,7 +200,7 @@ test("현재 인벤토리는 읽기 전용 preflight·현행 뷰와 알려진 �
     "migrate-add-markdown-image-assets": ["db_schema", "writes"],
     "migrate-add-rate-limit-tables": ["db_schema", "writes"],
     "migrate-add-user-session-version": ["db_schema", "read_only"],
-    "migrate-atomic-application-questions": ["db_schema", "writes"],
+    "migrate-atomic-application-questions": ["db_schema", "read_only"],
     "migrate-backfill-kakao-legacy-bindings": ["db_data", "read_only"],
     "migrate-html-to-markdown": ["db_data", "writes"],
     "migrate-protected-resource-blobs": ["blob_and_db", "read_only"],
