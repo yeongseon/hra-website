@@ -37,6 +37,23 @@
       ]
     },
     {
+      "name": "@shadcn/registry",
+      "severity": "low",
+      "range": "<=0.0.0-rc-20261007105214 || >=0.1.0",
+      "nodes": [
+        {
+          "path": "node_modules/@shadcn/registry",
+          "version": "0.2.0",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "deepmerge"
+        }
+      ]
+    },
+    {
       "name": "@tailwindcss/typography",
       "severity": "moderate",
       "range": "<=0.0.0-insiders.fda8ce5 || >=0.5.5",
@@ -167,6 +184,27 @@
       ]
     },
     {
+      "name": "deepmerge",
+      "severity": "low",
+      "range": ">=4.2.0",
+      "nodes": [
+        {
+          "path": "node_modules/deepmerge",
+          "version": "4.3.1",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "source": 1243505,
+          "id": "GHSA-gcqx-w48m-w2h4",
+          "severity": "low",
+          "range": ">=4.2.0 <=4.3.1",
+          "title": "deepmerge mergeObject() allows prototype poisoning of returned objects"
+        }
+      ]
+    },
+    {
       "name": "drizzle-kit",
       "severity": "moderate",
       "range": "0.19.0 - 1.0.0-beta.1-fd8bfcc",
@@ -287,7 +325,7 @@
     {
       "name": "postcss-selector-parser",
       "severity": "moderate",
-      "range": "<7.1.6",
+      "range": "<6.1.5",
       "nodes": [
         {
           "path": "node_modules/postcss-selector-parser",
@@ -297,11 +335,31 @@
       ],
       "via": [
         {
-          "source": 1241232,
+          "source": 1243379,
           "id": "GHSA-rj75-hqrm-r3gf",
           "severity": "moderate",
-          "range": "<7.1.6",
+          "range": "<6.1.5",
           "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion"
+        }
+      ]
+    },
+    {
+      "name": "shadcn",
+      "severity": "low",
+      "range": "<=0.0.0-rc-20261007105214 || >=2.0.0",
+      "nodes": [
+        {
+          "path": "node_modules/shadcn",
+          "version": "4.22.1",
+          "development": false
+        }
+      ],
+      "via": [
+        {
+          "dependency": "@shadcn/registry"
+        },
+        {
+          "dependency": "deepmerge"
         }
       ]
     },
@@ -418,6 +476,13 @@
       "callLocations": "vitest.config.mts; package.json test 스크립트; 운영 서버는 next start.",
       "assessment": "공격 조건은 advisory에 명시된 개발 서버 editor 실행, custom middleware 또는 fs.allow 경로 처리다. 운영 웹 입력은 해당 Vite 개발 서버에 도달하지 않는다.",
       "residualAssumptions": "개발 서버 외부 노출/악성 저장소 경로/editor 설정 입력은 여전히 위험하다. 로컬/CI 도구의 안전을 보장하지 않는다."
+    },
+    {
+      "id": "shadcn-registry-cli",
+      "usedApi": "shadcn CLI와 @shadcn/registry의 설정·registry 항목 병합에 쓰이는 deepmerge 4.3.1이다. 제품에서는 shadcn/tailwind.css만 빌드 시 읽으며 해당 JavaScript API를 호출하지 않는다.",
+      "callLocations": "src/app/globals.css:3의 CSS import; node_modules/shadcn/dist/index.js 및 @shadcn/registry/dist의 설정·registry 병합 코드. 제품 TypeScript·CI 명령에는 해당 JavaScript 실행 경로가 없다.",
+      "assessment": "공식 권고 https://github.com/advisories/GHSA-gcqx-w48m-w2h4 는 공격자 제어 객체의 병합 결과가 의도하지 않은 prototype 값을 상속할 수 있는 조건을 다룬다. 운영 웹 요청의 해당 API 도달 경로는 발견되지 않아 P2로 추적하지만 도구 입력 위험은 남고 독립 보안 리뷰를 거친다. 이 판단은 P1 위험 수용이나 npm production 표시만을 근거로 한 자동 허용이 아니다.",
+      "residualAssumptions": "2026-10-28 공식 권고와 npm에서 patched release는 없으며 최신 shadcn·registry도 deepmerge ^4.3.1을 사용한다. 신뢰할 수 없는 remote registry·프로젝트 설정을 사용하는 CLI 실행을 금지한다. 이는 운영 조건이며 새 런타임 차단 구현을 뜻하지 않는다. 제품 JavaScript 연결·미신뢰 입력 허용 시 즉시 재분류하고 2026-11-05까지 공식 패치·전이 의존성 대안을 재검토한다."
     }
   ],
   "assessments": [
@@ -647,13 +712,13 @@
       "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=4.0.0 <4.3.2"
     },
     {
-      "key": "postcss-selector-parser:1241232",
+      "key": "postcss-selector-parser:1243379",
       "contextId": "build-css-source-map",
       "priority": "P2",
       "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
+      "reviewedOn": "2026-10-28",
       "reviewBy": "2026-11-05",
-      "attackCondition": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion — GHSA-rj75-hqrm-r3gf, <7.1.6"
+      "attackCondition": "공식 권고 https://github.com/advisories/GHSA-rj75-hqrm-r3gf 의 <6.1.5 범위에서 미신뢰 CSS selector의 동기 파싱이 CPU를 점유하는 조건이다. 설치 6.0.10은 영향 범위이며 6.1.5 보안 backport가 존재하지만 @tailwindcss/typography 0.5.20의 정확한 6.0.10 pin으로 일반 lock 갱신만으로 적용되지 않는다. 별도 전이 override의 호환성·빌드 검증을 후속 검토하며 기존 2026-11-05 기한을 유지한다."
     },
     {
       "key": "source-map-js:1241209",
@@ -708,6 +773,42 @@
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
       "attackCondition": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine — GHSA-rq7h-c2jc-7f22, >=8.0.0 <=8.1.5"
+    },
+    {
+      "key": "@shadcn/registry:deepmerge",
+      "contextId": "shadcn-registry-cli",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-28",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "@shadcn/registry 0.2.0이 deepmerge 4.3.1을 통해 설정·registry 입력을 병합하는 전이 사용면이다. 공식 https://github.com/advisories/GHSA-gcqx-w48m-w2h4 의 조건을 별도로 검토하며 제품에서는 CSS만 사용한다. 미신뢰 remote registry·설정으로 CLI를 실행하지 않고 무패치 상태를 2026-11-05까지 재검토한다."
+    },
+    {
+      "key": "deepmerge:1243505",
+      "contextId": "shadcn-registry-cli",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-28",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "공식 https://github.com/advisories/GHSA-gcqx-w48m-w2h4 의 >=4.2.0 <=4.3.1 범위에서 공격자가 병합 원본과 관련 대상 형태를 제어하면 반환 객체가 의도하지 않은 prototype 값을 상속할 수 있다. 설치 4.3.1은 영향 범위이고 공식 패치는 없다. 제품 JavaScript 호출은 없지만 CLI의 미신뢰 remote registry·설정 실행을 금지하고 2026-11-05까지 패치를 재검토한다."
+    },
+    {
+      "key": "shadcn:@shadcn/registry",
+      "contextId": "shadcn-registry-cli",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-28",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "shadcn 4.22.1에서 @shadcn/registry 0.2.0을 거쳐 deepmerge 4.3.1로 이어지는 CLI 설정·registry 입력 병합의 전이 경로다. 공식 https://github.com/advisories/GHSA-gcqx-w48m-w2h4 를 기준으로 검토하며 제품은 CSS만 사용한다. 미신뢰 remote registry·설정 CLI 실행을 금지하고 2026-11-05까지 무패치 상태를 재검토한다."
+    },
+    {
+      "key": "shadcn:deepmerge",
+      "contextId": "shadcn-registry-cli",
+      "priority": "P2",
+      "owner": "repo-maintainers",
+      "reviewedOn": "2026-10-28",
+      "reviewBy": "2026-11-05",
+      "attackCondition": "shadcn 4.22.1이 deepmerge 4.3.1을 직접 사용하는 CLI 설정 병합 경로다. 공식 https://github.com/advisories/GHSA-gcqx-w48m-w2h4 의 영향 조건이며 제품은 CSS만 읽고 해당 JavaScript를 호출하지 않는다. 미신뢰 remote registry·설정 CLI 실행을 금지하고 2026-11-05까지 공식 패치를 재검토한다."
     }
   ]
 }
