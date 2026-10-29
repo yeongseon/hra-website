@@ -1,6 +1,6 @@
 # API v1 현재 제공 범위
 
-공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 기존 공지·본인 프로필·공개 일정·가이드북 목록과 아래 학사 MVP 경로를 제공합니다. 나머지 자료 유형과 모바일 인증은 각각 후속 확장 및 #273 범위입니다.
+공용 HTTP 계약의 정본은 [`packages/contracts/openapi.json`](https://github.com/yeongseon/hra-website/blob/main/packages/contracts/openapi.json)입니다. 이 파일은 OpenAPI 3.1.1 JSON 형식이며 **실제로 제공하는 경로만** 기록합니다. 기존 공지·본인 프로필·공개 일정·가이드북 목록과 아래 학사 MVP 경로를 제공합니다. 나머지 자료 유형과 모바일 인증은 각각 후속 확장 및 #273 범위입니다.
 
 ## 본인 프로필
 
