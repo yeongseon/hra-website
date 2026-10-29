@@ -337,9 +337,9 @@
     },
     {
       "path": "scripts/migrate-atomic-application-questions.mjs",
-      "sha256": "451c45693adcdc88d01301d513859824029719aa0d600568a3471c94a0fa8454",
+      "sha256": "b80f273df2801db9179cd4865292a7b9202e99add86792957a469a9765949794",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
+      "defaultBehavior": "read_only",
       "writeOptions": [],
       "commands": [
         "db:migrate-atomic-application-questions"

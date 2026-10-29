@@ -640,24 +640,19 @@
       "fresh": {
         "disposition": "exclude",
         "required": false,
-        "reason": "revision 컬럼은 export, 두 외부 함수는 SQL 참조가 소유한다. wrapper의 전체 transaction을 자동 복제하지 않는다."
+        "reason": "접속 없는 계획만 제공하고 신뢰된 대상 없는 적용을 차단한다. revision 컬럼은 export, 두 함수는 원본 SQL이 소유하며 이 CLI는 설치하지 않는다."
       },
       "objects": ["question-revision-column","question-save","question-revision-assert"],
       "requires": ["web-base","question-revision-column","answer-fk"],
-      "checks": ["questions_revision ALTER와 두 외부 SQL의 transaction 결합은 원문 SQL 둘만 수집해 대체한 것으로 간주하지 않는다."],
+      "checks": ["무인자와 확인 인자만 있는 CLI는 DB 접속·환경 자격 조회 없이 종료해야 한다.","원본 SQL 둘과 fresh 후보 보존을 기존 DB의 ALTER·두 함수 결합 업그레이드 검증으로 간주하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-atomic-application-questions.mjs",
-          "line": 14,
-          "note": "두 외부 SQL 원문을 읽기."
-        },
-        {
-          "file": "scripts/migrate-atomic-application-questions.mjs",
-          "line": 17,
-          "note": "컬럼 추가와 함수들의 결합 transaction."
+          "line": 1,
+          "note": "질문 설치의 예정 객체만 설명하는 접속 없는 계획과 신뢰되지 않은 적용의 차단 경계."
         }
       ],
-      "unresolved": ["wrapper의 catalog/data 분기 또는 결합 transaction을 정적으로 일반 SQL 하나로 확정하지 않았다. 연결 객체의 수동 대조가 필요하다."]
+      "unresolved": ["기존 DB에 revision 컬럼과 두 함수를 결합 설치하던 공개 wrapper는 비활성이다. 실제 대상·복구·승인과 결합 업그레이드는 #280의 별도 검증이 필요하다."]
     },
     {
       "ref": "scripts/migrate-backfill-kakao-legacy-bindings.mjs",
@@ -1834,8 +1829,8 @@
         },
         {
           "source": "scripts/migrate-atomic-application-questions.mjs",
-          "relationship": "unresolved",
-          "reason": "wrapper는 컬럼 추가와 두 외부 함수 SQL을 한 transaction에 전달한다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 이 컬럼을 예정 대상으로 설명하는 차단된 계획이며, ALTER나 원본 SQL 읽기를 실행하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/schema-export.sql",
@@ -1845,7 +1840,7 @@
       ],
       "requires": ["web-base"],
       "checks": ["정수 NOT NULL DEFAULT 0이 질문 저장·제출 검증 양쪽 함수의 선행조건이다."],
-      "unresolved": ["export 컬럼과 wrapper ALTER의 동등성 및 wrapper 전체 transaction 경계 분리가 미검증이다."],
+      "unresolved": ["export 컬럼과 신규 설치 후보의 실제 catalog 동등성은 별도 검증 대상이다. 공개 wrapper의 기존 DB 결합 업그레이드는 비활성 상태다."],
       "requiredForFresh": true
     },
     {
@@ -1861,8 +1856,8 @@
         },
         {
           "source": "scripts/migrate-atomic-application-questions.mjs",
-          "relationship": "wrapper",
-          "reason": "외부 함수 원문을 읽어 revision 컬럼·assert 함수와 함께 설치한다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 이 함수를 예정 대상으로 설명하는 차단된 계획이며, 함수 원문을 읽거나 설치하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/custom-atomic-application-questions.sql",
@@ -1888,8 +1883,8 @@
         },
         {
           "source": "scripts/migrate-atomic-application-questions.mjs",
-          "relationship": "wrapper",
-          "reason": "질문 저장 wrapper가 이 외부 SQL도 읽는다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 이 함수를 예정 대상으로 설명하는 차단된 계획이며, 함수 원문을 읽거나 설치하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/custom-assert-application-question-revision.sql",
