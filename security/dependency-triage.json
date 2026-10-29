@@ -255,74 +255,6 @@
       ]
     },
     {
-      "name": "js-yaml",
-      "severity": "high",
-      "range": "<=3.15.1 || 4.0.0 - 4.3.1",
-      "nodes": [
-        {
-          "path": "node_modules/gray-matter/node_modules/js-yaml",
-          "version": "3.14.2",
-          "development": false
-        },
-        {
-          "path": "node_modules/js-yaml",
-          "version": "4.2.0",
-          "development": false
-        }
-      ],
-      "via": [
-        {
-          "source": 1121859,
-          "id": "GHSA-h67p-54hq-rp68",
-          "severity": "moderate",
-          "range": "<3.15.0",
-          "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases"
-        },
-        {
-          "source": 1123911,
-          "id": "GHSA-52cp-r559-cp3m",
-          "severity": "high",
-          "range": ">=4.0.0 <4.3.0",
-          "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
-        },
-        {
-          "source": 1123912,
-          "id": "GHSA-52cp-r559-cp3m",
-          "severity": "high",
-          "range": ">=3.0.0 <3.15.0",
-          "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption"
-        },
-        {
-          "source": 1138114,
-          "id": "GHSA-5p4m-2wfm-xmqj",
-          "severity": "high",
-          "range": ">=3.0.0 <3.15.1",
-          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported"
-        },
-        {
-          "source": 1138115,
-          "id": "GHSA-5p4m-2wfm-xmqj",
-          "severity": "high",
-          "range": ">=4.0.0 <4.3.1",
-          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported"
-        },
-        {
-          "source": 1193726,
-          "id": "GHSA-2883-xcg3-v3hh",
-          "severity": "high",
-          "range": ">=3.0.0 <3.15.2",
-          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources"
-        },
-        {
-          "source": 1193727,
-          "id": "GHSA-2883-xcg3-v3hh",
-          "severity": "high",
-          "range": ">=4.0.0 <4.3.2",
-          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources"
-        }
-      ]
-    },
-    {
       "name": "postcss-selector-parser",
       "severity": "moderate",
       "range": "<6.1.5",
@@ -455,20 +387,6 @@
       "callLocations": "eslint.config.mjs; package.json lint; scripts 및 shadcn CLI; node_modules/fast-glob, micromatch, braces.",
       "assessment": "공격 조건은 advisory의 중첩/반복 brace 패턴을 확장기에 전달하는 것이다. 고정 저장소 도구 패턴이며 운영 사용자 요청에서 glob 패턴을 받지 않는다.",
       "residualAssumptions": "악성 저장소/도구 설정/CLI 패턴 입력은 CPU/메모리/stack 고갈이 가능하다. production 의존성으로 표시된 CLI도 자동 무해 판정하지 않는다."
-    },
-    {
-      "id": "yaml-parser-cli",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 악의적 YAML merge/alias 또는 외부 제어 format precision 입력이다. JSON_SCHEMA와 저장소 내 고정 기본본만 파싱하며 CLI argparse/sprintf를 웹 요청에서 호출하지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
-    },
-    {
-      "id": "yaml-omap",
-      "usedApi": "gray-matter 엔진의 yaml.load(str, { schema: yaml.JSON_SCHEMA }); argparse/sprintf는 CLI 전이 코드.",
-      "callLocations": "src/lib/markdown/parse.ts:13-58; content/member 내 내장 6개 Markdown 기본본의 서버 파싱.",
-      "assessment": "공격 조건은 명시적 !!omap 타입의 반복 해석이다. JSON_SCHEMA는 해당 YAML 타입을 등록하지 않으며 파서는 운영 사용자 Markdown 업로드에 사용되지 않는다.",
-      "residualAssumptions": "저장소 기본본 공급망 침해/향후 외부 YAML 입력 연결/스키마 확장 시 재분류한다. npm prod 표시는 실제 웹 도달성과 동일하지 않다."
     },
     {
       "id": "vitest-vite",
@@ -647,69 +565,6 @@
       "reviewedOn": "2026-10-22",
       "reviewBy": "2026-11-05",
       "attackCondition": "esbuild allows arbitrary file read when running the development server on Windows — GHSA-g7r4-m6w7-qqqr, >=0.27.3 <0.28.1"
-    },
-    {
-      "key": "js-yaml:1121859",
-      "contextId": "yaml-parser-cli",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases — GHSA-h67p-54hq-rp68, <3.15.0"
-    },
-    {
-      "key": "js-yaml:1123911",
-      "contextId": "yaml-parser-cli",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=4.0.0 <4.3.0"
-    },
-    {
-      "key": "js-yaml:1123912",
-      "contextId": "yaml-parser-cli",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: YAML merge-key chains can force quadratic CPU consumption — GHSA-52cp-r559-cp3m, >=3.0.0 <3.15.0"
-    },
-    {
-      "key": "js-yaml:1138114",
-      "contextId": "yaml-omap",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=3.0.0 <3.15.1"
-    },
-    {
-      "key": "js-yaml:1138115",
-      "contextId": "yaml-omap",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported — GHSA-5p4m-2wfm-xmqj, >=4.0.0 <4.3.1"
-    },
-    {
-      "key": "js-yaml:1193726",
-      "contextId": "yaml-parser-cli",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=3.0.0 <3.15.2"
-    },
-    {
-      "key": "js-yaml:1193727",
-      "contextId": "yaml-parser-cli",
-      "priority": "P2",
-      "owner": "repo-maintainers",
-      "reviewedOn": "2026-10-22",
-      "reviewBy": "2026-10-29",
-      "attackCondition": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources — GHSA-2883-xcg3-v3hh, >=4.0.0 <4.3.2"
     },
     {
       "key": "postcss-selector-parser:1243379",
