@@ -7,7 +7,7 @@ const policy = JSON.parse(readFileSync(new URL('../../security/dependency-triage
 const lock = JSON.parse(readFileSync(new URL('../../package-lock.json', import.meta.url)));
 // 실제 원장의 독립 nodes/via 집합으로 npm 응답을 복원한다. 공격 조건 설명은 응답 metadata와 분리한다.
 const audit = { auditReportVersion: 2, vulnerabilities: Object.fromEntries(policy.packages.map(pkg => [pkg.name, { name: pkg.name, severity: pkg.severity, range: pkg.range, nodes: pkg.nodes.map(node => node.path), via: pkg.via.map(v => v.source ? { ...v, url: 'https://github.com/advisories/' + v.id } : v.dependency) }])) };
-test('현재 정확한 집합은 package 수와 advisory 수를 구분한다', () => { assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-28'), { affectedPackages: 13, advisoryEntries: 29, p1: 0 }); });
+test('현재 정확한 집합은 package 수와 advisory 수를 구분한다', () => { assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-28'), { affectedPackages: 12, advisoryEntries: 22, p1: 0 }); });
 for (const [name, change] of [
   ['새 advisory', a => a.vulnerabilities.vite.via[0].source++],
   ['영향 범위 변경', a => a.vulnerabilities.vite.via[0].range += ' || 99.0.0'],
@@ -112,13 +112,13 @@ test('손상된 원장은 원문 없이 실패 차단한다', () => {
   assert.deepEqual(dependencyDiagnosticLines(error), ['DEPENDENCY_TRIAGE_CHANGED']);
 });
 
-test('v2 원장은 36개 권고별 판단과 7개 공유 사용 맥락을 유지한다', () => {
+test('v2 원장은 29개 권고별 판단과 5개 공유 사용 맥락을 유지한다', () => {
   assert.equal(policy.schemaVersion, 2);
-  assert.equal(policy.assessments.length, 36);
-  assert.equal(policy.contexts.length, 7);
-  assert.equal(new Set(policy.assessments.map(item => item.contextId)).size, 7);
-  assert.deepEqual(policy.contexts.map(context => policy.assessments.filter(item => item.contextId === context.id).length).sort((a, b) => a - b), [2, 3, 4, 5, 5, 5, 12]);
-  assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-28'), { affectedPackages: 13, advisoryEntries: 29, p1: 0 });
+  assert.equal(policy.assessments.length, 29);
+  assert.equal(policy.contexts.length, 5);
+  assert.equal(new Set(policy.assessments.map(item => item.contextId)).size, 5);
+  assert.deepEqual(policy.contexts.map(context => policy.assessments.filter(item => item.contextId === context.id).length).sort((a, b) => a - b), [3, 4, 5, 5, 12]);
+  assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-28'), { affectedPackages: 12, advisoryEntries: 22, p1: 0 });
 });
 
 for (const [name, change] of [
@@ -156,13 +156,21 @@ test('동일 GHSA의 다른 source ID는 각각 진단하고 차단한다', () =
   assert.doesNotMatch(dependencyDiagnosticLines(error).join('\n'), /title|range|version/);
 });
 
-// 새 무패치 도구 권고를 검토해도 기존 YAML 권고의 더 이른 기한은 연장하지 않습니다.
-test('새 CLI 검토가 기존 10월 29일 기한과 만료 차단을 연장하지 않는다', () => {
-  const yamlAssessments = policy.assessments.filter(item => item.key.startsWith('js-yaml:'));
-  assert.equal(yamlAssessments.length, 7);
-  assert.ok(yamlAssessments.every(item => item.reviewedOn === '2026-10-22' && item.reviewBy === '2026-10-29'));
+// 수정 버전으로 대체한 YAML의 임시 예외만 제거하고 다른 평가의 날짜는 그대로 보존합니다.
+test('패치된 YAML 설치본은 임시 평가·공유 맥락 없이 확인한다', () => {
+  assert.equal(policy.packages.some(item => item.name === 'js-yaml'), false);
+  assert.deepEqual(policy.assessments.filter(item => item.key.startsWith('js-yaml:')), []);
+  assert.deepEqual(policy.contexts.filter(item => ['yaml-parser-cli', 'yaml-omap'].includes(item.id)), []);
   const cliAssessments = policy.assessments.filter(item => item.contextId === 'shadcn-registry-cli');
   assert.equal(cliAssessments.length, 4);
   assert.ok(cliAssessments.every(item => item.reviewedOn === '2026-10-28' && item.reviewBy === '2026-11-05'));
-  assert.throws(() => verifyDependencyPolicy(audit, lock, policy, '2026-10-30'), /DEPENDENCY_TRIAGE_INVALID/);
+  assert.deepEqual(verifyDependencyPolicy(audit, lock, policy, '2026-10-30'), { affectedPackages: 12, advisoryEntries: 22, p1: 0 });
+});
+
+// 실제 원장의 기한을 늘리지 않고 합성 평가만 만료시켜 일반 실패 차단이 남아 있음을 확인합니다.
+test('YAML 예외를 제거해도 다른 평가의 만료는 계속 차단한다', () => {
+  const input = structuredClone(policy);
+  input.assessments[0].reviewBy = '2026-10-29';
+  assert.deepEqual(verifyDependencyPolicy(audit, lock, input, '2026-10-29'), { affectedPackages: 12, advisoryEntries: 22, p1: 0 });
+  assert.throws(() => verifyDependencyPolicy(audit, lock, input, '2026-10-30'), /DEPENDENCY_TRIAGE_INVALID/);
 });
