@@ -17,6 +17,7 @@ const targets = [
   { name: "질문", script: "scripts/migrate-atomic-application-questions.mjs", alias: "db:migrate-atomic-application-questions", prefix: "ATOMIC_QUESTION_INSTALLER" },
   { name: "Markdown 이미지", script: "scripts/migrate-add-markdown-image-assets.mjs", alias: "db:migrate-add-markdown-image-assets", prefix: "MARKDOWN_IMAGE_INSTALLER" },
   { name: "모집설정", script: "scripts/migrate-recruitment-singleton.mjs", alias: "db:migrate-recruitment-singleton", prefix: "RECRUITMENT_INSTALLER" },
+  { name: "지원서 중복 제약", script: "scripts/migrate-add-application-submissions-unique.mjs", alias: "db:migrate-add-application-unique", prefix: "APPLICATION_UNIQUE_INSTALLER" },
 ];
 const commands = JSON.parse(readFileSync(join(repository, "package.json"), "utf8")).scripts;
 const syntheticUrl = "postgresql://atomic-only:atomic-credential-sentinel@atomic-qa.invalid/atomic_only";

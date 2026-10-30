@@ -297,9 +297,9 @@
     },
     {
       "path": "scripts/migrate-add-application-submissions-unique.mjs",
-      "sha256": "00caf1ed1fc6aaf255a800f9ce79e1b89ffb71d5db629a04f762abc34362c100",
+      "sha256": "0d79e3ff8483b321b7163c7caa2ee2b591448c5d7a0d657cc2be60564e468113",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
+      "defaultBehavior": "read_only",
       "writeOptions": [],
       "commands": [
         "db:migrate-add-application-unique"
