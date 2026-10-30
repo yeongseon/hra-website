@@ -770,26 +770,16 @@
       "fresh": {
         "disposition": "unresolved",
         "required": true,
-        "reason": "schema 제약과 기본행 INSERT가 섞여 있어 신규 설치에 필요한 최소 기본행 정책을 먼저 분리해야 한다."
+        "reason": "기본행 INSERT의 순수 선언 소유자는 유지하지만 공개 CLI 적용은 차단한다. 신규 설치의 기본행 필요성·필드·단계와 기존 DB 결합 업그레이드는 별도 검증 대상이다."
       },
       "objects": ["recruitment-singleton","recruitment-default"],
       "requires": ["web-base","recruitment-singleton"],
-      "checks": ["복수 행 검사를 지나야 하는 조건부 제약·기본행 정책을 새 설치의 schema/data 단계로 수동 분리한다."],
+      "checks": ["무인자와 확인 인자만 있는 CLI는 DB 접속·환경 자격 조회 없이 종료해야 한다.","순수 INSERT 선언은 원래 문장과 일치하고 소유 로컬 검증에서 기본행 생성·재실행·편집값 보존을 만족해야 한다.","독립 reference의 고정 INSERT와 후보 본문을 선언 상수에서 생성하지 않으며 기존 DB 결합 업그레이드의 대체 증거로 간주하지 않는다."],
       "evidence": [
         {
           "file": "scripts/migrate-recruitment-singleton.mjs",
-          "line": 12,
-          "note": "현재 행 수에 따른 거부 분기."
-        },
-        {
-          "file": "scripts/migrate-recruitment-singleton.mjs",
-          "line": 25,
-          "note": "조건부 컬럼/제약과 기본 행의 transaction."
-        },
-        {
-          "file": "scripts/migrate-recruitment-singleton.mjs",
-          "line": 51,
-          "note": "기본 행 삽입과 후속 단일 행 검증."
+          "line": 1,
+          "note": "기본행의 순수 SQL 선언과 접속 없는 설치 계획·신뢰되지 않은 적용 차단의 역할 설명."
         }
       ],
       "unresolved": ["schema export와 조건부 DO 제약의 동등성, schema/data 분리 경계가 미확정이다.","빈 신규 DB의 최소 기본 행 필요성·필드 값·설치 phase를 별도 승인된 fresh 계약으로 확정해야 한다."]
@@ -1226,7 +1216,7 @@
         "recruitment-singleton"
       ],
       "checks": [
-        "원본 scripts/migrate-recruitment-singleton.mjs:51의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다.",
+        "원본 scripts/migrate-recruitment-singleton.mjs:9의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다.",
         "path·role·원문/후보 SHA·predecessor는 scripts/db/source-inventory.json만 정본으로 사용하며 적용 이력이나 운영 승인을 나타내지 않는다.",
         "독립 raw reference와 후보 engine 전체 C[k]·인가·데이터 보존·실패/재시도·경합을 대조해야 한다."
       ],
@@ -1238,8 +1228,8 @@
         },
         {
           "file": "scripts/migrate-recruitment-singleton.mjs",
-          "line": 51,
-          "note": "원본 singleton_key=1 최소 INSERT 효과를 별도 후보로 분리하는 근거다."
+          "line": 9,
+          "note": "실행하지 않는 순수 singleton_key=1 INSERT 선언을 별도 후보와 독립 대조하는 근거다."
         }
       ],
       "unresolved": [
@@ -2141,8 +2131,8 @@
         },
         {
           "source": "scripts/migrate-recruitment-singleton.mjs",
-          "relationship": "unresolved",
-          "reason": "복수 행 사전 거부 뒤 조건부 제약 추가와 기본 행 INSERT를 한 transaction에 실행한다."
+          "relationship": "inspection",
+          "reason": "DB 관측 없이 제약을 예정 대상으로 설명하는 차단된 계획이며, 복수 행 조회·조건부 제약·결합 설치를 실행하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/schema-export.sql",
@@ -2164,12 +2154,12 @@
         {
           "source": "scripts/migrate-recruitment-singleton.mjs",
           "relationship": "primary",
-          "reason": "해당 inventory 원문이 이 사용자 정의 객체·효과의 선언 소유자다."
+          "reason": "이 파일의 순수 exported INSERT가 기본행 효과의 선언 소유자다. 공개 CLI는 해당 문장을 실행하지 않으며 독립 reference와 후보 SQL을 이 상수에서 생성하지 않는다."
         },
         {
           "source": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
           "relationship": "unresolved",
-          "reason": "원본 scripts/migrate-recruitment-singleton.mjs:51의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
+          "reason": "원본 scripts/migrate-recruitment-singleton.mjs:9의 singleton_key=1 INSERT 효과만 수동 분리한다. schema 제약은 export가 소유하며 관리자 콘텐츠를 만들지 않는다. 전체 engine prefix와 동작·실패 gate의 동등/대체 판정은 미완료다."
         }
       ],
       "requires": ["recruitment-singleton"],

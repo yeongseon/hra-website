@@ -205,7 +205,7 @@ test("현재 인벤토리는 읽기 전용 preflight·현행 뷰와 알려진 �
     "migrate-html-to-markdown": ["db_data", "writes"],
     "migrate-protected-resource-blobs": ["blob_and_db", "read_only"],
     "migrate-rate-limit-reservations": ["db_schema", "read_only"],
-    "migrate-recruitment-singleton": ["db_schema_and_data", "writes"],
+    "migrate-recruitment-singleton": ["db_schema_and_data", "read_only"],
     "seed-admin": ["seed_db", "rejects"],
     "seed-alumni": ["seed_db", "writes"],
     "seed-cohorts": ["seed_db", "writes"],

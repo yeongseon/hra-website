@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { createFreshReference, assertFreshReferenceObjects } from "../support/db-fresh-reference.mjs";
 import { collectLocalCatalog } from "../support/db-migration-catalog.mjs";
 import { academicG1Actors, academicG1Ids, seedAcademicG1Domain } from "../support/academic-g1-fixture.mjs";
+import { recruitmentDefaultInsertSql } from "../../scripts/migrate-recruitment-singleton.mjs";
 
 const postgresBin = process.env.HRA_TEST_PG_BIN;
 assert.ok(postgresBin, "FRESH_PG_BIN_REQUIRED");
@@ -68,6 +69,41 @@ test("전체 원본 fresh reference는 독립 prefix·변형·동작 계약을 �
     assert.equal(reference.readiness.freshReady, false); assert.equal(reference.readiness.productionReady, false);
     assert.equal(reference.readiness.unresolved.length, 3);
     assert.equal((await session.query("SELECT count(*)::integer AS count FROM hra_migrations.applied_migrations")).rows[0].count, 0);
+    assert.equal((await collectLocalCatalog(session)).digest, baseline);
+  });
+
+  await t.test("보존한 기본 행 INSERT는 원문과 같고 빈 행 생성·재실행·편집 보존을 소유 PG에서 충족한다", async () => {
+    // 기대문은 기존 MJS 51행에서 독립적으로 고정합니다. 후보나 reference의 SQL을 상수에서 만들지 않습니다.
+    const expectedSql = "INSERT INTO recruitment_settings (singleton_key) VALUES (1) ON CONFLICT (singleton_key) DO NOTHING";
+    ensure(recruitmentDefaultInsertSql === expectedSql, "FRESH_RECRUITMENT_INSERT_LITERAL_EXACT");
+    assert.equal(createHash("sha256").update(recruitmentDefaultInsertSql).digest("hex"), "0ff1d8ac9b131e92da17b745cfaee5bcb60efec6673a16d8b4b81e97394f59cb", "FRESH_RECRUITMENT_INSERT_DIGEST_EXACT");
+    // 전체 행의 값은 출력하지 않고 지문만 비교하여 rollback 뒤 기존 행이 그대로인지 확인합니다.
+    const rowDigest = async () => (await session.query("SELECT md5(coalesce(jsonb_agg(to_jsonb(r) ORDER BY r.id)::text,'[]')) AS digest FROM public.recruitment_settings r")).rows[0].digest;
+    assert.equal((await session.query("SELECT count(*)::integer AS count FROM public.recruitment_settings")).rows[0].count, 1);
+    const before = await rowDigest();
+    await rollback(session, async () => {
+      await session.query("SET LOCAL search_path TO pg_catalog, public");
+      await session.query("DELETE FROM public.recruitment_settings");
+      await session.query(recruitmentDefaultInsertSql);
+      // 기본값 기대는 schema.ts와 schema export의 정의에서 고정하며 실행 대상 상수에서 유도하지 않습니다.
+      const defaults = (await session.query(`SELECT count(*)::integer AS count,
+        bool_and(singleton_key=1 AND id IS NOT NULL AND updated_at IS NOT NULL
+          AND recruitment_status='UPCOMING' AND poster_layout='right'
+          AND active_cohort_id IS NULL AND google_form_url IS NULL AND recruitment_start_date IS NULL
+          AND poster_image_url IS NULL AND deadline_date IS NULL AND next_recruitment_year IS NULL
+          AND next_recruitment_month IS NULL AND qualification_text IS NULL AND details_markdown IS NULL) AS valid_defaults
+        FROM public.recruitment_settings`)).rows[0];
+      assert.equal(defaults.count, 1);
+      ensure(defaults.valid_defaults, "FRESH_RECRUITMENT_SCHEMA_DEFAULTS");
+      await session.query("UPDATE public.recruitment_settings SET details_markdown=$1", ["합성 모집 내용 보존"]);
+      const edited = await rowDigest();
+      await session.query(recruitmentDefaultInsertSql);
+      const replay = (await session.query("SELECT count(*)::integer AS count,count(*) FILTER(WHERE details_markdown=$1)::integer AS preserved FROM public.recruitment_settings", ["합성 모집 내용 보존"])).rows[0];
+      assert.equal(replay.count, 1);
+      assert.equal(replay.preserved, 1);
+      assert.equal(await rowDigest(), edited, "FRESH_RECRUITMENT_EDITED_ROW_PRESERVED");
+    });
+    assert.equal(await rowDigest(), before, "FRESH_RECRUITMENT_PRIOR_ROW_RESTORED");
     assert.equal((await collectLocalCatalog(session)).digest, baseline);
   });
 

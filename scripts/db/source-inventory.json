@@ -60,7 +60,7 @@
     {
       "path": "scripts/db/candidates/db-fresh/custom-recruitment-default.sql",
       "role": "fresh_candidate",
-      "sha256": "50d290b1cd88682e52ba2e84d3a630f72ef05cd80901df45e41ef240e8262c20",
+      "sha256": "21b59093b44d923033564bb2462c2b642381e8cc85868c99126e2b97e45a9ac8",
       "id": "fresh-custom-recruitment-default",
       "predecessors": ["fresh-custom-rate-limit-reservation-index"]
     },
@@ -393,9 +393,9 @@
     },
     {
       "path": "scripts/migrate-recruitment-singleton.mjs",
-      "sha256": "5c1506e71ed1e4ab6d992a3fc8bab10acfc2e2b2064ab59857d20d96e2079e92",
+      "sha256": "3550e3479160f2f7a268e417255959e9f5b55400d36f4291ee8a0a0b961e2cf9",
       "effect": "db_schema_and_data",
-      "defaultBehavior": "writes",
+      "defaultBehavior": "read_only",
       "writeOptions": [],
       "commands": [
         "db:migrate-recruitment-singleton"
