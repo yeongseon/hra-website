@@ -39,7 +39,7 @@
     "blob:cleanup-markdown-images": "node --env-file=.env scripts/cleanup-markdown-image-assets.mjs",
     "blob:migrate-protected": "node --env-file=.env scripts/migrate-protected-resource-blobs.mjs",
     "db:migrate-atomic-application-questions": "node scripts/migrate-atomic-application-questions.mjs",
-    "db:migrate-recruitment-singleton": "node --env-file=.env scripts/migrate-recruitment-singleton.mjs",
+    "db:migrate-recruitment-singleton": "node scripts/migrate-recruitment-singleton.mjs",
     "verify:oauth-binding-security": "node --env-file=.env scripts/verify-oauth-binding-security.mjs",
     "verify:editor-preview": "node scripts/verify-editor-preview.mjs",
     "prepare": "husky"

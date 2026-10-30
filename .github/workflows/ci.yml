@@ -50,7 +50,7 @@ jobs:
           node scripts/check-db-installation-contract.mjs
 
       - name: 기본 DB push·스키마 설치 접속 차단 회귀
-        # 차단된 합성 대상에서 기본 접속·두 설치 명령의 우회 거부와 오프라인 SQL 생성을 검사합니다.
+        # 차단된 합성 대상에서 기본 접속·계획 전용 설치 명령의 우회 거부와 오프라인 SQL 생성을 검사합니다.
         run: |
           node --test scripts/tests/db-push-guard.test.mjs
           node --test scripts/tests/schema-plan-cli.test.mjs
