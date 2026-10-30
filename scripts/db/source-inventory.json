@@ -317,9 +317,9 @@
     },
     {
       "path": "scripts/migrate-add-rate-limit-tables.mjs",
-      "sha256": "e8566d9e28eb27b1036f7691c3889a0a939c6b483eaa6755e0697f0b3bf8cfa3",
+      "sha256": "0f55ebd6bb3059c5a0e023ca8865d607c47e35751b2744dfdbb8e91fdba2ac48",
       "effect": "db_schema",
-      "defaultBehavior": "writes",
+      "defaultBehavior": "read_only",
       "writeOptions": [],
       "commands": [
         "db:migrate-add-rate-limit-tables"
